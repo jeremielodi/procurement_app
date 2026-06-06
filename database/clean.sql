@@ -1,0 +1,2 @@
+delete from requisition_items;
+delete from requisitions;

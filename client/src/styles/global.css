@@ -1,0 +1,77 @@
+/* src/styles/global.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow p-6;
+  }
+  
+  .status-badge {
+    @apply px-2 py-1 text-xs font-semibold rounded-full;
+  }
+  
+  .status-badge-pending {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  
+  .status-badge-approved {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .status-badge-rejected {
+    @apply bg-red-100 text-red-800;
+  }
+  
+  .status-badge-in-progress {
+    @apply bg-blue-100 text-blue-800;
+  }
+}
+
+/* Ajouter dans global.css pour l'impression */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .shadow {
+    box-shadow: none !important;
+  }
+  
+  .bg-white {
+    background: white !important;
+  }
+  
+  button, 
+  .btn, 
+  .btn-primary,
+  .flex.gap-2 > button,
+  .flex.gap-2 > a {
+    display: none !important;
+  }
+  
+  a[href]:after {
+    content: none !important;
+  }
+}

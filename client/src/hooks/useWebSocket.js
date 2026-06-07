@@ -27,7 +27,7 @@ export const useWebSocket = () => {
       setIsConnected(true)
       
       // Rejoindre la room de l'utilisateur
-      const userId = localStorage.getItem('userId')
+      const userId = sessionStorage.getItem('userId')
       if (userId) {
         socketRef.current.emit('join', userId)
       }

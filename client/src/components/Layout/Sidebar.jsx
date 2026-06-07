@@ -166,9 +166,9 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     return initial
   })
 
-  // Sauvegarder l'état des groupes dans localStorage
+  // Sauvegarder l'état des groupes dans sessionStorage
   useEffect(() => {
-    localStorage.setItem('sidebarGroups', JSON.stringify(openGroups))
+    sessionStorage.setItem('sidebarGroups', JSON.stringify(openGroups))
   }, [openGroups])
 
   // Ouvrir automatiquement le groupe du module actif quand la route change

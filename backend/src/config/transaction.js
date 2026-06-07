@@ -1,4 +1,4 @@
-
+// backend/src/transaction.js
 var q = require('q');
 
 /**
@@ -19,13 +19,20 @@ class Transaction {
       let results = [];
       await this.db.exec('BEGIN');
       for (let i = 0; i < this.queries.length; i++) {
-        const { sql, params } = this.queries[i];
-        const resI = await this.db.exec(sql, params);
-        results.push(resI);
+        const { sql, params, isRaw } = this.queries[i];
+        
+        // Si c'est une requête raw, exécuter sans préparation
+        if (isRaw) {
+          const resI = await this.db.exec(sql);
+          results.push(resI);
+        } else {
+          const resI = await this.db.exec(sql, params);
+          results.push(resI);
+        }
+        
         this.sleep(200);
       }
       await this.db.exec('COMMIT');
-      // this.//db.done();
       deferred.resolve(results);
     } catch (e) {
       await this.db.exec('ROLLBACK');
@@ -33,7 +40,6 @@ class Transaction {
     }
     return deferred.promise;
   }
-
 
   exec(sql, params) {
     const deferred = q.defer();
@@ -65,17 +71,162 @@ class Transaction {
     });
 
     const sql = `INSERT INTO ${tableName}(${colSql}) values(${valSql})`;
-    this.queries.push({ sql, params });
+    this.queries.push({ sql, params, isRaw: false });
   }
 
+  /**
+   * Ajouter une requête INSERT avec des valeurs brutes (pour les expressions SQL comme NOW(), gen_random_uuid(), etc.)
+   */
+  addInsertRawQuery(tableName, jsonData, rawFields = []) {
+    let colSql = '';
+    let valSql = '';
+    const params = [];
+    const keys = Object.keys(jsonData);
+    let paramIndex = 1;
+    
+    keys.forEach((col) => {
+      colSql += col;
+      
+      // Vérifier si le champ doit être traité comme brut
+      if (rawFields.includes(col)) {
+        valSql += jsonData[col]; // Valeur brute (ex: 'NOW()', 'gen_random_uuid()')
+      } else {
+        valSql += `$${paramIndex}`;
+        params.push(jsonData[col]);
+        paramIndex++;
+      }
+      
+      if (keys.indexOf(col) !== keys.length - 1) {
+        colSql += ',';
+        valSql += ',';
+      }
+    });
+
+    const sql = `INSERT INTO ${tableName}(${colSql}) values(${valSql})`;
+    this.queries.push({ sql, params, isRaw: false });
+  }
 
   /**
-   * 
-   * @param {*} tableName the name of the table to update
-   * @param {*} jsonData the differents column to apply the change for
-   * @param {*} idKey the specific column used as the primary key of the table
-   * @param {*} idValue the value of @idKey
+   * Ajouter une requête UPDATE avec des valeurs brutes
    */
+  addUpdateRawQuery(tableName, jsonData, idKey, idValue, rawFields = []) {
+    let setSql = '';
+    const params = [];
+    const keys = Object.keys(jsonData);
+    let paramIndex = 1;
+    
+    keys.forEach((col) => {
+      if (rawFields.includes(col)) {
+        setSql += `${col}=${jsonData[col]}`;
+      } else {
+        setSql += `${col}=$${paramIndex}`;
+        params.push(jsonData[col]);
+        paramIndex++;
+      }
+      
+      if (keys.indexOf(col) !== keys.length - 1) {
+        setSql += ',';
+      }
+    });
+    
+    params.push(idValue);
+    const sql = `UPDATE ${tableName} SET ${setSql} WHERE ${idKey}=$${paramIndex}`;
+    this.queries.push({ sql, params, isRaw: false });
+  }
+
+  /**
+   * Ajouter une requête SQL brute directement
+   */
+  addRawQuery(sql) {
+    this.queries.push({ sql, params: [], isRaw: true });
+  }
+
+  /**
+   * Ajouter une requête avec support des opérateurs
+   */
+  addWhereQuery(tableName, conditions, operation = 'AND') {
+    let sql = `SELECT * FROM ${tableName} WHERE `;
+    const params = [];
+    const conditionParts = [];
+    let paramIndex = 1;
+    
+    for (const [key, value] of Object.entries(conditions)) {
+      if (key.includes('>') || key.includes('<') || key.includes('>=') || key.includes('<=') || key.includes('!=') || key.includes('LIKE')) {
+        conditionParts.push(`${key} $${paramIndex}`);
+      } else {
+        conditionParts.push(`${key} = $${paramIndex}`);
+      }
+      params.push(value);
+      paramIndex++;
+    }
+    
+    sql += conditionParts.join(` ${operation} `);
+    this.queries.push({ sql, params, isRaw: false });
+  }
+
+  /**
+   * Ajouter une requête UPDATE incrémentale (ex: SET count = count + 1)
+   */
+  addIncrementQuery(tableName, field, idKey, idValue, increment = 1) {
+    const sql = `UPDATE ${tableName} SET ${field} = ${field} + $1 WHERE ${idKey} = $2`;
+    const params = [increment, idValue];
+    this.queries.push({ sql, params, isRaw: false });
+  }
+
+  /**
+   * Ajouter une requête UPSERT (INSERT ... ON CONFLICT DO UPDATE)
+   */
+  addUpsertQuery(tableName, jsonData, conflictKey, updateFields = null) {
+    let colSql = '';
+    let valSql = '';
+    const params = [];
+    const keys = Object.keys(jsonData);
+    
+    keys.forEach((col, index) => {
+      colSql += col;
+      valSql += `$${index + 1}`;
+      params.push(jsonData[col]);
+      if (keys.length !== (index + 1)) {
+        colSql += ',';
+        valSql += ',';
+      }
+    });
+    
+    let updateSql = '';
+    if (updateFields) {
+      updateSql = updateFields.map(field => `${field} = EXCLUDED.${field}`).join(', ');
+    } else {
+      updateSql = keys.map(key => `${key} = EXCLUDED.${key}`).join(', ');
+    }
+    
+    const sql = `INSERT INTO ${tableName}(${colSql}) values(${valSql}) 
+                 ON CONFLICT (${conflictKey}) DO UPDATE SET ${updateSql}`;
+    this.queries.push({ sql, params, isRaw: false });
+  }
+
+  /**
+   * Ajouter une requête avec RETURNING
+   */
+  addInsertReturningQuery(tableName, jsonData, returning = '*') {
+    let colSql = '';
+    let valSql = '';
+    const params = [];
+    const keys = Object.keys(jsonData);
+    
+    keys.forEach((col, index) => {
+      colSql += col;
+      valSql += `$${index + 1}`;
+      params.push(jsonData[col]);
+      if (keys.length !== (index + 1)) {
+        colSql += ',';
+        valSql += ',';
+      }
+    });
+    
+    const sql = `INSERT INTO ${tableName}(${colSql}) values(${valSql}) RETURNING ${returning}`;
+    this.queries.push({ sql, params, isRaw: false });
+  }
+
   addUpdateQuery(tableName, jsonData, idKey, idValue) {
     let colSql = '';
     let valSql = '';
@@ -94,12 +245,31 @@ class Transaction {
     });
     params[i] = idValue;
     const sql = `UPDATE ${tableName} SET ${colSql} WHERE ${idKey}=$${i + 1}`;
-    this.queries.push({ sql, params });
+    this.queries.push({ sql, params, isRaw: false });
   }
 
   addDeleteQuery(tableName, idKey, idValue) {
     const sql = `DELETE FROM ${tableName} WHERE ${idKey}=$1`;
-    this.queries.push({ sql, params : [idValue] });
+    this.queries.push({ sql, params: [idValue], isRaw: false });
+  }
+
+  /**
+   * Supprimer avec plusieurs conditions
+   */
+  addDeleteWhereQuery(tableName, conditions) {
+    let sql = `DELETE FROM ${tableName} WHERE `;
+    const params = [];
+    const conditionParts = [];
+    let paramIndex = 1;
+    
+    for (const [key, value] of Object.entries(conditions)) {
+      conditionParts.push(`${key} = $${paramIndex}`);
+      params.push(value);
+      paramIndex++;
+    }
+    
+    sql += conditionParts.join(' AND ');
+    this.queries.push({ sql, params, isRaw: false });
   }
 
   SelectQuery(sqlQuery, params) {
@@ -109,11 +279,11 @@ class Transaction {
       sql = sql.replace('?', `$${i}`);
       i++;
     }
-    this.queries.push({ sql, params });
+    this.queries.push({ sql, params, isRaw: false });
   }
 
   addQuery(sql, params) {
-    this.queries.push({ sql, params });
+    this.queries.push({ sql, params, isRaw: false });
   }
 
   sleep(ms) {

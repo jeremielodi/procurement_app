@@ -33,6 +33,7 @@ export default function ProjectForm({ project, onClose }) {
         projectManagerId: project.project_manager_id || '',
         startDate: project.start_date,
         endDate: project.end_date,
+        isActive: project.is_active,
         status: project.status || 'ACTIVE'
       });
     }

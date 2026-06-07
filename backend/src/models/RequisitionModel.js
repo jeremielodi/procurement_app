@@ -169,7 +169,7 @@ class RequisitionModel {
     const budget = await db.one(`
       SELECT id, entity_code, allocated_amount, utilized_amount, remaining_amount
       FROM budget_allocations 
-      WHERE id = $1
+      WHERE id = $1 and is_active=true
     `, [budgetLineId]);
     
     if (!budget) {

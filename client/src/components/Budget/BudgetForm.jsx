@@ -45,6 +45,7 @@ export default function BudgetForm({ budget, onClose }) {
         loc: budget.loc || '',
         fundingSource: budget.funding_source || '',
         subProject: budget.sub_project || '',
+        isActive: budget.is_active,
         functionCode: budget.function_code || '',
         description: budget.description || '',
         allocatedAmount: budget.allocated_amount || '',

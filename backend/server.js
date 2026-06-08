@@ -2,14 +2,14 @@
 require('./env');
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
 const http = require('http');
 const socketIo = require('socket.io');
 const routes = require('./src/routes');
 const db = require('./src/config/database');
 const { startWorkers } = require('./src/workers');
 const databaseInitializer = require('./src/utils/initDatabase');
-
+const path = require('path');
+const helmet = require('helmet');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -21,7 +21,19 @@ const io = socketIo(server, {
 });
 
 // Middleware
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        // Allows the browser to load blob URLs inside iframes
+        "frame-src": ["'self'", "blob:"], 
+        // Optional: Add to worker-src if you are also using web workers
+        "worker-src": ["'self'", "blob:"], 
+      },
+    },
+  })
+);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -36,7 +48,7 @@ app.use((req, res, next) => {
 app.use('/api', routes);
 
 app.use(express.static(process.env.UPLOAD_DIR));
-
+app.use(express.static( path.resolve(__dirname, '../client/dist')));
 // Health check
 app.get('/health', async (req, res) => {
   try {
@@ -47,6 +59,10 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// 3. The Catch-All Route: Redirects everything else back to React
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+});
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log(`🟢 New client connected: ${socket.id}`);

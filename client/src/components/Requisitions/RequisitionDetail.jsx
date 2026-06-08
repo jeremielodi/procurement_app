@@ -35,10 +35,12 @@ import { requisitionService } from '../../services/requisitionService'
 import { purchaseOrderService } from '../../services/purchaseOrderService'
 import { workflowService } from '../../services/workflowService'
 import { taskService } from '../../services/taskService'
+import { uploadService } from '../../services/uploadService'
 import StatusBadge from '../Common/StatusBadge'
 import LoadingSpinner from '../Common/LoadingSpinner'
 import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
+import PdfViewer from '../Common/PdfViewer'
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 
@@ -52,6 +54,8 @@ export default function RequisitionDetail() {
   const [cancellationReason, setCancellationReason] = useState('')
   const [activeTab, setActiveTab] = useState('details')
   const [pendingTasksCount, setPendingTasksCount] = useState(0)
+  const [viewerAttachmentId, setViewerAttachmentId] = useState(null)
+  const [viewerFileName, setViewerFileName] = useState(null)
 
   // Récupérer les détails de la réquisition
   const { data: requisitionData, isLoading, error, refetch } = useQuery({
@@ -89,14 +93,11 @@ export default function RequisitionDetail() {
   const purchaseOrders = purchaseOrdersData?.data || []
   
   // CORRECTION: Extraire correctement les données d'historique
-  // workflowHistoryData peut être un objet avec une propriété data, ou directement un tableau
   const workflowHistory = workflowHistoryData?.data || workflowHistoryData || []
   
   // Extraire les activités, tâches et processus de l'historique
-  const processHistory = workflowHistory.process || null
   const activities = workflowHistory.activities || []
   const historyTasks = workflowHistory.tasks || []
-  const processVariables = workflowHistory.variables || {}
 
   // Mutation pour annuler la réquisition
   const cancelMutation = useMutation({
@@ -135,6 +136,30 @@ export default function RequisitionDetail() {
       toast.error(error.message || 'Erreur lors de la soumission')
     }
   })
+
+  // Télécharger un fichier
+  const handleDownloadFile = async (attachmentId, fileName) => {
+    try {
+      const blob = await uploadService.downloadFile(attachmentId)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', fileName)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      toast.success('Téléchargement démarré')
+    } catch (error) {
+      toast.error('Erreur lors du téléchargement')
+    }
+  }
+
+  // Voir le PDF
+  const handleViewPdf = (attachmentId, fileName) => {
+    setViewerAttachmentId(attachmentId)
+    setViewerFileName(fileName)
+  }
 
   // Générer le rapport PDF
   const handleGeneratePDF = async () => {
@@ -233,7 +258,6 @@ export default function RequisitionDetail() {
         </div>
         
         <div className="flex gap-2">
-          {/* Lien vers les tâches */}
           {requisition.process_instance_id && (
             <Link
               to={`/requisitions/${requisition.id}/tasks`}
@@ -409,30 +433,63 @@ export default function RequisitionDetail() {
                 </div>
               </div>
 
-              {/* Pièces jointes */}
+              {/* Pièces jointes avec visualiseur PDF */}
               {requisition.attachments && requisition.attachments.length > 0 && (
                 <div className="bg-white rounded-lg shadow">
                   <div className="p-6 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                       <Paperclip size={20} />
-                      Pièces jointes
+                      Pièces jointes ({requisition.attachments.length})
                     </h2>
                   </div>
                   <div className="divide-y divide-gray-200">
                     {requisition.attachments.map((attachment, index) => (
-                      <div key={index} className="p-4 flex items-center justify-between">
+                      <div key={index} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                         <div className="flex items-center gap-3">
-                          <FileText size={18} className="text-gray-400" />
-                          <span className="text-sm text-gray-700">{attachment.file_name}</span>
+                          {attachment.mime_type === 'application/pdf' ? (
+                            <FileText size={20} className="text-red-500" />
+                          ) : attachment.mime_type?.startsWith('image/') ? (
+                            <FileText size={20} className="text-blue-500" />
+                          ) : (
+                            <FileText size={20} className="text-gray-400" />
+                          )}
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">{attachment.file_name}</p>
+                            <p className="text-xs text-gray-400">
+                              {(attachment.file_size / 1024).toFixed(2)} KB - Ajouté le {formatDate(attachment.uploaded_at)}
+                            </p>
+                          </div>
                         </div>
-                        <a
-                          href={attachment.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                          <Eye size={16} />
-                        </a>
+                        <div className="flex gap-2">
+                          {/* Bouton visualiser pour PDF */}
+                          {attachment.mime_type === 'application/pdf' && (
+                            <button
+                              onClick={() => handleViewPdf(attachment.id, attachment.file_name)}
+                              className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                              title="Visualiser"
+                            >
+                              <Eye size={18} />
+                            </button>
+                          )}
+                          {/* Bouton télécharger */}
+                          <button
+                            onClick={() => handleDownloadFile(attachment.id, attachment.file_name)}
+                            className="p-2 text-gray-500 hover:text-green-600 rounded-lg hover:bg-green-50 transition-colors"
+                            title="Télécharger"
+                          >
+                            <Download size={18} />
+                          </button>
+                          {/* Lien externe */}
+                          <a
+                            href={attachment.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 text-gray-500 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
+                            title="Ouvrir dans un nouvel onglet"
+                          >
+                            <ExternalLink size={18} />
+                          </a>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -517,31 +574,31 @@ export default function RequisitionDetail() {
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                   </tr>
                 </thead>
-               <tbody className="divide-y divide-gray-200">
-  {requisition.items?.map((item, index) => {
-    // Debug: Afficher la structure dans la console
-    console.log('Item structure:', item)
-    
-    return (
-      <tr key={index} className="hover:bg-gray-50">
-        <td className="px-6 py-4">
-          <div className="text-sm text-gray-800">
-            {item.item_description || item.description || JSON.stringify(item)}
-          </div>
-        </td>
-        <td className="px-6 py-4 text-sm text-gray-800 text-center">
-          {item.quantity || item.qty || 0}
-        </td>
-        <td className="px-6 py-4 text-sm text-gray-800 text-right">
-          {formatCurrency(item.unit_price || item.unitPrice || 0, requisition.currency)}
-        </td>
-        <td className="px-6 py-4 text-sm font-semibold text-gray-800 text-right">
-          {formatCurrency(item.total_amount || item.totalAmount || 0, requisition.currency)}
-        </td>
-      </tr>
-    )
-  })}
-</tbody>
+                <tbody className="divide-y divide-gray-200">
+                  {requisition.items?.map((item, index) => {
+                    return (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-800">
+                            {item.item_description || item.description || 'Non spécifié'}
+                          </div>
+                          {item.specifications && (
+                            <div className="text-xs text-gray-500 mt-1">{item.specifications}</div>
+                          )}
+                         </td>
+                        <td className="px-6 py-4 text-sm text-gray-800 text-center">
+                          {item.quantity || 0}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800 text-right">
+                          {formatCurrency(item.unit_price || item.unitPrice || 0, requisition.currency)}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-800 text-right">
+                          {formatCurrency(item.total_amount || item.totalAmount || 0, requisition.currency)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
                 <tfoot className="bg-gray-50">
                   <tr>
                     <td colSpan="3" className="px-6 py-4 text-right font-semibold text-gray-800">
@@ -653,7 +710,7 @@ export default function RequisitionDetail() {
         )}
       </div>
 
-      {/* Modal de confirmation de suppression */}
+      {/* Modales */}
       <Modal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
@@ -668,7 +725,6 @@ export default function RequisitionDetail() {
         <p className="text-sm text-gray-500 mt-2">Cette action est irréversible.</p>
       </Modal>
 
-      {/* Modal d'annulation */}
       <Modal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
@@ -697,7 +753,6 @@ export default function RequisitionDetail() {
         </div>
       </Modal>
 
-      {/* Modal du workflow */}
       <Modal
         isOpen={showWorkflowModal}
         onClose={() => setShowWorkflowModal(false)}
@@ -708,7 +763,6 @@ export default function RequisitionDetail() {
         onConfirm={() => setShowWorkflowModal(false)}
       >
         <div className="space-y-4 max-h-96 overflow-y-auto">
-          {/* Afficher les activités du workflow */}
           {activities.length > 0 ? (
             activities.map((activity, index) => (
               <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
@@ -748,6 +802,18 @@ export default function RequisitionDetail() {
           )}
         </div>
       </Modal>
+
+      {/* Visualiseur PDF */}
+      {viewerAttachmentId && (
+        <PdfViewer
+          attachmentId={viewerAttachmentId}
+          fileName={viewerFileName}
+          onClose={() => {
+            setViewerAttachmentId(null)
+            setViewerFileName(null)
+          }}
+        />
+      )}
     </div>
   )
 }

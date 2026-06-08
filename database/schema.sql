@@ -343,7 +343,7 @@ CREATE TABLE IF NOT EXISTS service_acceptance_notes (
 -- 16. TABLE DES PIÈCES JOINTES
 -- ============================================
 CREATE TABLE IF NOT EXISTS attachments (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY,
     entity_type VARCHAR(50),
     entity_id UUID,
     file_name VARCHAR(255),

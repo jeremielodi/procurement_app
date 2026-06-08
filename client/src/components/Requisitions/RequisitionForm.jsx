@@ -1,14 +1,16 @@
-// src/components/Requisitions/RequisitionForm.jsx
+// src/components/Requisitions/RequisitionForm.jsx - Ajouter l'upload
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Save, X, Search, AlertCircle, CheckCircle } from 'lucide-react'
+import { Plus, Trash2, Save, X, Search, AlertCircle, CheckCircle, Paperclip } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { requisitionService } from '../../services/requisitionService'
 import { projectService } from '../../services/projectService'
 import { budgetService } from '../../services/budgetService'
+import { uploadService } from '../../services/uploadService'
 import BudgetLineSearchModal from './BudgetLineSearchModal'
+import FileUpload from '../Common/FileUpload'
 
 const departments = ['IT', 'Administration', 'Operations', 'Finance', 'HR']
 const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
@@ -20,6 +22,8 @@ export default function RequisitionForm() {
   const [showBudgetModal, setShowBudgetModal] = useState(false)
   const [selectedItemIndex, setSelectedItemIndex] = useState(null)
   const [selectedProject, setSelectedProject] = useState(null)
+  const [attachments, setAttachments] = useState([])
+  const [createdRequisitionId, setCreatedRequisitionId] = useState(null)
 
   const {
     register,
@@ -63,8 +67,23 @@ export default function RequisitionForm() {
   const projects = projectsData?.data || []
 
   const createMutation = useMutation({
-    mutationFn: requisitionService.create,
-    onSuccess: () => {
+    mutationFn: async (data) => {
+      // Créer d'abord la réquisition
+      const result = await requisitionService.create(data);
+      return result;
+    },
+    onSuccess: async (response) => {
+      const requisitionId = response.data?.id;
+      setCreatedRequisitionId(requisitionId);
+      
+      // Uploader les fichiers après création
+      if (attachments.length > 0 && requisitionId) {
+        const filesToUpload = attachments.filter(a => a.temporary).map(a => a.file);
+        if (filesToUpload.length > 0) {
+          await uploadService.uploadMultipleFiles(filesToUpload, 'requisition', requisitionId);
+        }
+      }
+      
       queryClient.invalidateQueries(['requisitions'])
       toast.success('Réquisition créée avec succès')
       navigate('/requisitions')
@@ -501,6 +520,20 @@ export default function RequisitionForm() {
               Aucun article. Cliquez sur "Ajouter un article"
             </p>
           )}
+        </div>
+
+        {/* Pièces jointes */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Paperclip size={20} className="text-gray-500" />
+            <h2 className="text-lg font-semibold">Pièces jointes</h2>
+          </div>
+          <FileUpload
+            entityType="requisition"
+            entityId={createdRequisitionId}
+            onUploadComplete={setAttachments}
+            existingFiles={attachments}
+          />
         </div>
 
         {/* Actions */}

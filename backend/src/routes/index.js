@@ -17,6 +17,8 @@ const profileController = require('../controllers/ProfileController');
 const budgetController = require('../controllers/BudgetController');
 const { authenticate, hasPermission, hasAnyPermission } = require('../middleware/auth');
 
+const uploadRoutes = require('./upload');
+
 // ============================================
 // ROUTES D'AUTHENTIFICATION (publiques)
 // ============================================
@@ -377,4 +379,5 @@ router.delete('/budget/:id', hasPermission('MANAGE_BUDGET'), budgetController.de
 
 router.get('/budget/by-project/:projectId', hasPermission('VIEW_BUDGET'), budgetController.getByProject);
 
+router.use('/upload',  uploadRoutes);
 module.exports = router;

@@ -35,6 +35,8 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api', routes);
 
+app.use(express.static(process.env.UPLOAD_DIR));
+
 // Health check
 app.get('/health', async (req, res) => {
   try {

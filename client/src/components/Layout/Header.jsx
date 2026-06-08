@@ -29,6 +29,11 @@ export default function Header({ toggleSidebar }) {
 
   const handleLogout = () => {
     setIsProfileOpen(false)
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     logout()
     navigate('/login')
   }

@@ -64,7 +64,7 @@
       <bpmn:outgoing>Flow_BudgetYes_Validation</bpmn:outgoing>
       <bpmn:outgoing>Flow_BudgetNo_Adjustment</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Activity_HierarchicalValidation" name="Hierarchical Validation" camunda:assignee="${approver}" camunda:candidateGroups="management">
+    <bpmn:userTask id="Activity_HierarchicalValidation" name="Hierarchical Validation" camunda:assignee="${approver}" camunda:candidateGroups="manager">
       <bpmn:incoming>Flow_BudgetYes_Validation</bpmn:incoming>
       <bpmn:outgoing>Flow_Validation_Gateway</bpmn:outgoing>
     </bpmn:userTask>
@@ -213,6 +213,10 @@
         <dc:Bounds x="660" y="75" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_ServiceAcceptance_di" bpmnElement="Activity_ServiceAcceptance">
+        <dc:Bounds x="2160" y="68" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_Rejected_di" bpmnElement="Event_Rejected">
         <dc:Bounds x="860" y="90" width="36" height="36" />
         <bpmndi:BPMNLabel>
@@ -229,38 +233,18 @@
           <dc:Bounds x="460.5" y="213" width="89" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_ServiceAcceptance_di" bpmnElement="Activity_ServiceAcceptance">
-        <dc:Bounds x="2160" y="68" width="100" height="80" />
+      <bpmndi:BPMNShape id="Activity_HierarchicalValidation_di" bpmnElement="Activity_HierarchicalValidation">
+        <dc:Bounds x="680" y="294" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_GoodsReceipt_di" bpmnElement="Activity_GoodsReceipt">
-        <dc:Bounds x="2160" y="910" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_ProcessInvoice_di" bpmnElement="Task_ProcessInvoice">
-        <dc:Bounds x="2270" y="185" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_Completed_di" bpmnElement="Event_Completed">
-        <dc:Bounds x="2512" y="207" width="36" height="36" />
+      <bpmndi:BPMNShape id="Gateway_ApprovalDecision_di" bpmnElement="Gateway_ApprovalDecision" isMarkerVisible="true">
+        <dc:Bounds x="850" y="309" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="2503" y="250" width="54" height="27" />
+          <dc:Bounds x="910" y="327" width="54" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_DirectPurchase_di" bpmnElement="Activity_DirectPurchase">
-        <dc:Bounds x="1350" y="633" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_SendPO_di" bpmnElement="Task_SendPO">
-        <dc:Bounds x="2040" y="573" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_SoleSource_di" bpmnElement="Activity_SoleSource">
-        <dc:Bounds x="1350" y="733" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_RFPProcess_di" bpmnElement="Activity_RFPProcess">
-        <dc:Bounds x="1350" y="417" width="100" height="80" />
+      <bpmndi:BPMNShape id="Activity_POApproval_di" bpmnElement="Activity_POApproval">
+        <dc:Bounds x="1880" y="290" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_DetermineType_di" bpmnElement="Activity_DetermineType">
@@ -277,30 +261,46 @@
           <dc:Bounds x="1164" y="554" width="71" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_DirectPurchase_di" bpmnElement="Activity_DirectPurchase">
+        <dc:Bounds x="1350" y="633" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_RequestQuotations_di" bpmnElement="Activity_RequestQuotations">
         <dc:Bounds x="1350" y="521" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_CreatePO_di" bpmnElement="Activity_CreatePO">
-        <dc:Bounds x="1720" y="475" width="100" height="80" />
+      <bpmndi:BPMNShape id="Activity_RFPProcess_di" bpmnElement="Activity_RFPProcess">
+        <dc:Bounds x="1350" y="417" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_AnalyzeOffers_di" bpmnElement="Task_AnalyzeOffers">
         <dc:Bounds x="1550" y="290" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_HierarchicalValidation_di" bpmnElement="Activity_HierarchicalValidation">
-        <dc:Bounds x="680" y="294" width="100" height="80" />
+      <bpmndi:BPMNShape id="Activity_SoleSource_di" bpmnElement="Activity_SoleSource">
+        <dc:Bounds x="1350" y="733" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_POApproval_di" bpmnElement="Activity_POApproval">
-        <dc:Bounds x="1880" y="290" width="100" height="80" />
+      <bpmndi:BPMNShape id="Activity_CreatePO_di" bpmnElement="Activity_CreatePO">
+        <dc:Bounds x="1720" y="475" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Gateway_ApprovalDecision_di" bpmnElement="Gateway_ApprovalDecision" isMarkerVisible="true">
-        <dc:Bounds x="850" y="309" width="50" height="50" />
+      <bpmndi:BPMNShape id="Task_SendPO_di" bpmnElement="Task_SendPO">
+        <dc:Bounds x="2040" y="573" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_GoodsReceipt_di" bpmnElement="Activity_GoodsReceipt">
+        <dc:Bounds x="2160" y="910" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ProcessInvoice_di" bpmnElement="Task_ProcessInvoice">
+        <dc:Bounds x="2270" y="185" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_Completed_di" bpmnElement="Event_Completed">
+        <dc:Bounds x="2512" y="207" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="910" y="327" width="54" height="14" />
+          <dc:Bounds x="2503" y="250" width="54" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_Start_CreateRequisition_di" bpmnElement="Flow_Start_CreateRequisition">
@@ -345,6 +345,23 @@
         <di:waypoint x="875" y="211" />
         <di:waypoint x="878" y="211" />
         <di:waypoint x="878" y="126" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DetermineType_Classify_di" bpmnElement="Flow_DetermineType_Classify">
+        <di:waypoint x="924" y="566" />
+        <di:waypoint x="1030" y="566" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Classify_Gateway_di" bpmnElement="Flow_Classify_Gateway">
+        <di:waypoint x="1130" y="566" />
+        <di:waypoint x="1250" y="566" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Method_DirectPurchase_di" bpmnElement="Flow_Method_DirectPurchase">
+        <di:waypoint x="1270" y="586" />
+        <di:waypoint x="1270" y="673" />
+        <di:waypoint x="1350" y="673" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Method_Quotations_di" bpmnElement="Flow_Method_Quotations">
+        <di:waypoint x="1295" y="561" />
+        <di:waypoint x="1350" y="561" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Method_RFP_di" bpmnElement="Flow_Method_RFP">
         <di:waypoint x="1270" y="536" />
@@ -410,23 +427,6 @@
       <bpmndi:BPMNEdge id="Flow_Invoice_Complete_di" bpmnElement="Flow_Invoice_Complete">
         <di:waypoint x="2370" y="225" />
         <di:waypoint x="2512" y="225" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_DetermineType_Classify_di" bpmnElement="Flow_DetermineType_Classify">
-        <di:waypoint x="924" y="566" />
-        <di:waypoint x="1030" y="566" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Classify_Gateway_di" bpmnElement="Flow_Classify_Gateway">
-        <di:waypoint x="1130" y="566" />
-        <di:waypoint x="1250" y="566" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Method_DirectPurchase_di" bpmnElement="Flow_Method_DirectPurchase">
-        <di:waypoint x="1270" y="586" />
-        <di:waypoint x="1270" y="673" />
-        <di:waypoint x="1350" y="673" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Method_Quotations_di" bpmnElement="Flow_Method_Quotations">
-        <di:waypoint x="1295" y="561" />
-        <di:waypoint x="1350" y="561" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

@@ -4,62 +4,6 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 
--- ============================================
--- TABLE DES DÉPARTEMENTS
--- ============================================
-CREATE TABLE IF NOT EXISTS departments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    manager_id UUID REFERENCES users(id),
-    is_active BOOLEAN DEFAULT true,
-    created_by UUID REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================
--- TABLE DES PROJETS
--- ============================================
-CREATE TABLE IF NOT EXISTS projects (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL,
-    name VARCHAR(200) NOT NULL,
-    description TEXT,
-    project_manager_id UUID REFERENCES users(id),
-    status VARCHAR(50) DEFAULT 'ACTIVE',
-    start_date DATE,
-    end_date DATE,
-    is_active BOOLEAN DEFAULT true,
-    created_by UUID REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================
--- TABLE DES MEMBRES DE PROJET
--- ============================================
-CREATE TABLE IF NOT EXISTS project_members (
-    id SERIAL PRIMARY KEY,
-    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id),
-    role VARCHAR(50),
-    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    assigned_by UUID REFERENCES users(id),
-    UNIQUE(project_id, user_id)
-);
-
--- ============================================
--- INDEXES
--- ============================================
-CREATE INDEX IF NOT EXISTS idx_departments_code ON departments(code);
-CREATE INDEX IF NOT EXISTS idx_departments_manager ON departments(manager_id);
-CREATE INDEX IF NOT EXISTS idx_projects_code ON projects(code);
-CREATE INDEX IF NOT EXISTS idx_projects_department ON projects(department_id);
-CREATE INDEX IF NOT EXISTS idx_projects_manager ON projects(project_manager_id);
-CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id);
-CREATE INDEX IF NOT EXISTS idx_project_members_project ON project_members(project_id);
 
 -- ============================================
 -- 1. TABLE DES UTILISATEURS
@@ -121,6 +65,62 @@ CREATE TABLE IF NOT EXISTS profile_permissions (
 );
 
 -- ============================================
+-- TABLE DES DÉPARTEMENTS
+-- ============================================
+CREATE TABLE IF NOT EXISTS departments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(20) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    manager_id UUID REFERENCES users(id),
+    is_active BOOLEAN DEFAULT true,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
+-- TABLE DES PROJETS
+-- ============================================
+CREATE TABLE IF NOT EXISTS projects (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(20) UNIQUE NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    project_manager_id UUID REFERENCES users(id),
+    status VARCHAR(50) DEFAULT 'ACTIVE',
+    start_date DATE,
+    end_date DATE,
+    is_active BOOLEAN DEFAULT true,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
+-- TABLE DES MEMBRES DE PROJET
+-- ============================================
+CREATE TABLE IF NOT EXISTS project_members (
+    id SERIAL PRIMARY KEY,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id),
+    role VARCHAR(50),
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    assigned_by UUID REFERENCES users(id),
+    UNIQUE(project_id, user_id)
+);
+
+-- ============================================
+-- INDEXES
+-- ============================================
+CREATE INDEX IF NOT EXISTS idx_departments_code ON departments(code);
+CREATE INDEX IF NOT EXISTS idx_departments_manager ON departments(manager_id);
+CREATE INDEX IF NOT EXISTS idx_projects_code ON projects(code);
+CREATE INDEX IF NOT EXISTS idx_projects_manager ON projects(project_manager_id);
+CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_project_members_project ON project_members(project_id);
+
+-- ============================================
 -- 6. TABLE DES RÉQUISITIONS
 -- ============================================
 CREATE TABLE IF NOT EXISTS requisitions (
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS requisitions (
     department VARCHAR(100),
     project_code VARCHAR(50),
     budget_line VARCHAR(100),
-    estimated_amount DECIMAL(15,2),
+    estimated_amount DECIMAL(19,4),
     currency VARCHAR(3) DEFAULT 'USD',
     requester_id UUID REFERENCES users(id),
     status VARCHAR(50) DEFAULT 'DRAFT',
@@ -154,10 +154,10 @@ CREATE TABLE IF NOT EXISTS requisition_items (
     id SERIAL PRIMARY KEY,
     requisition_id UUID REFERENCES requisitions(id) ON DELETE CASCADE,
     item_description TEXT NOT NULL,
-    quantity  DECIMAL(15,2) NOT NULL,
-    frequency  frequency  DECIMAL(15,2) NOT NULL default 1,
-    unit_price DECIMAL(15,2),
-    total_amount DECIMAL(15,2),
+    quantity  DECIMAL(19,4) NOT NULL,
+    frequency  DECIMAL(19,4) NOT NULL default 1,
+    unit_price DECIMAL(19,4),
+    total_amount DECIMAL(19,4),
     budget_line_code VARCHAR(50),
     budget_line_id UUID,
     specifications TEXT,
@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS suppliers (
     bank_iban VARCHAR(100),
     bank_swift VARCHAR(50),
     notes TEXT,
-    total_spent DECIMAL(15,2) DEFAULT 0,
+    total_spent DECIMAL(19,4) DEFAULT 0,
     order_count INTEGER DEFAULT 0,
     last_evaluation_date DATE,
     evaluation_comments TEXT,
@@ -209,7 +209,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     order_date DATE,
     delivery_date DATE,
     shipping_address TEXT,
-    total_amount DECIMAL(15,2),
+    total_amount DECIMAL(19,4),
     currency VARCHAR(3) DEFAULT 'USD',
     status VARCHAR(50) DEFAULT 'DRAFT',
     approved_by UUID REFERENCES users(id),
@@ -231,8 +231,8 @@ CREATE TABLE IF NOT EXISTS purchase_order_items (
     purchase_order_id INTEGER REFERENCES purchase_orders(id) ON DELETE CASCADE,
     item_description TEXT NOT NULL,
     quantity INTEGER NOT NULL,
-    unit_price DECIMAL(15,2),
-    total_amount DECIMAL(15,2),
+    unit_price DECIMAL(19,4),
+    total_amount DECIMAL(19,4),
     specifications TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -248,9 +248,9 @@ CREATE TABLE IF NOT EXISTS budget_allocations (
     sub_project VARCHAR(100),
     function_code VARCHAR(50),
     description TEXT,
-    allocated_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
-    utilized_amount DECIMAL(15,2) DEFAULT 0,
-    remaining_amount DECIMAL(15,2) GENERATED ALWAYS AS (allocated_amount - utilized_amount) STORED,
+    allocated_amount DECIMAL(19,4) NOT NULL DEFAULT 0,
+    utilized_amount DECIMAL(19,4) DEFAULT 0,
+    remaining_amount DECIMAL(19,4) GENERATED ALWAYS AS (allocated_amount - utilized_amount) STORED,
     project_id UUID REFERENCES projects(id),
     is_active BOOLEAN DEFAULT true,
     created_by UUID REFERENCES users(id),
@@ -261,6 +261,21 @@ CREATE TABLE IF NOT EXISTS budget_allocations (
 
 
 -- ============================================
+-- TABLE DES DÉPENSES
+-- ============================================
+CREATE TABLE IF NOT EXISTS budget_expenses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    budget_id UUID REFERENCES budget_allocations(id) ON DELETE CASCADE,
+    requisition_id UUID REFERENCES requisitions(id),
+    purchase_order_id INTEGER REFERENCES purchase_orders(id),
+    amount DECIMAL(19,4) NOT NULL,
+    description TEXT,
+    expense_date DATE DEFAULT CURRENT_DATE,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
 -- INDEXES
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_budget_allocations_entity ON budget_allocations(entity_code);
@@ -269,20 +284,7 @@ CREATE INDEX IF NOT EXISTS idx_budget_allocations_funding ON budget_allocations(
 CREATE INDEX IF NOT EXISTS idx_budget_expenses_budget ON budget_expenses(budget_id);
 CREATE INDEX IF NOT EXISTS idx_budget_expenses_requisition ON budget_expenses(requisition_id);
 
--- ============================================
--- TABLE DES DÉPENSES
--- ============================================
-CREATE TABLE IF NOT EXISTS budget_expenses (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    budget_id UUID REFERENCES budget_allocations(id) ON DELETE CASCADE,
-    requisition_id UUID REFERENCES requisitions(id),
-    purchase_order_id INTEGER REFERENCES purchase_orders(id),
-    amount DECIMAL(15,2) NOT NULL,
-    description TEXT,
-    expense_date DATE DEFAULT CURRENT_DATE,
-    created_by UUID REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+
 -- ============================================
 -- 12. TABLE DES JUSTIFICATIONS SOURCE UNIQUE
 -- ============================================
@@ -464,10 +466,6 @@ CREATE INDEX IF NOT EXISTS idx_supplier_status ON suppliers(status);
 CREATE INDEX IF NOT EXISTS idx_supplier_prequalified ON suppliers(prequalified);
 CREATE INDEX IF NOT EXISTS idx_supplier_code ON suppliers(supplier_code);
 CREATE INDEX IF NOT EXISTS idx_supplier_rating ON suppliers(rating);
-
-CREATE INDEX IF NOT EXISTS idx_budget_allocations_line ON budget_allocations(budget_line);
-CREATE INDEX IF NOT EXISTS idx_budget_allocations_dept ON budget_allocations(department);
-CREATE INDEX IF NOT EXISTS idx_budget_allocations_year ON budget_allocations(fiscal_year);
 
 CREATE INDEX IF NOT EXISTS idx_workflow_process ON workflow_history(process_instance_id);
 CREATE INDEX IF NOT EXISTS idx_workflow_entity ON workflow_history(entity_type, entity_id);

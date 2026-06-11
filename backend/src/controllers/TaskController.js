@@ -1,4 +1,5 @@
 // backend/src/controllers/TaskController.js
+const UserModel = require('../models/UserModel');
 const camundaService = require('../services/CamundaService');
 
 /**
@@ -8,7 +9,28 @@ const camundaService = require('../services/CamundaService');
 async function getUserTasks(req, res) {
     try {
         const { assignee, processInstanceId } = req.query;
+        const currentUserId = req.user.id;
+        const user = await UserModel.findById(currentUserId);
+        const profiles = user.profiles.map(p => p.id.replace('prof_', '')) || [];
+        console.log(profiles);
 
+        let tasks = [];
+        if (processInstanceId) {
+            tasks = await camundaService.getUserTasks(null, processInstanceId);
+        } else {
+            tasks = await camundaService.getUserTasks(null);
+        }
+
+        let userTasks = [];
+        if(profiles.includes('admin')){
+            userTasks = tasks;
+        }
+        else {
+         
+            // assigne taskes 
+            const assigneeTasks = (tasks || []).filter(t => (t.assignee == currentUserId) || profiles.includes( t.candidateGroup));
+            userTasks.push(...assigneeTasks);
+        } 
         if (!assignee) {
             return res.status(400).json({
                 success: false,
@@ -16,19 +38,12 @@ async function getUserTasks(req, res) {
             });
         }
 
-        let tasks = [];
-        if (processInstanceId) {
-            tasks = await camundaService.getUserTasks(assignee, processInstanceId);
-        } else {
-            tasks = await camundaService.getUserTasks(assignee);
-        }
-
         let enrichedTasks = [];
         // Enrichir les tâches avec des informations supplémentaires
-        if (tasks) {
+        if (userTasks) {
 
             enrichedTasks = await Promise.all(
-                tasks.map(async (task) => {
+                userTasks.map(async (task) => {
                     let variables = null;
 
                     try {

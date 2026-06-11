@@ -15,10 +15,12 @@ import {
   Calendar,
   AlertCircle,
   Eye,
-  FileText
+  FileText,
+  UserPlus
 } from 'lucide-react';
 import { requisitionService } from '../../services/requisitionService';
 import { taskService } from '../../services/taskService';
+import { useAuth } from '../../hooks/useAuth';
 import StatusBadge from '../Common/StatusBadge';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import Modal from '../Common/Modal';
@@ -27,12 +29,16 @@ import toast from 'react-hot-toast';
 export default function RequisitionTasks() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userEmail = user?.email;
+  
   const [tasks, setTasks] = useState([]);
   const [requisition, setRequisition] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [claimingTaskId, setClaimingTaskId] = useState(null);
   
   // États pour le formulaire
   const [formData, setFormData] = useState({
@@ -77,6 +83,20 @@ export default function RequisitionTasks() {
       toast.error('Erreur lors du chargement des données');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleClaimTask = async (taskId) => {
+    setClaimingTaskId(taskId);
+    try {
+      await taskService.claimTask(taskId, userEmail);
+      toast.success('Tâche prise en charge avec succès');
+      await loadData(); // Recharger les tâches
+    } catch (error) {
+      console.error('Error claiming task:', error);
+      toast.error('Erreur lors de la prise en charge');
+    } finally {
+      setClaimingTaskId(null);
     }
   };
 
@@ -238,38 +258,80 @@ export default function RequisitionTasks() {
             </h2>
           </div>
           <div className="divide-y divide-gray-200">
-            {pendingTasks.map((task) => (
-              <div key={task.id} className={`p-6 hover:bg-gray-50 transition-colors ${getTaskColor(task.name)}`}>
-                <div className="flex justify-between items-start">
-                  <div className="flex gap-3 flex-1">
-                    {getTaskIcon(getTaskName(task))}
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-800">{getTaskName(task)}</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 mt-2 text-sm">
-                        <div className="text-gray-500">Réquisition:</div>
-                        <div className="font-medium text-blue-600">{task.variables?.requisitionNumber || '-'}</div>
-                        <div className="text-gray-500">Montant:</div>
-                        <div>{formatCurrency(task.variables?.estimatedAmount)}</div>
-                        <div className="text-gray-500">Projet:</div>
-                        <div>{task.variables?.projectName || task.variables?.projectCode || '-'}</div>
-                        <div className="text-gray-500">Créée le:</div>
-                        <div>{formatDate(task.created)}</div>
+            {pendingTasks.map((task) => {
+              const isAssignedToMe = task.assignee === userEmail;
+              const isUnassigned = !task.assignee;
+              const canClaim = isUnassigned;
+              const canProcess = isAssignedToMe;
+              
+              return (
+                <div key={task.id} className={`p-6 hover:bg-gray-50 transition-colors ${getTaskColor(task.name)}`}>
+                  <div className="flex justify-between items-start">
+                    <div className="flex gap-3 flex-1">
+                      {getTaskIcon(getTaskName(task))}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-800">{getTaskName(task)}</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 mt-2 text-sm">
+                          <div className="text-gray-500">Réquisition:</div>
+                          <div className="font-medium text-blue-600">{task.variables?.requisitionNumber || '-'}</div>
+                          <div className="text-gray-500">Montant:</div>
+                          <div>{formatCurrency(task.variables?.estimatedAmount)}</div>
+                          <div className="text-gray-500">Projet:</div>
+                          <div>{task.variables?.projectName || task.variables?.projectCode || '-'}</div>
+                          <div className="text-gray-500">Créée le:</div>
+                          <div>{formatDate(task.created)}</div>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-2">
+                          {isAssignedToMe && (
+                            <span className="inline-flex items-center gap-1 text-green-600">
+                              <CheckCircle size={14} />
+                              Assignée à vous
+                            </span>
+                          )}
+                          {isUnassigned && (
+                            <span className="inline-flex items-center gap-1 text-yellow-600">
+                              <Clock size={14} />
+                              Non assignée
+                            </span>
+                          )}
+                          {task.assignee && !isAssignedToMe && (
+                            <span className="inline-flex items-center gap-1 text-gray-500">
+                              <User size={14} />
+                              Assignée à: {task.assignee}
+                            </span>
+                          )}
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-500 mt-2">
-                        Assignée à: {task.assignee || 'Non assignée'}
-                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {canClaim && (
+                        <button
+                          onClick={() => handleClaimTask(task.id)}
+                          disabled={claimingTaskId === task.id}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {claimingTaskId === task.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          ) : (
+                            <UserPlus size={16} />
+                          )}
+                          {claimingTaskId === task.id ? 'Prise en charge...' : 'Prendre en charge'}
+                        </button>
+                      )}
+                      {canProcess && (
+                        <button
+                          onClick={() => handleCompleteTask(task)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                        >
+                          <Send size={16} />
+                          Traiter
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleCompleteTask(task)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-                  >
-                    <Send size={16} />
-                    Traiter
-                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -408,7 +470,7 @@ export default function RequisitionTasks() {
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Méthode d'achat *
+                    Methode d'achat *
                   </label>
                   <div className="space-y-2">
                     {[

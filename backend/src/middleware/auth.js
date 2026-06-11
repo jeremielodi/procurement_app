@@ -4,8 +4,16 @@ const userModel = require('../models/UserModel');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+const authorizationPaths = [
+  'auth/login',
+  'auth/logout'
+];
 async function authenticate(req, res, next) {
   try {
+    if(authorizationPaths.includes(req.path)) {
+      next();
+      return;
+    }
     const authHeader = req.headers.Authorization || req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

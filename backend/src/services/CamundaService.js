@@ -257,8 +257,8 @@ async function completeTask(taskId, variables = {}) {
  */
 async function assignTask(taskId, userId) {
   try {
-    const response = await client.post(`/task/${taskId}/assignee`, {
-      userId
+    const response = await client.post(`/tasks/${taskId}/claim`, {
+      assignee: userId
     });
 
     return { success: true };

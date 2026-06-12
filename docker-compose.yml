@@ -43,7 +43,7 @@ services:
       DB_USER: ${DB_USER:-camunda}
       DB_PASSWORD: ${DB_PASSWORD:-camunda}
       # Camunda
-      CAMUNDA_URL: http://camunda:8080/engine-rest
+      CAMUNDA_REST_URL: http://camunda:8080/engine-rest
       CAMUNDA_USERNAME: ${CAMUNDA_USERNAME:-demo}
       CAMUNDA_PASSWORD: ${CAMUNDA_PASSWORD:-demo}
       # Server

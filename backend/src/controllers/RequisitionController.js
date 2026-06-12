@@ -193,7 +193,7 @@ async create(req, res) {
 
       // Démarrer le processus Camunda avec TOUTES les informations
       const processResult = await camundaService.startProcess(
-        'ProcurementProcess',
+        process.env.PROCUREMENT_BPMN_PROCESS,
         {
           // === INFORMATIONS GÉNÉRALES ===
           requisitionId: result.id,

@@ -6,12 +6,12 @@ const notificationService = require('../services/NotificationService');
 const camundaService = require('../services/CamundaService');
  const db = require('../config/database');
 
-const CAMUNDA_URL = process.env.CAMUNDA_URL || 'http://localhost:8080/engine-rest';
+const CAMUNDA_REST_URL = process.env.CAMUNDA_REST_URL || 'http://localhost:8080/engine-rest';
 const USERNAME = process.env.CAMUNDA_USERNAME;
 const PASSWORD = process.env.CAMUNDA_PASSWORD;
 
 const camunda = axios.create({
-  baseURL: CAMUNDA_URL,
+  baseURL: CAMUNDA_REST_URL,
   auth: { username: USERNAME, password: PASSWORD },
   timeout: 30000
 });
@@ -1066,7 +1066,7 @@ async function startWorkers() {
   console.log('========================================');
   console.log('🚀 Starting Camunda Workers');
   console.log('========================================');
-  console.log(`📡 Camunda URL: ${CAMUNDA_URL}`);
+  console.log(`📡 Camunda URL: ${CAMUNDA_REST_URL}`);
   console.log(`🔐 Username: ${USERNAME ? '✓ set' : '✗ not set'}`);
   console.log(`🆔 Worker ID: ${WORKER_ID}`);
   console.log(`📋 Topics subscribed:`);

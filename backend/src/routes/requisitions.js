@@ -52,7 +52,7 @@ module.exports = (pool, io) => {
       await client.query('COMMIT');
       
       // Start Camunda workflow
-      const camundaRestUrl = `${process.env.CAMUNDA_URL}/process-definition/key/ProcurementProcess/start`;
+      const camundaRestUrl = `${process.env.CAMUNDA_REST_URL}/process-definition/key/${process.env.PROCUREMENT_BPMN_PROCESS}/start`;
       
       const workflowStart = await fetch(camundaRestUrl, {
         method: 'POST',

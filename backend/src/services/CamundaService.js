@@ -3,7 +3,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 
 // Configuration
-let baseUrl = process.env.CAMUNDA_URL || 'http://localhost:8080/engine-rest';
+let baseUrl = process.env.CAMUNDA_REST_URL || 'http://localhost:8080/engine-rest';
 let bearerToken = process.env.CAMUNDA_BEARER_TOKEN || null;
 let username = process.env.CAMUNDA_USERNAME || null;
 let password = process.env.CAMUNDA_PASSWORD || null;

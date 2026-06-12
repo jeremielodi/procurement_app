@@ -7,6 +7,7 @@ const socketIo = require('socket.io');
 const routes = require('./src/routes');
 const db = require('./src/config/database');
 const { startWorkers } = require('./src/workers');
+const { startTaskListener } = require('./src/workers/task_listner')
 const databaseInitializer = require('./src/utils/initDatabase');
 const path = require('path');
 const helmet = require('helmet');
@@ -160,6 +161,9 @@ async function startServer() {
     // Démarrer les workers Camunda
     startWorkers();
     
+    // task Listner
+    startTaskListener();
+
     // Démarrer le serveur
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {

@@ -162,7 +162,7 @@ async function startServer() {
     startWorkers();
     
     // task Listner
-    startTaskListener();
+    startTaskListener(io);
 
     // Démarrer le serveur
     const PORT = process.env.PORT || 5000;

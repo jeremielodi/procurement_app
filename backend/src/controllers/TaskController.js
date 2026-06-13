@@ -12,8 +12,7 @@ async function getUserTasks(req, res) {
         const currentUserId = req.user.id;
         const user = await UserModel.findById(currentUserId);
         const profiles = user.profiles.map(p => p.id.replace('prof_', '')) || [];
-        console.log(profiles);
-
+        
         let tasks = [];
         if (processInstanceId) {
             tasks = await camundaService.getUserTasks(null, processInstanceId);

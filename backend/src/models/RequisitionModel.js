@@ -326,6 +326,13 @@ class RequisitionModel {
       params.push(filters.department);
       paramCount++;
     }
+
+     if (filters.processInstanceId && filters.processInstanceId != 'all') {
+      sql += ` AND r.process_instance_id = $${paramCount}`;
+      params.push(filters.processInstanceId);
+      paramCount++;
+    }
+    
     
     if (filters.fromDate) {
       sql += ` AND r.created_at >= $${paramCount}`;

@@ -264,7 +264,11 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       {/* Logo */}
       <div className="flex items-center justify-between p-4 border-b">
         {isOpen && (
-          <span className="text-xl font-bold text-blue-600">Procurement App</span>
+          <>
+            <img src='/images/logo_wwf1.png' style={{height:30}}/>
+            <span className="text-xl font-bold text-blue-600">Procurement App</span>
+          </>
+         
         )}
         <button
           onClick={() => setIsOpen(!isOpen)}

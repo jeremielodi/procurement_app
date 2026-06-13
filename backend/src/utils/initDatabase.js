@@ -1,13 +1,21 @@
 // backend/src/utils/initDatabase.js
+require('dotenv').config(); // Load env first
+
 const db = require('../config/database');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
+const debug = require('debug');
+const logInfo = debug('init-db:info');
+const logWarn = debug('init-db:warn');
+const logError = debug('init-db:error');
+const logSuccess = debug('init-db:success');
+const logDebug = debug('init-db:debug');
 
 class DatabaseInitializer {
   async init() {
-    console.log('\n========================================');
-    console.log('🔧 Database initialization');
-    console.log('========================================');
+    logInfo('========================================');
+    logInfo('🔧 Database initialization');
+    logInfo('========================================');
     
     await this.ensureTablesExist();
     await this.createDefaultProfiles();
@@ -15,14 +23,11 @@ class DatabaseInitializer {
     await this.assignPermissionsToAdminProfile();
     await this.createSuperUser();
     
-    console.log('========================================\n');
+    logInfo('========================================');
   }
 
-  /**
-   * Vérifie et crée les tables si elles n'existent pas
-   */
   async ensureTablesExist() {
-    console.log('📝 Checking database tables...');
+    logInfo('📝 Checking database tables...');
     
     const tables = [
       'users', 'profiles', 'user_profiles', 'permissions', 'profile_permissions',
@@ -32,16 +37,13 @@ class DatabaseInitializer {
     for (const table of tables) {
       const exists = await this.tableExists(table);
       if (!exists) {
-        console.log(`⚠️ Table ${table} does not exist! Please run the SQL schema first.`);
+        logWarn('⚠️ Table %s does not exist! Please run the SQL schema first.', table);
       } else {
-        console.log(`✅ Table ${table} exists`);
+        logSuccess('✅ Table %s exists', table);
       }
     }
   }
 
-  /**
-   * Vérifie si une table existe
-   */
   async tableExists(table) {
     const result = await db.one(
       `SELECT EXISTS (
@@ -53,9 +55,6 @@ class DatabaseInitializer {
     return result.exists;
   }
 
-  /**
-   * Vérifie si une colonne existe dans une table
-   */
   async columnExists(table, column) {
     const result = await db.one(
       `SELECT EXISTS (
@@ -67,33 +66,21 @@ class DatabaseInitializer {
     return result.exists;
   }
 
-  /**
-   * Vérifie si une table est vide
-   */
   async isTableEmpty(table) {
     const result = await db.one(`SELECT COUNT(*) as count FROM ${table}`);
     return parseInt(result.count) === 0;
   }
 
-  /**
-   * Récupère tous les IDs existants dans une table
-   */
   async getExistingIds(table, idColumn = 'id') {
     const rows = await db.select(`SELECT ${idColumn} FROM ${table}`);
     return new Set(rows.map(row => row[idColumn]));
   }
 
-  /**
-   * Récupère tous les noms existants dans une table
-   */
   async getExistingNames(table, nameColumn = 'name') {
     const rows = await db.select(`SELECT ${nameColumn} FROM ${table}`);
     return new Set(rows.map(row => row[nameColumn]));
   }
 
-  /**
-   * Insertion en masse avec vérification des doublons
-   */
   async batchInsert(table, records, idField = 'id', nameField = 'name') {
     if (records.length === 0) return { inserted: 0, skipped: 0 };
     
@@ -123,25 +110,24 @@ class DatabaseInitializer {
       existingNames.add(record[nameField]);
     }
     
+    logDebug('Batch insert into %s: %d inserted, %d skipped', table, inserted, skipped);
     return { inserted, skipped };
   }
 
   async createDefaultProfiles() {
-    console.log('📝 Creating default profiles...');
+    logInfo('📝 Creating default profiles...');
     
     const tableExists = await this.tableExists('profiles');
     if (!tableExists) {
-      console.log('❌ Profiles table does not exist, skipping...');
+      logError('❌ Profiles table does not exist, skipping...');
       return;
     }
     
     const hasId = await this.columnExists('profiles', 'id');
     const hasName = await this.columnExists('profiles', 'name');
-    const hasDescription = await this.columnExists('profiles', 'description');
-    const hasCreatedAt = await this.columnExists('profiles', 'created_at');
     
     if (!hasId || !hasName) {
-      console.log('❌ Profiles table missing required columns (id, name), skipping...');
+      logError('❌ Profiles table missing required columns (id, name), skipping...');
       return;
     }
     
@@ -156,43 +142,39 @@ class DatabaseInitializer {
       { id: 'prof_store_keeper', name: 'Magasinier', description: 'Gère les stocks' }
     ];
     
+    const hasCreatedAt = await this.columnExists('profiles', 'created_at');
     if (hasCreatedAt) {
       profiles.forEach(p => p.created_at = new Date());
     }
     
     const isEmpty = await this.isTableEmpty('profiles');
-    
     if (!isEmpty) {
-      console.log('✅ Profiles table already has data, skipping...');
+      logInfo('✅ Profiles table already has data, skipping...');
       return;
     }
     
     const result = await this.batchInsert('profiles', profiles, 'id', 'name');
-    console.log(`✅ Profiles: ${result.inserted} created, ${result.skipped} skipped`);
+    logSuccess('✅ Profiles: %d created, %d skipped', result.inserted, result.skipped);
   }
 
   async createDefaultPermissions() {
-    console.log('📝 Creating default permissions...');
+    logInfo('📝 Creating default permissions...');
     
     const tableExists = await this.tableExists('permissions');
     if (!tableExists) {
-      console.log('❌ Permissions table does not exist, skipping...');
+      logError('❌ Permissions table does not exist, skipping...');
       return;
     }
     
     const hasId = await this.columnExists('permissions', 'id');
     const hasName = await this.columnExists('permissions', 'name');
-    const hasResource = await this.columnExists('permissions', 'resource');
-    const hasAction = await this.columnExists('permissions', 'action');
-    const hasCreatedAt = await this.columnExists('permissions', 'created_at');
     
     if (!hasId || !hasName) {
-      console.log('❌ Permissions table missing required columns, skipping...');
+      logError('❌ Permissions table missing required columns, skipping...');
       return;
     }
     
     const permissions = [
-      // Permissions existantes
       { id: 'perm_view_requisitions', name: 'VIEW_REQUISITIONS', description: 'Voir les réquisitions', resource: 'requisition', action: 'read' },
       { id: 'perm_create_requisitions', name: 'CREATE_REQUISITIONS', description: 'Créer des réquisitions', resource: 'requisition', action: 'create' },
       { id: 'perm_edit_requisitions', name: 'EDIT_REQUISITIONS', description: 'Modifier les réquisitions', resource: 'requisition', action: 'update' },
@@ -206,51 +188,48 @@ class DatabaseInitializer {
       { id: 'perm_view_dashboard', name: 'VIEW_DASHBOARD', description: 'Voir le tableau de bord', resource: 'dashboard', action: 'read' },
       { id: 'perm_manage_users', name: 'MANAGE_USERS', description: 'Gérer les utilisateurs', resource: 'user', action: 'write' },
       { id: 'perm_manage_workflow', name: 'MANAGE_WORKFLOW', description: 'Gérer les workflows', resource: 'workflow', action: 'write' },
-      // Nouvelles permissions pour les départements et projets
       { id: 'perm_view_departments', name: 'VIEW_DEPARTMENTS', description: 'Voir les départements', resource: 'department', action: 'read' },
       { id: 'perm_manage_departments', name: 'MANAGE_DEPARTMENTS', description: 'Gérer les départements', resource: 'department', action: 'write' },
       { id: 'perm_view_projects', name: 'VIEW_PROJECTS', description: 'Voir les projets', resource: 'project', action: 'read' },
       { id: 'perm_manage_projects', name: 'MANAGE_PROJECTS', description: 'Gérer les projets', resource: 'project', action: 'write' }
     ];
     
+    const hasCreatedAt = await this.columnExists('permissions', 'created_at');
     if (hasCreatedAt) {
       permissions.forEach(p => p.created_at = new Date());
     }
     
-    if (!hasResource) {
-      permissions.forEach(p => delete p.resource);
-    }
-    if (!hasAction) {
-      permissions.forEach(p => delete p.action);
-    }
+    const hasResource = await this.columnExists('permissions', 'resource');
+    const hasAction = await this.columnExists('permissions', 'action');
+    if (!hasResource) permissions.forEach(p => delete p.resource);
+    if (!hasAction) permissions.forEach(p => delete p.action);
     
     const isEmpty = await this.isTableEmpty('permissions');
-    
     if (!isEmpty) {
-      console.log('✅ Permissions table already has data, skipping...');
+      logInfo('✅ Permissions table already has data, skipping...');
       return;
     }
     
     const result = await this.batchInsert('permissions', permissions, 'id', 'name');
-    console.log(`✅ Permissions: ${result.inserted} created, ${result.skipped} skipped`);
+    logSuccess('✅ Permissions: %d created, %d skipped', result.inserted, result.skipped);
   }
 
   async assignPermissionsToAdminProfile() {
-    console.log('📝 Assigning permissions to admin profile...');
+    logInfo('📝 Assigning permissions to admin profile...');
     
     const profilesExist = await this.tableExists('profiles');
     const permissionsExist = await this.tableExists('permissions');
     const profilePermissionsExist = await this.tableExists('profile_permissions');
     
     if (!profilesExist || !permissionsExist || !profilePermissionsExist) {
-      console.log('❌ Required tables missing, skipping permission assignment');
+      logError('❌ Required tables missing, skipping permission assignment');
       return;
     }
     
     const adminProfile = await db.one("SELECT id FROM profiles WHERE name = 'Administrateur'");
     
     if (!adminProfile) {
-      console.log('⚠️ Admin profile not found, skipping');
+      logWarn('⚠️ Admin profile not found, skipping');
       return;
     }
     
@@ -260,14 +239,14 @@ class DatabaseInitializer {
     );
     
     if (parseInt(existingAssignments.count) > 0) {
-      console.log('✅ Permissions already assigned to admin profile, skipping...');
+      logInfo('✅ Permissions already assigned to admin profile, skipping...');
       return;
     }
     
     const allPermissions = await db.select("SELECT id FROM permissions");
     
     if (allPermissions.length === 0) {
-      console.log('⚠️ No permissions found, skipping');
+      logWarn('⚠️ No permissions found, skipping');
       return;
     }
     
@@ -280,29 +259,27 @@ class DatabaseInitializer {
       inserted++;
     }
     
-    console.log(`✅ Admin profile: ${inserted} permissions assigned`);
+    logSuccess('✅ Admin profile: %d permissions assigned', inserted);
   }
 
   async createSuperUser() {
-    console.log('📝 Creating superuser...');
+    logInfo('📝 Creating superuser...');
     
     const usersExist = await this.tableExists('users');
     const profilesExist = await this.tableExists('profiles');
     const userProfilesExist = await this.tableExists('user_profiles');
     
     if (!usersExist) {
-      console.log('❌ Users table does not exist, skipping superuser creation');
+      logError('❌ Users table does not exist, skipping superuser creation');
       return;
     }
     
     const userCount = await db.one('SELECT COUNT(*) as count FROM users');
     
     if (parseInt(userCount.count) > 0) {
-      console.log(`✅ ${userCount.count} user(s) already exist, skipping superuser creation`);
+      logInfo('✅ %d user(s) already exist, skipping superuser creation', userCount.count);
       return;
     }
-    
-    console.log('📝 Creating superuser...');
     
     const userId = uuidv4();
     const defaultPassword = 'Admin123!';
@@ -346,10 +323,10 @@ class DatabaseInitializer {
       }
     }
     
-    console.log('✅ Superuser created successfully!');
-    console.log('📧 Email: admin@procurement.com');
-    console.log('🔑 Password: Admin123!');
-    console.log('⚠️ Please change this password after first login!');
+    logSuccess('✅ Superuser created successfully!');
+    logInfo('📧 Email: admin@procurement.com');
+    logWarn('🔑 Password: %s', defaultPassword);
+    logWarn('⚠️ Please change this password after first login!');
   }
 }
 

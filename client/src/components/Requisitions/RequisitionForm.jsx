@@ -160,7 +160,7 @@ export default function RequisitionForm() {
         estimatedAmount: totalAmount,
         currency: 'USD',
         priority: data.priority,
-        justification: data.justification,
+        justification: '',
         items: itemsWithBudget
       })
     } catch (error) {
@@ -342,17 +342,7 @@ export default function RequisitionForm() {
             />
           </div>
 
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Justification
-            </label>
-            <textarea
-              {...register('justification')}
-              rows="2"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Justifiez cette demande d'achat..."
-            />
-          </div>
+        
         </div>
 
         {/* Articles */}

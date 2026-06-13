@@ -92,6 +92,13 @@ class UserModel {
       params.push(filters.department);
       paramCount++;
     }
+
+     if (filters.profileId) {
+      sql += ` AND ( p.id =$${paramCount} OR p.id=$${paramCount+1}   )`;
+      params.push(filters.profileId);
+      params.push(`prof_${filters.profileId}`);
+      paramCount = params.length + 1;
+    }
     
     sql += ` GROUP BY u.id ORDER BY u.created_at DESC`;
     

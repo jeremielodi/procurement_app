@@ -1,10 +1,13 @@
 // backend/src/controllers/RequisitionController.js
 const requisitionModel = require('../models/RequisitionModel');
 const userModel = require('../models/UserModel');
+const departmentModel = require('../models/DepartmentModel')
 const notificationService = require('../services/NotificationService');
 const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
+const requisitionExportService = require('../services/RequisitionExportService');
+
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -108,13 +111,13 @@ class RequisitionController {
 async create(req, res) {
   try {
     const {
-      title, description, department, projectId,
+      title, description, departmentId, projectId,
       estimatedAmount, currency, priority, justification, items
     } = req.body;
 
     const userId = req.user?.id || 1;
     const io = req.io;
-
+    
     // Récupérer l'email et le username de l'utilisateur
     const userEmail = await this.getUserEmailById(userId);
     const userUsername = await this.getUserUsernameById(userId);
@@ -123,6 +126,9 @@ async create(req, res) {
     const projectDetails = await this.getProjectDetails(projectId);
     const projectCode = projectDetails?.code || null;
     const projectName = projectDetails?.name || null;
+
+    // recuperer le departement
+    const departement = await departmentModel.findById(departmentId);
 
     // Préparer les items avec toutes les informations
     const itemsWithDetails = await Promise.all(items.map(async (item) => {
@@ -158,7 +164,7 @@ async create(req, res) {
     const result = await requisitionModel.create({
       title, 
       description, 
-      department, 
+      departmentId, 
       projectId,
       projectCode,
       estimatedAmount: totalAmount, 
@@ -205,7 +211,8 @@ async create(req, res) {
           // === DÉTAILS DE LA RÉQUISITION ===
           title: title || '',
           description: description || '',
-          department: department || '',
+          departmentId: departmentId || '',
+          departementCode: departement.code,
           priority: priority || 'MEDIUM',
           justification: justification || '',
           estimatedAmount: totalAmount,
@@ -481,14 +488,15 @@ async create(req, res) {
    */
   async list(req, res) {
     try {
-      const { status, department, fromDate, toDate, page = 1, limit = 20 } = req.query;
+      const { status, departmentId, fromDate, priority, toDate, page = 1, limit = 20 } = req.query;
       const offset = (page - 1) * limit;
 
       const requisitions = await requisitionModel.findAll({
         status,
-        department,
+        departmentId,
         fromDate,
         toDate,
+        priority,
         limit: parseInt(limit),
         offset: parseInt(offset)
       });
@@ -767,6 +775,123 @@ async create(req, res) {
       });
     }
   }
+
+  /**
+ * Exporter les réquisitions en PDF avec Puppeteer
+ * GET /api/requisitions/export/pdf
+ */
+async exportPDF(req, res) {
+  try {
+    const { status, departmentId, fromDate, toDate } = req.query;
+    
+    const requisitions = await requisitionModel.findAll({
+      status,
+      departmentId,
+      fromDate,
+      toDate,
+      limit: 1000 // Limite pour performance
+    });
+    
+    const pdfBuffer = await requisitionExportService.generatePDF(
+      requisitions,
+      'Liste des réquisitions'
+    );
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=requisitions_${new Date().toISOString().split('T')[0]}.pdf`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Error exporting PDF:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+/**
+ * Exporter une réquisition spécifique en PDF
+ * GET /api/requisitions/:id/export/pdf
+ */
+
+async exportRequisitionPDF(req, res) {
+  try {
+    const { id } = req.params;
+
+    const requisition = await requisitionModel.findById(id);
+
+    if (!requisition) {
+      return res.status(404).json({
+        success: false,
+        message: 'Réquisition non trouvée'
+      });
+    }
+
+    const pdfBuffer = await requisitionExportService.generateRequisitionDetailPDF(requisition);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Length': pdfBuffer.length,
+      'Content-Disposition': `inline; filename=requisition_${requisition.requisition_number}.pdf`
+    });
+
+    return res.end(pdfBuffer);
+
+  } catch (error) {
+    console.error('Error exporting requisition PDF:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+}
+
+/**
+ * Exporter les réquisitions en Excel
+ * GET /api/requisitions/export/excel
+ */
+async exportExcel(req, res) {
+  try {
+    const { status, departmentId, fromDate, toDate } = req.query;
+    
+    const requisitions = await requisitionModel.findAll({
+      status,
+      departmentId,
+      fromDate,
+      toDate,
+      limit: 10000
+    });
+    
+    const excelBuffer = await requisitionExportService.exportToExcel(requisitions);
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=requisitions_${new Date().toISOString().split('T')[0]}.xlsx`);
+    res.send(excelBuffer);
+  } catch (error) {
+    console.error('Error exporting Excel:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+/**
+ * Tester la génération de PDF
+ * GET /api/requisitions/test-pdf
+ */
+async testPDF(req, res) {
+  try {
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument();
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=test.pdf');
+    
+    doc.pipe(res);
+    doc.fontSize(25).text('Test PDF', 100, 100);
+    doc.fontSize(14).text('Ceci est un test de génération de PDF', 100, 150);
+    doc.end();
+  } catch (error) {
+    console.error('Test PDF error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
 }
 
 module.exports = new RequisitionController();

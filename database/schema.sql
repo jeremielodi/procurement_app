@@ -128,8 +128,8 @@ CREATE TABLE IF NOT EXISTS requisitions (
     requisition_number VARCHAR(20) UNIQUE NOT NULL,
     title VARCHAR(200) NOT NULL,
     description TEXT,
-    department VARCHAR(100),
-    project_code VARCHAR(50),
+    department_id UUID,
+    project_id UUID NOT NULL,
     budget_line VARCHAR(100),
     estimated_amount DECIMAL(19,4),
     currency VARCHAR(3) DEFAULT 'USD',
@@ -452,7 +452,8 @@ CREATE INDEX IF NOT EXISTS idx_requisitions_status ON requisitions(status);
 CREATE INDEX IF NOT EXISTS idx_requisitions_requester ON requisitions(requester_id);
 CREATE INDEX IF NOT EXISTS idx_requisitions_process ON requisitions(process_instance_id);
 CREATE INDEX IF NOT EXISTS idx_requisitions_created ON requisitions(created_at);
-CREATE INDEX IF NOT EXISTS idx_requisitions_department ON requisitions(department);
+CREATE INDEX IF NOT EXISTS idx_requisitions_department ON requisitions(department_id);
+CREATE INDEX IF NOT EXISTS idx_requisitions_project ON requisitions(project_id);
 CREATE INDEX IF NOT EXISTS idx_requisitions_budget_line ON requisitions(budget_line);
 
 CREATE INDEX IF NOT EXISTS idx_po_number ON purchase_orders(po_number);
@@ -605,11 +606,14 @@ ORDER BY month DESC;
 -- Vue des statistiques par département
 CREATE OR REPLACE VIEW department_stats AS
 SELECT 
-    department,
-    COUNT(*) as requisition_count,
-    SUM(estimated_amount) as total_amount,
-    AVG(estimated_amount) as avg_amount
-FROM requisitions
-WHERE department IS NOT NULL
-GROUP BY department
+    r.department_id,
+    d.code as department_code,
+    d.name as department_name,
+    COUNT(r.*) as requisition_count,
+    SUM(r.estimated_amount) as total_amount,
+    AVG(r.estimated_amount) as avg_amount
+FROM requisitions r
+JOIN departments d ON d.id = r.department_id
+WHERE r.department_id IS NOT NULL
+GROUP BY r.department_id, d.code, d.name
 ORDER BY total_amount DESC;

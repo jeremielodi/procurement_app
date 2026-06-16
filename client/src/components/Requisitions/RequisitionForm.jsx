@@ -1,4 +1,4 @@
-// src/components/Requisitions/RequisitionForm.jsx - Ajouter l'upload
+// src/components/Requisitions/RequisitionForm.jsx
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
@@ -8,11 +8,11 @@ import toast from 'react-hot-toast'
 import { requisitionService } from '../../services/requisitionService'
 import { projectService } from '../../services/projectService'
 import { budgetService } from '../../services/budgetService'
+import { departmentService } from '../../services/departmentService'
 import { uploadService } from '../../services/uploadService'
 import BudgetLineSearchModal from './BudgetLineSearchModal'
 import FileUpload from '../Common/FileUpload'
 
-const departments = ['IT', 'Administration', 'Operations', 'Finance', 'HR']
 const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
 
 export default function RequisitionForm() {
@@ -44,7 +44,7 @@ export default function RequisitionForm() {
         budgetLineInfo: null
       }],
       projectId: '',
-      department: '',
+      departmentId: '',
       priority: 'MEDIUM',
       justification: ''
     },
@@ -59,16 +59,22 @@ export default function RequisitionForm() {
   const items = watch('items')
 
   // Charger les projets actifs
-  const { data: projectsData } = useQuery({
+  const { data: projectsData, isLoading: projectsLoading } = useQuery({
     queryKey: ['active-projects'],
-    queryFn: () => projectService.getAll()
+    queryFn: () => projectService.getAll({ is_active: true })
+  })
+
+  // Charger les départements actifs
+  const { data: departmentsData, isLoading: departmentsLoading } = useQuery({
+    queryKey: ['active-departments'],
+    queryFn: () => departmentService.getAll({ is_active: true })
   })
 
   const projects = projectsData?.data || []
+  const departments = departmentsData?.data || []
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      // Créer d'abord la réquisition
       const result = await requisitionService.create(data);
       return result;
     },
@@ -76,7 +82,6 @@ export default function RequisitionForm() {
       const requisitionId = response.data?.id;
       setCreatedRequisitionId(requisitionId);
       
-      // Uploader les fichiers après création
       if (attachments.length > 0 && requisitionId) {
         const filesToUpload = attachments.filter(a => a.temporary).map(a => a.file);
         if (filesToUpload.length > 0) {
@@ -113,7 +118,7 @@ export default function RequisitionForm() {
   // Vérifier si le formulaire global est valide
   const isFormValid = () => {
     const hasProject = !!projectId
-    const hasDepartment = !!getValues('department')
+    const hasDepartment = !!getValues('departmentId')
     const hasTitle = !!getValues('title') && getValues('title').trim() !== ''
     const itemsComplete = areAllItemsComplete()
     
@@ -155,12 +160,12 @@ export default function RequisitionForm() {
       await createMutation.mutateAsync({
         title: data.title,
         description: data.description,
-        department: data.department,
+        departmentId: data.departmentId,
         projectId: data.projectId,
         estimatedAmount: totalAmount,
         currency: 'USD',
         priority: data.priority,
-        justification: '',
+        justification: data.justification || '',
         items: itemsWithBudget
       })
     } catch (error) {
@@ -277,18 +282,30 @@ export default function RequisitionForm() {
                 Département *
               </label>
               <select
-                {...register('department', { required: 'Le département est requis' })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                {...register('departmentId', { required: 'Le département est requis' })}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.departmentId ? 'border-red-500' : 'border-gray-300'
+                }`}
+                disabled={departmentsLoading}
               >
-                <option value="">Sélectionner</option>
-                {departments.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
+                <option value="">Sélectionner un département</option>
+                {departmentsLoading ? (
+                  <option disabled>Chargement des départements...</option>
+                ) : (
+                  departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.code} - {dept.name}
+                    </option>
+                  ))
+                )}
               </select>
-              {errors.department && (
-                <p className="text-red-500 text-sm mt-1">{errors.department.message}</p>
+              {errors.departmentId && (
+                <p className="text-red-500 text-sm mt-1">{errors.departmentId.message}</p>
+              )}
+              {!departmentsLoading && departments.length === 0 && (
+                <p className="text-sm text-amber-600 mt-1">
+                  ⚠️ Aucun département disponible. Veuillez d'abord créer des départements.
+                </p>
               )}
             </div>
 
@@ -302,15 +319,25 @@ export default function RequisitionForm() {
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                   !projectId ? 'border-red-500' : 'border-gray-300'
                 }`}
+                disabled={projectsLoading}
               >
                 <option value="">Sélectionner un projet</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.code} - {project.name}
-                  </option>
-                ))}
+                {projectsLoading ? (
+                  <option disabled>Chargement des projets...</option>
+                ) : (
+                  projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.code} - {project.name}
+                    </option>
+                  ))
+                )}
               </select>
               {!projectId && <p className="text-red-500 text-sm mt-1">Projet requis</p>}
+              {!projectsLoading && projects.length === 0 && (
+                <p className="text-sm text-amber-600 mt-1">
+                  ⚠️ Aucun projet disponible. Veuillez d'abord créer des projets.
+                </p>
+              )}
             </div>
 
             <div>
@@ -342,7 +369,17 @@ export default function RequisitionForm() {
             />
           </div>
 
-        
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Justification
+            </label>
+            <textarea
+              {...register('justification')}
+              rows="2"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Justifiez cette demande d'achat..."
+            />
+          </div>
         </div>
 
         {/* Articles */}

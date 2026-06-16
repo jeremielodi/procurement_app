@@ -1,5 +1,6 @@
 // backend/src/controllers/DepartmentController.js
 const departmentModel = require('../models/DepartmentModel');
+const { v4: uuidv4 } = require('uuid');
 
 class DepartmentController {
   async list(req, res) {
@@ -25,13 +26,14 @@ class DepartmentController {
 
   async create(req, res) {
     try {
-      const { code, name, description, managerId } = req.body;
+      const { id, code, name, description, managerId } = req.body;
       const createdBy = req.user.id;
-      
+
       const result = await departmentModel.create({
+        id: id || uuidv4(),
         code, name, description, managerId, createdBy
       });
-      
+
       res.status(201).json({ success: true, data: result });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
@@ -42,7 +44,7 @@ class DepartmentController {
     try {
       const { id } = req.params;
       const { name, description, managerId, isActive } = req.body;
-      
+
       await departmentModel.update(id, { name, description, managerId, isActive });
       res.json({ success: true, message: 'Département mis à jour' });
     } catch (error) {

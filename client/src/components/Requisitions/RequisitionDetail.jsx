@@ -43,6 +43,7 @@ import Modal from '../Common/Modal'
 import PdfViewer from '../Common/PdfViewer'
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters'
 import toast from 'react-hot-toast'
+import RequisitionViewer from './RequisitionViewer';
 
 export default function RequisitionDetail() {
   const { id } = useParams()
@@ -56,6 +57,7 @@ export default function RequisitionDetail() {
   const [pendingTasksCount, setPendingTasksCount] = useState(0)
   const [viewerAttachmentId, setViewerAttachmentId] = useState(null)
   const [viewerFileName, setViewerFileName] = useState(null)
+  const [showViewer, setShowViewer] = useState(false);
 
   // Récupérer les détails de la réquisition
   const { data: requisitionData, isLoading, error, refetch } = useQuery({
@@ -161,22 +163,67 @@ export default function RequisitionDetail() {
     setViewerFileName(fileName)
   }
 
-  // Générer le rapport PDF
-  const handleGeneratePDF = async () => {
-    try {
-      const pdf = await requisitionService.generatePDF(id)
-      const url = window.URL.createObjectURL(new Blob([pdf]))
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', `Requisition_${requisition?.requisition_number}.pdf`)
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      toast.success('PDF généré avec succès')
-    } catch (error) {
-      toast.error('Erreur lors de la génération du PDF')
-    }
+  
+  // Version avec gestion d'erreur 404
+const handleGeneratePDF = async () => {
+  if (!requisition?.id) {
+    toast.error('Réquisition non disponible');
+    return;
   }
+
+  try {
+    toast.loading('Génération du PDF en cours...', { id: 'pdf-generation' });
+    
+    const response = await requisitionService.generatePDF(requisition.id);
+    
+    // Vérifier que la réponse est bien un blob
+    if (!response || !(response instanceof Blob)) {
+      console.error('Invalid response:', response);
+      throw new Error('La réponse du serveur n\'est pas valide');
+    }
+    
+    // Vérifier que le blob n'est pas vide
+    if (response.size === 0) {
+      throw new Error('Le PDF généré est vide');
+    }
+    
+    // Vérifier que le type est correct
+    if (!response.type.includes('pdf') && !response.type.includes('octet-stream')) {
+      console.warn('Unexpected content type:', response.type);
+      // Continuer quand même, ça peut être un PDF
+    }
+    
+    // Créer l'URL du blob
+    const url = window.URL.createObjectURL(response);
+    
+    // Créer le lien de téléchargement
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Requisition_${requisition.requisition_number || 'document'}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    
+    // Nettoyer
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }, 100);
+    
+    toast.success('PDF généré avec succès', { id: 'pdf-generation' });
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    
+    // Afficher le message d'erreur
+    let errorMessage = 'Erreur lors de la génération du PDF';
+    if (error.response?.status === 404) {
+      errorMessage = 'Réquisition non trouvée';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    toast.error(errorMessage, { id: 'pdf-generation' });
+  }
+};
 
   // Voir le workflow
   const handleViewWorkflow = () => {
@@ -278,7 +325,7 @@ export default function RequisitionDetail() {
           )}
 
           <button
-            onClick={handleGeneratePDF}
+           onClick={() => setShowViewer(true)}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Download size={18} />
@@ -510,22 +557,16 @@ export default function RequisitionDetail() {
                       <Hash size={14} />
                       Département:
                     </span>
-                    <span className="text-sm font-medium">{requisition.department || '-'}</span>
+                    <span className="text-sm font-medium">{requisition.department_name || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500 flex items-center gap-1">
                       <Tag size={14} />
                       Code projet:
                     </span>
-                    <span className="text-sm font-medium">{requisition.project_code || '-'}</span>
+                    <span className="text-sm font-medium">{requisition.project_name || '-'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500 flex items-center gap-1">
-                      <DollarSign size={14} />
-                      Ligne budgétaire:
-                    </span>
-                    <span className="text-sm font-medium">{requisition.budget_line || '-'}</span>
-                  </div>
+                
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">Montant estimé:</span>
                     <span className="text-sm font-semibold text-blue-600">
@@ -801,6 +842,7 @@ export default function RequisitionDetail() {
             </div>
           )}
         </div>
+
       </Modal>
 
       {/* Visualiseur PDF */}
@@ -814,6 +856,14 @@ export default function RequisitionDetail() {
           }}
         />
       )}
+
+      {showViewer && (
+        <RequisitionViewer
+          requisitionId={id}
+          onClose={() => setShowViewer(false)}
+        />
+      )}
+    
     </div>
   )
 }

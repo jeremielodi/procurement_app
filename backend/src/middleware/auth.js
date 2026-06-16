@@ -6,9 +6,10 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 const authorizationPaths = [
   'auth/login',
-  'auth/logout'
+  'auth/logout',
 ];
 async function authenticate(req, res, next) {
+  
   try {
     if(authorizationPaths.includes(req.path)) {
       next();

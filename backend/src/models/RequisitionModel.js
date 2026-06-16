@@ -10,7 +10,7 @@ class RequisitionModel {
    */
   async create(requisitionData) {
     const { 
-      title, description, department, projectId, projectCode,
+      title, description, departmentId, projectId, projectCode,
       estimatedAmount, currency, requesterId, priority, justification,
       items
     } = requisitionData;
@@ -32,8 +32,8 @@ class RequisitionModel {
         requisition_number: requisitionNumber,
         title,
         description,
-        department,
-        project_code: projectCode,
+        department_id: departmentId,
+        project_id: projectId,
         estimated_amount: estimatedAmount,
         currency: currency || 'USD',
         requester_id: requesterId,
@@ -263,8 +263,17 @@ class RequisitionModel {
    */
   async findById(id) {
     const requisition = await db.one(
-      `SELECT r.*, u.first_name, u.last_name, u.email 
+      `SELECT r.*, 
+        u.first_name,
+        u.last_name,
+        u.email,
+        d.code as department_code,
+        d.name as department_name,
+        p.code as project_code,
+        p.name as project_name
        FROM requisitions r
+       LEFT JOIN departments d ON d.id = r.department_id
+       LEFT JOIN projects p ON p.id = r.project_id
        LEFT JOIN users u ON r.requester_id = u.id
        WHERE r.id = $1`,
       [id]
@@ -307,8 +316,12 @@ class RequisitionModel {
    */
   async findAll(filters = {}) {
     let sql = `
-      SELECT r.*, u.first_name, u.last_name
+      SELECT r.*, u.first_name, u.last_name, 
+        d.code as department_code,
+        d.name as department_name
       FROM requisitions r
+      LEFT JOIN departments d ON d.id = r.department_id
+      LEFT JOIN projects p ON p.id = r.project_id
       LEFT JOIN users u ON r.requester_id = u.id
       WHERE 1=1
     `;
@@ -321,11 +334,17 @@ class RequisitionModel {
       paramCount++;
     }
     
-    if (filters.department && filters.department != 'all') {
-      sql += ` AND r.department = $${paramCount}`;
-      params.push(filters.department);
+    if (filters.departmentId && filters.departmentId != 'all') {
+      sql += ` AND r.department_id = $${paramCount}`;
+      params.push(filters.departmentId);
       paramCount++;
     }
+    if (filters.priority && filters.priority != 'all') {
+      sql += ` AND r.priority = $${paramCount}`;
+      params.push(filters.priority);
+      paramCount++;
+    }
+    
 
      if (filters.processInstanceId && filters.processInstanceId != 'all') {
       sql += ` AND r.process_instance_id = $${paramCount}`;

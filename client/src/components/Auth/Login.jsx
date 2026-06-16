@@ -51,11 +51,13 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl overflow-hidden">
         {/* Header */}
         <div className="bg-blue-600 p-6 text-center">
-          <h1 className="text-2xl font-bold text-white">Procurement System</h1>
+        <center> <img src='/images/logo_wwf1.png' style={{height:50, borderRadius: 20}}/></center>
+          <h1 className="text-2xl font-bold text-white">
+             Procurement System</h1>
           <p className="text-blue-100 mt-2">WWF - Gestion d'achats</p>
         </div>
         

@@ -115,12 +115,12 @@ class DashboardModel {
     // Données par département
     const departmentData = await db.select(`
       SELECT 
-        department,
+        department_id,
         COUNT(*) as count,
         COALESCE(SUM(estimated_amount), 0) as amount
       FROM requisitions
-      WHERE department IS NOT NULL
-      GROUP BY department
+      WHERE department_id IS NOT NULL
+      GROUP BY department_id
       ORDER BY amount DESC
     `);
     
@@ -284,7 +284,7 @@ class DashboardModel {
         r.id,
         r.requisition_number,
         r.title,
-        r.department,
+        r.department_id,
         r.estimated_amount,
         r.currency,
         r.status,
@@ -322,14 +322,14 @@ class DashboardModel {
   async getDepartmentSummary() {
     return await db.select(`
       SELECT 
-        department,
+        department_id,
         COUNT(*) as requisition_count,
         COALESCE(SUM(estimated_amount), 0) as total_amount,
         COUNT(CASE WHEN status = 'APPROVED' THEN 1 END) as approved_count,
         COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_count
       FROM requisitions
-      WHERE department IS NOT NULL
-      GROUP BY department
+      WHERE department_id IS NOT NULL
+      GROUP BY department_id
       ORDER BY total_amount DESC
     `);
   }

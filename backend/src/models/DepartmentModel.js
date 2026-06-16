@@ -58,18 +58,7 @@ class DepartmentModel {
       LEFT JOIN users u ON d.manager_id = u.id
       WHERE d.id = $1
     `, [id]);
-    
-    if (!department) return null;
-    
-    // Récupérer les projets du département
-    const projects = await db.select(`
-      SELECT p.*, u.first_name as manager_first_name, u.last_name as manager_last_name
-      FROM projects p
-      LEFT JOIN users u ON p.project_manager_id = u.id
-      WHERE p.department_id = $1 AND p.is_active = true
-    `, [id]);
-    
-    return { ...department, projects };
+    return department;
   }
 
   async update(id, data) {

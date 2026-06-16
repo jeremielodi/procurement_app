@@ -28,6 +28,7 @@ import {
   Printer
 } from 'lucide-react'
 import { requisitionService } from '../../services/requisitionService'
+import { departmentService } from '../../services/departmentService'
 import StatusBadge from '../Common/StatusBadge'
 import LoadingSpinner from '../Common/LoadingSpinner'
 import ErrorAlert from '../Common/ErrorAlert'
@@ -55,15 +56,6 @@ const priorityOptions = [
   { value: 'URGENT', label: 'Urgent' }
 ]
 
-const departmentOptions = [
-  { value: 'all', label: 'Tous départements' },
-  { value: 'IT', label: 'IT' },
-  { value: 'Administration', label: 'Administration' },
-  { value: 'Operations', label: 'Operations' },
-  { value: 'Finance', label: 'Finance' },
-  { value: 'HR', label: 'HR' }
-]
-
 export default function RequisitionList() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -72,7 +64,7 @@ export default function RequisitionList() {
   const [filters, setFilters] = useState({
     status: 'all',
     priority: 'all',
-    department: 'all',
+    departmentId: 'all',
     search: '',
     fromDate: '',
     toDate: ''
@@ -87,6 +79,23 @@ export default function RequisitionList() {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
   const [requisitionToDelete, setRequisitionToDelete] = useState(null)
 
+  // Récupérer les départements actifs
+  const { data: departmentsData, isLoading: departmentsLoading } = useQuery({
+    queryKey: ['active-departments'],
+    queryFn: () => departmentService.getAll({ is_active: true })
+  })
+
+  const departments = departmentsData?.data || []
+  
+  // Créer les options de département pour le filtre
+  const departmentOptions = [
+    { value: 'all', label: 'Tous départements' },
+    ...departments.map(dept => ({
+      value: dept.id,
+      label: `${dept.code} - ${dept.name}`
+    }))
+  ]
+
   // Récupérer les réquisitions
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['requisitions', filters, pagination],
@@ -96,7 +105,7 @@ export default function RequisitionList() {
       limit: pagination.limit,
       ...(filters.status !== 'all' && { status: filters.status }),
       ...(filters.priority !== 'all' && { priority: filters.priority }),
-      ...(filters.department !== 'all' && { department: filters.department }),
+      ...(filters.departmentId !== 'all' && { departmentId: filters.departmentId }),
       ...(filters.search && { search: filters.search }),
       ...(filters.fromDate && { fromDate: filters.fromDate }),
       ...(filters.toDate && { toDate: filters.toDate })
@@ -156,7 +165,7 @@ export default function RequisitionList() {
     setFilters({
       status: 'all',
       priority: 'all',
-      department: 'all',
+      departmentId: 'all',
       search: '',
       fromDate: '',
       toDate: ''
@@ -210,6 +219,12 @@ export default function RequisitionList() {
 
   const handlePrint = () => {
     window.print()
+  }
+
+  const getDepartmentName = (departmentId) => {
+    if (!departmentId) return '-'
+    const dept = departments.find(d => d.id === departmentId)
+    return dept ? `${dept.code} - ${dept.name}` : departmentId
   }
 
   const getStatusIcon = (status) => {
@@ -288,7 +303,7 @@ export default function RequisitionList() {
           >
             <Filter size={18} />
             Filtres
-            {(filters.status !== 'all' || filters.priority !== 'all' || filters.department !== 'all' || filters.fromDate || filters.toDate) && (
+            {(filters.status !== 'all' || filters.priority !== 'all' || filters.departmentId !== 'all' || filters.fromDate || filters.toDate) && (
               <span className="ml-1 w-2 h-2 bg-blue-600 rounded-full" />
             )}
           </button>
@@ -353,9 +368,10 @@ export default function RequisitionList() {
                 ))}
               </select>
               <select
-                value={filters.department}
-                onChange={(e) => handleFilterChange('department', e.target.value)}
+                value={filters.departmentId}
+                onChange={(e) => handleFilterChange('departmentId', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                disabled={departmentsLoading}
               >
                 {departmentOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -492,7 +508,7 @@ export default function RequisitionList() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-1 text-sm text-gray-600">
                         <Building2 size={14} />
-                        {requisition.department}
+                        {getDepartmentName(requisition.department_id)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

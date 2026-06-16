@@ -59,6 +59,12 @@ router.delete('/requisitions/:id',
   (req, res) => requisitionController.delete(req, res)
 );
 
+
+// Exports
+router.get('/requisitions/export/pdf', hasPermission('VIEW_REQUISITIONS'), requisitionController.exportPDF);
+router.get('/requisitions/export/excel', hasPermission('VIEW_REQUISITIONS'), requisitionController.exportExcel);
+router.get('/requisitions/:id/export/pdf', hasPermission('VIEW_REQUISITIONS'), requisitionController.exportRequisitionPDF);
+
 // ============================================
 // ROUTES DES TÂCHES (protégées)
 // ============================================

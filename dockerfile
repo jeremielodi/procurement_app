@@ -1,77 +1,67 @@
-# Dockerfile.multistage
-# Stage 1: Build du client React
+# Stage 1: Build React client
 FROM node:24-alpine AS client-builder
 
 WORKDIR /app/client
 
-# Copier les fichiers du client
 COPY client/package*.json ./
+RUN npm install
 
-# Installer les dépendances du client
-RUN npm Install
-
-# Copier le code source du client
 COPY client/ .
-
-# Build du client
 RUN npm run build
 
-# Stage 2: Build du backend
+
+# Stage 2: Backend dependencies
 FROM node:24-alpine AS backend-builder
 
 WORKDIR /app/backend
 
-# Copier les fichiers du backend
 COPY backend/package*.json ./
+RUN npm install --omit=dev
 
-# Installer les dépendances du backend
-RUN npm install --only=production
 
 # Stage 3: Production
 FROM node:24-alpine
 
 WORKDIR /app
 
-# Installer les dépendances système
+# Required packages
 RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
     postgresql-client \
     curl
 
-# Créer l'utilisateur non-root
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-
-# Copier les dépendances backend
-COPY --from=backend-builder --chown=nodejs:nodejs /app/backend/node_modules ./node_modules
-
-# Copier le code source backend
-COPY --chown=nodejs:nodejs backend/ .
-
-# Copier le client build
-COPY --from=client-builder --chown=nodejs:nodejs /app/client/dist ./client/dist
-
-# Créer le répertoire pour les uploads
-RUN mkdir -p /app/uploads && chown -R nodejs:nodejs /app/uploads
-
-# Créer le répertoire pour les logs
-RUN mkdir -p /app/logs && chown -R nodejs:nodejs /app/logs
-
-# Variables d'environnement
 ENV NODE_ENV=production
 ENV PORT=5000
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:5000/health || exit 1
+# Create user
+RUN addgroup -S nodejs && \
+    adduser -S nodejs -G nodejs
 
-# Exposer le port
-EXPOSE 5000
+# Backend structure preserved
+COPY --from=backend-builder /app/backend/node_modules /app/backend/node_modules
+COPY backend /app/backend
 
-# Changer vers l'utilisateur non-root
+# Client build exactly where server.js expects it
+COPY --from=client-builder /app/client/dist /app/client/dist
+
+# Uploads & logs
+RUN mkdir -p /app/uploads /app/logs && \
+    chown -R nodejs:nodejs /app
+
 USER nodejs
 
-# Démarrer l'application
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+ CMD curl -f http://localhost:5000/health || exit 1
+
+EXPOSE 5000
+
+WORKDIR /app/backend
+COPY ./backend/.env .env
 CMD ["node", "server.js"]

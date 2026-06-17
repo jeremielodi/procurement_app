@@ -6,6 +6,7 @@ services:
     image: postgres:16
     container_name: wwf_postgres
     restart: unless-stopped
+    env_file: ./backend/.env
     environment:
       POSTGRES_DB: ${DB_NAME:-wwf_procurement}
       POSTGRES_USER: ${DB_USER:-camunda}
@@ -15,7 +16,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./database:/docker-entrypoint-initdb.d:ro
     ports:
-      - "5432:5432"
+      - "5435:5432"
     networks:
       - wwf_network
     healthcheck:
@@ -34,29 +35,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-
+    env_file: ./backend/.env
     environment:
       # Database
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-wwf_procurement}
-      DB_USER: ${DB_USER:-camunda}
-      DB_PASSWORD: ${DB_PASSWORD:-camunda}
-      # Camunda
-      CAMUNDA_REST_URL: http://camunda:8080/engine-rest
-      CAMUNDA_USERNAME: ${CAMUNDA_USERNAME:-demo}
-      CAMUNDA_PASSWORD: ${CAMUNDA_PASSWORD:-demo}
       # Server
       NODE_ENV: production
       PORT: 5000
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      # Email
-      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-your-email@gmail.com}
-      SMTP_PASS: ${SMTP_PASS:-your-app-password}
-      SMTP_FROM: ${SMTP_FROM:-noreply@procurement.com}
       # Uploads
       UPLOAD_DIR: /app/uploads
     volumes:

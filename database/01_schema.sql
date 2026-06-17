@@ -3,7 +3,56 @@
 -- UUID generation
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- =========================================================
+-- CURRENCY TABLE
+-- =========================================================
+CREATE TABLE IF NOT EXISTS currency (
+    id SMALLINT NOT NULL,  -- tinyint unsigned -> SMALLINT in PostgreSQL
+    name VARCHAR(50) NOT NULL,
+    format_key VARCHAR(20) NOT NULL,
+    symbol VARCHAR(15) NOT NULL,
+    intel_number_format VARCHAR(10) NOT NULL DEFAULT 'en-US',
+    note TEXT,
+    min_monentary_unit DECIMAL(10,2) NOT NULL,
+    PRIMARY KEY (id)
+);
 
+-- =========================================================
+-- ENTERPRISE TABLE
+-- =========================================================
+CREATE TABLE IF NOT EXISTS enterprise (
+    uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),  -- BINARY(16) -> UUID with default generation
+    name VARCHAR(200) NULL,
+    currency_id SMALLINT NOT NULL,  -- tinyint unsigned -> SMALLINT
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_update TIMESTAMP DEFAULT NULL,
+    CONSTRAINT enterprise_name_unique UNIQUE (name),
+    CONSTRAINT enterprise_currency_fkey FOREIGN KEY (currency_id) 
+        REFERENCES currency (id) ON UPDATE CASCADE
+);
+
+-- =========================================================
+-- INDEXES
+-- =========================================================
+CREATE INDEX idx_enterprise_name ON enterprise(name);
+CREATE INDEX idx_enterprise_currency_id ON enterprise(currency_id);
+
+-- =========================================================
+-- COMMENTS
+-- =========================================================
+COMMENT ON TABLE currency IS 'Currency definitions';
+COMMENT ON TABLE enterprise IS 'Enterprise/organization information';
+COMMENT ON COLUMN currency.id IS 'Currency ID (SMALLINT)';
+COMMENT ON COLUMN currency.format_key IS 'Format key for currency display';
+COMMENT ON COLUMN currency.symbol IS 'Currency symbol';
+COMMENT ON COLUMN currency.note IS 'Additional notes about the currency';
+
+COMMENT ON TABLE enterprise IS 'Enterprise/organization information';
+COMMENT ON COLUMN enterprise.uuid IS 'Unique enterprise identifier (UUID)';
+COMMENT ON COLUMN enterprise.name IS 'Enterprise name (unique)';
+COMMENT ON COLUMN enterprise.currency_id IS 'Reference to currency table';
+COMMENT ON COLUMN enterprise.created_at IS 'Creation timestamp (auto-set)';
+COMMENT ON COLUMN enterprise.last_update IS 'Last update timestamp';
 
 -- ============================================
 -- 1. TABLE DES UTILISATEURS
@@ -497,123 +546,3 @@ CREATE INDEX IF NOT EXISTS idx_goods_receipt_po ON goods_receipt_notes(po_id);
 CREATE INDEX IF NOT EXISTS idx_goods_receipt_received_by ON goods_receipt_notes(received_by);
 CREATE INDEX IF NOT EXISTS idx_service_acceptance_po ON service_acceptance_notes(po_id);
 CREATE INDEX IF NOT EXISTS idx_service_acceptance_accepted_by ON service_acceptance_notes(accepted_by);
-
--- ============================================
--- FONCTIONS ET TRIGGERS
--- ============================================
-
--- Fonction pour mettre à jour updated_at
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Triggers pour updated_at
-CREATE TRIGGER update_users_updated_at
-    BEFORE UPDATE ON users
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_requisitions_updated_at
-    BEFORE UPDATE ON requisitions
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_suppliers_updated_at
-    BEFORE UPDATE ON suppliers
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_purchase_orders_updated_at
-    BEFORE UPDATE ON purchase_orders
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_budget_allocations_updated_at
-    BEFORE UPDATE ON budget_allocations
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_notifications_updated_at
-    BEFORE UPDATE ON notifications
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
--- Trigger pour mettre à jour completed_at automatiquement
-CREATE OR REPLACE FUNCTION update_completed_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.status = 'COMPLETED' AND OLD.status != 'COMPLETED' THEN
-        NEW.completed_at = CURRENT_TIMESTAMP;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_update_completed_at ON requisitions;
-CREATE TRIGGER trigger_update_completed_at
-    BEFORE UPDATE ON requisitions
-    FOR EACH ROW
-    EXECUTE FUNCTION update_completed_at();
-
--- Trigger pour mettre à jour les statistiques des fournisseurs
-CREATE OR REPLACE FUNCTION update_supplier_stats()
-RETURNS TRIGGER AS $$
-BEGIN
-    UPDATE suppliers
-    SET 
-        total_spent = (
-            SELECT COALESCE(SUM(total_amount), 0)
-            FROM purchase_orders
-            WHERE supplier_id = NEW.supplier_id AND status = 'COMPLETED'
-        ),
-        order_count = (
-            SELECT COUNT(*)
-            FROM purchase_orders
-            WHERE supplier_id = NEW.supplier_id
-        )
-    WHERE id = NEW.supplier_id;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_update_supplier_stats ON purchase_orders;
-CREATE TRIGGER trigger_update_supplier_stats
-    AFTER INSERT OR UPDATE ON purchase_orders
-    FOR EACH ROW
-    EXECUTE FUNCTION update_supplier_stats();
-
--- ============================================
--- VUES POUR LE DASHBOARD
--- ============================================
-
--- Vue des statistiques par mois
-CREATE OR REPLACE VIEW monthly_stats AS
-SELECT 
-    TO_CHAR(created_at, 'YYYY-MM') as month,
-    COUNT(*) as total_requisitions,
-    SUM(estimated_amount) as total_amount,
-    COUNT(CASE WHEN status = 'APPROVED' THEN 1 END) as approved_count,
-    COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed_count
-FROM requisitions
-GROUP BY TO_CHAR(created_at, 'YYYY-MM')
-ORDER BY month DESC;
-
--- Vue des statistiques par département
-CREATE OR REPLACE VIEW department_stats AS
-SELECT 
-    r.department_id,
-    d.code as department_code,
-    d.name as department_name,
-    COUNT(r.*) as requisition_count,
-    SUM(r.estimated_amount) as total_amount,
-    AVG(r.estimated_amount) as avg_amount
-FROM requisitions r
-JOIN departments d ON d.id = r.department_id
-WHERE r.department_id IS NOT NULL
-GROUP BY r.department_id, d.code, d.name
-ORDER BY total_amount DESC;

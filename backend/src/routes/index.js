@@ -264,47 +264,41 @@ router.delete('/notifications/:userId/all',
 // ============================================
 // ROUTES DU DASHBOARD (protégées)
 // ============================================
-router.get('/dashboard/stats',
-  authenticate,
-  hasPermission('VIEW_DASHBOARD'),
-  dashboardController.getStats
-);
 
-router.get('/dashboard/charts',
-  authenticate,
-  hasPermission('VIEW_DASHBOARD'),
-  dashboardController.getChartData
-);
+// Toutes les routes du dashboard nécessitent une authentification
 
-router.get('/dashboard/recent-requisitions',
-  authenticate,
-  hasPermission('VIEW_DASHBOARD'),
-  dashboardController.getRecentRequisitions
-);
+// Dashboard principal
+router.get('/dashboard', dashboardController.getDashboardData);
 
-router.get('/dashboard/recent-activities',
-  authenticate,
-  hasPermission('VIEW_DASHBOARD'),
-  dashboardController.getRecentActivities
-);
+// Statistiques
+router.get('/dashboard/stats', dashboardController.getStats);
 
-router.get('/dashboard/department-summary',
-  authenticate,
-  hasPermission('VIEW_DASHBOARD'),
-  dashboardController.getDepartmentSummary
-);
+// Graphiques
+router.get('/dashboard/charts', dashboardController.getChartData);
 
-router.get('/dashboard/supplier-summary',
-  authenticate,
-  hasPermission('VIEW_DASHBOARD'),
-  dashboardController.getSupplierSummary
-);
+// Réquisitions récentes
+router.get('/dashboard/recent-requisitions', dashboardController.getRecentRequisitions);
 
-router.get('/dashboard/kpis',
-  authenticate,
-  hasPermission('VIEW_DASHBOARD'),
-  dashboardController.getKPIs
-);
+// Activités récentes
+router.get('/dashboard/recent-activities', dashboardController.getRecentActivities);
+
+// Résumé par département
+router.get('/dashboard/department-summary', dashboardController.getDepartmentSummary);
+
+// Résumé par fournisseur
+router.get('/dashboard/supplier-summary', dashboardController.getSupplierSummary);
+
+// KPI
+router.get('/dashboard/kpis', dashboardController.getKPIs);
+
+// Alertes
+router.get('/dashboard/alerts', dashboardController.getAlerts);
+
+// Statistiques par projet
+router.get('/dashboard/project-stats', dashboardController.getProjectStats);
+
+// Export
+router.get('/dashboard/export', dashboardController.exportDashboardData);
 
 // ============================================
 // ROUTES DU WORKFLOW (protégées)

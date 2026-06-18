@@ -164,6 +164,159 @@ class DashboardController {
       });
     }
   }
+
+  /**
+   * Récupérer les alertes
+   */
+  async getAlerts(req, res) {
+    try {
+      const alerts = await dashboardModel.getAlerts();
+      
+      res.json({
+        success: true,
+        data: alerts
+      });
+    } catch (error) {
+      console.error('Error getting alerts:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la récupération des alertes',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Récupérer les statistiques par projet
+   */
+  async getProjectStats(req, res) {
+    try {
+      const stats = await dashboardModel.getProjectStats();
+      
+      res.json({
+        success: true,
+        data: stats
+      });
+    } catch (error) {
+      console.error('Error getting project stats:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la récupération des statistiques par projet',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Récupérer toutes les données du tableau de bord en une seule requête
+   */
+  async getDashboardData(req, res) {
+    try {
+      const { period = 'month' } = req.query;
+      
+      // Récupérer toutes les données en parallèle
+      const [
+        stats,
+        chartData,
+        recentRequisitions,
+        recentActivities,
+        kpis,
+        alerts,
+        departmentSummary,
+        supplierSummary,
+        projectStats
+      ] = await Promise.all([
+        dashboardModel.getStats(),
+        dashboardModel.getChartData(period),
+        dashboardModel.getRecentRequisitions(10),
+        dashboardModel.getRecentActivities(10),
+        dashboardModel.getKPIs(),
+        dashboardModel.getAlerts(),
+        dashboardModel.getDepartmentSummary(),
+        dashboardModel.getSupplierSummary(),
+        dashboardModel.getProjectStats()
+      ]);
+      
+      res.json({
+        success: true,
+        data: {
+          stats,
+          chartData,
+          recentRequisitions,
+          recentActivities,
+          kpis,
+          alerts,
+          departmentSummary,
+          supplierSummary,
+          projectStats,
+          period
+        }
+      });
+    } catch (error) {
+      console.error('Error getting dashboard data:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la récupération des données du tableau de bord',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Exporter les données du tableau de bord
+   */
+  async exportDashboardData(req, res) {
+    try {
+      const { format = 'json' } = req.query;
+      
+      const data = await dashboardModel.getChartData('year');
+      
+      if (format === 'json') {
+        res.json({
+          success: true,
+          data: data
+        });
+      } else if (format === 'csv') {
+        // Convertir les données en CSV
+        const csvData = this.convertToCSV(data);
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename=dashboard-export-${new Date().toISOString().split('T')[0]}.csv`);
+        res.send(csvData);
+      } else {
+        res.status(400).json({
+          success: false,
+          message: 'Format non supporté. Utilisez json ou csv'
+        });
+      }
+    } catch (error) {
+      console.error('Error exporting dashboard data:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de l\'exportation des données',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Convertir les données en CSV
+   */
+  convertToCSV(data) {
+    // Implémentation simplifiée de conversion en CSV
+    const rows = [];
+    
+    // En-têtes
+    rows.push('Période,Réquisitions,Montant,Approuvé,Terminé,Rejeté,En attente');
+    
+    // Données mensuelles
+    if (data.monthlyTrend) {
+      data.monthlyTrend.forEach(item => {
+        rows.push(`${item.period},${item.requisitions},${item.amount},${item.approved},${item.completed},${item.rejected},${item.pending}`);
+      });
+    }
+    
+    return rows.join('\n');
+  }
 }
 
 module.exports = new DashboardController();

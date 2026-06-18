@@ -15,6 +15,12 @@ import BudgetLineSearchModal from './BudgetLineSearchModal'
 import FileUpload from '../Common/FileUpload'
 
 const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
+const priorityLabels = {
+  'LOW': 'Basse',
+  'MEDIUM': 'Moyenne',
+  'HIGH': 'Haute',
+  'URGENT': 'Urgente'
+};
 
 export default function RequisitionForm() {
   const navigate = useNavigate()
@@ -223,7 +229,7 @@ export default function RequisitionForm() {
   }
 
   const formatCurrency = (amount) => {
-    if(!currency.code) {
+    if (!currency.code) {
       return amount;
     }
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: currency.code }).format(amount || 0)
@@ -367,7 +373,7 @@ export default function RequisitionForm() {
               >
                 {priorities.map((priority) => (
                   <option key={priority} value={priority}>
-                    {priority}
+                    {priorityLabels[priority]}
                   </option>
                 ))}
               </select>

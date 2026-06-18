@@ -76,11 +76,7 @@ export default function Modal({
     if (isOpen) {
       document.addEventListener('keydown', handleEscape)
       document.body.style.overflow = 'hidden'
-      
-      // Focus sur le bouton de confirmation
-      if (confirmButtonRef.current) {
-        confirmButtonRef.current.focus()
-      }
+    
     }
 
     return () => {

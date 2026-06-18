@@ -49,6 +49,11 @@ class UserController {
         return res.status(400).json({ success: false, message: 'Username, email et password requis' });
       }
       
+      const connectedUser = await userModel.findById(req.user.id);
+
+      if (!connectedUser) {
+        return res.status(404).json({ success: false, message: 'Connected user not exist!!!' });
+      }
       const result = await userModel.create({
         username,
         email,
@@ -57,7 +62,8 @@ class UserController {
         lastName,
         department,
         position,
-        profileIds: profileIds || []
+        profileIds: profileIds || [],
+        enterpriseId: connectedUser.enterprise_id,
       });
       
       res.status(201).json({ success: true, data: result });

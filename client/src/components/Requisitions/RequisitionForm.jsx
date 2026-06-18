@@ -10,6 +10,7 @@ import { projectService } from '../../services/projectService'
 import { budgetService } from '../../services/budgetService'
 import { departmentService } from '../../services/departmentService'
 import { uploadService } from '../../services/uploadService'
+import { enterpriseService } from '../../services/enterpriseService'
 import BudgetLineSearchModal from './BudgetLineSearchModal'
 import FileUpload from '../Common/FileUpload'
 
@@ -22,6 +23,7 @@ export default function RequisitionForm() {
   const [showBudgetModal, setShowBudgetModal] = useState(false)
   const [selectedItemIndex, setSelectedItemIndex] = useState(null)
   const [selectedProject, setSelectedProject] = useState(null)
+  const [selectedEnterprise, setSelectedEnterprise] = useState(null)
   const [attachments, setAttachments] = useState([])
   const [createdRequisitionId, setCreatedRequisitionId] = useState(null)
 
@@ -35,9 +37,9 @@ export default function RequisitionForm() {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      items: [{ 
-        description: '', 
-        quantity: 1, 
+      items: [{
+        description: '',
+        quantity: 1,
         frequency: 1,
         unitPrice: 0,
         budgetLineId: '',
@@ -64,6 +66,11 @@ export default function RequisitionForm() {
     queryFn: () => projectService.getAll({ is_active: true })
   })
 
+  // Charger les projets actifs
+  const { data: enterprisesData } = useQuery({
+    queryKey: ['current-enteprise'],
+    queryFn: () => enterpriseService.getAll()
+  })
   // Charger les départements actifs
   const { data: departmentsData, isLoading: departmentsLoading } = useQuery({
     queryKey: ['active-departments'],
@@ -72,7 +79,16 @@ export default function RequisitionForm() {
 
   const projects = projectsData?.data || []
   const departments = departmentsData?.data || []
-
+  const enterprises = enterprisesData?.data || [];
+  let currency = {};
+  if (enterprises.length > 0) {
+    currency = {
+      code: enterprises[0].currency_code,
+      id: enterprises[0].currency_id,
+      name: enterprises[0].currency_name,
+      symbol: enterprises[0].currency_symbol,
+    }
+  }
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const result = await requisitionService.create(data);
@@ -81,14 +97,14 @@ export default function RequisitionForm() {
     onSuccess: async (response) => {
       const requisitionId = response.data?.id;
       setCreatedRequisitionId(requisitionId);
-      
+
       if (attachments.length > 0 && requisitionId) {
         const filesToUpload = attachments.filter(a => a.temporary).map(a => a.file);
         if (filesToUpload.length > 0) {
           await uploadService.uploadMultipleFiles(filesToUpload, 'requisition', requisitionId);
         }
       }
-      
+
       queryClient.invalidateQueries(['requisitions'])
       toast.success('Réquisition créée avec succès')
       navigate('/requisitions')
@@ -100,13 +116,13 @@ export default function RequisitionForm() {
 
   // Vérifier si un article est complet
   const isItemComplete = (item) => {
-    return item && 
-           item.description && 
-           item.description.trim() !== '' &&
-           item.quantity > 0 && 
-           item.unitPrice > 0 && 
-           item.budgetLineId &&
-           item.frequency > 0
+    return item &&
+      item.description &&
+      item.description.trim() !== '' &&
+      item.quantity > 0 &&
+      item.unitPrice > 0 &&
+      item.budgetLineId &&
+      item.frequency > 0
   }
 
   // Vérifier si tous les articles sont complets
@@ -121,7 +137,7 @@ export default function RequisitionForm() {
     const hasDepartment = !!getValues('departmentId')
     const hasTitle = !!getValues('title') && getValues('title').trim() !== ''
     const itemsComplete = areAllItemsComplete()
-    
+
     return hasProject && hasDepartment && hasTitle && itemsComplete
   }
 
@@ -147,7 +163,7 @@ export default function RequisitionForm() {
     setIsSubmitting(true)
     try {
       const totalAmount = calculateTotal()
-      
+
       const itemsWithBudget = data.items.map(item => ({
         description: item.description,
         quantity: item.quantity,
@@ -156,14 +172,15 @@ export default function RequisitionForm() {
         budgetLineId: item.budgetLineId,
         specifications: item.specifications || null
       }))
-      
+
       await createMutation.mutateAsync({
         title: data.title,
         description: data.description,
         departmentId: data.departmentId,
         projectId: data.projectId,
         estimatedAmount: totalAmount,
-        currency: 'USD',
+        currencyId: currency.id,
+        currencyCode: currency.code,
         priority: data.priority,
         justification: data.justification || '',
         items: itemsWithBudget
@@ -206,7 +223,10 @@ export default function RequisitionForm() {
   }
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(amount || 0)
+    if(!currency.code) {
+      return amount;
+    }
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: currency.code }).format(amount || 0)
   }
 
   const getItemStatus = (item) => {
@@ -267,9 +287,8 @@ export default function RequisitionForm() {
               </label>
               <input
                 {...register('title', { required: 'Le titre est requis' })}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.title ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.title ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="Titre de la réquisition"
               />
               {errors.title && (
@@ -283,9 +302,8 @@ export default function RequisitionForm() {
               </label>
               <select
                 {...register('departmentId', { required: 'Le département est requis' })}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.departmentId ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.departmentId ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 disabled={departmentsLoading}
               >
                 <option value="">Sélectionner un département</option>
@@ -316,9 +334,8 @@ export default function RequisitionForm() {
               <select
                 value={projectId}
                 onChange={handleProjectChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  !projectId ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${!projectId ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 disabled={projectsLoading}
               >
                 <option value="">Sélectionner un projet</option>
@@ -388,9 +405,9 @@ export default function RequisitionForm() {
             <h2 className="text-lg font-semibold">Articles</h2>
             <button
               type="button"
-              onClick={() => append({ 
-                description: '', 
-                quantity: 1, 
+              onClick={() => append({
+                description: '',
+                quantity: 1,
                 frequency: 1,
                 unitPrice: 0,
                 budgetLineId: '',
@@ -423,11 +440,11 @@ export default function RequisitionForm() {
                   const status = getItemStatus(item)
                   const budgetLineInfo = watch(`items.${index}.budgetLineInfo`)
                   const itemTotal = calculateItemTotal(
-                    item?.quantity || 0, 
-                    item?.frequency || 1, 
+                    item?.quantity || 0,
+                    item?.frequency || 1,
                     item?.unitPrice || 0
                   )
-                  
+
                   return (
                     <tr key={field.id} className={!status.isComplete ? 'bg-red-50' : ''}>
                       <td className="px-2 py-2 text-center" title={status.tooltip}>
@@ -439,9 +456,8 @@ export default function RequisitionForm() {
                             required: 'Description requise',
                           })}
                           placeholder="Description de l'article"
-                          className={`w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 ${
-                            !item?.description ? 'border-red-400 bg-red-50' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 ${!item?.description ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                            }`}
                         />
                       </td>
                       <td className="px-2 py-2">
@@ -453,9 +469,8 @@ export default function RequisitionForm() {
                             min: 1,
                             valueAsNumber: true
                           })}
-                          className={`w-full px-2 py-1 border rounded text-center focus:ring-2 focus:ring-blue-500 ${
-                            !item?.quantity || item.quantity <= 0 ? 'border-red-400 bg-red-50' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-2 py-1 border rounded text-center focus:ring-2 focus:ring-blue-500 ${!item?.quantity || item.quantity <= 0 ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                            }`}
                         />
                       </td>
                       <td className="px-2 py-2">
@@ -467,9 +482,8 @@ export default function RequisitionForm() {
                             min: 1,
                             valueAsNumber: true
                           })}
-                          className={`w-full px-2 py-1 border rounded text-center focus:ring-2 focus:ring-blue-500 ${
-                            !item?.frequency || item.frequency <= 0 ? 'border-red-400 bg-red-50' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-2 py-1 border rounded text-center focus:ring-2 focus:ring-blue-500 ${!item?.frequency || item.frequency <= 0 ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                            }`}
                           placeholder="x/mois"
                         />
                       </td>
@@ -482,9 +496,8 @@ export default function RequisitionForm() {
                             min: 0,
                             valueAsNumber: true
                           })}
-                          className={`w-full px-2 py-1 border rounded text-right focus:ring-2 focus:ring-blue-500 ${
-                            !item?.unitPrice || item.unitPrice <= 0 ? 'border-red-400 bg-red-50' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-2 py-1 border rounded text-right focus:ring-2 focus:ring-blue-500 ${!item?.unitPrice || item.unitPrice <= 0 ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                            }`}
                         />
                       </td>
                       <td className="px-2 py-2 text-right font-medium text-blue-600">
@@ -497,9 +510,8 @@ export default function RequisitionForm() {
                             value={budgetLineInfo ? `${budgetLineInfo.entity_code} - ${budgetLineInfo.description || 'Sans description'}` : ''}
                             onClick={() => openBudgetSearch(index)}
                             placeholder="Sélectionner ligne budgétaire"
-                            className={`flex-1 px-2 py-1 border rounded bg-gray-50 cursor-pointer text-sm ${
-                              !item?.budgetLineId ? 'border-red-400 bg-red-50' : 'border-green-400 bg-green-50'
-                            }`}
+                            className={`flex-1 px-2 py-1 border rounded bg-gray-50 cursor-pointer text-sm ${!item?.budgetLineId ? 'border-red-400 bg-red-50' : 'border-green-400 bg-green-50'
+                              }`}
                           />
                           <button
                             type="button"

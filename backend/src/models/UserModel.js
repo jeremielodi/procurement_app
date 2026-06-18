@@ -8,7 +8,7 @@ class UserModel {
    * Créer un nouvel utilisateur
    */
   async create(userData) {
-    const { username, email, password, firstName, lastName, department, position, profileIds = [] } = userData;
+    const { username, email, password, firstName, lastName, department, position, enterpriseId, profileIds = [] } = userData;
     
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
@@ -27,6 +27,7 @@ class UserModel {
         department,
         position,
         is_active: true,
+        enterprise_id: enterpriseId,
         created_at: new Date(),
         updated_at: new Date()
       });
@@ -64,7 +65,9 @@ class UserModel {
   async findAll(filters = {}) {
     let sql = `
       SELECT u.id, u.username, u.email, u.first_name, u.last_name, 
-             u.department, u.position, u.is_active, u.last_login, u.created_at,
+             u.department, u.position, u.is_active,
+             u.enterprise_id,
+             u.last_login, u.created_at,
              array_agg(DISTINCT p.id) as profile_ids,
              array_agg(DISTINCT p.name) as profile_names
       FROM users u
@@ -139,8 +142,17 @@ class UserModel {
    */
   async findById(id) {
     const user = await db.one(
-      `SELECT u.id, u.username, u.email, u.first_name, u.last_name, 
-              u.department, u.position, u.is_active, u.last_login, u.created_at
+      `SELECT u.id,
+          u.username,
+          u.email,
+          u.first_name, 
+          u.last_name, 
+          u.department, 
+          u.position, 
+          u.enterprise_id,
+          u.is_active, 
+          u.last_login,
+          u.created_at
        FROM users u
        WHERE u.id = $1`,
       [id]
@@ -175,8 +187,12 @@ class UserModel {
    */
   async findByEmail(email) {
     const user = await db.one(
-      `SELECT u.id, u.username, u.email, u.first_name, u.last_name, 
-              u.department, u.position, u.is_active, u.last_login, u.created_at
+      `SELECT u.id, u.username, u.email,
+          u.first_name, u.last_name, 
+          u.department, u.position,
+          u.enterprise_id,
+          u.is_active, u.last_login,
+          u.created_at
        FROM users u
        WHERE u.email = $1`,
       [email]
@@ -482,7 +498,7 @@ class UserModel {
 async authenticate(email, password) {
   const user = await db.one(
     `SELECT id, username, email, password_hash, first_name, last_name, 
-            department, position, is_active 
+            department, position, is_active, enterprise_id
      FROM users WHERE email = $1 AND is_active = true`,
     [email]
   );

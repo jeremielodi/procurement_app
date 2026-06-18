@@ -112,7 +112,7 @@ async create(req, res) {
   try {
     const {
       title, description, departmentId, projectId,
-      estimatedAmount, currency, priority, justification, items
+      estimatedAmount, currencyId, currencyCode, priority, justification, items
     } = req.body;
 
     const userId = req.user?.id || 1;
@@ -168,7 +168,7 @@ async create(req, res) {
       projectId,
       projectCode,
       estimatedAmount: totalAmount, 
-      currency, 
+      currencyId,
       priority, 
       justification, 
       items: itemsWithDetails,
@@ -216,7 +216,8 @@ async create(req, res) {
           priority: priority || 'MEDIUM',
           justification: justification || '',
           estimatedAmount: totalAmount,
-          currency: currency || 'USD',
+          currency: currencyCode || 'USD',
+          currencyId,
           
           // === INFORMATIONS PROJET ===
           projectId: projectId || '',

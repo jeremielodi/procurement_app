@@ -21,8 +21,9 @@ CREATE TABLE IF NOT EXISTS currency (
 -- ENTERPRISE TABLE
 -- =========================================================
 CREATE TABLE IF NOT EXISTS enterprise (
-    uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),  -- BINARY(16) -> UUID with default generation
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),  -- BINARY(16) -> UUID with default generation
     name VARCHAR(200) NULL,
+    code varchar(40),
     currency_id SMALLINT NOT NULL,  -- tinyint unsigned -> SMALLINT
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_update TIMESTAMP DEFAULT NULL,
@@ -68,6 +69,7 @@ CREATE TABLE IF NOT EXISTS users (
     position VARCHAR(100),
     is_active BOOLEAN DEFAULT true,
     last_login TIMESTAMP,
+    enterprise_id UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -103,7 +105,9 @@ CREATE TABLE IF NOT EXISTS permissions (
     resource VARCHAR(50),
     action VARCHAR(50)
 );
-
+VIEW_PROJECTS
+VIEW_BUDGET
+VIEW_DEPARTMENTS
 -- ============================================
 -- 5. TABLE PROFILE_PERMISSIONS (liaison profil - permission)
 -- ============================================
@@ -181,7 +185,9 @@ CREATE TABLE IF NOT EXISTS requisitions (
     project_id UUID NOT NULL,
     budget_line VARCHAR(100),
     estimated_amount DECIMAL(19,4),
-    currency VARCHAR(3) DEFAULT 'USD',
+    currency_id SMALLINT NOT NULL,  -- tinyint unsigned -> SMALLINT
+    CONSTRAINT requisitions_currency_fkey FOREIGN KEY (currency_id) 
+
     requester_id UUID REFERENCES users(id),
     status VARCHAR(50) DEFAULT 'DRAFT',
     priority VARCHAR(20),
@@ -259,7 +265,10 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     delivery_date DATE,
     shipping_address TEXT,
     total_amount DECIMAL(19,4),
-    currency VARCHAR(3) DEFAULT 'USD',
+    
+    currency_id SMALLINT NOT NULL,  -- tinyint unsigned -> SMALLINT
+    CONSTRAINT requisitions_currency_fkey FOREIGN KEY (currency_id) 
+
     status VARCHAR(50) DEFAULT 'DRAFT',
     approved_by UUID REFERENCES users(id),
     approved_at TIMESTAMP,

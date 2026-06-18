@@ -18,8 +18,6 @@ class DatabaseInitializer {
     logInfo('========================================');
     
     await this.ensureTablesExist();
-    await this.createDefaultProfiles();
-    await this.createDefaultPermissions();
     await this.assignPermissionsToAdminProfile();
     await this.createSuperUser();
     
@@ -114,49 +112,7 @@ class DatabaseInitializer {
     return { inserted, skipped };
   }
 
-  async createDefaultProfiles() {
-    logInfo('📝 Creating default profiles...');
-    
-    const tableExists = await this.tableExists('profiles');
-    if (!tableExists) {
-      logError('❌ Profiles table does not exist, skipping...');
-      return;
-    }
-    
-    const hasId = await this.columnExists('profiles', 'id');
-    const hasName = await this.columnExists('profiles', 'name');
-    
-    if (!hasId || !hasName) {
-      logError('❌ Profiles table missing required columns (id, name), skipping...');
-      return;
-    }
-    
-    const profiles = [
-      { id: 'prof_admin', name: 'Administrateur', description: 'Accès complet au système' },
-      { id: 'prof_manager', name: 'Manager', description: 'Gestion et approbation' },
-      { id: 'prof_user', name: 'Utilisateur', description: 'Utilisateur standard' },
-      { id: 'prof_requester', name: 'Demandeur', description: 'Peut créer des réquisitions' },
-      { id: 'prof_approver', name: 'Approbateur', description: 'Peut approuver les réquisitions' },
-      { id: 'prof_procurement', name: 'Agent d\'achat', description: 'Gère les achats' },
-      { id: 'prof_finance', name: 'Finance', description: 'Gère les aspects financiers' },
-      { id: 'prof_store_keeper', name: 'Magasinier', description: 'Gère les stocks' }
-    ];
-    
-    const hasCreatedAt = await this.columnExists('profiles', 'created_at');
-    if (hasCreatedAt) {
-      profiles.forEach(p => p.created_at = new Date());
-    }
-    
-    const isEmpty = await this.isTableEmpty('profiles');
-    if (!isEmpty) {
-      logInfo('✅ Profiles table already has data, skipping...');
-      return;
-    }
-    
-    const result = await this.batchInsert('profiles', profiles, 'id', 'name');
-    logSuccess('✅ Profiles: %d created, %d skipped', result.inserted, result.skipped);
-  }
-
+  
   async createDefaultPermissions() {
     logInfo('📝 Creating default permissions...');
     
@@ -174,45 +130,7 @@ class DatabaseInitializer {
       return;
     }
     
-    const permissions = [
-      { id: 'perm_view_requisitions', name: 'VIEW_REQUISITIONS', description: 'Voir les réquisitions', resource: 'requisition', action: 'read' },
-      { id: 'perm_create_requisitions', name: 'CREATE_REQUISITIONS', description: 'Créer des réquisitions', resource: 'requisition', action: 'create' },
-      { id: 'perm_edit_requisitions', name: 'EDIT_REQUISITIONS', description: 'Modifier les réquisitions', resource: 'requisition', action: 'update' },
-      { id: 'perm_delete_requisitions', name: 'DELETE_REQUISITIONS', description: 'Supprimer les réquisitions', resource: 'requisition', action: 'delete' },
-      { id: 'perm_approve_requisitions', name: 'APPROVE_REQUISITIONS', description: 'Approuver les réquisitions', resource: 'requisition', action: 'approve' },
-      { id: 'perm_view_suppliers', name: 'VIEW_SUPPLIERS', description: 'Voir les fournisseurs', resource: 'supplier', action: 'read' },
-      { id: 'perm_manage_suppliers', name: 'MANAGE_SUPPLIERS', description: 'Gérer les fournisseurs', resource: 'supplier', action: 'write' },
-      { id: 'perm_view_orders', name: 'VIEW_PURCHASE_ORDERS', description: 'Voir les commandes', resource: 'purchase_order', action: 'read' },
-      { id: 'perm_create_orders', name: 'CREATE_PURCHASE_ORDERS', description: 'Créer des commandes', resource: 'purchase_order', action: 'create' },
-      { id: 'perm_approve_orders', name: 'APPROVE_PURCHASE_ORDERS', description: 'Approuver les commandes', resource: 'purchase_order', action: 'approve' },
-      { id: 'perm_view_dashboard', name: 'VIEW_DASHBOARD', description: 'Voir le tableau de bord', resource: 'dashboard', action: 'read' },
-      { id: 'perm_manage_users', name: 'MANAGE_USERS', description: 'Gérer les utilisateurs', resource: 'user', action: 'write' },
-      { id: 'perm_manage_workflow', name: 'MANAGE_WORKFLOW', description: 'Gérer les workflows', resource: 'workflow', action: 'write' },
-      { id: 'perm_view_departments', name: 'VIEW_DEPARTMENTS', description: 'Voir les départements', resource: 'department', action: 'read' },
-      { id: 'perm_manage_departments', name: 'MANAGE_DEPARTMENTS', description: 'Gérer les départements', resource: 'department', action: 'write' },
-      { id: 'perm_view_projects', name: 'VIEW_PROJECTS', description: 'Voir les projets', resource: 'project', action: 'read' },
-      { id: 'perm_manage_projects', name: 'MANAGE_PROJECTS', description: 'Gérer les projets', resource: 'project', action: 'write' }
-    ];
-    
-    const hasCreatedAt = await this.columnExists('permissions', 'created_at');
-    if (hasCreatedAt) {
-      permissions.forEach(p => p.created_at = new Date());
-    }
-    
-    const hasResource = await this.columnExists('permissions', 'resource');
-    const hasAction = await this.columnExists('permissions', 'action');
-    if (!hasResource) permissions.forEach(p => delete p.resource);
-    if (!hasAction) permissions.forEach(p => delete p.action);
-    
-    const isEmpty = await this.isTableEmpty('permissions');
-    if (!isEmpty) {
-      logInfo('✅ Permissions table already has data, skipping...');
-      return;
-    }
-    
-    const result = await this.batchInsert('permissions', permissions, 'id', 'name');
-    logSuccess('✅ Permissions: %d created, %d skipped', result.inserted, result.skipped);
-  }
+     }
 
   async assignPermissionsToAdminProfile() {
     logInfo('📝 Assigning permissions to admin profile...');
@@ -281,10 +199,17 @@ class DatabaseInitializer {
       return;
     }
     
+    const enterprise = await db.one('SELECT id FROM enterprise');
+
+    if(!enterprise){
+       logInfo('No enterprise defined');
+       return;
+    }
     const userId = uuidv4();
     const defaultPassword = 'Admin123!';
     const passwordHash = await bcrypt.hash(defaultPassword, 10);
     
+
     const userRecord = {
       id: userId,
       username: 'superadmin',
@@ -292,12 +217,11 @@ class DatabaseInitializer {
       password_hash: passwordHash,
       first_name: 'Super',
       last_name: 'Admin',
-      is_active: true
+      is_active: true,
+      enterprise_id: enterprise.id
     };
+ 
     
-    if (await this.columnExists('users', 'department')) {
-      userRecord.department = 'IT';
-    }
     if (await this.columnExists('users', 'position')) {
       userRecord.position = 'System Administrator';
     }

@@ -11,7 +11,7 @@ class RequisitionModel {
   async create(requisitionData) {
     const { 
       title, description, departmentId, projectId, projectCode,
-      estimatedAmount, currency, requesterId, priority, justification,
+      estimatedAmount, currencyId, requesterId, priority, justification,
       items
     } = requisitionData;
 
@@ -35,7 +35,7 @@ class RequisitionModel {
         department_id: departmentId,
         project_id: projectId,
         estimated_amount: estimatedAmount,
-        currency: currency || 'USD',
+        currency_id: currencyId,
         requester_id: requesterId,
         status: 'DRAFT',
         priority,

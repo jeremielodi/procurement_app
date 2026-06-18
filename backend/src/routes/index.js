@@ -15,6 +15,8 @@ const departmentController = require('../controllers/DepartmentController');
 const projectController = require('../controllers/ProjectController');
 const profileController = require('../controllers/ProfileController');
 const budgetController = require('../controllers/BudgetController');
+const enterpriseController = require('../controllers/EnterpriseController');
+const currencyController = require('../controllers/CurrencyController');
 const { authenticate, hasPermission, hasAnyPermission } = require('../middleware/auth');
 
 const uploadRoutes = require('./upload');
@@ -26,6 +28,29 @@ router.post('/auth/login', authController.login);
 router.get('/auth/profile', authenticate, authController.getProfile);
 
 router.use(authenticate);
+
+// Routes publiques (lecture)
+router.get('/enterprises', authenticate, enterpriseController.list);
+router.get('/enterprises/default', authenticate, enterpriseController.getDefault);
+router.get('/enterprises/code/:code', authenticate, enterpriseController.getByCode);
+router.get('/enterprises/:uuid', authenticate, enterpriseController.getOne);
+
+// Routes protégées (écriture)
+router.post('/enterprises/', authenticate, hasPermission('MANAGE_ENTERPRISES'), enterpriseController.create);
+router.put('/enterprises/:id', authenticate, hasPermission('MANAGE_ENTERPRISES'), enterpriseController.update);
+router.delete('/enterprises/:id', authenticate, hasPermission('MANAGE_ENTERPRISES'), enterpriseController.delete);
+
+
+router.get('/currencies', authenticate, currencyController.list);
+router.get('/currencies/active', authenticate, currencyController.getActive);
+router.get('/currencies/default', authenticate, currencyController.getDefault);
+router.get('/currencies/:id', authenticate, currencyController.getOne);
+
+// Routes protégées (écriture)
+router.post('/currencies/', authenticate, hasPermission('MANAGE_CURRENCIES'), currencyController.create);
+router.put('/currencies/:id', authenticate, hasPermission('MANAGE_CURRENCIES'), currencyController.update);
+router.delete('/currencies/:id', authenticate, hasPermission('MANAGE_CURRENCIES'), currencyController.delete);
+
 // ============================================
 // ROUTES DES RÉQUISITIONS (protégées)
 // ============================================
@@ -285,31 +310,26 @@ router.get('/dashboard/kpis',
 // ROUTES DU WORKFLOW (protégées)
 // ============================================
 router.get('/workflow/process/:processInstanceId/history',
-  authenticate,
   hasPermission('VIEW_REQUISITIONS'),
   workflowController.getProcessHistory
 );
 
 router.get('/workflow/process/:processInstanceId/status',
-  authenticate,
   hasPermission('VIEW_REQUISITIONS'),
   workflowController.getProcessStatus
 );
 
 router.get('/workflow/process/:processInstanceId/tasks',
-  authenticate,
   hasPermission('VIEW_REQUISITIONS'),
   workflowController.getProcessTasks
 );
 
 router.get('/workflow/process/:processInstanceId/variables',
-  authenticate,
   hasPermission('VIEW_REQUISITIONS'),
   workflowController.getProcessVariables
 );
 
 router.post('/workflow/process/:processInstanceId/suspend',
-  authenticate,
   hasPermission('MANAGE_WORKFLOW'),
   workflowController.suspendProcess
 );

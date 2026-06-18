@@ -6,8 +6,8 @@
         <bpmn:flowNodeRef>StartEvent_NewRequisition</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_CreateRequisition</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_BudgetAdjustment</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Event_Rejected</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_ServiceAcceptance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_Rejected</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_Finance" name="Finance">
         <bpmn:flowNodeRef>Task_CheckBudget</bpmn:flowNodeRef>
@@ -16,21 +16,22 @@
         <bpmn:flowNodeRef>Event_Completed</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_Management" name="Management">
+        <bpmn:flowNodeRef>Gateway_ApprovalDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_POApproval</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_AnalyzeOffers</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_HierarchicalValidation</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Activity_POApproval</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Gateway_ApprovalDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1x2n3lq</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_Procurement" name="Procurement">
-        <bpmn:flowNodeRef>Activity_DirectPurchase</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_SendPO</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Activity_SoleSource</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Activity_RFPProcess</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Activity_DetermineType</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_ClassifyProcurement</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Gateway_MethodDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_DirectPurchase</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_RequestQuotations</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_RFPProcess</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_SoleSource</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_CreatePO</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendPO</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_MethodDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_DetermineType</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_Logistics" name="Logistics">
         <bpmn:flowNodeRef>Activity_GoodsReceipt</bpmn:flowNodeRef>
@@ -63,13 +64,15 @@
       <bpmn:incoming>Flow_CheckBudget_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_BudgetYes_Validation</bpmn:outgoing>
       <bpmn:outgoing>Flow_BudgetNo_Adjustment</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1r3et5a</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Activity_HierarchicalValidation" name="Hierarchical Validation" camunda:assignee="${approver}" camunda:candidateGroups="manager">
+    <bpmn:userTask id="Activity_HierarchicalValidation" name="Hierarchical Validation N1" camunda:assignee="${approver}" camunda:candidateGroups="manager">
       <bpmn:incoming>Flow_BudgetYes_Validation</bpmn:incoming>
       <bpmn:outgoing>Flow_Validation_Gateway</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:exclusiveGateway id="Gateway_ApprovalDecision" name="Approved?">
       <bpmn:incoming>Flow_Validation_Gateway</bpmn:incoming>
+      <bpmn:incoming>Flow_10zl3rp</bpmn:incoming>
       <bpmn:outgoing>Flow_Approved_DetermineType</bpmn:outgoing>
       <bpmn:outgoing>Flow_Rejected_End</bpmn:outgoing>
     </bpmn:exclusiveGateway>
@@ -138,7 +141,7 @@
     <bpmn:sequenceFlow id="Flow_CreateRequisition_CheckBudget" sourceRef="Activity_CreateRequisition" targetRef="Task_CheckBudget" />
     <bpmn:sequenceFlow id="Flow_CheckBudget_Gateway" sourceRef="Task_CheckBudget" targetRef="Gateway_BudgetDecision" />
     <bpmn:sequenceFlow id="Flow_BudgetYes_Validation" sourceRef="Gateway_BudgetDecision" targetRef="Activity_HierarchicalValidation">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${budgetAvailable == true}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${(budgetAvailable == true) &amp;&amp; (estimatedAmount &lt; 10000) }</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_BudgetNo_Adjustment" sourceRef="Gateway_BudgetDecision" targetRef="Activity_BudgetAdjustment">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${budgetAvailable == false}</bpmn:conditionExpression>
@@ -176,19 +179,27 @@
     <bpmn:sequenceFlow id="Flow_GoodsReceipt_ServiceAcceptance" sourceRef="Activity_GoodsReceipt" targetRef="Activity_ServiceAcceptance" />
     <bpmn:sequenceFlow id="Flow_ServiceAcceptance_Invoice" sourceRef="Activity_ServiceAcceptance" targetRef="Task_ProcessInvoice" />
     <bpmn:sequenceFlow id="Flow_Invoice_Complete" sourceRef="Task_ProcessInvoice" targetRef="Event_Completed" />
+    <bpmn:userTask id="Activity_1x2n3lq" name="Hierarchical Validation N2" camunda:assignee="${approver}" camunda:candidateGroups="manager_n2">
+      <bpmn:incoming>Flow_1r3et5a</bpmn:incoming>
+      <bpmn:outgoing>Flow_10zl3rp</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_1r3et5a" sourceRef="Gateway_BudgetDecision" targetRef="Activity_1x2n3lq">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${(budgetAvailable == true) &amp;&amp; (estimatedAmount &gt;= 10000)}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_10zl3rp" sourceRef="Activity_1x2n3lq" targetRef="Gateway_ApprovalDecision" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_ProcurementProcess">
     <bpmndi:BPMNPlane id="BPMNPlane_ProcurementProcess" bpmnElement="ProcurementProcess">
       <bpmndi:BPMNShape id="Lane_Logistics_di" bpmnElement="Lane_Logistics" isHorizontal="true">
-        <dc:Bounds x="80" y="855" width="2510" height="255" />
+        <dc:Bounds x="80" y="930" width="2510" height="180" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Procurement_di" bpmnElement="Lane_Procurement" isHorizontal="true">
-        <dc:Bounds x="80" y="398" width="2510" height="457" />
+        <dc:Bounds x="80" y="480" width="2510" height="450" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Management_di" bpmnElement="Lane_Management" isHorizontal="true">
-        <dc:Bounds x="80" y="270" width="2510" height="128" />
+        <dc:Bounds x="80" y="270" width="2510" height="210" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Finance_di" bpmnElement="Lane_Finance" isHorizontal="true">
@@ -224,7 +235,7 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_CheckBudget_di" bpmnElement="Task_CheckBudget">
-        <dc:Bounds x="400" y="185" width="100" height="80" />
+        <dc:Bounds x="335" y="185" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_BudgetDecision_di" bpmnElement="Gateway_BudgetDecision" isMarkerVisible="true">
@@ -234,13 +245,13 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_HierarchicalValidation_di" bpmnElement="Activity_HierarchicalValidation">
-        <dc:Bounds x="680" y="294" width="100" height="80" />
+        <dc:Bounds x="691" y="294" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_ApprovalDecision_di" bpmnElement="Gateway_ApprovalDecision" isMarkerVisible="true">
         <dc:Bounds x="850" y="309" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="910" y="327" width="54" height="14" />
+          <dc:Bounds x="910" y="316" width="54" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_POApproval_di" bpmnElement="Activity_POApproval">
@@ -248,29 +259,29 @@
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_DetermineType_di" bpmnElement="Activity_DetermineType">
-        <dc:Bounds x="824" y="526" width="100" height="80" />
+        <dc:Bounds x="880" y="604" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_ClassifyProcurement_di" bpmnElement="Task_ClassifyProcurement">
-        <dc:Bounds x="1030" y="526" width="100" height="80" />
+        <dc:Bounds x="1030" y="604" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_MethodDecision_di" bpmnElement="Gateway_MethodDecision" isMarkerVisible="true">
-        <dc:Bounds x="1245" y="536" width="50" height="50" />
+        <dc:Bounds x="1245" y="614" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1164" y="554" width="71" height="14" />
+          <dc:Bounds x="1164" y="632" width="71" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_DirectPurchase_di" bpmnElement="Activity_DirectPurchase">
-        <dc:Bounds x="1350" y="633" width="100" height="80" />
+        <dc:Bounds x="1350" y="711" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_RequestQuotations_di" bpmnElement="Activity_RequestQuotations">
-        <dc:Bounds x="1350" y="521" width="100" height="80" />
+        <dc:Bounds x="1350" y="599" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_RFPProcess_di" bpmnElement="Activity_RFPProcess">
-        <dc:Bounds x="1350" y="417" width="100" height="80" />
+        <dc:Bounds x="1350" y="495" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_AnalyzeOffers_di" bpmnElement="Task_AnalyzeOffers">
@@ -278,19 +289,19 @@
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_SoleSource_di" bpmnElement="Activity_SoleSource">
-        <dc:Bounds x="1350" y="733" width="100" height="80" />
+        <dc:Bounds x="1350" y="811" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_CreatePO_di" bpmnElement="Activity_CreatePO">
-        <dc:Bounds x="1720" y="475" width="100" height="80" />
+        <dc:Bounds x="1720" y="553" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_SendPO_di" bpmnElement="Task_SendPO">
-        <dc:Bounds x="2040" y="573" width="100" height="80" />
+        <dc:Bounds x="2040" y="651" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_GoodsReceipt_di" bpmnElement="Activity_GoodsReceipt">
-        <dc:Bounds x="2160" y="910" width="100" height="80" />
+        <dc:Bounds x="2160" y="966" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_ProcessInvoice_di" bpmnElement="Task_ProcessInvoice">
@@ -303,23 +314,27 @@
           <dc:Bounds x="2503" y="250" width="54" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_06q6est" bpmnElement="Activity_1x2n3lq">
+        <dc:Bounds x="535" y="385" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_Start_CreateRequisition_di" bpmnElement="Flow_Start_CreateRequisition">
         <di:waypoint x="196" y="108" />
         <di:waypoint x="240" y="108" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_CreateRequisition_CheckBudget_di" bpmnElement="Flow_CreateRequisition_CheckBudget">
         <di:waypoint x="340" y="115" />
-        <di:waypoint x="450" y="115" />
-        <di:waypoint x="450" y="185" />
+        <di:waypoint x="385" y="115" />
+        <di:waypoint x="385" y="185" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_CheckBudget_Gateway_di" bpmnElement="Flow_CheckBudget_Gateway">
-        <di:waypoint x="500" y="225" />
-        <di:waypoint x="560" y="225" />
+        <di:waypoint x="435" y="225" />
+        <di:waypoint x="565" y="225" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_BudgetYes_Validation_di" bpmnElement="Flow_BudgetYes_Validation">
-        <di:waypoint x="585" y="245" />
-        <di:waypoint x="585" y="294" />
-        <di:waypoint x="690" y="294" />
+        <di:waypoint x="610" y="220" />
+        <di:waypoint x="710" y="220" />
+        <di:waypoint x="710" y="294" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_BudgetNo_Adjustment_di" bpmnElement="Flow_BudgetNo_Adjustment">
         <di:waypoint x="585" y="195" />
@@ -331,14 +346,13 @@
         <di:waypoint x="860" y="108" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Validation_Gateway_di" bpmnElement="Flow_Validation_Gateway">
-        <di:waypoint x="780" y="334" />
+        <di:waypoint x="791" y="334" />
         <di:waypoint x="850" y="334" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Approved_DetermineType_di" bpmnElement="Flow_Approved_DetermineType">
-        <di:waypoint x="875" y="359" />
-        <di:waypoint x="875" y="443" />
-        <di:waypoint x="874" y="443" />
-        <di:waypoint x="874" y="526" />
+        <di:waypoint x="900" y="334" />
+        <di:waypoint x="930" y="334" />
+        <di:waypoint x="930" y="604" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Rejected_End_di" bpmnElement="Flow_Rejected_End">
         <di:waypoint x="875" y="309" />
@@ -347,76 +361,76 @@
         <di:waypoint x="878" y="126" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_DetermineType_Classify_di" bpmnElement="Flow_DetermineType_Classify">
-        <di:waypoint x="924" y="566" />
-        <di:waypoint x="1030" y="566" />
+        <di:waypoint x="980" y="644" />
+        <di:waypoint x="1030" y="644" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Classify_Gateway_di" bpmnElement="Flow_Classify_Gateway">
-        <di:waypoint x="1130" y="566" />
-        <di:waypoint x="1250" y="566" />
+        <di:waypoint x="1130" y="644" />
+        <di:waypoint x="1250" y="644" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Method_DirectPurchase_di" bpmnElement="Flow_Method_DirectPurchase">
-        <di:waypoint x="1270" y="586" />
-        <di:waypoint x="1270" y="673" />
-        <di:waypoint x="1350" y="673" />
+        <di:waypoint x="1270" y="664" />
+        <di:waypoint x="1270" y="751" />
+        <di:waypoint x="1350" y="751" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Method_Quotations_di" bpmnElement="Flow_Method_Quotations">
-        <di:waypoint x="1295" y="561" />
-        <di:waypoint x="1350" y="561" />
+        <di:waypoint x="1295" y="639" />
+        <di:waypoint x="1350" y="639" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Method_RFP_di" bpmnElement="Flow_Method_RFP">
-        <di:waypoint x="1270" y="536" />
-        <di:waypoint x="1270" y="457" />
-        <di:waypoint x="1350" y="457" />
+        <di:waypoint x="1270" y="614" />
+        <di:waypoint x="1270" y="535" />
+        <di:waypoint x="1350" y="535" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Method_SoleSource_di" bpmnElement="Flow_Method_SoleSource">
-        <di:waypoint x="1270" y="586" />
-        <di:waypoint x="1270" y="773" />
-        <di:waypoint x="1350" y="773" />
+        <di:waypoint x="1270" y="664" />
+        <di:waypoint x="1270" y="851" />
+        <di:waypoint x="1350" y="851" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_DirectPurchase_CreatePO_di" bpmnElement="Flow_DirectPurchase_CreatePO">
-        <di:waypoint x="1450" y="673" />
-        <di:waypoint x="1595" y="673" />
-        <di:waypoint x="1595" y="515" />
-        <di:waypoint x="1720" y="515" />
+        <di:waypoint x="1450" y="751" />
+        <di:waypoint x="1595" y="751" />
+        <di:waypoint x="1595" y="593" />
+        <di:waypoint x="1720" y="593" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Quotations_Analyze_di" bpmnElement="Flow_Quotations_Analyze">
-        <di:waypoint x="1450" y="561" />
-        <di:waypoint x="1505" y="561" />
+        <di:waypoint x="1450" y="639" />
+        <di:waypoint x="1505" y="639" />
         <di:waypoint x="1505" y="330" />
         <di:waypoint x="1550" y="330" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_RFP_Analyze_di" bpmnElement="Flow_RFP_Analyze">
-        <di:waypoint x="1400" y="417" />
+        <di:waypoint x="1400" y="495" />
         <di:waypoint x="1400" y="320" />
         <di:waypoint x="1550" y="320" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Analyze_CreatePO_di" bpmnElement="Flow_Analyze_CreatePO">
         <di:waypoint x="1650" y="330" />
         <di:waypoint x="1770" y="330" />
-        <di:waypoint x="1770" y="475" />
+        <di:waypoint x="1770" y="553" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_SoleSource_CreatePO_di" bpmnElement="Flow_SoleSource_CreatePO">
-        <di:waypoint x="1450" y="773" />
-        <di:waypoint x="1770" y="773" />
-        <di:waypoint x="1770" y="555" />
+        <di:waypoint x="1450" y="851" />
+        <di:waypoint x="1770" y="851" />
+        <di:waypoint x="1770" y="633" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_CreatePO_POApproval_di" bpmnElement="Flow_CreatePO_POApproval">
-        <di:waypoint x="1820" y="515" />
-        <di:waypoint x="1910" y="515" />
+        <di:waypoint x="1820" y="593" />
+        <di:waypoint x="1910" y="593" />
         <di:waypoint x="1910" y="370" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_POApproval_SendPO_di" bpmnElement="Flow_POApproval_SendPO">
         <di:waypoint x="1980" y="330" />
         <di:waypoint x="2090" y="330" />
-        <di:waypoint x="2090" y="573" />
+        <di:waypoint x="2090" y="651" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_SendPO_GoodsReceipt_di" bpmnElement="Flow_SendPO_GoodsReceipt">
-        <di:waypoint x="2070" y="653" />
-        <di:waypoint x="2070" y="950" />
-        <di:waypoint x="2160" y="950" />
+        <di:waypoint x="2070" y="731" />
+        <di:waypoint x="2070" y="1006" />
+        <di:waypoint x="2160" y="1006" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_GoodsReceipt_ServiceAcceptance_di" bpmnElement="Flow_GoodsReceipt_ServiceAcceptance">
-        <di:waypoint x="2210" y="910" />
+        <di:waypoint x="2210" y="966" />
         <di:waypoint x="2210" y="148" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_ServiceAcceptance_Invoice_di" bpmnElement="Flow_ServiceAcceptance_Invoice">
@@ -427,6 +441,15 @@
       <bpmndi:BPMNEdge id="Flow_Invoice_Complete_di" bpmnElement="Flow_Invoice_Complete">
         <di:waypoint x="2370" y="225" />
         <di:waypoint x="2512" y="225" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1r3et5a_di" bpmnElement="Flow_1r3et5a">
+        <di:waypoint x="585" y="245" />
+        <di:waypoint x="585" y="385" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10zl3rp_di" bpmnElement="Flow_10zl3rp">
+        <di:waypoint x="635" y="425" />
+        <di:waypoint x="875" y="425" />
+        <di:waypoint x="875" y="359" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

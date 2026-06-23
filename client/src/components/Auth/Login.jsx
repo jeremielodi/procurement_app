@@ -40,7 +40,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    
+
     const result = await login(formData.email, formData.password);
     if (result.success) {
       toast.success('Connexion réussie');
@@ -51,16 +51,18 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br flex items-center justify-center p-4">
+    <div
+      className="min-h-screen login-bg-color flex items-center justify-center p-4" 
+    >
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="bg-blue-600 p-6 text-center">
-        <center> <img src='/images/logo_wwf1.png' style={{height:50, borderRadius: 20}}/></center>
+        <div className="p-6 text-center login-card-header-bg">
+          <center> <img src='/images/logo_wwf1.png' style={{ height: 50, borderRadius: 20 }} /></center>
           <h1 className="text-2xl font-bold text-white">
-             Procurement System</h1>
+            Procurement System</h1>
           <p className="text-blue-100 mt-2">WWF - Gestion d'achats</p>
         </div>
-        
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div>
@@ -72,9 +74,8 @@ export default function Login() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.email ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.email ? 'border-red-500' : 'border-gray-300'
+                }`}
               placeholder="exemple@wwf.org"
             />
             {errors.email && (
@@ -84,7 +85,7 @@ export default function Login() {
               </p>
             )}
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Mot de passe
@@ -95,9 +96,8 @@ export default function Login() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.password ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="••••••••"
               />
               <button
@@ -115,7 +115,7 @@ export default function Login() {
               </p>
             )}
           </div>
-          
+
           <div className="flex items-center justify-between">
             <label className="flex items-center">
               <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
@@ -125,11 +125,11 @@ export default function Login() {
               Mot de passe oublié ?
             </Link>
           </div>
-          
+
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="w-full btn-primary flex items-center justify-center gap-2 py-2 px-4 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             {isLoading ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -139,7 +139,7 @@ export default function Login() {
             {isLoading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
-        
+
         {/* Footer */}
         <div className="p-4 bg-gray-50 text-center">
           <p className="text-xs text-gray-500">

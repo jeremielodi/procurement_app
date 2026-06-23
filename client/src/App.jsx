@@ -24,7 +24,7 @@ import NotificationList from './components/Notifications/NotificationList';
 import ProfileList from './components/Admin/ProfileList';
 import BudgetList from './components/Budget/BudgetList';
 import TaskList from './components/Task/TaskList';
-
+import  './app.css'
 function App() {
   return (
     <AuthProvider>

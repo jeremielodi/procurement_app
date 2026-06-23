@@ -165,9 +165,6 @@ const RequisitionViewer = ({ requisitionId, requisition, onClose }) => {
               <span className="font-medium text-gray-800">
                 {requisition?.requisition_number || 'Réquisition'}
               </span>
-              <span className="text-sm text-gray-500 ml-2">
-                - {requisition?.title || 'Sans titre'}
-              </span>
             </div>
           </div>
           

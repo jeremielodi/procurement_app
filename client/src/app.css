@@ -1,0 +1,10 @@
+.btn-primary, .bg-blue-600 {
+    background-color: rgb(70 ,112 ,188) !important
+}
+.login-bg-color {
+    background: linear-gradient(to bottom right, rgba(0,0,0,0.3), rgba(0,0,0,0.1)), url('/images/app_bg.jpg') center/cover no-repeat  
+}
+
+.login-card-header-bg {
+    background-color: #090f23
+}

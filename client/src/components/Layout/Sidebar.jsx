@@ -278,22 +278,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         </button>
       </div>
 
-      {/* Profil utilisateur */}
-      <div className="p-4 border-b">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold">
-            {getInitials()}
-          </div>
-          {isOpen && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800 truncate">
-                {getFullName()}
-              </p>
-              <p className="text-xs text-gray-500 truncate">{getMainRole()}</p>
-            </div>
-          )}
-        </div>
-      </div>
+    
 
       {/* Navigation principale avec groupes extensibles */}
       <nav className="flex-1 overflow-y-auto py-4">

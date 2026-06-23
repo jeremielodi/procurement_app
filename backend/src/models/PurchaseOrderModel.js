@@ -60,6 +60,7 @@ class PurchaseOrderModel {
    * Récupérer une commande par ID
    */
   async findById(id) {
+    console.log("purchaise ID", id);
     const po = await db.one(`
       SELECT 
         po.*,

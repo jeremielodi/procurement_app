@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { taskService } from '../../services/taskService';
 import { useAuth } from '../../hooks/useAuth';
+import { getTaskLabel } from '../../utils/taskLabels';
 import Modal from '../Common/Modal';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -125,31 +126,29 @@ const TaskList = () => {
     }
   };
   
-  const getTaskIcon = (taskName) => {
-    if (!taskName) return <User size={20} className="text-purple-500" />;
-    if (taskName.includes('Validation') || taskName.includes('Approbation')) {
+  const getTaskIcon = (task) => {
+    const key = task?.taskDefinitionKey || '';
+    if (key.includes('Validation') || key.includes('Approval') || key.includes('Approbation')) {
       return <CheckCircle size={20} className="text-blue-500" />;
     }
-    if (taskName.includes('Budget')) {
+    if (key.includes('Budget')) {
       return <DollarSign size={20} className="text-yellow-500" />;
     }
-    if (taskName.includes('Purchase') || taskName.includes('Commande')) {
+    if (key.includes('PO') || key.includes('Purchase') || key.includes('CreatePO')) {
       return <Package size={20} className="text-green-500" />;
     }
     return <User size={20} className="text-purple-500" />;
   };
-  
-  const getTaskColor = (taskName) => {
-    if (!taskName) return 'border-gray-200';
-    if (taskName.includes('Validation')) return 'border-blue-200 bg-blue-50';
-    if (taskName.includes('Budget')) return 'border-yellow-200 bg-yellow-50';
-    if (taskName.includes('Purchase')) return 'border-green-200 bg-green-50';
+
+  const getTaskColor = (task) => {
+    const key = task?.taskDefinitionKey || '';
+    if (key.includes('Validation') || key.includes('Approval')) return 'border-blue-200 bg-blue-50';
+    if (key.includes('Budget')) return 'border-yellow-200 bg-yellow-50';
+    if (key.includes('PO') || key.includes('Purchase') || key.includes('CreatePO')) return 'border-green-200 bg-green-50';
     return 'border-gray-200 bg-gray-50';
   };
-  
-  const getTaskName = (task) => {
-    return task.name || task.taskName || task.activityName || 'Tâche sans nom';
-  };
+
+  const getTaskName = (task) => getTaskLabel(task);
   
   // Compter les tâches par état
   const pendingCount = tasks.filter(t => t.state !== 'completed').length;
@@ -187,7 +186,7 @@ const TaskList = () => {
   };
 
   const TaskForm = ({ task, onChange }) => {
-    const taskName = getTaskName(task);
+    const isDetermineType = task.taskDefinitionKey === 'Activity_DetermineType';
     const variables = task.variables || {};
 
     return (
@@ -306,7 +305,7 @@ const TaskList = () => {
         )}
 
         {/* Procurement method selection */}
-        {(taskName.includes('Determine') || taskName.includes('Méthode')) && (
+        {isDetermineType && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Méthode d'achat *</label>
             <select
@@ -325,8 +324,7 @@ const TaskList = () => {
         )}
 
         {/* Generic comment for all other tasks */}
-        {!isRequisitionApproval(task) && !isPOApproval(task) &&
-         !taskName.includes('Determine') && !taskName.includes('Méthode') && (
+        {!isRequisitionApproval(task) && !isPOApproval(task) && !isDetermineType && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Commentaire</label>
             <textarea
@@ -433,14 +431,14 @@ const TaskList = () => {
             return (
               <div 
                 key={task.id} 
-                className={`bg-white rounded-lg shadow border-l-4 ${getTaskColor(task.name)} p-4 hover:shadow-md transition-shadow ${!isCompleted ? 'cursor-pointer' : ''}`}
+                className={`bg-white rounded-lg shadow border-l-4 ${getTaskColor(task)} p-4 hover:shadow-md transition-shadow ${!isCompleted ? 'cursor-pointer' : ''}`}
                 onClick={() => !isCompleted && handleCompleteTask(task)}
               >
                 <div className="flex flex-wrap justify-between items-start gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      {getTaskIcon(task.name)}
-                      <h3 className="font-semibold text-gray-800">{task.name}</h3>
+                      {getTaskIcon(task)}
+                      <h3 className="font-semibold text-gray-800">{getTaskLabel(task)}</h3>
                       {isCompleted && (
                         <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
                           Terminée

@@ -6,7 +6,13 @@
     "dev": "vite",
     "start": "vite --open",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "playwright test",
+    "test:api": "playwright test --project=api --reporter=line",
+    "test:flow": "playwright test tests/api/flow.spec.js --project=api --reporter=line",
+    "test:e2e": "playwright test --project=e2e --reporter=line",
+    "test:setup": "playwright test --project=e2e-setup",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.14",
@@ -31,6 +37,7 @@
     "socket.io-client": "^4.6.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.24",

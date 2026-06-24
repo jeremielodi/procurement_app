@@ -501,6 +501,69 @@ CREATE TABLE IF NOT EXISTS approvals (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+
+-- Migration: Invoices and Payments tables
+-- Run after 01_schema.sql
+
+-- ─── INVOICES ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS invoices (
+    id               SERIAL PRIMARY KEY,
+    invoice_number   VARCHAR(50) UNIQUE NOT NULL,
+    po_id            INTEGER REFERENCES purchase_orders(id),
+    grn_id           INTEGER REFERENCES goods_receipt_notes(id),
+    supplier_id      INTEGER REFERENCES suppliers(id),
+    invoice_date     DATE NOT NULL,
+    due_date         DATE,
+    subtotal         DECIMAL(15,2) NOT NULL DEFAULT 0,
+    tax_amount       DECIMAL(15,2) NOT NULL DEFAULT 0,
+    total_amount     DECIMAL(15,2) NOT NULL,
+    currency         VARCHAR(10)  DEFAULT 'XAF',
+    status           VARCHAR(50)  DEFAULT 'DRAFT',
+    -- 3-way matching
+    match_status     VARCHAR(50)  DEFAULT 'PENDING',
+    match_details    TEXT,
+    matched_at       TIMESTAMP,
+    -- Camunda linkage
+    process_instance_id VARCHAR(255),
+    camunda_task_id  VARCHAR(255),
+    -- audit
+    notes            TEXT,
+    rejection_reason TEXT,
+    created_by       UUID REFERENCES users(id),
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ─── PAYMENTS ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS payments (
+    id               SERIAL PRIMARY KEY,
+    payment_number   VARCHAR(50) UNIQUE NOT NULL,
+    invoice_id       INTEGER REFERENCES invoices(id),
+    po_id            INTEGER REFERENCES purchase_orders(id),
+    payment_date     DATE,
+    amount           DECIMAL(15,2) NOT NULL,
+    currency         VARCHAR(10)  DEFAULT 'XAF',
+    payment_method   VARCHAR(50)  DEFAULT 'BANK_TRANSFER',
+    reference        VARCHAR(100),
+    bank_account     VARCHAR(100),
+    status           VARCHAR(50)  DEFAULT 'PENDING',
+    notes            TEXT,
+    process_instance_id VARCHAR(255),
+    camunda_task_id  VARCHAR(255),
+    created_by       UUID REFERENCES users(id),
+    approved_by      UUID REFERENCES users(id),
+    approved_at      TIMESTAMP,
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ─── INDEXES ─────────────────────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_invoices_po_id    ON invoices(po_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_grn_id   ON invoices(grn_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status   ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice  ON payments(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status   ON payments(status);
+
 -- ============================================
 -- INDEXES POUR LES PERFORMANCES
 -- ============================================

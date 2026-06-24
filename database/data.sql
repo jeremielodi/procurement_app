@@ -56,14 +56,17 @@ WHERE NOT EXISTS (
 INSERT INTO profiles (id, name, description)
 SELECT * FROM (VALUES
     ('prof_admin', 'Administrateur', 'Accès complet au système'),
-    ('prof_manager', 'Manager', 'Gestion et approbation'),
+    ('prof_manager', 'Manager', 'Gestion et approbation N1 (< 25 000)'),
     ('prof_manager_n2', 'Manager N2', 'Gestion et approbation de plus 10.000'),
     ('prof_user', 'Utilisateur', 'Utilisateur standard'),
     ('prof_requester', 'Demandeur', 'Peut créer des réquisitions'),
     ('prof_approver', 'Approbateur', 'Peut approuver les réquisitions'),
     ('prof_procurement', 'Agent d''achat', 'Gère les achats'),
-    ('prof_finance', 'Finance', 'Gère les aspects financiers'),
-    ('prof_store_keeper', 'Magasinier', 'Gère les stocks')
+    ('prof_finance', 'Finance', 'Gère les aspects financiers N2 (25 000 – 100 000)'),
+    ('prof_store_keeper', 'Magasinier', 'Gère les stocks'),
+    ('prof_dg', 'Directeur Général', 'Approbation N3 (≥ 100 000)'),
+    ('prof_logistic', 'Logistique', 'Réception marchandises et bon de livraison (GRN)'),
+    ('prof_management', 'Direction', 'Approbation des bons de commande')
 ) AS tmp(id, name, description)
 WHERE NOT EXISTS (
     SELECT 1 FROM profiles WHERE id = tmp.id
@@ -278,8 +281,77 @@ WHERE p.name IN (
     'VIEW_DEPARTMENTS'
 )
 AND NOT EXISTS (
-    SELECT 1 
-    FROM profile_permissions pp 
-    WHERE pp.profile_id = 'prof_store_keeper' 
+    SELECT 1
+    FROM profile_permissions pp
+    WHERE pp.profile_id = 'prof_store_keeper'
+    AND pp.permission_id = p.id
+);
+
+-- 10. DIRECTEUR GÉNÉRAL (dg) - Approbation N3 (>= 100 000)
+INSERT INTO profile_permissions (profile_id, permission_id)
+SELECT
+    'prof_dg' AS profile_id,
+    p.id AS permission_id
+FROM permissions p
+WHERE p.name IN (
+    'VIEW_REQUISITIONS',
+    'APPROVE_REQUISITIONS',
+    'VIEW_SUPPLIERS',
+    'VIEW_PURCHASE_ORDERS',
+    'APPROVE_PURCHASE_ORDERS',
+    'VIEW_DASHBOARD',
+    'VIEW_DEPARTMENTS',
+    'VIEW_PROJECTS',
+    'VIEW_BUDGET'
+)
+AND NOT EXISTS (
+    SELECT 1
+    FROM profile_permissions pp
+    WHERE pp.profile_id = 'prof_dg'
+    AND pp.permission_id = p.id
+);
+
+-- 11. LOGISTIQUE (logistic) - Réception marchandises (GRN)
+INSERT INTO profile_permissions (profile_id, permission_id)
+SELECT
+    'prof_logistic' AS profile_id,
+    p.id AS permission_id
+FROM permissions p
+WHERE p.name IN (
+    'VIEW_REQUISITIONS',
+    'VIEW_SUPPLIERS',
+    'VIEW_PURCHASE_ORDERS',
+    'VIEW_DASHBOARD',
+    'VIEW_DEPARTMENTS',
+    'VIEW_PROJECTS'
+)
+AND NOT EXISTS (
+    SELECT 1
+    FROM profile_permissions pp
+    WHERE pp.profile_id = 'prof_logistic'
+    AND pp.permission_id = p.id
+);
+
+-- 12. DIRECTION (management) - Approbation bons de commande
+INSERT INTO profile_permissions (profile_id, permission_id)
+SELECT
+    'prof_management' AS profile_id,
+    p.id AS permission_id
+FROM permissions p
+WHERE p.name IN (
+    'VIEW_REQUISITIONS',
+    'APPROVE_REQUISITIONS',
+    'VIEW_SUPPLIERS',
+    'VIEW_PURCHASE_ORDERS',
+    'APPROVE_PURCHASE_ORDERS',
+    'VIEW_DASHBOARD',
+    'VIEW_DEPARTMENTS',
+    'VIEW_PROJECTS',
+    'VIEW_BUDGET'
+)
+AND NOT EXISTS (
+    SELECT 1
+    FROM profile_permissions pp
+    WHERE pp.profile_id = 'prof_management'
     AND pp.permission_id = p.id
 );

@@ -1,5 +1,6 @@
 // src/pages/Dashboard/components/RecentRequisitions.jsx
 import React, { useState } from 'react';
+import { useCurrency } from '../../contexts/EnterpriseContext';
 import { motion } from 'framer-motion';
 import { 
   FileText, 
@@ -21,6 +22,7 @@ import { fr } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 
 export default function RecentRequisitions({ requisitions = [], limit = 5 }) {
+  const { formatAmount } = useCurrency();
   const [expanded, setExpanded] = useState(false);
   
   // Limiter le nombre d'éléments affichés
@@ -118,16 +120,7 @@ export default function RecentRequisitions({ requisitions = [], limit = 5 }) {
     );
   };
 
-  // Fonction pour formater le montant
-  const formatCurrency = (amount, currencySymbol = '€') => {
-    if (amount === undefined || amount === null) return '0 €';
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
+  const formatCurrency = (amount) => formatAmount(amount || 0);
 
   // Fonction pour obtenir le temps écoulé
   const getTimeAgo = (date) => {

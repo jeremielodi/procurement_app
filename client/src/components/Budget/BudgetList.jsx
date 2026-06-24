@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit, Trash2, Eye, DollarSign, TrendingUp, TrendingDown, Search, Filter } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
+import { useCurrency } from '../../contexts/EnterpriseContext';
 import { projectService } from '../../services/projectService';
 import Modal from '../Common/Modal';
 import BudgetForm from './BudgetForm';
@@ -10,6 +11,7 @@ import BudgetDetail from './BudgetDetail';
 import toast from 'react-hot-toast';
 
 export default function BudgetList() {
+  const { formatAmount } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [fundingSource, setFundingSource] = useState('all');
@@ -40,12 +42,7 @@ export default function BudgetList() {
   let summaryInfo = summaryData?.data;
   const summary = (summaryInfo || {}).summary;
 
-  const formatCurrency = (amount) => {
-    if(!amount) {
-        amount = 0;
-    }
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(amount);
-  };
+  const formatCurrency = (amount) => formatAmount(amount || 0);
 
   const getUtilizationRate = (allocated, utilized) => {
     if (allocated === 0) return 0;

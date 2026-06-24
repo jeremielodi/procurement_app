@@ -34,7 +34,7 @@ class DashboardModel {
 
       // Réquisitions en attente d'approbation
       const pendingApprovals = await db.one(
-        "SELECT COUNT(*) as count FROM requisitions WHERE status = 'PENDING'"
+        "SELECT COUNT(*) as count FROM requisitions WHERE status IN ('IN_PROGRESS', 'PENDING_APPROVAL', 'BUDGET_INSUFFICIENT')"
       );
 
       // Réquisitions approuvées ce mois
@@ -51,6 +51,35 @@ class DashboardModel {
         "SELECT COALESCE(SUM(total_amount), 0) as total FROM purchase_orders"
       );
       
+      // GRN stats
+      const grnStats = await db.one(`
+        SELECT
+          COUNT(*) as total,
+          COUNT(CASE WHEN status = 'COMPLETE' THEN 1 END) as complete,
+          COUNT(CASE WHEN status = 'PARTIAL'  THEN 1 END) as partial
+        FROM goods_receipt_notes
+      `);
+
+      // Invoice stats
+      const invoiceStats = await db.one(`
+        SELECT
+          COUNT(*) as total,
+          COUNT(CASE WHEN match_status = 'MATCHED'       THEN 1 END) as matched,
+          COUNT(CASE WHEN match_status = 'PRICE_MISMATCH' THEN 1 END) as mismatch,
+          COALESCE(SUM(total_amount), 0) as total_amount
+        FROM invoices
+      `);
+
+      // Payment stats
+      const paymentStats = await db.one(`
+        SELECT
+          COUNT(*) as total,
+          COUNT(CASE WHEN status = 'PENDING'   THEN 1 END) as pending,
+          COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed,
+          COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN amount ELSE 0 END), 0) as paid_amount
+        FROM payments
+      `);
+
       return {
         requisitions: {
           total: parseInt(totalRequisitions.count),
@@ -67,6 +96,23 @@ class DashboardModel {
         },
         orders: {
           total: parseInt(totalOrders.count)
+        },
+        grn: {
+          total: parseInt(grnStats.total),
+          complete: parseInt(grnStats.complete),
+          partial: parseInt(grnStats.partial)
+        },
+        invoices: {
+          total: parseInt(invoiceStats.total),
+          matched: parseInt(invoiceStats.matched),
+          mismatch: parseInt(invoiceStats.mismatch),
+          totalAmount: parseFloat(invoiceStats.total_amount)
+        },
+        payments: {
+          total: parseInt(paymentStats.total),
+          pending: parseInt(paymentStats.pending),
+          completed: parseInt(paymentStats.completed),
+          paidAmount: parseFloat(paymentStats.paid_amount)
         }
       };
     } catch (error) {
@@ -105,10 +151,9 @@ class DashboardModel {
           TO_CHAR(created_at, $1) as period,
           COUNT(*) as requisitions,
           COALESCE(SUM(estimated_amount), 0) as amount,
-          COUNT(CASE WHEN status = 'APPROVED' THEN 1 END) as approved,
-          COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed,
-          COUNT(CASE WHEN status = 'REJECTED' THEN 1 END) as rejected,
-          COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending
+          COUNT(CASE WHEN status = 'APPROVED'    THEN 1 END) as approved,
+          COUNT(CASE WHEN status = 'REJECTED'    THEN 1 END) as rejected,
+          COUNT(CASE WHEN status IN ('IN_PROGRESS','PENDING_APPROVAL') THEN 1 END) as pending
         FROM requisitions
         WHERE created_at >= NOW() - INTERVAL '${interval}'
         GROUP BY TO_CHAR(created_at, $1)
@@ -127,16 +172,13 @@ class DashboardModel {
       
       // Couleurs par statut
       const statusColors = {
-        'DRAFT': '#9CA3AF',
-        'PENDING': '#F59E0B',
-        'BUDGET_CHECKED': '#3B82F6',
-        'APPROVED': '#10B981',
-        'REJECTED': '#EF4444',
-        'IN_PROGRESS': '#8B5CF6',
-        'COMPLETED': '#10B981',
-        'CANCELLED': '#6B7280',
-        'SUBMITTED': '#60A5FA',
-        'PROCESSING': '#A78BFA'
+        'DRAFT':               '#9CA3AF',
+        'IN_PROGRESS':         '#8B5CF6',
+        'PENDING_APPROVAL':    '#F59E0B',
+        'BUDGET_INSUFFICIENT': '#F97316',
+        'APPROVED':            '#10B981',
+        'REJECTED':            '#EF4444',
+        'CANCELLED':           '#6B7280'
       };
       
       const statusDistributionWithColors = statusDistribution.map(item => ({
@@ -179,23 +221,23 @@ class DashboardModel {
         LIMIT 5
       `);
       
-      // Méthodes d'achat
+      // Méthodes d'achat — basé sur le montant estimé selon les seuils BPMN
       const procurementMethods = await db.select(`
-        SELECT 
-          CASE 
-            WHEN estimated_amount <= 5000 THEN 'DIRECT_PURCHASE'
-            WHEN estimated_amount <= 25000 THEN 'MULTIPLE_QUOTATIONS'
-            WHEN estimated_amount > 25000 THEN 'RFP'
+        SELECT
+          CASE
             WHEN EXISTS (
-              SELECT 1 FROM sole_source_justifications ssj 
+              SELECT 1 FROM sole_source_justifications ssj
               WHERE ssj.requisition_id = requisitions.id
             ) THEN 'SOLE_SOURCE'
-            ELSE 'OTHER'
+            WHEN estimated_amount <= 5000  THEN 'DIRECT_PURCHASE'
+            WHEN estimated_amount <= 25000 THEN 'MULTIPLE_QUOTATIONS'
+            ELSE 'RFP'
           END as method,
           COUNT(*) as count,
           COALESCE(SUM(estimated_amount), 0) as amount
         FROM requisitions
         GROUP BY method
+        ORDER BY count DESC
       `);
       
       const methodLabels = {
@@ -248,16 +290,13 @@ class DashboardModel {
    */
   getStatusLabel(status) {
     const labels = {
-      'DRAFT': 'Brouillon',
-      'PENDING': 'En attente',
-      'BUDGET_CHECKED': 'Vérifié budget',
-      'APPROVED': 'Approuvé',
-      'REJECTED': 'Rejeté',
-      'IN_PROGRESS': 'En cours',
-      'COMPLETED': 'Terminé',
-      'CANCELLED': 'Annulé',
-      'SUBMITTED': 'Soumis',
-      'PROCESSING': 'En traitement'
+      'DRAFT':               'Brouillon',
+      'IN_PROGRESS':         'En cours',
+      'PENDING_APPROVAL':    "En attente d'approbation",
+      'BUDGET_INSUFFICIENT': 'Budget insuffisant',
+      'APPROVED':            'Approuvé',
+      'REJECTED':            'Rejeté',
+      'CANCELLED':           'Annulé'
     };
     return labels[status] || status;
   }
@@ -519,7 +558,7 @@ class DashboardModel {
           COUNT(r.id) as requisition_count,
           COALESCE(SUM(r.estimated_amount), 0) as total_amount,
           COUNT(CASE WHEN r.status = 'APPROVED' THEN 1 END) as approved_count,
-          COUNT(CASE WHEN r.status = 'PENDING' THEN 1 END) as pending_count,
+          COUNT(CASE WHEN r.status IN ('IN_PROGRESS','PENDING_APPROVAL') THEN 1 END) as pending_count,
           COUNT(CASE WHEN r.status = 'REJECTED' THEN 1 END) as rejected_count,
           COUNT(CASE WHEN r.status = 'COMPLETED' THEN 1 END) as completed_count,
           COALESCE(AVG(CASE WHEN r.approved_at IS NOT NULL THEN 
@@ -606,7 +645,7 @@ class DashboardModel {
       // Taux d'approbation
       const approvalRate = await db.one(`
         SELECT 
-          COUNT(CASE WHEN status IN ('APPROVED', 'COMPLETED') THEN 1 END) as approved,
+          COUNT(CASE WHEN status = 'APPROVED' THEN 1 END) as approved,
           COUNT(*) as total
         FROM requisitions
       `);
@@ -695,7 +734,7 @@ class DashboardModel {
           created_at,
           EXTRACT(EPOCH FROM (NOW() - created_at))/86400 as days_pending
         FROM requisitions
-        WHERE status = 'PENDING'
+        WHERE status IN ('IN_PROGRESS', 'PENDING_APPROVAL')
         AND created_at < NOW() - INTERVAL '5 days'
         ORDER BY created_at ASC
         LIMIT 10
@@ -771,7 +810,7 @@ class DashboardModel {
           COUNT(r.id) as requisition_count,
           COALESCE(SUM(r.estimated_amount), 0) as total_requisition_amount,
           COUNT(CASE WHEN r.status = 'APPROVED' THEN 1 END) as approved_count,
-          COUNT(CASE WHEN r.status = 'PENDING' THEN 1 END) as pending_count,
+          COUNT(CASE WHEN r.status IN ('IN_PROGRESS','PENDING_APPROVAL') THEN 1 END) as pending_count,
           COUNT(po.id) as order_count,
           COALESCE(SUM(po.total_amount), 0) as total_order_amount,
           COALESCE(SUM(ba.allocated_amount), 0) as budget_allocated,

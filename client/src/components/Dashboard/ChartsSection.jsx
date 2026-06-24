@@ -1,5 +1,6 @@
 // src/pages/Dashboard/components/ChartsSection.jsx
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useCurrency } from '../../contexts/EnterpriseContext';
 import { motion } from 'framer-motion';
 import * as echarts from 'echarts';
 import {
@@ -7,10 +8,12 @@ import {
     PieChart,
     LineChart,
     Download,
+    FileDown,
     RefreshCw,
 } from 'lucide-react';
 
 export default function ChartsSection({ chartData, period }) {
+    const { formatAmount } = useCurrency();
     const [activeTab, setActiveTab] = useState('trend');
 
     // Refs pour les conteneurs de graphiques
@@ -55,16 +58,7 @@ export default function ChartsSection({ chartData, period }) {
         colors.purple, colors.pink, colors.cyan, colors.orange
     ], [colors]);
 
-    // Formatage des montants
-    const formatCurrency = useCallback((amount) => {
-        if (amount === undefined || amount === null) return '0 €';
-        return new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(amount);
-    }, []);
+    const formatCurrency = useCallback((amount) => formatAmount(amount), [formatAmount]);
 
     // 1. Graphique de tendance (Ligne)
     const getTrendOption = useCallback(() => {
@@ -769,7 +763,7 @@ export default function ChartsSection({ chartData, period }) {
                     <button
                         onClick={handleExport}
                         className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="Exporter en PNG"
+                        title="Exporter le graphique en PNG"
                     >
                         <Download className="w-4 h-4" />
                     </button>
@@ -778,7 +772,7 @@ export default function ChartsSection({ chartData, period }) {
                         className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                         title="Télécharger les données (CSV)"
                     >
-                        <Download className="w-4 h-4" />
+                        <FileDown className="w-4 h-4" />
                     </button>
                 </div>
             </div>

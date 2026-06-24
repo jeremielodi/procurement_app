@@ -2,8 +2,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Clock, DollarSign, Users, Bell } from 'lucide-react';
+import { useCurrency } from '../../contexts/EnterpriseContext';
 
 export default function AlertsSection({ alerts }) {
+  const { formatAmount } = useCurrency();
   if (!alerts) return null;
 
   const hasAlerts = 
@@ -30,7 +32,7 @@ export default function AlertsSection({ alerts }) {
         <Bell className="w-5 h-5 text-yellow-500 mr-2" />
         <h3 className="text-lg font-semibold text-gray-800">Alertes</h3>
         <span className="ml-3 bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-          {alerts.pendingOverdue?.length || 0 + alerts.budgetAlerts?.length || 0 + alerts.supplierAlerts?.length || 0}
+          {(alerts.pendingOverdue?.length || 0) + (alerts.budgetAlerts?.length || 0) + (alerts.supplierAlerts?.length || 0)}
         </span>
       </div>
 
@@ -70,7 +72,7 @@ export default function AlertsSection({ alerts }) {
                 <div className="mt-2 space-y-1">
                   {alerts.budgetAlerts.slice(0, 3).map(item => (
                     <div key={item.id} className="text-sm text-yellow-600">
-                      {item.entity_code} - {item.utilization_rate}% utilisé ({formatCurrency(item.remaining_amount)} restant)
+                      {item.entity_code} - {item.utilization_rate}% utilisé ({formatAmount(item.remaining_amount)} restant)
                     </div>
                   ))}
                 </div>
@@ -105,12 +107,6 @@ export default function AlertsSection({ alerts }) {
   );
 }
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(amount);
-}
 
 const CheckCircle = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">

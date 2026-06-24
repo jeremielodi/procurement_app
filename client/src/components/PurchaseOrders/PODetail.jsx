@@ -25,12 +25,13 @@ import {
   AlertCircle,
   Eye,
   FileCheck,
-  Receipt,
-  CreditCard
+  Info
 } from 'lucide-react'
 import { purchaseOrderService } from '../../services/purchaseOrderService'
 import { supplierService } from '../../services/supplierService'
 import { requisitionService } from '../../services/requisitionService'
+import { grnService } from '../../services/grnService'
+import { sanService } from '../../services/sanService'
 import StatusBadge from '../Common/StatusBadge'
 import LoadingSpinner from '../Common/LoadingSpinner'
 import ErrorAlert from '../Common/ErrorAlert'
@@ -67,6 +68,21 @@ export default function PODetail() {
     queryFn: () => requisitionService.getById(poData?.data?.requisition_id),
     enabled: !!poData?.data?.requisition_id
   })
+
+  // GRN et SAN liés à cette commande
+  const { data: grnData } = useQuery({
+    queryKey: ['grn-by-po', id],
+    queryFn: () => grnService.getByPO(id),
+    enabled: !!id
+  })
+  const { data: sanData } = useQuery({
+    queryKey: ['san-by-po', id],
+    queryFn: () => sanService.getByPO(id),
+    enabled: !!id
+  })
+
+  const grns = grnData?.data || []
+  const sans = sanData?.data || []
 
   const po = poData?.data
   const supplier = supplierData?.data
@@ -445,6 +461,84 @@ export default function PODetail() {
                     <StatusBadge status={requisition.status} size="sm" />
                   </div>
                 </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Flux Procure-to-Pay */}
+          {['PO_APPROVED', 'PO_SENT', 'PO_RECEIVED', 'PO_COMPLETE'].includes(po.status) && (
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-4 border-b border-gray-200">
+                <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Truck size={16} />
+                  Flux P2P
+                </h2>
+              </div>
+              <div className="p-4 space-y-3">
+                {/* Note GoFlow */}
+                <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg p-2.5">
+                  <Info size={13} className="text-blue-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-blue-700">
+                    Les actions (GRN, SAN, Facture, Paiement) sont déclenchées par GoFlow et apparaissent dans votre <strong>liste des tâches</strong>.
+                  </p>
+                </div>
+
+                {/* GRN */}
+                {grns.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase mb-1.5 flex items-center gap-1">
+                      <Package size={12} /> Bons de réception (GRN)
+                    </p>
+                    <div className="space-y-1">
+                      {grns.map(g => (
+                        <Link
+                          key={g.id}
+                          to={`/goods-receipts/${g.id}`}
+                          className="flex items-center justify-between px-2 py-1.5 rounded bg-gray-50 hover:bg-blue-50 text-xs"
+                        >
+                          <span className="font-mono text-gray-700">{g.grn_number}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                            g.status === 'COMPLETE' ? 'bg-green-100 text-green-700' :
+                            g.status === 'PARTIAL'  ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>{g.status}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* SAN */}
+                {sans.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase mb-1.5 flex items-center gap-1">
+                      <FileCheck size={12} /> Acceptations service (SAN)
+                    </p>
+                    <div className="space-y-1">
+                      {sans.map(s => (
+                        <Link
+                          key={s.id}
+                          to={`/service-acceptance-notes/${s.id}`}
+                          className="flex items-center justify-between px-2 py-1.5 rounded bg-gray-50 hover:bg-purple-50 text-xs"
+                        >
+                          <span className="font-mono text-gray-700">{s.san_number}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                            s.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
+                            s.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>{s.status}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Aucun document encore */}
+                {grns.length === 0 && sans.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center py-2">
+                    Aucun document P2P enregistré pour cette commande.
+                  </p>
+                )}
               </div>
             </div>
           )}

@@ -69,7 +69,7 @@ class BudgetController {
 
 async getByProject(req, res) {
   try {
-    const budgetLines = await budgetModel.getBudgetLinesByProject(req.params.projectId);
+    const budgetLines = await budgetModel.findAll({ projectId: req.params.projectId });
     res.json({ success: true, data: budgetLines });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

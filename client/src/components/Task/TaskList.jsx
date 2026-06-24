@@ -23,11 +23,13 @@ import { useAuth } from '../../hooks/useAuth';
 import Modal from '../Common/Modal';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { useCurrency } from '../../contexts/EnterpriseContext';
 
 const TaskList = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { currency } = useCurrency();
   const userEmail = user?.email;
   
   const [selectedTask, setSelectedTask] = useState(null);
@@ -55,7 +57,8 @@ const TaskList = () => {
   });
   
   const completeMutation = useMutation({
-    mutationFn: ({ taskId, variables }) => taskService.completeTask(taskId, variables),
+    mutationFn: ({ taskId, variables, taskDefinitionKey, requisitionId, estimatedAmount }) =>
+      taskService.completeTask(taskId, { variables, taskDefinitionKey, requisitionId, estimatedAmount }),
     onSuccess: () => {
       queryClient.invalidateQueries(['user-tasks', userEmail]);
       toast.success('Tâche complétée avec succès');
@@ -86,6 +89,11 @@ const TaskList = () => {
   };
   
   const handleCompleteTask = (task) => {
+    const route = getFormRoute(task);
+    if (route) {
+      navigate(route);
+      return;
+    }
     setSelectedTask(task);
     formDataRef.current = {};
     forceUpdate({});
@@ -94,9 +102,12 @@ const TaskList = () => {
   const handleSubmitTask = async () => {
     setSubmitting(true);
     try {
-      await completeMutation.mutateAsync({ 
-        taskId: selectedTask.id, 
-        variables: formDataRef.current 
+      await completeMutation.mutateAsync({
+        taskId: selectedTask.id,
+        variables: formDataRef.current,
+        taskDefinitionKey: selectedTask.taskDefinitionKey,
+        requisitionId: selectedTask.variables?.requisitionId,
+        estimatedAmount: selectedTask.variables?.estimatedAmount
       });
     } finally {
       setSubmitting(false);
@@ -144,53 +155,70 @@ const TaskList = () => {
   const pendingCount = tasks.filter(t => t.state !== 'completed').length;
   const completedCount = tasks.filter(t => t.state === 'completed').length;
   
+  // Task definition keys that approve/reject a requisition (variable: approved)
+  const REQUISITION_APPROVAL_KEYS = [
+    'Activity_ManagerApproval',
+    'Activity_FinanceApproval',
+    'Activity_DGApproval'
+  ];
+
+  const isRequisitionApproval = (task) =>
+    REQUISITION_APPROVAL_KEYS.includes(task.taskDefinitionKey) ||
+    ['Validation', 'Hierarchical', 'Approbation Réquisition', 'Hierarchical Approval'].some(k =>
+      (task.name || '').includes(k)
+    );
+
+  const isPOApproval = (task) =>
+    task.taskDefinitionKey === 'Activity_POApproval' ||
+    (task.name || '').includes('Approbation Commande') ||
+    (task.name || '').includes('PO Approval');
+
+  // Tâches qui ont un formulaire dédié → redirection au lieu de la modale
+  const FORM_TASKS = {
+    'Activity_GoodsReceipt':      (t) => `/goods-receipts/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
+    'Activity_ServiceAcceptance': (t) => `/service-acceptance-notes/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
+    'Activity_EnterInvoice':      (t) => `/invoices/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
+    'Activity_ProcessPayment':    (t) => `/payments/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
+  };
+
+  const getFormRoute = (task) => {
+    const fn = FORM_TASKS[task.taskDefinitionKey];
+    return fn ? fn(task) : null;
+  };
+
   const TaskForm = ({ task, onChange }) => {
     const taskName = getTaskName(task);
     const variables = task.variables || {};
-    
+
     return (
       <div className="space-y-4">
+        {/* Requisition summary */}
         <div className="bg-blue-50 p-4 rounded-lg">
           <h4 className="font-medium text-blue-800 mb-2">Informations de la réquisition</h4>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="text-gray-600 flex items-center gap-1">
-              <Hash size={14} />
-              Numéro:
-            </div>
+            <div className="text-gray-600 flex items-center gap-1"><Hash size={14} />Numéro:</div>
             <div className="font-medium">{variables.requisitionNumber || '-'}</div>
-            
-            <div className="text-gray-600 flex items-center gap-1">
-              <ShoppingCart size={14} />
-              Titre:
-            </div>
+
+            <div className="text-gray-600 flex items-center gap-1"><ShoppingCart size={14} />Titre:</div>
             <div className="font-medium">{variables.title || '-'}</div>
-            
-            <div className="text-gray-600 flex items-center gap-1">
-              <DollarSign size={14} />
-              Montant:
+
+            <div className="text-gray-600 flex items-center gap-1"><DollarSign size={14} />Montant:</div>
+            <div className="font-medium">
+              {variables.estimatedAmount?.toLocaleString()} {variables.currency || currency.code}
             </div>
-            <div className="font-medium">{variables.estimatedAmount?.toLocaleString()} {variables.currency || 'USD'}</div>
-            
-            <div className="text-gray-600 flex items-center gap-1">
-              <Building2 size={14} />
-              Département:
-            </div>
-            <div className="font-medium">{variables.department || '-'}</div>
-            
-            <div className="text-gray-600 flex items-center gap-1">
-              <User size={14} />
-              Demandeur:
-            </div>
-            <div className="font-medium">{variables.requester || '-'}</div>
-            
-            <div className="text-gray-600 flex items-center gap-1">
-              <Package size={14} />
-              Projet:
-            </div>
+
+            <div className="text-gray-600 flex items-center gap-1"><Building2 size={14} />Département:</div>
+            <div className="font-medium">{variables.departementCode || variables.department || '-'}</div>
+
+            <div className="text-gray-600 flex items-center gap-1"><User size={14} />Demandeur:</div>
+            <div className="font-medium">{variables.requesterUsername || variables.requester || '-'}</div>
+
+            <div className="text-gray-600 flex items-center gap-1"><Package size={14} />Projet:</div>
             <div className="font-medium">{variables.projectName || variables.projectCode || '-'}</div>
           </div>
         </div>
-        
+
+        {/* Items list */}
         {variables.items && (
           <div className="border rounded-lg overflow-hidden">
             <div className="bg-gray-50 px-4 py-2 font-medium text-sm">Articles</div>
@@ -202,31 +230,28 @@ const TaskList = () => {
                     <div key={idx} className="p-3 text-sm">
                       <div className="font-medium">{item.description}</div>
                       <div className="text-gray-500 text-xs mt-1">
-                        Quantité: {item.quantity} | Fréquence: {item.frequency} | Prix: {item.unitPrice} | Total: {item.total}
+                        Qté: {item.quantity} × Fréq: {item.frequency} × Prix: {item.unitPrice} = {item.total}
                       </div>
                       {item.budgetLineCode && (
                         <div className="text-xs text-blue-600 mt-1">
-                          Budget: {item.budgetLineCode} - {item.budgetLineDescription}
+                          Budget: {item.budgetLineCode} – {item.budgetLineDescription}
                         </div>
                       )}
                     </div>
                   ));
                 } catch (e) {
-                  return <div className="p-3 text-sm text-gray-500">Erreur de chargement</div>;
+                  return <div className="p-3 text-sm text-gray-500">Erreur de chargement des articles</div>;
                 }
               })()}
             </div>
           </div>
         )}
-        
-        {(taskName.includes('Validation') || 
-          taskName.includes('Hierarchical') ||
-          taskName.includes('Approbation')) && (
+
+        {/* Requisition approval (N1 / N2 / N3) — variable: approved */}
+        {isRequisitionApproval(task) && (
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Décision *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Décision *</label>
               <select
                 defaultValue=""
                 onChange={(e) => onChange('approved', e.target.value === 'true')}
@@ -239,13 +264,11 @@ const TaskList = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Commentaire
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Commentaire</label>
               <textarea
                 defaultValue=""
                 onBlur={(e) => onChange('comment', e.target.value)}
-                rows="4"
+                rows="3"
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 placeholder="Ajoutez un commentaire..."
               />
@@ -253,12 +276,39 @@ const TaskList = () => {
           </>
         )}
 
-        {(taskName.includes('Determine') || 
-          taskName.includes('Procurement')) && (
+        {/* PO Approval — variable: poApproved */}
+        {isPOApproval(task) && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Décision sur le bon de commande *</label>
+              <select
+                defaultValue=""
+                onChange={(e) => onChange('poApproved', e.target.value === 'true')}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Sélectionner...</option>
+                <option value="true">✅ Approuver le bon de commande</option>
+                <option value="false">❌ Rejeter le bon de commande</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Commentaire</label>
+              <textarea
+                defaultValue=""
+                onBlur={(e) => onChange('comment', e.target.value)}
+                rows="3"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Ajoutez un commentaire..."
+              />
+            </div>
+          </>
+        )}
+
+        {/* Procurement method selection */}
+        {(taskName.includes('Determine') || taskName.includes('Méthode')) && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Méthode d'achat *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Méthode d'achat *</label>
             <select
               defaultValue=""
               onChange={(e) => onChange('procurementMethod', e.target.value)}
@@ -266,52 +316,19 @@ const TaskList = () => {
               required
             >
               <option value="">Sélectionner...</option>
-              <option value="DIRECT_PURCHASE">Achat direct</option>
-              <option value="MULTIPLE_QUOTATIONS">Multiples devis</option>
-              <option value="RFP">Appel d'offres</option>
-              <option value="SOLE_SOURCE">Source unique</option>
+              <option value="DIRECT_PURCHASE">Achat direct (&lt; 5 000)</option>
+              <option value="MULTIPLE_QUOTATIONS">Multiples devis (5 000 – 25 000)</option>
+              <option value="RFP">Appel d'offres (&gt; 25 000)</option>
+              <option value="SOLE_SOURCE">Source unique (justifiée)</option>
             </select>
           </div>
         )}
 
-        {taskName.includes('Budget Adjustment') && (
+        {/* Generic comment for all other tasks */}
+        {!isRequisitionApproval(task) && !isPOApproval(task) &&
+         !taskName.includes('Determine') && !taskName.includes('Méthode') && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nouveau montant proposé *
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              defaultValue=""
-              onBlur={(e) => onChange('newBudgetAmount', parseFloat(e.target.value))}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Montant proposé"
-            />
-            <div className="mt-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Justification de l'ajustement
-              </label>
-              <textarea
-                defaultValue=""
-                onBlur={(e) => onChange('adjustmentJustification', e.target.value)}
-                rows="3"
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="Expliquez pourquoi un ajustement budgétaire est nécessaire..."
-              />
-            </div>
-          </div>
-        )}
-
-        {!taskName.includes('Validation') &&
-         !taskName.includes('Hierarchical') &&
-         !taskName.includes('Approbation') &&
-         !taskName.includes('Determine') &&
-         !taskName.includes('Procurement') &&
-         !taskName.includes('Budget Adjustment') && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Commentaire
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Commentaire</label>
             <textarea
               defaultValue=""
               onBlur={(e) => onChange('comment', e.target.value)}
@@ -439,7 +456,7 @@ const TaskList = () => {
                       <div className="font-medium truncate">{variables.title || '-'}</div>
                       
                       <div className="text-gray-500">Montant:</div>
-                      <div className="font-medium">{variables.estimatedAmount?.toLocaleString()} {variables.currency || 'USD'}</div>
+                      <div className="font-medium">{variables.estimatedAmount?.toLocaleString()} {variables.currency || currency.code}</div>
                       
                       <div className="text-gray-500">Projet:</div>
                       <div className="font-medium">{variables.projectName || variables.projectCode || '-'}</div>
@@ -494,7 +511,7 @@ const TaskList = () => {
                             className="flex items-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700"
                           >
                             <Send size={16} />
-                            Traiter
+                            {getFormRoute(task) ? 'Ouvrir le formulaire' : 'Traiter'}
                           </button>
                         )}
                       </>

@@ -13,9 +13,14 @@ const getBrowserOptions = () => {
     ]
   };
 
-  // Utiliser chromium préinstallé en production
-  if (process.env.NODE_ENV === 'production') {
-    options.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser';
+  // En production Linux : utiliser le chromium système ou l'env var
+  // Sur Windows ou si l'env var pointe un chemin qui n'existe pas → laisser Puppeteer
+  // trouver son propre Chromium bundlé (pas d'executablePath)
+  const explicitPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (explicitPath) {
+    options.executablePath = explicitPath;
+  } else if (process.env.NODE_ENV === 'production' && process.platform !== 'win32') {
+    options.executablePath = '/usr/bin/chromium-browser';
   }
 
   return options;

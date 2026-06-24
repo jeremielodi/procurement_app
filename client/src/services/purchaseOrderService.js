@@ -46,6 +46,24 @@ export const purchaseOrderService = {
     return response.data
   },
 
+  // Envoyer la commande au fournisseur
+  send: async (id) => {
+    const response = await api.post(`/purchase-orders/${id}/send`)
+    return response.data
+  },
+
+  // Soumettre pour approbation (DRAFT → PO_PENDING)
+  submit: async (id) => {
+    const response = await api.post(`/purchase-orders/${id}/submit`)
+    return response.data
+  },
+
+  // Supprimer une commande
+  delete: async (id) => {
+    const response = await api.delete(`/purchase-orders/${id}`)
+    return response.data
+  },
+
   // Récupérer les statistiques des commandes
   getStats: async () => {
     const response = await api.get('/purchase-orders/stats')

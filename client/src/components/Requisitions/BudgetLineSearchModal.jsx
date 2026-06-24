@@ -3,10 +3,12 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, MapPin, Building2, FileText, DollarSign, Filter, ChevronDown } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
+import { useCurrency } from '../../contexts/EnterpriseContext';
 import Modal from '../Common/Modal';
 import LoadingSpinner from '../Common/LoadingSpinner';
 
 export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, projectId }) {
+  const { formatAmount } = useCurrency();
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     search: '',
@@ -38,9 +40,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
     onClose();
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(amount);
-  };
+  const formatCurrency = (amount) => formatAmount(amount || 0);
 
   const getUsagePercent = (allocated, utilized) => {
     if (allocated === 0) return 0;

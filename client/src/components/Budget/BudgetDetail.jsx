@@ -3,12 +3,14 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, DollarSign, Calendar, FileText } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
+import { useCurrency } from '../../contexts/EnterpriseContext';
 import { requisitionService } from '../../services/requisitionService';
 import { purchaseOrderService } from '../../services/purchaseOrderService';
 import Modal from '../Common/Modal';
 import toast from 'react-hot-toast';
 
 export default function BudgetDetail({ budget, onClose }) {
+  const { formatAmount } = useCurrency();
   const queryClient = useQueryClient();
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [expenseForm, setExpenseForm] = useState({
@@ -39,9 +41,7 @@ export default function BudgetDetail({ budget, onClose }) {
     }
   });
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(amount);
-  };
+  const formatCurrency = (amount) => formatAmount(amount || 0);
 
   const utilizationRate = ((budget.utilized_amount / budget.allocated_amount) * 100).toFixed(1);
 

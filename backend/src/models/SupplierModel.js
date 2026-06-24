@@ -42,6 +42,15 @@ class SupplierModel {
   /**
    * Récupérer tous les fournisseurs préqualifiés
    */
+  async getById(id) {
+    const results = await db.select('SELECT * FROM suppliers WHERE id = $1', [id]);
+    return results[0] || null;
+  }
+
+  async getAll() {
+    return db.select('SELECT * FROM suppliers ORDER BY name', []);
+  }
+
   async getPrequalifiedSuppliers() {
     return await db.select(
       "SELECT * FROM suppliers WHERE prequalified = true AND status = 'ACTIVE' ORDER BY name",

@@ -1,0 +1,286 @@
+Docusign Envelope ID: F63BFA61-89DD-8085-8369-8F01E77E06BF
+Bureau National du Programme WWF en RDC 
+4630, avenue de la Science 
+Immeuble 365 Offices Building (Entrée D) 
+Commune de la Gombe – Kinshasa  
+République Démocratique du Congo 
+Numéro d’impôt : A0700478D 
+TERMES DE RÉFÉRENCE 
+Identification du Marché 
+Tel. 0976006100 
+B.P. 2847 Kinshasa I 
+E-mail : wwfdrc@wwfdrc.org  
+Website : www.wwfdrc.org  
+Recrutement d’un consultant IT pour le développement d’une 
+application web de gestion électronique du processus d’achat 
+Projets 
+Date de publication des TDR 
+OD (40001336 - 403725) 
+30 avril 2026 
+Date limite pour la réception des 
+demandes de renseignements  
+14 mai 2026  
+Date de clôture de réception des 
+offres  
+21 mai 2026 
+Site de publication 
+Media Congo 
+1. Contexte et justification 
+Dans le cadre de l’amélioration de l’efficacité, de la transparence et de la traçabilité des processus 
+d’achats, l’organisation souhaite mettre en place un système électronique de gestion du processus 
+d’achat. 
+Actuellement, les demandes d’achats sont traitées via des échanges de courriels et des documents 
+manuels, ce qui entraîne : 
+• Des retards dans le traitement des réquisitions ;  
+• Une visibilité limitée sur l’état d’avancement des processus ;  
+• Des difficultés de suivi et d’archivage ;  
+• Une traçabilité insuffisante des validations.  
+Afin de remédier à ces défis, l’organisation souhaite recruter un consultant ou une firme spécialisée pour 
+concevoir et développer une application web sécurisée permettant d’automatiser et de digitaliser 
+l’ensemble du processus d’achat. 
+2. Objectif de la mission 
+L’objectif principal est de concevoir, développer et déployer un système web sécurisé permettant : 
+• La gestion électronique des réquisitions d’achat ;  
+• L’automatisation des validations ;  
+• Le suivi des processus d’achat ;  
+• L’archivage des documents ;  
+• La gestion de la réception des biens et services. 
+3. Résultats attendus 
+À l’issue de la mission, le consultant devra livrer un système web complet, sécurisé et opérationnel 
+permettant de digitaliser l’ensemble du processus d’achat. 
+Le système devra couvrir : 
+• La gestion des réquisitions ;  
+• Le workflow de validation ;  
+• Le suivi des processus ;  
+• La gestion des fournisseurs ;  
+• La réception des biens et services ;  
+• L’archivage électronique ;  
+• Le reporting et le suivi des performances.  
+Docusign Envelope ID: F63BFA61-89DD-8085-8369-8F01E77E06BF
+Les fonctionnalités détaillées sont décrites au point 4. 
+4. Fonctionnalités attendues du système 
+Le logiciel devra intégrer les fonctionnalités suivantes afin d’assurer une gestion efficace, transparente et 
+traçable du processus de réquisitions et d’achats. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+4.1 Gestion des réquisitions d’achat 
+Le système devra permettre : 
+• La création et soumission électronique des réquisitions ;  
+• L’attribution automatique d’un numéro unique ;  
+• La saisie des informations clés (département, projet, description, quantité, 
+budget, ligne budgétaire) ;  
+• L’ajout de pièces justificatives ;  
+• La sécurisation des accès et sauvegarde des données. 
+ 
+4.2 Workflow de validation et d’approbation 
+Le système devra intégrer : 
+• Une validation hiérarchique selon les seuils ;  
+• L’acheminement automatique des demandes ;  
+• Des notifications automatiques ;  
+• Un historique complet des décisions ;  
+• Une structuration obligatoire des étapes du processus.  
+ 
+4.3 Suivi des processus d’achat 
+Le système devra permettre : 
+• L’identification des processus en cours, approuvés, rejetés ou clôturés ;  
+• Le suivi des délais par étape ;  
+• L’identification des retards ;  
+• Une visualisation claire de l’état d’avancement. 
+ 
+4.4 Tableau de bord et reporting 
+Le système devra intégrer : 
+• La classification automatique des achats :  
+o Achat direct  
+o Fournisseur préqualifié  
+o Cotations multiples  
+o Appel d’offres  
+o Source unique  
+• La définition des étapes et responsabilités ;  
+• L’analyse des offres ;  
+• L’attribution et le suivi des marchés.  
+ 
+ 
+4.5 Gestion de la réception des biens et services 
+Le système devra permettre : 
+• La gestion et préqualification des fournisseurs ;  
+• La diligence raisonnable ;  
+• Le suivi des fournisseurs et commandes ;  
+• La gestion des relations fournisseurs. 
+ 
+4.6 Archivage et gestion documentaire 
+Le système devra inclure : 
+• Un module Goods Receipt Note (GRN) ;  
+• Un module Service Acceptance Note ;  
+• La validation des livraisons et services ;  
+• L’ajout d’observations et justificatifs.  
+ 
+4.7 Archivage électronique et gestion documentaire 
+Le système devra permettre : 
+• L’archivage sécurisé de tous les documents ;  
+• La gestion des droits d’accès ;  
+• La traçabilité des actions ;  
+• Une recherche rapide des documents.  
+ 
+4.8 Tableau de bord et reporting 
+Le système devra inclure : 
+• Un tableau de bord interactif ;  
+• Le suivi des réquisitions par statut ;  
+• Le suivi des délais de traitement ;  
+• Des indicateurs de performance ;  
+• L’exportation des données (Excel, PDF).  
+ 
+4.9 Gestion des utilisateurs 
+Le système devra permettre : 
+• La gestion des profils utilisateurs ;  
+• La gestion des droits d’accès ;  
+• La traçabilité des actions.  
+ 
+ 
+ 
+Docusign Envelope ID: F63BFA61-89DD-8085-8369-8F01E77E06BF
+Docusign Envelope ID: F63BFA61-89DD-8085-8369-8F01E77E06BF
+5. Méthodologie attendue 
+Le consultant devra proposer une méthodologie incluant : 
+• Analyse des besoins des utilisateurs ; 
+• Conception du système (architecture et design) ; 
+• Développement et tests ; 
+• Déploiement du système ; 
+• Formation des utilisateurs ; 
+• Assistance technique après déploiement. 
+6. Livrables attendus 
+Dans le cadre de la mission, le consultant devra produire un ensemble de livrables permettant d’assurer 
+une bonne conception, un développement structuré et un déploiement efficace du système. Les 
+principaux livrables attendus sont les suivants : 
+• Rapport d’analyse des besoins 
+Le consultant devra produire un rapport détaillant les besoins fonctionnels et techniques du 
+système, basé sur des consultations avec les utilisateurs et les parties prenantes afin de s’assurer 
+que le logiciel répond aux exigences opérationnelles de l’organisation. 
+• Architecture technique du système 
+Le consultant devra présenter l’architecture technique proposée pour le système, incluant les 
+technologies utilisées, la structure de la base de données, les mécanismes de sécurité et les 
+modalités d’hébergement du logiciel. 
+• Prototype ou version pilote 
+Le consultant devra développer une version pilote ou un prototype du système permettant de 
+tester les principales fonctionnalités, recueillir les retours des utilisateurs et apporter les 
+ajustements nécessaires avant le développement final. 
+• Version finale du logiciel web 
+Le consultant devra livrer une version complète, fonctionnelle et sécurisée du système web, 
+intégrant toutes les fonctionnalités convenues et prête à être déployée et utilisée par 
+l’organisation. 
+• Manuel utilisateur (simple) 
+Le consultant devra élaborer un guide utilisateur clair et accessible expliquant les principales 
+fonctionnalités du système et les procédures à suivre pour les différents types d’utilisateurs. 
+• Manuel technique du système 
+Un manuel technique devra être fourni afin de documenter le fonctionnement du système, 
+l’architecture du logiciel, les procédures de maintenance, ainsi que les instructions nécessaires 
+pour les mises à jour futures. 
+• Rapport final de mission 
+À la fin de la mission, le consultant devra soumettre un rapport final présentant les activités 
+réalisées, les résultats obtenus, les défis rencontrés et les recommandations pour l’utilisation et 
+l’évolution du système. 
+7. Durée de la mission 
+La mission est estimée à 3 mois maximum à partir de la signature du contrat. 
+Docusign Envelope ID: F63BFA61-89DD-8085-8369-8F01E77E06BF
+8. Profil du consultant 
+Le consultant ou la firme devra avoir : 
+• Un diplôme en informatique, ingénierie logicielle ou domaine équivalent ; 
+• Au moins 5 ans d’expérience en développement d’applications web ; 
+• Une expérience dans le développement de systèmes de gestion ou ERP ; 
+• Une bonne connaissance des systèmes de workflow et de gestion documentaire ; 
+• Une expérience dans des projets similaires avec des organisations internationales constitue un 
+avantage. 
+9. Soumission des candidatures 
+Le dossier de candidature à soumettre au WWF sera constitué d’une offre technique et d’une offre 
+financière avec le calendrier détaillé de mise en œuvre.  
+L’offre technique comprendra cfr. La Grille d’évaluation des propositions 
+Critères 
+Score offre technique 
+Score 
+maximum 
+Lettre de manifestation d’intérêt adressée au Directeur National du WWF-DRC 
+80 
+5 
+Diplôme en informatique, ingénierie logicielle ou domaine équivalent, copie du titre en 
+annexe  
+5 
+Curriculum vitae détaillé du candidat ou profil de la firme   
+Brève présentation de l’approche méthodologique 
+10 
+10 
+Note explicative technique du logiciel en rapport avec les Termes de Référence  
+Brève présentation de son expertise sur des marchés similaires en développement 
+d’applications web et de systèmes de gestion ou ERP 
+20 
+15 
+Références professionnelles avec les détails de contact dont les adresses emails et 
+numéros de téléphone joignables  
+10 
+L’offre contient la lettre de certification et engagement de l’annexe B dûment rempli est 
+signée par la personne habilitée à engager l’institution. Toute lettre présentée dans un 
+format autre que celui repris l’annexe B sera rejetée ; 
+5 
+Score offre financière  
+Score total 
+20 
+100 
+Les questions éventuelles peuvent être soumises jusqu’au 14 Mai 2026 à l’adresse mngonga@wwfdrc.org 
+en copie cbuinu@wwfdrc.org et bxilunga@wwfdrc.org avec l’objet : « Consultant IT développement 
+d’une application web de gestion électronique du processus d’achat ». 
+NB : Les questions transmises tardivement ne pourront pas être traitées. Aucun 
+renseignement n’est délivré par téléphone. 
+DEPOT DE CANDIDATURE  
+Les candidats intéressés et qui remplissent les conditions reprises plus haut sont priés de faire parvenir 
+leurs offres par voie électronique, l’adresse : procurement@wwfdrc.org 
+Date limite de dépôt des candidatures : 21 mai 2026 à 17h00 Heure de Kinshasa 
+Docusign Envelope ID: F63BFA61-89DD-8085-8369-8F01E77E06BF
+ANNEXE B : LETTRE DE CERTIFICATION ET ENGAGEMENT 
+Je, personne physique dont la signature figure ci-dessous, suis entièrement autorisé(e) à engager 
+l’entreprise et je déclare que tous les renseignements fournis avec cette offre ou dans le cadre de cet 
+appel d’offres sont exacts, véridiques, complets et à jour.  
+En cas de réception d’un avis de sélection, je m’engage à exécuter le marché. Je reconnais qu’un 
+désistement après l’avis de sélection pourrait conduire à la radiation de ma société de la liste de 
+fournisseurs pré-qualifiés de WWF et/ou de marchés futurs avec WWF. 
+Par ailleurs, je certifie ne recourir à aucun acte de corruption ou de trafic d’influence dans le cadre de ce 
+marché.  
+Je reconnais qu’en cas de soupçon avéré ou de preuve d’une quelconque pression de nature corruptive 
+ou la remise d’un avantage indu (argent ou tout autre objet de valeur) par le fournisseur à un membre 
+du personnel de WWF ou un membre de la commission d’évaluation en vue d’influencer le processus de 
+sélection, le WWF a la faculté de rejeter mon offre dès la survenance des faits ou à partir du moment où 
+le WWF a la certitude des griefs reprochés. 
+Je reconnais qu’aucun agent de WWF ni aucun membre de la commission ne pourrait prétendre à 
+l’obtention d’une commission de quelque forme que ce soit dans le cadre du présent appel d’offres.  
+Dans l’éventualité où je subirais de quelque manière que ce soit, de la part d’un employé de WWF ou 
+membre de la commission, des pressions de nature corruptive, je suis tenu de dénoncer la tentative de 
+corruption directement auprès de la Directrice des Finances et/ou Directeur National de WWF. 
+SIGNATURE : _________________________________  
+DATE : _______________________________________                                                                        
+NOM ET TIRE (EN CARACTÈRES D’IMPRIMERIE) : _________________________________ 
+_______________________________________________________________________ 
+*** Apposez vos initiales au bas de chaque page de l’offre présentée *** 

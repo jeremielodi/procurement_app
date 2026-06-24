@@ -12,7 +12,7 @@ const api = axios.create({
 // Intercepteur pour ajouter le token à chaque requête
 api.interceptors.request.use(
   (config) => {
-    const token = sessionStorage.getItem('token')
+    const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -29,8 +29,8 @@ api.interceptors.response.use(
   (error) => {
     // Si erreur 401 (non autorisé), rediriger vers login
     if (error.response?.status === 401) {
-      sessionStorage.removeItem('token')
-      sessionStorage.removeItem('user')
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
       window.location.href = '/login'
       toast.error('Session expirée, veuillez vous reconnecter')
       return Promise.reject(error)

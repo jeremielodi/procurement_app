@@ -216,7 +216,7 @@ class EnterpriseModel {
    */
   async getDefault() {
     const enterprise = await db.one(`
-      SELECT 
+      SELECT
         e.id,
         e.name,
         e.code,
@@ -224,6 +224,8 @@ class EnterpriseModel {
         c.name as currency_name,
         c.symbol as currency_symbol,
         c.format_key as currency_code,
+        c.intel_number_format,
+        c.min_monentary_unit,
         e.created_at,
         e.last_update
       FROM enterprise e

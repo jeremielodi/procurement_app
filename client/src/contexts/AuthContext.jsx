@@ -12,24 +12,23 @@ export const AuthProvider = ({ children }) => {
   // Charger l'utilisateur à partir du token stocké
   useEffect(() => {
     const loadUser = async () => {
-      const token = sessionStorage.getItem('token');
-      
+      const token = localStorage.getItem('token');
+
       if (!token) {
         setIsLoading(false);
         return;
       }
-      
+
       try {
         const response = await api.get('/auth/profile');
-        console.log(response.data);
         const userData = response.data.data;
         setUser(userData);
         setIsAuthenticated(true);
-        sessionStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('user', JSON.stringify(userData));
       } catch (error) {
         console.error('Error loading user:', error);
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         setUser(null);
         setIsAuthenticated(false);
       } finally {
@@ -45,8 +44,8 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/login', { email, password });
       const { token, user: userData } = response.data.data;
       
-      sessionStorage.setItem('token', token);
-      sessionStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
       
       setUser(userData);
       setIsAuthenticated(true);
@@ -61,15 +60,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = useCallback(() => {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
     setIsAuthenticated(false);
   }, []);
 
   const updateUser = useCallback((updatedUser) => {
     setUser(updatedUser);
-    sessionStorage.setItem('user', JSON.stringify(updatedUser));
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   }, []);
 
   const value = {

@@ -25,12 +25,14 @@ import StatusBadge from '../Common/StatusBadge';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import Modal from '../Common/Modal';
 import toast from 'react-hot-toast';
+import { useCurrency } from '../../contexts/EnterpriseContext';
 
 export default function RequisitionTasks() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const userEmail = user?.email;
+  const { formatAmount } = useCurrency();
   
   const [tasks, setTasks] = useState([]);
   const [requisition, setRequisition] = useState(null);
@@ -168,9 +170,7 @@ export default function RequisitionTasks() {
     return task.name || task.taskName || task.activityName || 'Tâche sans nom';
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(amount || 0);
-  };
+  const formatCurrency = (amount) => formatAmount(amount || 0);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Date inconnue';

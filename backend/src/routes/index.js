@@ -17,6 +17,10 @@ const profileController = require('../controllers/ProfileController');
 const budgetController = require('../controllers/BudgetController');
 const enterpriseController = require('../controllers/EnterpriseController');
 const currencyController = require('../controllers/CurrencyController');
+const grnController = require('../controllers/GoodsReceiptController');
+const sanController = require('../controllers/ServiceAcceptanceController');
+const invoiceController = require('../controllers/InvoiceController');
+const paymentController = require('../controllers/PaymentController');
 const { authenticate, hasPermission, hasAnyPermission } = require('../middleware/auth');
 
 const uploadRoutes = require('./upload');
@@ -136,6 +140,20 @@ router.get('/suppliers',
     try {
       const suppliers = await supplierModel.getPrequalifiedSuppliers();
       res.json({ success: true, data: suppliers });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
+router.get('/suppliers/:id',
+  authenticate,
+  hasPermission('VIEW_SUPPLIERS'),
+  async (req, res) => {
+    try {
+      const supplier = await supplierModel.getById(req.params.id);
+      if (!supplier) return res.status(404).json({ success: false, message: 'Fournisseur introuvable' });
+      res.json({ success: true, data: supplier });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -398,6 +416,106 @@ router.put('/budget/:id', hasPermission('MANAGE_BUDGET'), budgetController.updat
 router.delete('/budget/:id', hasPermission('MANAGE_BUDGET'), budgetController.delete);
 
 router.get('/budget/by-project/:projectId', hasPermission('VIEW_BUDGET'), budgetController.getByProject);
+
+// ============================================
+// ROUTES DES BONS DE RÉCEPTION (GRN)
+// ============================================
+router.get('/goods-receipts',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  grnController.getAll.bind(grnController)
+);
+router.get('/goods-receipts/:id',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  grnController.getById.bind(grnController)
+);
+router.post('/goods-receipts',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  grnController.create.bind(grnController)
+);
+router.get('/purchase-orders/:poId/goods-receipts',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  grnController.getByPO.bind(grnController)
+);
+router.patch('/goods-receipts/:id/status',
+  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  grnController.updateStatus.bind(grnController)
+);
+
+// ============================================
+// ROUTES DES NOTES D'ACCEPTATION DE SERVICE (SAN)
+// ============================================
+router.get('/service-acceptance-notes',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  sanController.getAll.bind(sanController)
+);
+router.get('/service-acceptance-notes/:id',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  sanController.getById.bind(sanController)
+);
+router.post('/service-acceptance-notes',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  sanController.create.bind(sanController)
+);
+router.get('/purchase-orders/:poId/service-acceptance-notes',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  sanController.getByPO.bind(sanController)
+);
+
+// ============================================
+// ROUTES DES FACTURES
+// ============================================
+router.get('/invoices',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  invoiceController.getAll.bind(invoiceController)
+);
+router.get('/invoices/:id',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  invoiceController.getById.bind(invoiceController)
+);
+router.post('/invoices',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  invoiceController.create.bind(invoiceController)
+);
+router.post('/invoices/:id/match',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  invoiceController.runMatch.bind(invoiceController)
+);
+router.post('/invoices/:id/approve',
+  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  invoiceController.approve.bind(invoiceController)
+);
+router.post('/invoices/:id/reject',
+  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  invoiceController.reject.bind(invoiceController)
+);
+
+// ============================================
+// ROUTES DES PAIEMENTS
+// ============================================
+router.get('/payments',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  paymentController.getAll.bind(paymentController)
+);
+router.get('/payments/:id',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  paymentController.getById.bind(paymentController)
+);
+router.post('/payments',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  paymentController.create.bind(paymentController)
+);
+router.post('/payments/:id/approve',
+  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  paymentController.approve.bind(paymentController)
+);
+router.patch('/payments/:id/status',
+  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  paymentController.updateStatus.bind(paymentController)
+);
+router.get('/payments/:id/pdf',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  paymentController.generatePDF.bind(paymentController)
+);
 
 router.use('/upload',  uploadRoutes);
 module.exports = router;

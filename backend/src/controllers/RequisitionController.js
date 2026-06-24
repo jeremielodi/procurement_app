@@ -7,7 +7,7 @@ const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
 const requisitionExportService = require('../services/RequisitionExportService');
-
+const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -115,9 +115,16 @@ async create(req, res) {
       estimatedAmount, currencyId, currencyCode, priority, justification, items
     } = req.body;
 
+    if (!title || !departmentId || !currencyId || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'title, departmentId, currencyId et au moins un item sont requis'
+      });
+    }
+
     const userId = req.user?.id || 1;
     const io = req.io;
-    
+
     // Récupérer l'email et le username de l'utilisateur
     const userEmail = await this.getUserEmailById(userId);
     const userUsername = await this.getUserUsernameById(userId);
@@ -198,6 +205,7 @@ async create(req, res) {
       });
 
       // Démarrer le processus Camunda avec TOUTES les informations
+      const defaultCurrency = await getEnterpriseCurrencyCode();
       const processResult = await camundaService.startProcess(
         process.env.PROCUREMENT_BPMN_PROCESS,
         {
@@ -216,7 +224,7 @@ async create(req, res) {
           priority: priority || 'MEDIUM',
           justification: justification || '',
           estimatedAmount: totalAmount,
-          currency: currencyCode || 'USD',
+          currency: currencyCode || defaultCurrency,
           currencyId,
           
           // === INFORMATIONS PROJET ===
@@ -274,38 +282,38 @@ async create(req, res) {
         await sleep(3000);
         
         // Récupérer les tâches avec l'email comme assignee
-        const userTasks = await camundaService.getUserTasks(userEmail, processResult.processInstanceId);
+        // const userTasks = await camundaService.getUserTasks(userEmail, processResult.processInstanceId);
         
-        const createRequisitionTask = userTasks.filter((t) => t.taskDefinitionKey == 'Activity_CreateRequisition')[0] || {};
+        // const createRequisitionTask = userTasks.filter((t) => t.taskDefinitionKey == 'Activity_CreateRequisition')[0] || {};
         
-        if (createRequisitionTask.id) {
-          // Ajouter l'historique du workflow
-          await requisitionModel.addWorkflowHistory({
-            processInstanceId: processResult.processInstanceId,
-            entityType: 'requisition',
-            entityId: result.id,
-            taskId: createRequisitionTask.id,
-            taskName: createRequisitionTask.name || 'Création réquisition',
-            action: 'TASK_STARTED',
-            comments: `Début de la tâche: ${createRequisitionTask.name}`,
-            performedBy: userId
-          });
+        // if (createRequisitionTask.id) {
+        //   // Ajouter l'historique du workflow
+        //   await requisitionModel.addWorkflowHistory({
+        //     processInstanceId: processResult.processInstanceId,
+        //     entityType: 'requisition',
+        //     entityId: result.id,
+        //     taskId: createRequisitionTask.id,
+        //     taskName: createRequisitionTask.name || 'Création réquisition',
+        //     action: 'TASK_STARTED',
+        //     comments: `Début de la tâche: ${createRequisitionTask.name}`,
+        //     performedBy: userId
+        //   });
 
-          await camundaService.completeTask(createRequisitionTask.id, {});
+        //   await camundaService.completeTask(createRequisitionTask.id, {});
           
-          // Ajouter l'historique du workflow
-          await requisitionModel.addWorkflowHistory({
-            processInstanceId: processResult.processInstanceId,
-            entityType: 'requisition',
-            entityId: result.id,
-            taskId: createRequisitionTask.id,
-            taskName: createRequisitionTask.name || 'Création réquisition',
-            action: 'TASK_COMPLETED',
-            comments: `Tâche "${createRequisitionTask.name}" complétée automatiquement`,
-            performedBy: userId
-          });
+        //   // Ajouter l'historique du workflow
+        //   await requisitionModel.addWorkflowHistory({
+        //     processInstanceId: processResult.processInstanceId,
+        //     entityType: 'requisition',
+        //     entityId: result.id,
+        //     taskId: createRequisitionTask.id,
+        //     taskName: createRequisitionTask.name || 'Création réquisition',
+        //     action: 'TASK_COMPLETED',
+        //     comments: `Tâche "${createRequisitionTask.name}" complétée automatiquement`,
+        //     performedBy: userId
+        //   });
         
-        }
+        // }
 
         // Ajouter l'historique du workflow
         await requisitionModel.addWorkflowHistory({

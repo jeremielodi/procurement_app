@@ -1,2 +1,6 @@
+-- delete from payments;
+-- delete from invoices;
+-- delete from goods_receipt_notes;
+-- delete from purchase_orders;
 -- delete from requisition_items;
 -- delete from requisitions;

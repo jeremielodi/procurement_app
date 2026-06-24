@@ -1,34 +1,28 @@
 // src/pages/Dashboard/components/StatsCards.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  FileText, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
+import {
+  FileText,
+  Clock,
   Users,
   ShoppingCart,
-  DollarSign,
-  TrendingUp
+  Package,
+  FileCheck,
+  CreditCard,
 } from 'lucide-react';
+import { useCurrency } from '../../contexts/EnterpriseContext';
 
 export default function StatsCards({ stats }) {
+  const { formatAmount } = useCurrency();
   if (!stats) return null;
 
   const cards = [
     {
-      title: 'Total Réquisitions',
+      title: 'Réquisitions',
       value: stats.requisitions?.total || 0,
       icon: FileText,
       color: 'blue',
-      subtitle: `${stats.requisitions?.pendingApprovals || 0} en attente`,
-    },
-    {
-      title: 'Approuvées ce mois',
-      value: stats.requisitions?.approvedThisMonth || 0,
-      icon: CheckCircle,
-      color: 'green',
-      subtitle: 'Nouvelles approbations',
+      subtitle: `${stats.requisitions?.pendingApprovals || 0} en cours · ${stats.requisitions?.approvedThisMonth || 0} approuvées ce mois`,
     },
     {
       title: 'En attente d\'approbation',
@@ -38,11 +32,32 @@ export default function StatsCards({ stats }) {
       subtitle: 'À traiter',
     },
     {
-      title: 'Montant total des réquisitions',
-      value: stats.amount?.total || 0,
-      icon: DollarSign,
+      title: 'Commandes (PO)',
+      value: stats.orders?.total || 0,
+      icon: ShoppingCart,
+      color: 'indigo',
+      subtitle: stats.amount?.ordersTotal ? `Total: ${formatAmount(stats.amount.ordersTotal)}` : 'Commandes passées',
+    },
+    {
+      title: 'Bons de réception (GRN)',
+      value: stats.grn?.total || 0,
+      icon: Package,
+      color: 'green',
+      subtitle: `${stats.grn?.complete || 0} complets · ${stats.grn?.partial || 0} partiels`,
+    },
+    {
+      title: 'Factures',
+      value: stats.invoices?.total || 0,
+      icon: FileCheck,
       color: 'purple',
-      subtitle: stats.amount?.ordersTotal ? `Total commandes: ${formatCurrency(stats.amount.ordersTotal)}` : '',
+      subtitle: `${stats.invoices?.matched || 0} rapprochées · ${stats.invoices?.mismatch || 0} écarts`,
+    },
+    {
+      title: 'Paiements',
+      value: stats.payments?.total || 0,
+      icon: CreditCard,
+      color: 'pink',
+      subtitle: `${stats.payments?.pending || 0} en attente · ${formatAmount(stats.payments?.paidAmount || 0)} payés`,
     },
     {
       title: 'Fournisseurs actifs',
@@ -51,29 +66,19 @@ export default function StatsCards({ stats }) {
       color: 'indigo',
       subtitle: 'Partenaires enregistrés',
     },
-    {
-      title: 'Commandes totales',
-      value: stats.orders?.total || 0,
-      icon: ShoppingCart,
-      color: 'pink',
-      subtitle: 'Commandes passées',
-    },
   ];
-
-  // Filtrer les cartes qui n'ont pas de valeur
-  const activeCards = cards.filter(card => card.value > 0 || card.title === 'Total Réquisitions');
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {activeCards.slice(0, 6).map((card, index) => {
+      {cards.map((card, index) => {
         const Icon = card.icon;
         const colorClasses = {
-          blue: 'bg-blue-50 text-blue-600',
-          green: 'bg-green-50 text-green-600',
+          blue:   'bg-blue-50 text-blue-600',
+          green:  'bg-green-50 text-green-600',
           yellow: 'bg-yellow-50 text-yellow-600',
           purple: 'bg-purple-50 text-purple-600',
           indigo: 'bg-indigo-50 text-indigo-600',
-          pink: 'bg-pink-50 text-pink-600',
+          pink:   'bg-pink-50 text-pink-600',
         };
 
         return (
@@ -88,8 +93,8 @@ export default function StatsCards({ stats }) {
               <div>
                 <p className="text-sm font-medium text-gray-500">{card.title}</p>
                 <p className="mt-2 text-2xl font-bold text-gray-900">
-                  {typeof card.value === 'number' && card.value > 999 
-                    ? formatCurrency(card.value) 
+                  {typeof card.value === 'number' && card.value > 999
+                    ? formatAmount(card.value)
                     : card.value}
                 </p>
                 {card.subtitle && (
@@ -107,13 +112,3 @@ export default function StatsCards({ stats }) {
   );
 }
 
-// Fonction utilitaire pour formater les montants
-function formatCurrency(amount) {
-  if (amount === undefined || amount === null) return '0 USD';
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}

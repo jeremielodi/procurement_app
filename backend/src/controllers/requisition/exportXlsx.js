@@ -1,12 +1,14 @@
 const ExcelJS = require('exceljs');
 const RequisitionModel = require('../../models/RequisitionModel');
+const { getEnterpriseCurrencyCode } = require('../../utils/enterpriseCurrency');
 
  /**
    * Exporter les réquisitions en Excel
    */
   async function exportToExcel(filters = {}) {
     const requisitions = await RequisitionModel.findAll(filters);
-    
+    const enterpriseCurrency = await getEnterpriseCurrencyCode();
+
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Procurement System';
     workbook.created = new Date();
@@ -57,7 +59,7 @@ const RequisitionModel = require('../../models/RequisitionModel');
         department: req.department_name || '-',
         project: req.project_name || '-',
         amount: req.estimated_amount || 0,
-        currency: req.currency || 'USD',
+        currency: req.currency || enterpriseCurrency,
         status: req.status || '-',
         priority: req.priority || '-',
         requester: req.first_name && req.last_name ? `${req.first_name} ${req.last_name}` : (req.email || '-'),

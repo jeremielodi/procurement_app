@@ -2,6 +2,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { EnterpriseProvider } from './contexts/EnterpriseContext';
 import Login from './components/Auth/Login';
 import Profile from './components/Auth/Profile';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
@@ -24,10 +25,23 @@ import NotificationList from './components/Notifications/NotificationList';
 import ProfileList from './components/Admin/ProfileList';
 import BudgetList from './components/Budget/BudgetList';
 import TaskList from './components/Task/TaskList';
+import GRNList from './components/GRN/GRNList';
+import GRNForm from './components/GRN/GRNForm';
+import GRNDetail from './components/GRN/GRNDetail';
+import SANList from './components/SAN/SANList';
+import SANForm from './components/SAN/SANForm';
+import SANDetail from './components/SAN/SANDetail';
+import InvoiceList from './components/Invoices/InvoiceList';
+import InvoiceForm from './components/Invoices/InvoiceForm';
+import InvoiceDetail from './components/Invoices/InvoiceDetail';
+import PaymentList from './components/Payments/PaymentList';
+import PaymentForm from './components/Payments/PaymentForm';
+import PaymentDetail from './components/Payments/PaymentDetail';
 import  './app.css'
 function App() {
   return (
     <AuthProvider>
+      <EnterpriseProvider>
       <Routes>
         {/* Routes publiques */}
         <Route path="/login" element={<Login />} />
@@ -197,8 +211,29 @@ function App() {
             </Layout>
           </ProtectedRoute>
         } />
+
+        {/* GRN — Bons de réception */}
+        <Route path="/goods-receipts" element={<ProtectedRoute><Layout><GRNList /></Layout></ProtectedRoute>} />
+        <Route path="/goods-receipts/new" element={<ProtectedRoute><Layout><GRNForm /></Layout></ProtectedRoute>} />
+        <Route path="/goods-receipts/:id" element={<ProtectedRoute><Layout><GRNDetail /></Layout></ProtectedRoute>} />
+
+        {/* SAN — Notes d'acceptation de service */}
+        <Route path="/service-acceptance-notes" element={<ProtectedRoute><Layout><SANList /></Layout></ProtectedRoute>} />
+        <Route path="/service-acceptance-notes/new" element={<ProtectedRoute><Layout><SANForm /></Layout></ProtectedRoute>} />
+        <Route path="/service-acceptance-notes/:id" element={<ProtectedRoute><Layout><SANDetail /></Layout></ProtectedRoute>} />
+
+        {/* Factures */}
+        <Route path="/invoices" element={<ProtectedRoute><Layout><InvoiceList /></Layout></ProtectedRoute>} />
+        <Route path="/invoices/new" element={<ProtectedRoute><Layout><InvoiceForm /></Layout></ProtectedRoute>} />
+        <Route path="/invoices/:id" element={<ProtectedRoute><Layout><InvoiceDetail /></Layout></ProtectedRoute>} />
+
+        {/* Paiements */}
+        <Route path="/payments" element={<ProtectedRoute><Layout><PaymentList /></Layout></ProtectedRoute>} />
+        <Route path="/payments/new" element={<ProtectedRoute><Layout><PaymentForm /></Layout></ProtectedRoute>} />
+        <Route path="/payments/:id" element={<ProtectedRoute><Layout><PaymentDetail /></Layout></ProtectedRoute>} />
       </Routes>
 
+      </EnterpriseProvider>
     </AuthProvider>
 
 

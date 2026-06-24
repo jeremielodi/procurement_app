@@ -34,7 +34,7 @@ import StatusBadge from '../Common/StatusBadge'
 import LoadingSpinner from '../Common/LoadingSpinner'
 import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
-import { formatCurrency } from '../../utils/formatters'
+import { useCurrency } from '../../contexts/EnterpriseContext'
 import toast from 'react-hot-toast'
 
 const statusOptions = [
@@ -60,6 +60,7 @@ const ratingOptions = [
 export default function SupplierList() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { formatAmount } = useCurrency()
   
   // États pour les filtres
   const [filters, setFilters] = useState({
@@ -509,7 +510,7 @@ export default function SupplierList() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-semibold text-gray-900">
-                        {formatCurrency(supplier.total_spent || 0, 'USD')}
+                        {formatAmount(supplier.total_spent || 0)}
                       </div>
                       <div className="text-xs text-gray-500">
                         {supplier.order_count || 0} commandes

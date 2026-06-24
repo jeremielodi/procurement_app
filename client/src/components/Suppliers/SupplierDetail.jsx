@@ -43,13 +43,15 @@ import StatusBadge from '../Common/StatusBadge'
 import LoadingSpinner from '../Common/LoadingSpinner'
 import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters'
+import { formatDate, formatDateTime } from '../../utils/formatters'
+import { useCurrency } from '../../contexts/EnterpriseContext'
 import toast from 'react-hot-toast'
 
 export default function SupplierDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { formatAmount } = useCurrency()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showPrequalifyModal, setShowPrequalifyModal] = useState(false)
   const [showRatingModal, setShowRatingModal] = useState(false)
@@ -252,7 +254,7 @@ export default function SupplierDetail() {
             <div>
               <p className="text-sm text-gray-500">Total dépensé</p>
               <p className="text-2xl font-bold text-gray-800">
-                {formatCurrency(totalSpent, 'USD')}
+                {formatAmount(totalSpent)}
               </p>
             </div>
             <DollarSign className="h-8 w-8 text-green-500" />
@@ -518,7 +520,7 @@ export default function SupplierDetail() {
                         {formatDate(po.order_date)}
                       </td>
                       <td className="px-6 py-4 text-right font-semibold">
-                        {formatCurrency(po.total_amount, po.currency)}
+                        {formatAmount(po.total_amount)}
                       </td>
                       <td className="px-6 py-4">
                         <StatusBadge status={po.status} size="sm" />

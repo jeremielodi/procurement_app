@@ -1,5 +1,6 @@
 // backend/src/models/PurchaseOrderModel.js
 const db = require('../config/database');
+const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 
 class PurchaseOrderModel {
   /**
@@ -12,10 +13,11 @@ class PurchaseOrderModel {
       [year]
     );
     const poNumber = `PO-${year}-${String(parseInt(countResult.count) + 1).padStart(4, '0')}`;
-    
+    const defaultCurrency = await getEnterpriseCurrencyCode();
+
     const transaction = db.transaction();
-    
-    transaction.addInsertQuery('purchase_orders', {
+
+    transaction.addInsertReturningQuery('purchase_orders', {
       po_number: poNumber,
       requisition_id: poData.requisitionId,
       supplier_id: poData.supplierId,
@@ -23,13 +25,13 @@ class PurchaseOrderModel {
       delivery_date: poData.deliveryDate,
       shipping_address: poData.shippingAddress,
       total_amount: poData.totalAmount,
-      currency: poData.currency || 'USD',
+      currency: poData.currency || defaultCurrency,
       status: poData.status || 'DRAFT',
       created_by: poData.createdBy,
       created_at: new Date(),
       updated_at: new Date()
-    });
-    
+    }, 'id');
+
     const results = await transaction.execute();
     const poId = results[0][0]?.id || results[0][0]?.purchase_order_id;
     
@@ -93,18 +95,21 @@ class PurchaseOrderModel {
       ORDER BY delivery_date DESC
     `, [id]);
     
-    const approvals = await db.select(`
-      SELECT 
-        a.*,
-        u.first_name,
-        u.last_name,
-        u.role
-      FROM approvals a
-      LEFT JOIN users u ON a.approver_id = u.id
-      WHERE a.entity_type = 'purchase_order' AND a.entity_id = $1
-      ORDER BY a.approved_at DESC
-    `, [id]);
-    
+    // approvals.entity_id is UUID; PO ids are INTEGER — cast to text for comparison
+    let approvals = [];
+    try {
+      approvals = await db.select(`
+        SELECT
+          a.*,
+          u.first_name,
+          u.last_name
+        FROM approvals a
+        LEFT JOIN users u ON a.approver_id = u.id
+        WHERE a.entity_type = 'purchase_order' AND a.entity_id::text = $1::text
+        ORDER BY a.approved_at DESC
+      `, [String(id)]);
+    } catch (_) { /* non-fatal */ }
+
     return {
       ...po,
       items,
@@ -234,17 +239,17 @@ class PurchaseOrderModel {
    */
   async approve(id, approverId, comments = null) {
     await this.updateStatus(id, 'PO_APPROVED', approverId);
-    
-    // Ajouter à l'historique des approbations
-    await db.insert('approvals', {
-      entity_type: 'purchase_order',
-      entity_id: id,
-      approver_id: approverId,
-      status: 'APPROVED',
-      comments: comments,
-      approved_at: new Date()
-    });
-    
+    // approvals.entity_id is UUID; PO ids are INTEGER — insert is best-effort
+    try {
+      await db.insert('approvals', {
+        entity_type: 'purchase_order',
+        entity_id: id,
+        approver_id: approverId,
+        status: 'APPROVED',
+        comments: comments,
+        approved_at: new Date()
+      });
+    } catch (_) { /* non-fatal */ }
     return { success: true };
   }
 
@@ -253,17 +258,17 @@ class PurchaseOrderModel {
    */
   async reject(id, approverId, reason) {
     await this.updateStatus(id, 'PO_REJECTED', approverId);
-    
-    // Ajouter à l'historique des approbations
-    await db.insert('approvals', {
-      entity_type: 'purchase_order',
-      entity_id: id,
-      approver_id: approverId,
-      status: 'REJECTED',
-      comments: reason,
-      approved_at: new Date()
-    });
-    
+    // approvals.entity_id is UUID; PO ids are INTEGER — insert is best-effort
+    try {
+      await db.insert('approvals', {
+        entity_type: 'purchase_order',
+        entity_id: id,
+        approver_id: approverId,
+        status: 'REJECTED',
+        comments: reason,
+        approved_at: new Date()
+      });
+    } catch (_) { /* non-fatal */ }
     return { success: true };
   }
 

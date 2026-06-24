@@ -6,6 +6,7 @@ import {
   CheckSquare,
   ShoppingCart,
   Package,
+  PackageCheck,
   Truck,
   FolderOpen,
   DollarSign,
@@ -21,7 +22,10 @@ import {
   ChevronDown,
   ChevronUp,
   BarChart,
-  Database
+  Database,
+  FileText,
+  CreditCard,
+  ClipboardCheck
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -65,11 +69,42 @@ const menuGroups = [
         label: 'Commandes',
         permission: 'VIEW_PURCHASE_ORDERS'
       },
-      { 
-        path: '/suppliers', 
-        icon: Truck, 
+      {
+        path: '/suppliers',
+        icon: Truck,
         label: 'Fournisseurs',
         permission: 'VIEW_SUPPLIERS'
+      },
+      {
+        path: '/goods-receipts',
+        icon: PackageCheck,
+        label: 'Réceptions GRN',
+        permission: 'VIEW_PURCHASE_ORDERS'
+      },
+      {
+        path: '/service-acceptance-notes',
+        icon: ClipboardCheck,
+        label: 'Acceptation Service (SAN)',
+        permission: 'VIEW_PURCHASE_ORDERS'
+      }
+    ]
+  },
+  {
+    id: 'finance',
+    label: 'Finance',
+    icon: DollarSign,
+    items: [
+      {
+        path: '/invoices',
+        icon: FileText,
+        label: 'Factures',
+        permission: 'VIEW_PURCHASE_ORDERS'
+      },
+      {
+        path: '/payments',
+        icon: CreditCard,
+        label: 'Paiements',
+        permission: 'VIEW_PURCHASE_ORDERS'
       }
     ]
   },

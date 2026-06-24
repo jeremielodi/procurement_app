@@ -4,6 +4,7 @@ const Handlebars = require('handlebars');
 const path = require('path');
 const fs = require('fs');
 const ExcelJS = require('exceljs');
+const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 
 class RequisitionExportService {
   constructor() {
@@ -704,6 +705,7 @@ class RequisitionExportService {
       throw new Error('requisitions must be an array');
     }
 
+    const enterpriseCurrency = await getEnterpriseCurrencyCode();
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Procurement System';
     workbook.created = new Date();
@@ -769,7 +771,7 @@ class RequisitionExportService {
         department: req.department_name || '-',
         project: req.project_name || '-',
         amount: req.estimated_amount || 0,
-        currency: req.currency || 'USD',
+        currency: req.currency || enterpriseCurrency,
         status: statusLabels[req.status] || req.status || '-',
         priority: req.priority || '-',
         requester: req.first_name && req.last_name ? `${req.first_name} ${req.last_name}` : (req.email || '-'),

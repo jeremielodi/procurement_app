@@ -3,8 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Download, Printer, AlertCircle, FileText, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { requisitionService } from '../../services/requisitionService';
+import { useCurrency } from '../../contexts/EnterpriseContext';
 
 const RequisitionViewer = ({ requisitionId, requisition, onClose }) => {
+  const { currency } = useCurrency();
   const [pdfUrl, setPdfUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -196,7 +198,7 @@ const RequisitionViewer = ({ requisitionId, requisition, onClose }) => {
             <div>
               <span className="text-gray-500">Montant:</span>
               <span className="ml-1 font-medium">
-                {requisition.estimated_amount?.toLocaleString()} {requisition.currency || 'USD'}
+                {requisition.estimated_amount?.toLocaleString()} {requisition.currency || currency.code}
               </span>
             </div>
             <div>

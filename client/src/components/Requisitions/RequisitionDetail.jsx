@@ -69,7 +69,7 @@ export default function RequisitionDetail() {
   // Récupérer les commandes associées
   const { data: purchaseOrdersData } = useQuery({
     queryKey: ['purchase-orders', { requisition_id: id }],
-    queryFn: () => purchaseOrderService.getAll({ requisition_id: id }),
+    queryFn: () => purchaseOrderService.getAll({ requisitionId: id }),
     enabled: !!id
   })
 

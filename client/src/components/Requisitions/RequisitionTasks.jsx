@@ -1,12 +1,12 @@
 // src/components/Requisitions/RequisitionTasks.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  User, 
+import {
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+  Clock,
+  User,
   Send,
   DollarSign,
   Package,
@@ -33,7 +33,7 @@ export default function RequisitionTasks() {
   const { user } = useAuth();
   const userEmail = user?.email;
   const { formatAmount } = useCurrency();
-  
+
   const [tasks, setTasks] = useState([]);
   const [requisition, setRequisition] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +41,7 @@ export default function RequisitionTasks() {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [claimingTaskId, setClaimingTaskId] = useState(null);
-  
+
   // États pour le formulaire
   const [formData, setFormData] = useState({
     approved: '',
@@ -61,10 +61,10 @@ export default function RequisitionTasks() {
       setLoading(true);
       const reqData = await requisitionService.getById(id);
       setRequisition(reqData.data);
-      
+
       const tasksData = await taskService.getTasksByProcess(reqData.data.process_instance_id);
       const tasksList = tasksData.data || [];
-      
+
       const enrichedTasks = await Promise.all(
         tasksList.map(async (task) => {
           try {
@@ -78,7 +78,7 @@ export default function RequisitionTasks() {
           }
         })
       );
-      
+
       setTasks(enrichedTasks);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -103,6 +103,11 @@ export default function RequisitionTasks() {
   };
 
   const handleCompleteTask = (task) => {
+    if (task.taskDefinitionKey == "Activity_CreatePO") {
+       // Navigate to purchase orders route
+      navigate(`/purchase-orders/${id}/${task.id}`);
+      return; // Exit early since we're navigating away
+    }
     setSelectedTask(task);
     setFormData({
       approved: '',
@@ -119,14 +124,14 @@ export default function RequisitionTasks() {
     setSubmitting(true);
     try {
       const variables = {};
-      
+
       if (formData.approved !== '') variables.approved = formData.approved === 'true';
       if (formData.comment) variables.comment = formData.comment;
       if (formData.procurementMethod) variables.procurementMethod = formData.procurementMethod;
       if (formData.justification) variables.justification = formData.justification;
       if (formData.newBudgetAmount) variables.newBudgetAmount = parseFloat(formData.newBudgetAmount);
       if (formData.adjustmentJustification) variables.adjustmentJustification = formData.adjustmentJustification;
-      
+
       await taskService.completeTask(selectedTask.id, variables);
       toast.success('Tâche complétée avec succès');
       setShowTaskModal(false);
@@ -167,7 +172,7 @@ export default function RequisitionTasks() {
   };
 
   const getTaskName = (task) => {
-    return task.name || task.taskName || task.activityName || 'Tâche sans nom';
+    return (task.name || task.taskName || task.activityName || 'Tâche sans nom');
   };
 
   const formatCurrency = (amount) => formatAmount(amount || 0);
@@ -263,7 +268,7 @@ export default function RequisitionTasks() {
               const isUnassigned = !task.assignee;
               const canClaim = isUnassigned;
               const canProcess = isAssignedToMe;
-              
+
               return (
                 <div key={task.id} className={`p-6 hover:bg-gray-50 transition-colors ${getTaskColor(task.name)}`}>
                   <div className="flex justify-between items-start">
@@ -274,10 +279,7 @@ export default function RequisitionTasks() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 mt-2 text-sm">
                           <div className="text-gray-500">Réquisition:</div>
                           <div className="font-medium text-blue-600">{task.variables?.requisitionNumber || '-'}</div>
-                          <div className="text-gray-500">Montant:</div>
-                          <div>{formatCurrency(task.variables?.estimatedAmount)}</div>
-                          <div className="text-gray-500">Projet:</div>
-                          <div>{task.variables?.projectName || task.variables?.projectCode || '-'}</div>
+
                           <div className="text-gray-500">Créée le:</div>
                           <div>{formatDate(task.created)}</div>
                         </div>
@@ -414,102 +416,102 @@ export default function RequisitionTasks() {
                 </div>
               </div>
             )}
-            
+
             {/* Formulaire Validation */}
-            {(getTaskName(selectedTask).includes('Validation') || 
+            {(getTaskName(selectedTask).includes('Validation') ||
               getTaskName(selectedTask).includes('Hierarchical') ||
               getTaskName(selectedTask).includes('Approbation')) && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Décision *
-                  </label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg flex-1 hover:bg-green-50 transition-colors">
-                      <input
-                        type="radio"
-                        name="approved"
-                        value="true"
-                        checked={formData.approved === 'true'}
-                        onChange={(e) => handleInputChange('approved', e.target.value)}
-                        className="w-4 h-4 text-green-600"
-                      />
-                      <span className="text-green-700">✅ Approuver</span>
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Décision *
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg flex-1 hover:bg-red-50 transition-colors">
-                      <input
-                        type="radio"
-                        name="approved"
-                        value="false"
-                        checked={formData.approved === 'false'}
-                        onChange={(e) => handleInputChange('approved', e.target.value)}
-                        className="w-4 h-4 text-red-600"
-                      />
-                      <span className="text-red-700">❌ Rejeter</span>
-                    </label>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Commentaire
-                  </label>
-                  <textarea
-                    value={formData.comment}
-                    onChange={(e) => handleInputChange('comment', e.target.value)}
-                    rows="4"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ajoutez un commentaire..."
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Formulaire Détermination méthode d'achat */}
-            {(getTaskName(selectedTask).includes('Determine') || 
-              getTaskName(selectedTask).includes('Procurement')) && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Methode d'achat *
-                  </label>
-                  <div className="space-y-2">
-                    {[
-                      { value: 'DIRECT_PURCHASE', label: 'Achat direct', desc: 'Pour les achats < 5 000 USD' },
-                      { value: 'MULTIPLE_QUOTATIONS', label: 'Multiples devis', desc: 'Entre 5 000 et 25 000 USD' },
-                      { value: 'RFP', label: 'Appel d\'offres (RFP)', desc: 'Pour les achats > 25 000 USD' },
-                      { value: 'SOLE_SOURCE', label: 'Source unique', desc: 'Avec justification approuvée' }
-                    ].map(option => (
-                      <label key={option.value} className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg flex-1 hover:bg-green-50 transition-colors">
                         <input
                           type="radio"
-                          name="procurementMethod"
-                          value={option.value}
-                          checked={formData.procurementMethod === option.value}
-                          onChange={(e) => handleInputChange('procurementMethod', e.target.value)}
-                          className="w-4 h-4 text-blue-600 mt-0.5"
+                          name="approved"
+                          value="true"
+                          checked={formData.approved === 'true'}
+                          onChange={(e) => handleInputChange('approved', e.target.value)}
+                          className="w-4 h-4 text-green-600"
                         />
-                        <div>
-                          <span className="font-medium">{option.label}</span>
-                          <p className="text-xs text-gray-500">{option.desc}</p>
-                        </div>
+                        <span className="text-green-700">✅ Approuver</span>
                       </label>
-                    ))}
+                      <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg flex-1 hover:bg-red-50 transition-colors">
+                        <input
+                          type="radio"
+                          name="approved"
+                          value="false"
+                          checked={formData.approved === 'false'}
+                          onChange={(e) => handleInputChange('approved', e.target.value)}
+                          className="w-4 h-4 text-red-600"
+                        />
+                        <span className="text-red-700">❌ Rejeter</span>
+                      </label>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Justification
-                  </label>
-                  <textarea
-                    value={formData.justification}
-                    onChange={(e) => handleInputChange('justification', e.target.value)}
-                    rows="3"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Justifiez votre choix..."
-                  />
-                </div>
-              </>
-            )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Commentaire
+                    </label>
+                    <textarea
+                      value={formData.comment}
+                      onChange={(e) => handleInputChange('comment', e.target.value)}
+                      rows="4"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Ajoutez un commentaire..."
+                    />
+                  </div>
+                </>
+              )}
+
+            {/* Formulaire Détermination méthode d'achat */}
+            {(getTaskName(selectedTask).includes('Determine') ||
+              getTaskName(selectedTask).includes('Procurement')) && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Methode d'achat *
+                    </label>
+                    <div className="space-y-2">
+                      {[
+                        { value: 'DIRECT_PURCHASE', label: 'Achat direct', desc: 'Pour les achats < 5 000 USD' },
+                        { value: 'MULTIPLE_QUOTATIONS', label: 'Multiples devis', desc: 'Entre 5 000 et 25 000 USD' },
+                        { value: 'RFP', label: 'Appel d\'offres (RFP)', desc: 'Pour les achats > 25 000 USD' },
+                        { value: 'SOLE_SOURCE', label: 'Source unique', desc: 'Avec justification approuvée' }
+                      ].map(option => (
+                        <label key={option.value} className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                          <input
+                            type="radio"
+                            name="procurementMethod"
+                            value={option.value}
+                            checked={formData.procurementMethod === option.value}
+                            onChange={(e) => handleInputChange('procurementMethod', e.target.value)}
+                            className="w-4 h-4 text-blue-600 mt-0.5"
+                          />
+                          <div>
+                            <span className="font-medium">{option.label}</span>
+                            <p className="text-xs text-gray-500">{option.desc}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Justification
+                    </label>
+                    <textarea
+                      value={formData.justification}
+                      onChange={(e) => handleInputChange('justification', e.target.value)}
+                      rows="3"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Justifiez votre choix..."
+                    />
+                  </div>
+                </>
+              )}
 
             {/* Formulaire Ajustement budgétaire */}
             {getTaskName(selectedTask).includes('Budget Adjustment') && (
@@ -544,24 +546,24 @@ export default function RequisitionTasks() {
 
             {/* Formulaire commentaire générique */}
             {!getTaskName(selectedTask).includes('Validation') &&
-             !getTaskName(selectedTask).includes('Hierarchical') &&
-             !getTaskName(selectedTask).includes('Approbation') &&
-             !getTaskName(selectedTask).includes('Determine') &&
-             !getTaskName(selectedTask).includes('Procurement') &&
-             !getTaskName(selectedTask).includes('Budget Adjustment') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Commentaire
-                </label>
-                <textarea
-                  value={formData.comment}
-                  onChange={(e) => handleInputChange('comment', e.target.value)}
-                  rows="4"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ajoutez un commentaire..."
-                />
-              </div>
-            )}
+              !getTaskName(selectedTask).includes('Hierarchical') &&
+              !getTaskName(selectedTask).includes('Approbation') &&
+              !getTaskName(selectedTask).includes('Determine') &&
+              !getTaskName(selectedTask).includes('Procurement') &&
+              !getTaskName(selectedTask).includes('Budget Adjustment') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Commentaire
+                  </label>
+                  <textarea
+                    value={formData.comment}
+                    onChange={(e) => handleInputChange('comment', e.target.value)}
+                    rows="4"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ajoutez un commentaire..."
+                  />
+                </div>
+              )}
           </div>
         )}
       </Modal>

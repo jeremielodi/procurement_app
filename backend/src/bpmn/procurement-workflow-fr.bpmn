@@ -2,7 +2,7 @@
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ProcurementProcess" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.46.1" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
   <bpmn:process id="ProcurementProcess" name="Electronic Procurement Management Process" isExecutable="true" camunda:historyTimeToLive="30">
     <bpmn:laneSet id="LaneSet_1">
-      <bpmn:lane id="Lane_Requester" name="Requester">
+      <bpmn:lane id="Lane_Requester" name="Demandeur">
         <bpmn:flowNodeRef>StartEvent_NewRequisition</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_BudgetAdjustment</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Event_Rejected</bpmn:flowNodeRef>
@@ -30,7 +30,7 @@
         <bpmn:flowNodeRef>Gateway_ApprovalDecision</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_ValidationN3_DG</bpmn:flowNodeRef>
       </bpmn:lane>
-      <bpmn:lane id="Lane_Procurement" name="Procurement">
+      <bpmn:lane id="Lane_Procurement" name="Achats">
         <bpmn:flowNodeRef>Activity_DetermineType</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_ClassifyProcurement</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Gateway_MethodDecision</bpmn:flowNodeRef>
@@ -43,164 +43,164 @@
         <bpmn:flowNodeRef>Task_SendPO</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_SupplierConfirmation</bpmn:flowNodeRef>
       </bpmn:lane>
-      <bpmn:lane id="Lane_Logistics" name="Logistics">
+      <bpmn:lane id="Lane_Logistics" name="Logistique">
         <bpmn:flowNodeRef>Activity_GoodsReceipt</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Gateway_GRNDecision</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Event_GRNDispute</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
-    <bpmn:startEvent id="StartEvent_NewRequisition" name="Requisition Submitted">
+    <bpmn:startEvent id="StartEvent_NewRequisition" name="Réquisition soumise">
       <bpmn:outgoing>Flow_Start_CheckBudget</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:serviceTask id="Task_CheckBudget" name="Check Budget Availability" camunda:type="external" camunda:topic="check_budget">
+    <bpmn:serviceTask id="Task_CheckBudget" name="Vérifier la disponibilité budgétaire" camunda:type="external" camunda:topic="check_budget">
       <bpmn:incoming>Flow_Start_CheckBudget</bpmn:incoming>
       <bpmn:outgoing>Flow_CheckBudget_Gateway</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:exclusiveGateway id="Gateway_BudgetDecision" name="Budget Available?">
+    <bpmn:exclusiveGateway id="Gateway_BudgetDecision" name="Budget disponible ?">
       <bpmn:incoming>Flow_CheckBudget_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_Budget_OK</bpmn:outgoing>
       <bpmn:outgoing>Flow_Budget_KO</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Activity_BudgetAdjustment" name="Request Budget Adjustment" camunda:assignee="${requesterId}" camunda:candidateGroups="requester">
+    <bpmn:userTask id="Activity_BudgetAdjustment" name="Ajustement budgétaire" camunda:assignee="${requesterId}" camunda:candidateGroups="requester">
       <bpmn:incoming>Flow_Budget_KO</bpmn:incoming>
       <bpmn:outgoing>Flow_BudgetAdjustment_Reject</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:endEvent id="Event_Rejected" name="Process Rejected">
+    <bpmn:endEvent id="Event_Rejected" name="Processus rejeté">
       <bpmn:incoming>Flow_BudgetAdjustment_Reject</bpmn:incoming>
       <bpmn:incoming>Flow_Approval_Rejected</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:exclusiveGateway id="Gateway_AmountDecision" name="Approval Level?">
+    <bpmn:exclusiveGateway id="Gateway_AmountDecision" name="Niveau d'approbation ?">
       <bpmn:incoming>Flow_Budget_OK</bpmn:incoming>
       <bpmn:outgoing>Flow_Amount_N1</bpmn:outgoing>
       <bpmn:outgoing>Flow_Amount_N2</bpmn:outgoing>
       <bpmn:outgoing>Flow_Amount_N3</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Activity_ValidationN1_Manager" name="Manager Approval (N1)" camunda:assignee="${approver}" camunda:candidateGroups="manager">
+    <bpmn:userTask id="Activity_ValidationN1_Manager" name="Approbation hiérarchique N1 (Manager)" camunda:assignee="${approver}" camunda:candidateGroups="manager">
       <bpmn:incoming>Flow_Amount_N1</bpmn:incoming>
       <bpmn:outgoing>Flow_N1_ApprovalGateway</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_ValidationN2_Finance" name="Finance Approval (N2)" camunda:assignee="${approver}" camunda:candidateGroups="finance">
+    <bpmn:userTask id="Activity_ValidationN2_Finance" name="Approbation hiérarchique N2 (Finance)" camunda:assignee="${approver}" camunda:candidateGroups="finance">
       <bpmn:incoming>Flow_Amount_N2</bpmn:incoming>
       <bpmn:outgoing>Flow_N2_ApprovalGateway</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_ValidationN3_DG" name="DG Approval (N3)" camunda:assignee="${approver}" camunda:candidateGroups="dg">
+    <bpmn:userTask id="Activity_ValidationN3_DG" name="Approbation hiérarchique N3 (Direction Générale)" camunda:assignee="${approver}" camunda:candidateGroups="dg">
       <bpmn:incoming>Flow_Amount_N3</bpmn:incoming>
       <bpmn:outgoing>Flow_N3_ApprovalGateway</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:exclusiveGateway id="Gateway_ApprovalDecision" name="Approved?">
+    <bpmn:exclusiveGateway id="Gateway_ApprovalDecision" name="Approuvé ?">
       <bpmn:incoming>Flow_N1_ApprovalGateway</bpmn:incoming>
       <bpmn:incoming>Flow_N2_ApprovalGateway</bpmn:incoming>
       <bpmn:incoming>Flow_N3_ApprovalGateway</bpmn:incoming>
       <bpmn:outgoing>Flow_Approved_DetermineType</bpmn:outgoing>
       <bpmn:outgoing>Flow_Approval_Rejected</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Activity_DetermineType" name="Determine Procurement Type" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
+    <bpmn:userTask id="Activity_DetermineType" name="Déterminer la méthode d'achat" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_Approved_DetermineType</bpmn:incoming>
       <bpmn:outgoing>Flow_DetermineType_Classify</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:serviceTask id="Task_ClassifyProcurement" name="Classify Procurement Method" camunda:type="external" camunda:topic="classify_procurement">
+    <bpmn:serviceTask id="Task_ClassifyProcurement" name="Classifier la méthode d'achat" camunda:type="external" camunda:topic="classify_procurement">
       <bpmn:incoming>Flow_DetermineType_Classify</bpmn:incoming>
       <bpmn:outgoing>Flow_Classify_Gateway</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:exclusiveGateway id="Gateway_MethodDecision" name="Select Method">
+    <bpmn:exclusiveGateway id="Gateway_MethodDecision" name="Sélectionner la méthode">
       <bpmn:incoming>Flow_Classify_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_Method_DirectPurchase</bpmn:outgoing>
       <bpmn:outgoing>Flow_Method_Quotations</bpmn:outgoing>
       <bpmn:outgoing>Flow_Method_RFP</bpmn:outgoing>
       <bpmn:outgoing>Flow_Method_SoleSource</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Activity_DirectPurchase" name="Direct Purchase" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
+    <bpmn:userTask id="Activity_DirectPurchase" name="Achat direct" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_Method_DirectPurchase</bpmn:incoming>
       <bpmn:outgoing>Flow_DirectPurchase_CreatePO</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_RequestQuotations" name="Request Multiple Quotations" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
+    <bpmn:userTask id="Activity_RequestQuotations" name="Demande de devis multiples" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_Method_Quotations</bpmn:incoming>
       <bpmn:outgoing>Flow_Quotations_Analyze</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_RFPProcess" name="Call for Tenders / RFP" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
+    <bpmn:userTask id="Activity_RFPProcess" name="Appel d'offres (RFP)" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_Method_RFP</bpmn:incoming>
       <bpmn:outgoing>Flow_RFP_Analyze</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_SoleSource" name="Sole Source Justification" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
+    <bpmn:userTask id="Activity_SoleSource" name="Justification source unique" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_Method_SoleSource</bpmn:incoming>
       <bpmn:outgoing>Flow_SoleSource_CreatePO</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:serviceTask id="Task_AnalyzeOffers" name="Analyze Offers" camunda:type="external" camunda:topic="analyze_offers">
+    <bpmn:serviceTask id="Task_AnalyzeOffers" name="Analyser les offres" camunda:type="external" camunda:topic="analyze_offers">
       <bpmn:incoming>Flow_Quotations_Analyze</bpmn:incoming>
       <bpmn:incoming>Flow_RFP_Analyze</bpmn:incoming>
       <bpmn:outgoing>Flow_Analyze_CreatePO</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:userTask id="Activity_CreatePO" name="Create Purchase Order" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
+    <bpmn:userTask id="Activity_CreatePO" name="Créer le bon de commande" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_DirectPurchase_CreatePO</bpmn:incoming>
       <bpmn:incoming>Flow_Analyze_CreatePO</bpmn:incoming>
       <bpmn:incoming>Flow_SoleSource_CreatePO</bpmn:incoming>
       <bpmn:outgoing>Flow_CreatePO_POApproval</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_POApproval" name="Approve Purchase Order" camunda:assignee="${manager}" camunda:candidateGroups="management">
+    <bpmn:userTask id="Activity_POApproval" name="Approbation du bon de commande" camunda:assignee="${manager}" camunda:candidateGroups="management">
       <bpmn:incoming>Flow_CreatePO_POApproval</bpmn:incoming>
       <bpmn:outgoing>Flow_POApproval_Gateway</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:exclusiveGateway id="Gateway_POApprovalDecision" name="PO Approved?">
+    <bpmn:exclusiveGateway id="Gateway_POApprovalDecision" name="BC approuvé ?">
       <bpmn:incoming>Flow_POApproval_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_POApproved_SendPO</bpmn:outgoing>
       <bpmn:outgoing>Flow_PORejected_Cancel</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:endEvent id="Event_POCancelled" name="PO Cancelled">
+    <bpmn:endEvent id="Event_POCancelled" name="Bon de commande annulé">
       <bpmn:incoming>Flow_PORejected_Cancel</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:serviceTask id="Task_SendPO" name="Send PO to Supplier" camunda:type="external" camunda:topic="send_po_notification">
+    <bpmn:serviceTask id="Task_SendPO" name="Envoyer le BC au fournisseur" camunda:type="external" camunda:topic="send_po_notification">
       <bpmn:incoming>Flow_POApproved_SendPO</bpmn:incoming>
       <bpmn:outgoing>Flow_SendPO_SupplierConfirmation</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:userTask id="Activity_SupplierConfirmation" name="Supplier Order Confirmation" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
+    <bpmn:userTask id="Activity_SupplierConfirmation" name="Confirmation de commande fournisseur" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_SendPO_SupplierConfirmation</bpmn:incoming>
       <bpmn:outgoing>Flow_SupplierConfirmation_GRN</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_GoodsReceipt" name="Goods Receipt Note (GRN)" camunda:assignee="${storeKeeper}" camunda:candidateGroups="logistic">
+    <bpmn:userTask id="Activity_GoodsReceipt" name="Bon de réception (GRN)" camunda:assignee="${storeKeeper}" camunda:candidateGroups="logistic">
       <bpmn:incoming>Flow_SupplierConfirmation_GRN</bpmn:incoming>
       <bpmn:outgoing>Flow_GRN_Gateway</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:exclusiveGateway id="Gateway_GRNDecision" name="GRN Compliant?">
+    <bpmn:exclusiveGateway id="Gateway_GRNDecision" name="GRN conforme ?">
       <bpmn:incoming>Flow_GRN_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_GRN_OK</bpmn:outgoing>
       <bpmn:outgoing>Flow_GRN_Dispute</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:endEvent id="Event_GRNDispute" name="GRN Dispute / Return">
+    <bpmn:endEvent id="Event_GRNDispute" name="Litige GRN / Retour">
       <bpmn:incoming>Flow_GRN_Dispute</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:userTask id="Activity_ServiceAcceptance" name="Service Acceptance Note (SAN)" camunda:assignee="${requesterId}" camunda:candidateGroups="requester">
+    <bpmn:userTask id="Activity_ServiceAcceptance" name="Acceptation de service (SAN)" camunda:assignee="${requesterId}" camunda:candidateGroups="requester">
       <bpmn:incoming>Flow_GRN_OK</bpmn:incoming>
       <bpmn:outgoing>Flow_SAN_Gateway</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:exclusiveGateway id="Gateway_SANDecision" name="Service Accepted?">
+    <bpmn:exclusiveGateway id="Gateway_SANDecision" name="Service accepté ?">
       <bpmn:incoming>Flow_SAN_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_SAN_OK</bpmn:outgoing>
       <bpmn:outgoing>Flow_SAN_Rejected</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:endEvent id="Event_SANRejected" name="Service Rejected">
+    <bpmn:endEvent id="Event_SANRejected" name="Service rejeté">
       <bpmn:incoming>Flow_SAN_Rejected</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:userTask id="Activity_EnterInvoice" name="Enter Supplier Invoice" camunda:assignee="${financeOfficer}" camunda:candidateGroups="finance">
+    <bpmn:userTask id="Activity_EnterInvoice" name="Saisie de la facture fournisseur" camunda:assignee="${financeOfficer}" camunda:candidateGroups="finance">
       <bpmn:incoming>Flow_SAN_OK</bpmn:incoming>
       <bpmn:outgoing>Flow_EnterInvoice_ProcessInvoice</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:serviceTask id="Task_ProcessInvoice" name="3-Way Matching (PO + GRN + Invoice)" camunda:type="external" camunda:topic="process_invoice">
+    <bpmn:serviceTask id="Task_ProcessInvoice" name="Contrôle 3 voies (BC + GRN + Facture)" camunda:type="external" camunda:topic="process_invoice">
       <bpmn:incoming>Flow_EnterInvoice_ProcessInvoice</bpmn:incoming>
       <bpmn:outgoing>Flow_Invoice_Gateway</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:exclusiveGateway id="Gateway_InvoiceDecision" name="Invoice Valid?">
+    <bpmn:exclusiveGateway id="Gateway_InvoiceDecision" name="Facture valide ?">
       <bpmn:incoming>Flow_Invoice_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_Invoice_OK</bpmn:outgoing>
       <bpmn:outgoing>Flow_Invoice_Dispute</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:endEvent id="Event_InvoiceDispute" name="Invoice Blocked / Dispute">
+    <bpmn:endEvent id="Event_InvoiceDispute" name="Facture bloquée / Litige">
       <bpmn:incoming>Flow_Invoice_Dispute</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:userTask id="Activity_ProcessPayment" name="Process Payment" camunda:assignee="${financeOfficer}" camunda:candidateGroups="finance">
+    <bpmn:userTask id="Activity_ProcessPayment" name="Traitement du paiement" camunda:assignee="${financeOfficer}" camunda:candidateGroups="finance">
       <bpmn:incoming>Flow_Invoice_OK</bpmn:incoming>
       <bpmn:outgoing>Flow_Payment_Complete</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:endEvent id="Event_Completed" name="Process Completed">
+    <bpmn:endEvent id="Event_Completed" name="Processus terminé">
       <bpmn:incoming>Flow_Payment_Complete</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_Start_CheckBudget" sourceRef="StartEvent_NewRequisition" targetRef="Task_CheckBudget" />

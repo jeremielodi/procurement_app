@@ -102,6 +102,7 @@ const TaskList = () => {
   
   const handleSubmitTask = async () => {
     setSubmitting(true);
+    console.log(formDataRef.current);
     try {
       await completeMutation.mutateAsync({
         taskId: selectedTask.id,
@@ -156,10 +157,11 @@ const TaskList = () => {
   
   // Task definition keys that approve/reject a requisition (variable: approved)
   const REQUISITION_APPROVAL_KEYS = [
-    'Activity_ManagerApproval',
-    'Activity_FinanceApproval',
-    'Activity_DGApproval'
+    'Activity_ValidationN1_Manager',
+    'Activity_ValidationN2_Finance',
+    'Activity_ValidationN3_DG'
   ];
+  
 
   const isRequisitionApproval = (task) =>
     REQUISITION_APPROVAL_KEYS.includes(task.taskDefinitionKey) ||
@@ -253,7 +255,9 @@ const TaskList = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Décision *</label>
               <select
                 defaultValue=""
-                onChange={(e) => onChange('approved', e.target.value === 'true')}
+                onChange={(e) => {
+                  onChange('approved', e.target.value === 'true');
+                }}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 required
               >

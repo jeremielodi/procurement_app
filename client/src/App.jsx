@@ -13,7 +13,7 @@ import RequisitionForm from './components/Requisitions/RequisitionForm';
 import RequisitionDetail from './components/Requisitions/RequisitionDetail';
 import RequisitionTasks from './components/Requisitions/RequisitionTasks';
 import POList from './components/PurchaseOrders/POList';
-import POForm from './components/PurchaseOrders/PODetail';
+import POForm from './components/PurchaseOrders/POForm';
 import PODetail from './components/PurchaseOrders/PODetail';
 import SupplierList from './components/Suppliers/SupplierList';
 import SupplierForm from './components/Suppliers/SupplierForm';

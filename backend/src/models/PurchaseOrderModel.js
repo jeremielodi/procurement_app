@@ -20,6 +20,7 @@ class PurchaseOrderModel {
     transaction.addInsertReturningQuery('purchase_orders', {
       po_number: poNumber,
       requisition_id: poData.requisitionId,
+      task_id: poData.taskId || null,
       supplier_id: poData.supplierId,
       order_date: poData.orderDate || new Date(),
       delivery_date: poData.deliveryDate,

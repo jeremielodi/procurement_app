@@ -314,7 +314,7 @@ export default function PODetail() {
                   {po.items?.map((item, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm text-gray-800">
-                        {item.description}
+                        {item.description || item.item_description}
                         {item.specifications && (
                           <p className="text-xs text-gray-500 mt-1">{item.specifications}</p>
                         )}

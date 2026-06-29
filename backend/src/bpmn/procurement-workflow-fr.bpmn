@@ -69,7 +69,7 @@
       <bpmn:incoming>Flow_BudgetAdjustment_Reject</bpmn:incoming>
       <bpmn:incoming>Flow_Approval_Rejected</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:exclusiveGateway id="Gateway_AmountDecision" name="Niveau d'approbation ?">
+    <bpmn:exclusiveGateway id="Gateway_AmountDecision" name="Niveau d&#39;approbation ?">
       <bpmn:incoming>Flow_Budget_OK</bpmn:incoming>
       <bpmn:outgoing>Flow_Amount_N1</bpmn:outgoing>
       <bpmn:outgoing>Flow_Amount_N2</bpmn:outgoing>
@@ -94,11 +94,11 @@
       <bpmn:outgoing>Flow_Approved_DetermineType</bpmn:outgoing>
       <bpmn:outgoing>Flow_Approval_Rejected</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Activity_DetermineType" name="Déterminer la méthode d'achat" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
+    <bpmn:userTask id="Activity_DetermineType" name="Déterminer la méthode d&#39;achat" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_Approved_DetermineType</bpmn:incoming>
       <bpmn:outgoing>Flow_DetermineType_Classify</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:serviceTask id="Task_ClassifyProcurement" name="Classifier la méthode d'achat" camunda:type="external" camunda:topic="classify_procurement">
+    <bpmn:serviceTask id="Task_ClassifyProcurement" name="Classifier la méthode d&#39;achat" camunda:type="external" camunda:topic="classify_procurement">
       <bpmn:incoming>Flow_DetermineType_Classify</bpmn:incoming>
       <bpmn:outgoing>Flow_Classify_Gateway</bpmn:outgoing>
     </bpmn:serviceTask>
@@ -117,7 +117,7 @@
       <bpmn:incoming>Flow_Method_Quotations</bpmn:incoming>
       <bpmn:outgoing>Flow_Quotations_Analyze</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_RFPProcess" name="Appel d'offres (RFP)" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
+    <bpmn:userTask id="Activity_RFPProcess" name="Appel d&#39;offres (RFP)" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_Method_RFP</bpmn:incoming>
       <bpmn:outgoing>Flow_RFP_Analyze</bpmn:outgoing>
     </bpmn:userTask>
@@ -449,12 +449,6 @@
           <dc:Bounds x="3572" y="140" width="76" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_InvoiceDispute_di" bpmnElement="Event_InvoiceDispute">
-        <dc:Bounds x="3782" y="185" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="3758" y="158" width="84" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_EnterInvoice_di" bpmnElement="Activity_EnterInvoice">
         <dc:Bounds x="3420" y="237" width="100" height="80" />
         <bpmndi:BPMNLabel />
@@ -467,6 +461,12 @@
         <dc:Bounds x="3775" y="252" width="50" height="50" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="3766" y="309" width="68" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_InvoiceDispute_di" bpmnElement="Event_InvoiceDispute">
+        <dc:Bounds x="3782" y="185" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3758" y="158" width="84" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_ProcessPayment_di" bpmnElement="Activity_ProcessPayment">

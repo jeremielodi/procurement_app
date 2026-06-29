@@ -9,8 +9,8 @@ class PurchaseOrderController {
   async create(req, res) {
     try {
       const {
-        requisitionId, supplierId, orderDate, deliveryDate,
-        shippingAddress, totalAmount, currency, items, createdBy
+        requisitionId, taskId, supplierId, orderDate, deliveryDate,
+        shippingAddress, totalAmount, currency, items, notes, createdBy
       } = req.body;
 
       if (!requisitionId || !supplierId || !totalAmount) {
@@ -21,35 +21,35 @@ class PurchaseOrderController {
       }
 
       const result = await purchaseOrderModel.create({
-        requisitionId, supplierId, orderDate, deliveryDate,
-        shippingAddress, totalAmount, currency,
+        requisitionId, taskId: taskId || null, supplierId, orderDate, deliveryDate,
+        shippingAddress, totalAmount, currency, notes,
         items: items || [],
         createdBy: createdBy || req.user?.id || 1
       });
 
-      // If a Camunda "Create PO" user task is pending, complete it
-      if (requisitionId) {
-        try {
+      // Complete the Camunda task — use taskId directly if provided, otherwise look it up
+      try {
+        let camundaTaskId = taskId;
+        if (!camundaTaskId) {
           const reqRow = await db.one(
             'SELECT process_instance_id FROM requisitions WHERE id = $1',
             [requisitionId]
           );
           if (reqRow?.process_instance_id) {
             const tasks = await camundaService.getProcessTasks(reqRow.process_instance_id);
-            const createPoTask = (tasks || []).find(
-              t => t.taskDefinitionKey === 'Activity_CreatePO'
-            );
-            if (createPoTask) {
-              await camundaService.completeTask(createPoTask.id, {
-                poId: result.id,
-                poNumber: result.poNumber,
-                totalAmount
-              });
-            }
+            const found = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_CreatePO');
+            if (found) camundaTaskId = found.id;
           }
-        } catch (camundaErr) {
-          console.error('[PO create] Camunda task completion (non-fatal):', camundaErr.message);
         }
+        if (camundaTaskId) {
+          await camundaService.completeTask(camundaTaskId, {
+            poId: result.id,
+            poNumber: result.poNumber,
+            totalAmount
+          });
+        }
+      } catch (camundaErr) {
+        console.error('[PO create] Camunda task completion (non-fatal):', camundaErr.message);
       }
 
       res.status(201).json({ success: true, data: result, message: 'Commande créée avec succès' });

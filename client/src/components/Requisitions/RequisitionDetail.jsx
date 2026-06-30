@@ -31,7 +31,7 @@ import {
   ExternalLink,
   ListTodo
 } from 'lucide-react'
-import { requisitionService } from '../../services/requisitionService'
+import requisitionService from '../../services/requisitionService'
 import { purchaseOrderService } from '../../services/purchaseOrderService'
 import { workflowService } from '../../services/workflowService'
 import { taskService } from '../../services/taskService'
@@ -293,7 +293,7 @@ const handleGeneratePDF = async () => {
               <h1 className="text-2xl font-bold text-gray-800">
                 {requisition.requisition_number}
               </h1>
-              <StatusBadge status={requisition.status} size="lg" />
+              <StatusBadge status={requisitionService.getStatusOptionLabel(requisition.status)} size="lg" />
               {requisition.priority && (
                 <StatusBadge status={`PRIORITY_${requisition.priority}`} size="lg" />
               )}

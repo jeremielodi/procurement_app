@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, DollarSign, Calendar, FileText } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
 import { useCurrency } from '../../contexts/EnterpriseContext';
-import { requisitionService } from '../../services/requisitionService';
+import requisitionService from '../../services/requisitionService';
 import { purchaseOrderService } from '../../services/purchaseOrderService';
 import Modal from '../Common/Modal';
 import toast from 'react-hot-toast';

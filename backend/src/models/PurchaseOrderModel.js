@@ -27,7 +27,7 @@ class PurchaseOrderModel {
       shipping_address: poData.shippingAddress,
       total_amount: poData.totalAmount,
       currency: poData.currency || defaultCurrency,
-      status: poData.status || 'DRAFT',
+      status: 'PO_PENDING',
       created_by: poData.createdBy,
       created_at: new Date(),
       updated_at: new Date()
@@ -63,7 +63,6 @@ class PurchaseOrderModel {
    * Récupérer une commande par ID
    */
   async findById(id) {
-    console.log("purchaise ID", id);
     const po = await db.one(`
       SELECT 
         po.*,

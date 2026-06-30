@@ -1,4 +1,5 @@
 // backend/src/controllers/WorkflowController.js
+const workFlowModel = require('../models/workFlowModel');
 const camundaService = require('../services/CamundaService');
 
 /**
@@ -27,10 +28,11 @@ async function getProcessHistory(req, res) {
     
     // Récupérer les variables du processus
     const variables = await camundaService.getProcessVariables(processInstanceId);
-    
+    const flow = await workFlowModel.getByProcessInstanceId(processInstanceId);
     res.json({
       success: true,
       data: {
+        workflow: flow,
         process: history,
         // activities: activities,
         tasks: tasks,

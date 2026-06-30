@@ -114,7 +114,7 @@ export default function GRNDetail() {
       )}
 
       {/* Action: Create Invoice */}
-      {grn.status === 'COMPLETE' && (
+      {/* {grn.status === 'COMPLETE' && (
         <div className="mt-6">
           <Link
             to={`/invoices/new?poId=${grn.po_id}&grnId=${grn.id}`}
@@ -123,7 +123,7 @@ export default function GRNDetail() {
             Saisir la facture pour cette réception →
           </Link>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

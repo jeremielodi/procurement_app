@@ -1,6 +1,6 @@
 // src/components/PurchaseOrders/PODetail.jsx
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
@@ -29,7 +29,7 @@ import {
 } from 'lucide-react'
 import { purchaseOrderService } from '../../services/purchaseOrderService'
 import { supplierService } from '../../services/supplierService'
-import { requisitionService } from '../../services/requisitionService'
+import requisitionService from '../../services/requisitionService'
 import { grnService } from '../../services/grnService'
 import { sanService } from '../../services/sanService'
 import StatusBadge from '../Common/StatusBadge'
@@ -38,15 +38,21 @@ import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
 import toast from 'react-hot-toast'
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters'
+import PurchaseOrderViewer from './PurchaseOrderViewer'
 
 export default function PODetail() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
+  const taskId = searchParams.get('taskId') || null
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
+  const [showPdfViewer, setShowPdfViewer] = useState(false)
+  const [poApprovalComment, setPoApprovalComment] = useState('')
   const [rejectionReason, setRejectionReason] = useState('')
+  const canReject = rejectionReason.trim().length > 0
 
   // Récupérer les détails de la commande
   const { data: poData, isLoading, error } = useQuery({
@@ -90,20 +96,21 @@ export default function PODetail() {
 
   // Mutation pour approuver la commande
   const approveMutation = useMutation({
-    mutationFn: (data) => purchaseOrderService.approve(po.id, data.approverId),
+    mutationFn: (data) => purchaseOrderService.approve(po.id, { taskId, comments: data.comments }),
     onSuccess: () => {
       queryClient.invalidateQueries(['purchase-order', id])
       toast.success('Commande approuvée avec succès')
       setShowApproveModal(false)
+      setPoApprovalComment('')
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de l\'approbation')
+      toast.error(error.message || "Erreur lors de l'approbation")
     }
   })
 
   // Mutation pour rejeter la commande
   const rejectMutation = useMutation({
-    mutationFn: (data) => purchaseOrderService.reject(po.id, data.reason),
+    mutationFn: (data) => purchaseOrderService.reject(po.id, { reason: data.reason, taskId }),
     onSuccess: () => {
       queryClient.invalidateQueries(['purchase-order', id])
       toast.success('Commande rejetée')
@@ -139,22 +146,7 @@ export default function PODetail() {
     }
   })
 
-  // Générer le PDF
-  const handleGeneratePDF = async () => {
-    try {
-      const pdf = await purchaseOrderService.generatePDF(id)
-      const url = window.URL.createObjectURL(new Blob([pdf]))
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', `PO_${po.po_number}.pdf`)
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      toast.success('PDF généré avec succès')
-    } catch (error) {
-      toast.error('Erreur lors de la génération du PDF')
-    }
-  }
+  const handleOpenPdfViewer = () => setShowPdfViewer(true)
 
   // Imprimer
   const handlePrint = () => {
@@ -198,6 +190,7 @@ export default function PODetail() {
       </div>
     )
   }
+  
 
   return (
     <div className="space-y-6">
@@ -224,14 +217,7 @@ export default function PODetail() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Printer size={18} />
-            Imprimer
-          </button>
-          <button
-            onClick={handleGeneratePDF}
+            onClick={handleOpenPdfViewer}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Download size={18} />
@@ -256,8 +242,8 @@ export default function PODetail() {
               </button>
             </>
           )}
-          
-          {po.status === 'PO_PENDING' && (
+         
+          {(po.status === 'PO_PENDING' || po.status === 'DRAFT') && (
             <>
               <button
                 onClick={() => setShowApproveModal(true)}
@@ -274,17 +260,6 @@ export default function PODetail() {
                 Rejeter
               </button>
             </>
-          )}
-          
-          {po.status === 'PO_APPROVED' && (
-            <button
-              onClick={() => sendMutation.mutate()}
-              disabled={sendMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
-            >
-              <Send size={18} />
-              {sendMutation.isPending ? 'Envoi...' : 'Envoyer au fournisseur'}
-            </button>
           )}
         </div>
       </div>
@@ -578,6 +553,15 @@ export default function PODetail() {
         </div>
       </div>
 
+      {/* Visionneuse PDF */}
+      {showPdfViewer && (
+        <PurchaseOrderViewer
+          poId={id}
+          po={po}
+          onClose={() => setShowPdfViewer(false)}
+        />
+      )}
+
       {/* Modal de confirmation de suppression */}
       <Modal
         isOpen={showDeleteModal}
@@ -601,11 +585,22 @@ export default function PODetail() {
         type="success"
         confirmText="Approuver"
         cancelText="Annuler"
-        onConfirm={() => approveMutation.mutate({ approverId: 1 })}
+        onConfirm={() => approveMutation.mutate({ comments: poApprovalComment })}
         isLoading={approveMutation.isPending}
       >
-        <p>Êtes-vous sûr de vouloir approuver la commande <strong>{po.po_number}</strong> ?</p>
-        <p className="text-sm text-gray-500 mt-2">Une fois approuvée, la commande pourra être envoyée au fournisseur.</p>
+        <div className="space-y-4">
+          <p>Êtes-vous sûr de vouloir approuver la commande <strong>{po.po_number}</strong> ?</p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Commentaire <span className="text-gray-400 font-normal">(optionnel)</span></label>
+            <textarea
+              value={poApprovalComment}
+              onChange={(e) => setPoApprovalComment(e.target.value)}
+              rows="2"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              placeholder="Note pour le demandeur…"
+            />
+          </div>
+        </div>
       </Modal>
 
       {/* Modal de rejet */}
@@ -616,22 +611,24 @@ export default function PODetail() {
         type="danger"
         confirmText="Rejeter"
         cancelText="Annuler"
-        onConfirm={() => rejectMutation.mutate({ reason: rejectionReason })}
+        onConfirm={() => rejectMutation.mutate({ reason: rejectionReason, taskId })}
         isLoading={rejectMutation.isPending}
+        confirmDisabled={!canReject}
       >
         <div className="space-y-4">
           <p>Êtes-vous sûr de vouloir rejeter la commande <strong>{po.po_number}</strong> ?</p>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Motif du rejet
+              Motif du rejet <span className="text-red-500">*</span>
             </label>
             <textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               rows="3"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              placeholder="Veuillez indiquer la raison du rejet..."
-              required
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                rejectionReason.trim() ? 'border-gray-300' : 'border-red-300 bg-red-50'
+              }`}
+              placeholder="Veuillez indiquer la raison du rejet…"
             />
           </div>
         </div>

@@ -27,14 +27,14 @@ export const purchaseOrderService = {
   },
 
   // Approuver une commande
-  approve: async (id, approverId) => {
-    const response = await api.post(`/purchase-orders/${id}/approve`, { approverId })
+  approve: async (id, { taskId, comments } = {}) => {
+    const response = await api.post(`/purchase-orders/${id}/approve`, { taskId, comments })
     return response.data
   },
 
   // Rejeter une commande
-  reject: async (id, reason) => {
-    const response = await api.post(`/purchase-orders/${id}/reject`, { reason })
+  reject: async (id, { reason, taskId } = {}) => {
+    const response = await api.post(`/purchase-orders/${id}/reject`, { reason, taskId })
     return response.data
   },
 

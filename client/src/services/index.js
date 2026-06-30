@@ -1,5 +1,5 @@
 // src/services/index.js
-export { requisitionService } from './requisitionService'
+export requisitionService from './requisitionService'
 export { purchaseOrderService } from './purchaseOrderService'
 export { supplierService } from './supplierService'
 export { notificationService } from './notificationService'

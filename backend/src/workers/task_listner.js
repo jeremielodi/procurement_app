@@ -91,9 +91,16 @@ function connectSSE() {
 }
 
 async function emitNotification(userId, title, message, type, link) {
-  await notificationService.sendNotification(userId, title, message, 'INFO', link);
+  let _userId = userId;
+  if(userId.indexOf('@') != -1) {
+    const user = await UserModel.findByEmail(userId);
+    if(user) {
+      _userId = user.id;
+    }
+  }
+  await notificationService.sendNotification(_userId, title, message, 'INFO', link);
   if (_io) {
-    _io.to(`user-${userId}`).emit('notification', {
+    _io.to(`user-${_userId}`).emit('notification', {
       title, message, type, link,
       timestamp: new Date().toISOString()
     });

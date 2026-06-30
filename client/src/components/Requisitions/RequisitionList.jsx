@@ -27,7 +27,7 @@ import {
   FileSpreadsheet,
   Printer
 } from 'lucide-react'
-import { requisitionService } from '../../services/requisitionService'
+import requisitionService from '../../services/requisitionService'
 import { departmentService } from '../../services/departmentService'
 import StatusBadge from '../Common/StatusBadge'
 import LoadingSpinner from '../Common/LoadingSpinner'
@@ -36,17 +36,8 @@ import Modal from '../Common/Modal'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 
-const statusOptions = [
-  { value: 'all', label: 'Tous les statuts' },
-  { value: 'DRAFT', label: 'Brouillon' },
-  { value: 'PENDING', label: 'En attente' },
-  { value: 'BUDGET_CHECKED', label: 'Budget vérifié' },
-  { value: 'APPROVED', label: 'Approuvé' },
-  { value: 'REJECTED', label: 'Rejeté' },
-  { value: 'IN_PROGRESS', label: 'En cours' },
-  { value: 'COMPLETED', label: 'Terminé' },
-  { value: 'CANCELLED', label: 'Annulé' }
-]
+
+
 
 const priorityOptions = [
   { value: 'all', label: 'Toutes priorités' },
@@ -59,7 +50,7 @@ const priorityOptions = [
 export default function RequisitionList() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  
+
   // États pour les filtres
   const [filters, setFilters] = useState({
     status: 'all',
@@ -86,7 +77,7 @@ export default function RequisitionList() {
   })
 
   const departments = departmentsData?.data || []
-  
+
   // Créer les options de département pour le filtre
   const departmentOptions = [
     { value: 'all', label: 'Tous départements' },
@@ -354,7 +345,7 @@ export default function RequisitionList() {
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                {statusOptions.map(opt => (
+                {requisitionService.getStatusOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -479,8 +470,8 @@ export default function RequisitionList() {
                       <Plus size={16} className="mr-1" />
                       Créer une réquisition
                     </Link>
-                   </td>
-                 </tr>
+                  </td>
+                </tr>
               ) : (
                 requisitions.map((requisition) => (
                   <tr key={requisition.id} className="hover:bg-gray-50 transition-colors">
@@ -523,7 +514,7 @@ export default function RequisitionList() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={requisition.status} size="sm" />
+                      <StatusBadge status={requisitionService.getStatusOptionLabel(requisition.status)} size="sm" />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={`PRIORITY_${requisition.priority}`} size="sm" />
@@ -614,11 +605,10 @@ export default function RequisitionList() {
                     <button
                       key={pageNum}
                       onClick={() => setPagination(prev => ({ ...prev, page: pageNum }))}
-                      className={`w-10 h-10 rounded-lg transition-colors ${
-                        pagination.page === pageNum
+                      className={`w-10 h-10 rounded-lg transition-colors ${pagination.page === pageNum
                           ? 'bg-blue-600 text-white'
                           : 'border border-gray-300 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       {pageNum}
                     </button>

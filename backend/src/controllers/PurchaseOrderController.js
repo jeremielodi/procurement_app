@@ -131,37 +131,29 @@ class PurchaseOrderController {
       const existing = await purchaseOrderModel.findById(id);
       if (!existing) return res.status(404).json({ success: false, message: 'Commande non trouvée' });
 
-      if (existing.status !== 'PO_PENDING') {
+      if (existing.status !== 'PO_PENDING' && existing.status !== 'DRAFT') {
         return res.status(400).json({ success: false, message: 'Seules les commandes en attente peuvent être approuvées' });
       }
 
       let camundaTaskCompleted = false;
 
-      if (taskId) {
-        try {
-          await camundaService.completeTask(taskId, { poApproved: true, comment: comments });
-          camundaTaskCompleted = true;
-        } catch (err) {
-          console.error('[PO approve] Camunda completeTask (non-fatal):', err.message);
-        }
-      } else if (existing.requisition_id) {
-        try {
-          const reqRow = await db.one(
-            'SELECT process_instance_id FROM requisitions WHERE id = $1',
-            [existing.requisition_id]
-          );
-          if (reqRow?.process_instance_id) {
-            const tasks = await camundaService.getProcessTasks(reqRow.process_instance_id);
-            const poTask = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_POApproval');
-            if (poTask) {
-              await camundaService.completeTask(poTask.id, { poApproved: true, comment: comments });
-              camundaTaskCompleted = true;
-            }
+      try {
+        const reqRow = await db.one(
+          'SELECT process_instance_id FROM requisitions WHERE id = $1',
+          [existing.requisition_id]
+        );
+        if (reqRow?.process_instance_id) {
+          const tasks = await camundaService.getProcessTasks(reqRow.process_instance_id);
+          const poTask = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_POApproval');
+          if (poTask) {
+            await camundaService.completeTask(poTask.id, { poApproved: true, poApprovalComment: comments || '' });
+            camundaTaskCompleted = true;
           }
-        } catch (err) {
-          console.error('[PO approve] Camunda lookup (non-fatal):', err.message);
         }
+      } catch (err) {
+        console.error('[PO approve] Camunda lookup (non-fatal):', err.message);
       }
+
 
       await purchaseOrderModel.approve(id, userId, comments);
 
@@ -202,36 +194,27 @@ class PurchaseOrderController {
       const existing = await purchaseOrderModel.findById(id);
       if (!existing) return res.status(404).json({ success: false, message: 'Commande non trouvée' });
 
-      if (existing.status !== 'PO_PENDING') {
+      if (existing.status !== 'PO_PENDING' || '') {
         return res.status(400).json({ success: false, message: 'Seules les commandes en attente peuvent être rejetées' });
       }
 
       let camundaTaskCompleted = false;
 
-      if (taskId) {
-        try {
-          await camundaService.completeTask(taskId, { poApproved: false, comment: reason });
-          camundaTaskCompleted = true;
-        } catch (err) {
-          console.error('[PO reject] Camunda completeTask (non-fatal):', err.message);
-        }
-      } else if (existing.requisition_id) {
-        try {
-          const reqRow = await db.one(
-            'SELECT process_instance_id FROM requisitions WHERE id = $1',
-            [existing.requisition_id]
-          );
-          if (reqRow?.process_instance_id) {
-            const tasks = await camundaService.getProcessTasks(reqRow.process_instance_id);
-            const poTask = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_POApproval');
-            if (poTask) {
-              await camundaService.completeTask(poTask.id, { poApproved: false, comment: reason });
-              camundaTaskCompleted = true;
-            }
+      try {
+        const reqRow = await db.one(
+          'SELECT process_instance_id FROM requisitions WHERE id = $1',
+          [existing.requisition_id]
+        );
+        if (reqRow?.process_instance_id) {
+          const tasks = await camundaService.getProcessTasks(reqRow.process_instance_id);
+          const poTask = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_POApproval');
+          if (poTask) {
+            await camundaService.completeTask(poTask.id, { poApproved: false, poApprovalComment: reason || '' });
+            camundaTaskCompleted = true;
           }
-        } catch (err) {
-          console.error('[PO reject] Camunda lookup (non-fatal):', err.message);
         }
+      } catch (err) {
+        console.error('[PO reject] Camunda lookup (non-fatal):', err.message);
       }
 
       await purchaseOrderModel.reject(id, userId, reason);
@@ -299,9 +282,9 @@ class PurchaseOrderController {
       const filename = `PO-${po.po_number || id}.pdf`;
 
       res.set({
-        'Content-Type':        'application/pdf',
+        'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length':      pdfBuffer.length,
+        'Content-Length': pdfBuffer.length,
       });
       res.end(pdfBuffer);
     } catch (error) {

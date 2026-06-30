@@ -18,7 +18,7 @@ import {
   FileText,
   UserPlus
 } from 'lucide-react';
-import { requisitionService } from '../../services/requisitionService';
+import requisitionService from '../../services/requisitionService';
 import { taskService } from '../../services/taskService';
 import { useAuth } from '../../hooks/useAuth';
 import StatusBadge from '../Common/StatusBadge';
@@ -26,6 +26,8 @@ import LoadingSpinner from '../Common/LoadingSpinner';
 import Modal from '../Common/Modal';
 import toast from 'react-hot-toast';
 import { useCurrency } from '../../contexts/EnterpriseContext';
+import { purchaseOrderService } from '../../services/purchaseOrderService';
+import { grnService } from '../../services/grnService';
 
 export default function RequisitionTasks() {
   const { id } = useParams();
@@ -102,22 +104,61 @@ export default function RequisitionTasks() {
     }
   };
 
-  const handleCompleteTask = (task) => {
+  const handleCompleteTask = async (task) => {
+
+    const processVariables = await requisitionService.getProcessVariables(requisition.process_instance_id);
+
     if (task.taskDefinitionKey == "Activity_CreatePO") {
-       // Navigate to purchase orders route
+      // Navigate to purchase orders route
       navigate(`/purchase-orders/${id}/${task.id}`);
       return; // Exit early since we're navigating away
     }
-    setSelectedTask(task);
-    setFormData({
-      approved: '',
-      comment: '',
-      procurementMethod: '',
-      justification: '',
-      newBudgetAmount: '',
-      adjustmentJustification: ''
-    });
-    setShowTaskModal(true);
+    else if (task.taskDefinitionKey == 'Activity_POApproval') {
+
+      const purchases = await purchaseOrderService.getAll({ requisitionId: id });
+      if (purchases.success && purchases.data.length) {
+        navigate(`/purchase-orders/${purchases.data[0].id}`);
+      }
+      return;
+    } else if (task.taskDefinitionKey == 'Activity_GoodsReceipt') {
+      const purchases = await purchaseOrderService.getAll({ requisitionId: id });
+      if (purchases.success && purchases.data.length) {
+        navigate(`/goods-receipts/new?poId=${purchases.data[0].id}&taskId=${task.id}`);
+      }
+    }
+
+    else if (task.taskDefinitionKey == 'Activity_ServiceAcceptance') {
+      const purchases = await purchaseOrderService.getAll({ requisitionId: id });
+      if (purchases.success && purchases.data.length) {
+        navigate(`/service-acceptance-notes/new?poId=${purchases.data[0].id}&taskId=${task.id}`);
+      }
+    }
+    else if (task.taskDefinitionKey == 'Activity_EnterInvoice') {
+      const purchases = await purchaseOrderService.getAll({ requisitionId: id });
+
+      // grnId
+      if (purchases.success && purchases.data.length) {
+        const poId = purchases.data[0].id;
+        const grnId = processVariables.data.grnId;
+        navigate(`/invoices/new?poId=${poId}&taskId=${task.id}&grnId=${grnId}`);
+      }
+    }
+    else if (task.taskDefinitionKey == 'Activity_ProcessPayment') {
+      const { invoiceId, poId } = processVariables.data;
+      navigate(`/payments/new?taskId=${task.id}&invoiceId=${invoiceId}&poId=${poId}`);
+    }
+    else {
+      setSelectedTask(task);
+      setFormData({
+        approved: '',
+        comment: '',
+        procurementMethod: '',
+        justification: '',
+        newBudgetAmount: '',
+        adjustmentJustification: ''
+      });
+      setShowTaskModal(true);
+    }
   };
 
   const handleSubmitTask = async () => {
@@ -417,9 +458,11 @@ export default function RequisitionTasks() {
               </div>
             )}
 
+
             {/* Formulaire Validation */}
             {(getTaskName(selectedTask).includes('Validation') ||
               getTaskName(selectedTask).includes('Hierarchical') ||
+              (getTaskName(selectedTask).includes('Approval')) ||
               getTaskName(selectedTask).includes('Approbation')) && (
                 <>
                   <div>
@@ -548,6 +591,7 @@ export default function RequisitionTasks() {
             {!getTaskName(selectedTask).includes('Validation') &&
               !getTaskName(selectedTask).includes('Hierarchical') &&
               !getTaskName(selectedTask).includes('Approbation') &&
+              !getTaskName(selectedTask).includes('Approval') &&
               !getTaskName(selectedTask).includes('Determine') &&
               !getTaskName(selectedTask).includes('Procurement') &&
               !getTaskName(selectedTask).includes('Budget Adjustment') && (

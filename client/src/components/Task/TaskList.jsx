@@ -176,6 +176,7 @@ const TaskList = () => {
 
   // Tâches qui ont un formulaire dédié → redirection au lieu de la modale
   const FORM_TASKS = {
+    'Activity_POApproval':        (t) => `/purchase-orders/${t.variables?.poId || ''}?taskId=${t.id}`,
     'Activity_GoodsReceipt':      (t) => `/goods-receipts/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
     'Activity_ServiceAcceptance': (t) => `/service-acceptance-notes/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
     'Activity_EnterInvoice':      (t) => `/invoices/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
@@ -504,18 +505,7 @@ const TaskList = () => {
                           </button>
                         )}
                         
-                        {task.assignee === userEmail && task.status !== 'COMPLETED' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCompleteTask(task);
-                            }}
-                            className="flex items-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700"
-                          >
-                            <Send size={16} />
-                            {getFormRoute(task) ? 'Ouvrir le formulaire' : 'Traiter'}
-                          </button>
-                        )}
+                        
                       </>
                     )}
                   </div>

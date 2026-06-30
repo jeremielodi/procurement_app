@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, ShoppingCart, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { purchaseOrderService } from '../../services/purchaseOrderService';
-import { requisitionService } from '../../services/requisitionService';
+import requisitionService from '../../services/requisitionService';
 import { supplierService } from '../../services/supplierService';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 

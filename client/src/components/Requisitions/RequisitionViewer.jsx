@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Download, Printer, AlertCircle, FileText, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { requisitionService } from '../../services/requisitionService';
+import requisitionService from '../../services/requisitionService';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 
 const RequisitionViewer = ({ requisitionId, requisition, onClose }) => {

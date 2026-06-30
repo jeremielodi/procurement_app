@@ -17,6 +17,7 @@ const purchaseOrderModel = require('../models/PurchaseOrderModel');
 const notificationService = require('../services/NotificationService');
 const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
+const EmailNotificationService = require('../services/EmailNotificationService');
 
 const CAMUNDA_REST_URL = process.env.CAMUNDA_REST_URL || 'http://localhost:8080/engine-rest';
 const USERNAME = process.env.CAMUNDA_USERNAME;
@@ -425,34 +426,38 @@ async function processAnalyzeOffers(task) {
 }
 
 async function processSendPONotification(task) {
-  logTask('[%s] Processing task: %s', 'send_po_notification', task.id);
+  try {
+    logTask('[%s] Processing task: %s', 'send_po_notification', task.id);
+    const processInstanceId = task.processInstanceId;
+    const requisitionId = getVariableValue(task.variables, 'requisitionId');
 
-  const processInstanceId = task.processInstanceId;
-  const requisitionId = getVariableValue(task.variables, 'requisitionId');
+    const requisitionExists = await checkRequisitionExists(requisitionId);
 
-  const requisitionExists = await checkRequisitionExists(requisitionId);
-  if (!requisitionExists) {
-    await closeTaskAndProcess(task, processInstanceId, `Réquisition ${requisitionId} non trouvée`);
-    return { processTerminated: true };
-  }
+    if (!requisitionExists) {
+      await closeTaskAndProcess(task, processInstanceId, `Réquisition ${requisitionId} non trouvée`);
+      return { processTerminated: true };
+    }
 
-  const poId = getVariableValue(task.variables, 'poId');
-  if (!poId) {
-    logWarn('No poId in variables for send_po_notification, skipping email');
-    return {};
-  }
+    const poId = getVariableValue(task.variables, 'poId');
+    console.log(poId);
+    if (!poId) {
+      logWarn('No poId in variables for send_po_notification, skipping email');
+      return {};
+    }
 
-  const po = await purchaseOrderModel.findById(poId);
-  if (!po) {
-    logWarn('PO %s not found, skipping notification', poId);
-    return {};
-  }
+    const po = await purchaseOrderModel.findById(poId);
+    if (!po) {
+      logWarn('PO %s not found, skipping notification', poId);
+      return {};
+    }
 
-  if (po.supplier_email) {
-    await notificationService.sendEmail(
-      po.supplier_email,
-      `Purchase Order ${po.po_number}`,
-      `<h1>Purchase Order ${po.po_number}</h1>
+
+    console.log('step 2', po.supplier_email);
+    if (po.supplier_email) {
+      EmailNotificationService.sendEmail(
+        po.supplier_email,
+        `Purchase Order ${po.po_number}`,
+        `<h1>Purchase Order ${po.po_number}</h1>
        <p>Dear ${po.supplier_name},</p>
        <p>Please find below your purchase order details.</p>
        <ul>
@@ -462,28 +467,37 @@ async function processSendPONotification(task) {
          <li>Total Amount: ${po.total_amount} ${po.currency}</li>
        </ul>
        <p>Thank you for your business.</p>`
+      );
+      logSuccess('Email sent to supplier %s', po.supplier_email);
+    } else {
+      logWarn('No supplier email on PO %s, skipping email', po.po_number);
+    }
+
+
+    console.log('step 3');
+
+    await addWorkflowHistory(
+      processInstanceId, 'purchase_order', poId, task.id,
+      'Send PO Notification', 'Sent', `PO ${po.po_number} sent to supplier`
     );
-    logSuccess('Email sent to supplier %s', po.supplier_email);
-  } else {
-    logWarn('No supplier email on PO %s, skipping email', po.po_number);
+
+    emitPurchaseOrderUpdate(poId, { status: 'PO_SENT', po_number: po.po_number });
+
+
+    console.log('step 4');
+    // Notify the original requester (from the linked requisition, not the PO creator)
+    const requesterId = await getRequesterIdForPO(po);
+    if (requesterId) {
+      emitNotification(requesterId, 'Commande envoyée',
+        `La commande ${po.po_number} a été envoyée au fournisseur`,
+        'SUCCESS', `/purchase-orders/${poId}`);
+    }
+
+    console.log('step 5');
+    return {};
+  } catch (error) {
+    console.log(error)
   }
-
-  await addWorkflowHistory(
-    processInstanceId, 'purchase_order', poId, task.id,
-    'Send PO Notification', 'Sent', `PO ${po.po_number} sent to supplier`
-  );
-
-  emitPurchaseOrderUpdate(poId, { status: 'PO_SENT', po_number: po.po_number });
-
-  // Notify the original requester (from the linked requisition, not the PO creator)
-  const requesterId = await getRequesterIdForPO(po);
-  if (requesterId) {
-    emitNotification(requesterId, 'Commande envoyée',
-      `La commande ${po.po_number} a été envoyée au fournisseur`,
-      'SUCCESS', `/purchase-orders/${poId}`);
-  }
-
-  return {};
 }
 
 async function processInvoice(task) {
@@ -511,7 +525,7 @@ async function processInvoice(task) {
     // Fallback: basic amount check using Camunda variables
     const invoiceAmount = parseFloat(getVariableValue(task.variables, 'invoiceAmount') || 0);
     const invoiceNumber = getVariableValue(task.variables, 'invoiceNumber');
-    const grnCompliant  = getVariableValue(task.variables, 'grnCompliant');
+    const grnCompliant = getVariableValue(task.variables, 'grnCompliant');
     const po = poId ? await purchaseOrderModel.findById(poId) : null;
 
     if (po && invoiceAmount) {
@@ -673,13 +687,13 @@ async function processTask(task) {
   try {
     let result;
     switch (topicName) {
-      case 'check_budget':         result = await processCheckBudget(task);        break;
+      case 'check_budget': result = await processCheckBudget(task); break;
       case 'classify_procurement': result = await processClassifyProcurement(task); break;
-      case 'analyze_offers':       result = await processAnalyzeOffers(task);       break;
-      case 'send_po_notification': result = await processSendPONotification(task);  break;
-      case 'process_invoice':      result = await processInvoice(task);             break;
-      case 'goods_receipt':        result = await processGoodsReceipt(task);        break;
-      case 'service_acceptance':   result = await processServiceAcceptance(task);   break;
+      case 'analyze_offers': result = await processAnalyzeOffers(task); break;
+      case 'send_po_notification': result = await processSendPONotification(task); break;
+      case 'process_invoice': result = await processInvoice(task); break;
+      case 'goods_receipt': result = await processGoodsReceipt(task); break;
+      case 'service_acceptance': result = await processServiceAcceptance(task); break;
       case 'update_supplier_rating': result = await processUpdateSupplierRating(task); break;
       default:
         logWarn('Unknown topic: %s', topicName);

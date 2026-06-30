@@ -24,7 +24,7 @@ export const taskService = {
    * @param {object} body - { variables, comment?, taskDefinitionKey?, requisitionId?, estimatedAmount? }
    */
   completeTask: async (taskId, body) => {
-    const response = await api.post(`/tasks/${taskId}/complete`, body);
+    const response = await api.post(`/tasks/${taskId}/complete`, { variables: body});
     return response.data;
   },
 

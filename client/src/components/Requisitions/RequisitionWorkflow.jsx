@@ -36,7 +36,7 @@ import {
   ChevronDown,
   MoreVertical
 } from 'lucide-react'
-import { requisitionService } from '../../services/requisitionService'
+import requisitionService from '../../services/requisitionService'
 import { workflowService } from '../../services/workflowService'
 import StatusBadge from '../Common/StatusBadge'
 import LoadingSpinner from '../Common/LoadingSpinner'

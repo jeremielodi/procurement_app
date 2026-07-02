@@ -5,3 +5,4 @@
 -- delete from purchase_orders;
 -- delete from requisition_items;
 -- delete from requisitions;
+-- delete from  workflow_history;

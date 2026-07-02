@@ -59,7 +59,7 @@ async function getUserTasks(req, res) {
 
     // Garder uniquement les tâches dont le processInstanceId correspond
     // à une réquisition existante en base
-    if (userTasks.length > 0) {
+    if ((userTasks || []).length > 0) {
       const processIds = [...new Set(userTasks.map(t => t.processInstanceId).filter(Boolean))];
       if (processIds.length > 0) {
         const rows = await db.select(

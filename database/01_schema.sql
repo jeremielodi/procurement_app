@@ -424,6 +424,7 @@ CREATE TABLE IF NOT EXISTS workflow_history (
     entity_type VARCHAR(50),
     entity_id UUID,
     task_id VARCHAR(50),
+    task_definition_id VARCHAR(100),
     task_name VARCHAR(100),
     action VARCHAR(50),
     comments TEXT,

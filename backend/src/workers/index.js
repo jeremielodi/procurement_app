@@ -439,7 +439,6 @@ async function processSendPONotification(task) {
     }
 
     const poId = getVariableValue(task.variables, 'poId');
-    console.log(poId);
     if (!poId) {
       logWarn('No poId in variables for send_po_notification, skipping email');
       return {};
@@ -451,8 +450,6 @@ async function processSendPONotification(task) {
       return {};
     }
 
-
-    console.log('step 2', po.supplier_email);
     if (po.supplier_email) {
       EmailNotificationService.sendEmail(
         po.supplier_email,
@@ -473,9 +470,6 @@ async function processSendPONotification(task) {
       logWarn('No supplier email on PO %s, skipping email', po.po_number);
     }
 
-
-    console.log('step 3');
-
     await addWorkflowHistory(
       processInstanceId, 'purchase_order', poId, task.id,
       'Send PO Notification', 'Sent', `PO ${po.po_number} sent to supplier`
@@ -483,8 +477,6 @@ async function processSendPONotification(task) {
 
     emitPurchaseOrderUpdate(poId, { status: 'PO_SENT', po_number: po.po_number });
 
-
-    console.log('step 4');
     // Notify the original requester (from the linked requisition, not the PO creator)
     const requesterId = await getRequesterIdForPO(po);
     if (requesterId) {
@@ -492,8 +484,6 @@ async function processSendPONotification(task) {
         `La commande ${po.po_number} a été envoyée au fournisseur`,
         'SUCCESS', `/purchase-orders/${poId}`);
     }
-
-    console.log('step 5');
     return {};
   } catch (error) {
     console.log(error)

@@ -7,7 +7,6 @@ class UserController {
    */
   async list(req, res) {
     try {
-        console.log("get all users");
       const { search, is_active, department, page = 1, limit = 20 } = req.query;
       const offset = (page - 1) * limit;
       

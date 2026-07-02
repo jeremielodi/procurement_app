@@ -2,6 +2,7 @@
 const { EventSource } = require('eventsource');
 require('dotenv').config();
 const debug = require('debug');
+const db = require('../config/database');
 const RequisitionModel = require('../models/RequisitionModel');
 const UserModel = require('../models/UserModel');
 const notificationService = require('../services/NotificationService');
@@ -61,7 +62,10 @@ function connectSSE() {
   eventSource.addEventListener('task', async (event) => {
     try {
       const data = JSON.parse(event.data);
+
       logEvent('Event received: %O', data);
+
+      await logWorkflowHistory(data);
 
       if      (data.eventType === 'TASK_CREATED')   await handleTaskCreated(data);
       else if (data.eventType === 'TASK_CLAIMED')   await handleTaskClaimed(data);
@@ -144,6 +148,38 @@ async function getRequisitionIdForProcess(processInstanceId) {
     return requisitions?.[0]?.id || null;
   } catch {
     return null;
+  }
+}
+
+async function logWorkflowHistory(task) {
+  try {
+    const requisitionId = await getRequisitionIdForProcess(task.processInstanceId);
+    if (!requisitionId) {
+      logDebug('No requisitionId for task %s, skipping workflow_history log', task.taskId);
+      return;
+    }
+
+    let performedBy = null;
+    if (task.assignee) {
+      const user = await UserModel.findByEmail(task.assignee);
+      if (user) performedBy = user.id;
+    }
+
+    await db.insert('workflow_history', {
+      process_instance_id: task.processInstanceId,
+      entity_type: 'requisition',
+      entity_id: requisitionId,
+      task_id: task.taskId,
+      task_definition_id: task.TaskDefinitionKey,
+      task_name: task.taskName,
+      action: task.eventType,
+      comments: task.variables ? JSON.stringify(task.variables) : null,
+      performed_by: performedBy,
+      performed_at: task.timestamp ? new Date(task.timestamp) : new Date()
+    });
+    logDebug('Workflow history logged: %s (%s)', task.taskId, task.eventType);
+  } catch (err) {
+    logError('Failed to log workflow history: %s', err.message);
   }
 }
 

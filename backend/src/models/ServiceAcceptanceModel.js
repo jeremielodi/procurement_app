@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 
 class ServiceAcceptanceModel {
 
@@ -49,6 +50,9 @@ class ServiceAcceptanceModel {
     const params = [];
     let where = 'WHERE 1=1';
     let i = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    where += tenant.filter('san.enterprise_id', params);
+    i = params.length + 1;
 
     if (poId)   { where += ` AND san.po_id = $${i++}`;   params.push(poId); }
     if (status) { where += ` AND san.status = $${i++}`;  params.push(status); }
@@ -76,6 +80,9 @@ class ServiceAcceptanceModel {
     const params = [];
     let where = 'WHERE 1=1';
     let i = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    where += tenant.filter('enterprise_id', params);
+    i = params.length + 1;
     if (status) { where += ` AND status = $${i++}`; params.push(status); }
     const result = await db.one(
       `SELECT COUNT(*) AS count FROM service_acceptance_notes ${where}`, params

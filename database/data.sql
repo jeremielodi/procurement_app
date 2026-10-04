@@ -46,7 +46,9 @@ SELECT * FROM (VALUES
     ('perm_manage_enterprises', 'MANAGE_ENTERPRISES', 'Gérer les entreprises', 'enterprise', 'write'),
     ('perm_manage_currencies', 'MANAGE_CURRENCIES', 'Gérer les devises', 'currency', 'write'),
     ('perm_view_budget', 'VIEW_BUDGET', 'Voir les budgets', 'budget', 'read'),
-    ('perm_manage_budget', 'MANAGE_BUDGET', 'Gérer les budgets', 'budget', 'write')
+    ('perm_manage_budget', 'MANAGE_BUDGET', 'Gérer les budgets', 'budget', 'write'),
+    ('perm_manage_tenders', 'MANAGE_TENDERS', 'Gérer les appels d''offres', 'tender', 'write'),
+    ('perm_supplier_portal', 'SUPPLIER_PORTAL', 'Accès au portail fournisseur', 'tender', 'submit')
 ) AS tmp(id, name, description, resource, action)
 WHERE NOT EXISTS (
     SELECT 1 FROM permissions WHERE name = tmp.name
@@ -66,7 +68,8 @@ SELECT * FROM (VALUES
     ('prof_store_keeper', 'Magasinier', 'Gère les stocks'),
     ('prof_dg', 'Directeur Général', 'Approbation N3 (≥ 100 000)'),
     ('prof_logistic', 'Logistique', 'Réception marchandises et bon de livraison (GRN)'),
-    ('prof_management', 'Direction', 'Approbation des bons de commande')
+    ('prof_management', 'Direction', 'Approbation des bons de commande'),
+    ('prof_supplier', 'Fournisseur', 'Fournisseur inscrit : répond aux appels d''offres')
 ) AS tmp(id, name, description)
 WHERE NOT EXISTS (
     SELECT 1 FROM profiles WHERE id = tmp.id
@@ -231,7 +234,7 @@ WHERE p.name IN (
     'VIEW_DASHBOARD',
     'VIEW_DEPARTMENTS',
     'VIEW_PROJECTS',
-    'VIEW_BUDGET'
+    'MANAGE_TENDERS'
 )
 AND NOT EXISTS (
     SELECT 1 
@@ -355,3 +358,12 @@ AND NOT EXISTS (
     WHERE pp.profile_id = 'prof_management'
     AND pp.permission_id = p.id
 );
+
+-- FOURNISSEUR - Portail fournisseur uniquement
+INSERT INTO profile_permissions (profile_id, permission_id)
+SELECT 'prof_supplier', p.id FROM permissions p
+WHERE p.name = 'SUPPLIER_PORTAL'
+AND NOT EXISTS (SELECT 1 FROM profile_permissions pp WHERE pp.profile_id = 'prof_supplier' AND pp.permission_id = p.id);
+
+-- procureApp multi-entreprise : rattacher les données sans entreprise à la première entreprise
+SELECT procureapp_assign_orphans();

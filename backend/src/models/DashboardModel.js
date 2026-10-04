@@ -1,5 +1,7 @@
 // backend/src/models/DashboardModel.js
 const db = require('../config/database');
+// Multi-entreprise : toutes les requêtes du tableau de bord sont restreintes à l'entreprise courante
+const { scopedDb } = require('../utils/tenantSql');
 
 class DashboardModel {
   /**
@@ -8,37 +10,37 @@ class DashboardModel {
   async getStats() {
     try {
       // Total des réquisitions
-      const totalRequisitions = await db.one(
+      const totalRequisitions = await scopedDb.one(
         "SELECT COUNT(*) as count FROM requisitions"
       );
       
       // Réquisitions par statut
-      const requisitionsByStatus = await db.select(
+      const requisitionsByStatus = await scopedDb.select(
         "SELECT status, COUNT(*) as count FROM requisitions GROUP BY status"
       );
       
       // Montant total des réquisitions
-      const totalAmount = await db.one(
+      const totalAmount = await scopedDb.one(
         "SELECT COALESCE(SUM(estimated_amount), 0) as total FROM requisitions"
       );
       
       // Nombre de fournisseurs actifs
-      const activeSuppliers = await db.one(
+      const activeSuppliers = await scopedDb.one(
         "SELECT COUNT(*) as count FROM suppliers WHERE status = 'ACTIVE'"
       );
       
       // Nombre de commandes
-      const totalOrders = await db.one(
+      const totalOrders = await scopedDb.one(
         "SELECT COUNT(*) as count FROM purchase_orders"
       );
 
       // Réquisitions en attente d'approbation
-      const pendingApprovals = await db.one(
+      const pendingApprovals = await scopedDb.one(
         "SELECT COUNT(*) as count FROM requisitions WHERE status IN ('IN_PROGRESS', 'PENDING_APPROVAL', 'BUDGET_INSUFFICIENT')"
       );
 
       // Réquisitions approuvées ce mois
-      const approvedThisMonth = await db.one(`
+      const approvedThisMonth = await scopedDb.one(`
         SELECT COUNT(*) as count 
         FROM requisitions 
         WHERE status = 'APPROVED' 
@@ -47,12 +49,12 @@ class DashboardModel {
       `);
 
       // Montant total des commandes
-      const totalOrderAmount = await db.one(
+      const totalOrderAmount = await scopedDb.one(
         "SELECT COALESCE(SUM(total_amount), 0) as total FROM purchase_orders"
       );
       
       // GRN stats
-      const grnStats = await db.one(`
+      const grnStats = await scopedDb.one(`
         SELECT
           COUNT(*) as total,
           COUNT(CASE WHEN status = 'COMPLETE' THEN 1 END) as complete,
@@ -61,7 +63,7 @@ class DashboardModel {
       `);
 
       // Invoice stats
-      const invoiceStats = await db.one(`
+      const invoiceStats = await scopedDb.one(`
         SELECT
           COUNT(*) as total,
           COUNT(CASE WHEN match_status = 'MATCHED'       THEN 1 END) as matched,
@@ -71,7 +73,7 @@ class DashboardModel {
       `);
 
       // Payment stats
-      const paymentStats = await db.one(`
+      const paymentStats = await scopedDb.one(`
         SELECT
           COUNT(*) as total,
           COUNT(CASE WHEN status = 'PENDING'   THEN 1 END) as pending,
@@ -124,7 +126,7 @@ class DashboardModel {
   /**
    * Récupérer les données pour les graphiques
    */
-  async getChartData(period = 'month') {
+  async getChartData(period = 'month', { includeBudget = true } = {}) {
     try {
       let dateFormat;
       let interval;
@@ -146,7 +148,7 @@ class DashboardModel {
       }
       
       // Tendances mensuelles des réquisitions
-      const monthlyTrend = await db.select(`
+      const monthlyTrend = await scopedDb.select(`
         SELECT 
           TO_CHAR(created_at, $1) as period,
           COUNT(*) as requisitions,
@@ -161,7 +163,7 @@ class DashboardModel {
       `, [dateFormat]);
       
       // Distribution par statut
-      const statusDistribution = await db.select(`
+      const statusDistribution = await scopedDb.select(`
         SELECT 
           status as name,
           COUNT(*) as value
@@ -189,7 +191,7 @@ class DashboardModel {
       }));
       
       // Données par département
-      const departmentData = await db.select(`
+      const departmentData = await scopedDb.select(`
         SELECT 
           d.name as department_name,
           d.code as department_code,
@@ -205,7 +207,7 @@ class DashboardModel {
       `);
       
       // Top fournisseurs
-      const topSuppliers = await db.select(`
+      const topSuppliers = await scopedDb.select(`
         SELECT 
           s.id,
           s.name,
@@ -222,7 +224,7 @@ class DashboardModel {
       `);
       
       // Méthodes d'achat — basé sur le montant estimé selon les seuils BPMN
-      const procurementMethods = await db.select(`
+      const procurementMethods = await scopedDb.select(`
         SELECT
           CASE
             WHEN EXISTS (
@@ -268,7 +270,8 @@ class DashboardModel {
       const performanceMetrics = await this.getPerformanceMetrics();
       
       // Budget summary
-      const budgetSummary = await this.getBudgetSummary();
+      // Données budgétaires réservées à la Finance (MANAGE_BUDGET)
+      const budgetSummary = includeBudget ? await this.getBudgetSummary() : null;
       
       return {
         monthlyTrend,
@@ -306,7 +309,7 @@ class DashboardModel {
    */
   async getBudgetSummary() {
     try {
-      const summary = await db.one(`
+      const summary = await scopedDb.one(`
         SELECT 
           COUNT(*) as total_budgets,
           COALESCE(SUM(allocated_amount), 0) as total_allocated,
@@ -316,7 +319,7 @@ class DashboardModel {
         WHERE is_active = true
       `);
       
-      const byFundingSource = await db.select(`
+      const byFundingSource = await scopedDb.select(`
         SELECT 
           funding_source,
           COUNT(*) as count,
@@ -329,7 +332,7 @@ class DashboardModel {
         ORDER BY allocated DESC
       `);
       
-      const byProject = await db.select(`
+      const byProject = await scopedDb.select(`
         SELECT 
           p.name as project_name,
           p.code as project_code,
@@ -370,7 +373,7 @@ class DashboardModel {
   async getPerformanceMetrics() {
     try {
       // Délai moyen de traitement (en heures)
-      const avgProcessingTime = await db.one(`
+      const avgProcessingTime = await scopedDb.one(`
         SELECT COALESCE(AVG(
           EXTRACT(EPOCH FROM (COALESCE(approved_at, completed_at, updated_at, created_at) - created_at))/3600
         ), 0) as avg_hours
@@ -379,7 +382,7 @@ class DashboardModel {
       `);
       
       // Délai moyen par étape - Version corrigée sans fonction de fenêtre dans l'agrégation
-      const stepDelays = await db.select(`
+      const stepDelays = await scopedDb.select(`
         WITH step_times AS (
           SELECT 
             task_name,
@@ -402,7 +405,7 @@ class DashboardModel {
       `);
       
       // Taux de livraison à temps
-      const onTimeDelivery = await db.one(`
+      const onTimeDelivery = await scopedDb.one(`
         SELECT 
           COUNT(*) as total,
           COUNT(CASE WHEN delivery_date <= order_date + INTERVAL '7 days' THEN 1 END) as on_time
@@ -415,7 +418,7 @@ class DashboardModel {
         : 0;
       
       // Conformité budgétaire
-      const budgetCompliance = await db.one(`
+      const budgetCompliance = await scopedDb.one(`
         SELECT 
           COUNT(ri.id) as total,
           COUNT(CASE 
@@ -431,7 +434,7 @@ class DashboardModel {
         : 0;
       
       // Satisfaction fournisseurs
-      const supplierSatisfaction = await db.one(`
+      const supplierSatisfaction = await scopedDb.one(`
         SELECT 
           COALESCE(AVG(rating), 0) as avg_rating,
           COUNT(*) as total_evaluations
@@ -440,7 +443,7 @@ class DashboardModel {
       `);
       
       // Taux de réapprobation (réquisitions rejetées puis approuvées)
-      const reapprovalRate = await db.one(`
+      const reapprovalRate = await scopedDb.one(`
         SELECT 
           COUNT(DISTINCT r1.id) as reapproved,
           COUNT(DISTINCT r2.id) as total_rejected
@@ -481,7 +484,7 @@ class DashboardModel {
    */
   async getRecentRequisitions(limit = 10) {
     try {
-      return await db.select(`
+      return await scopedDb.select(`
         SELECT 
           r.id,
           r.requisition_number,
@@ -518,7 +521,7 @@ class DashboardModel {
    */
   async getRecentActivities(limit = 10) {
     try {
-      return await db.select(`
+      return await scopedDb.select(`
         SELECT 
           wh.id,
           wh.process_instance_id,
@@ -550,7 +553,7 @@ class DashboardModel {
    */
   async getDepartmentSummary() {
     try {
-      return await db.select(`
+      return await scopedDb.select(`
         SELECT 
           d.id,
           d.name as department_name,
@@ -580,7 +583,7 @@ class DashboardModel {
    */
   async getSupplierSummary() {
     try {
-      return await db.select(`
+      return await scopedDb.select(`
         SELECT 
           s.id,
           s.name,
@@ -616,7 +619,7 @@ class DashboardModel {
       const lastYear = currentYear - 1;
       
       // Comparaison année en cours vs année précédente
-      const currentYearStats = await db.one(`
+      const currentYearStats = await scopedDb.one(`
         SELECT 
           COUNT(*) as requisitions,
           COALESCE(SUM(estimated_amount), 0) as amount,
@@ -625,7 +628,7 @@ class DashboardModel {
         WHERE EXTRACT(YEAR FROM created_at) = $1
       `, [currentYear]);
       
-      const lastYearStats = await db.one(`
+      const lastYearStats = await scopedDb.one(`
         SELECT 
           COUNT(*) as requisitions,
           COALESCE(SUM(estimated_amount), 0) as amount,
@@ -643,7 +646,7 @@ class DashboardModel {
         : 0;
       
       // Taux d'approbation
-      const approvalRate = await db.one(`
+      const approvalRate = await scopedDb.one(`
         SELECT 
           COUNT(CASE WHEN status = 'APPROVED' THEN 1 END) as approved,
           COUNT(*) as total
@@ -655,7 +658,7 @@ class DashboardModel {
         : 0;
       
       // Taux de conversion des réquisitions en commandes
-      const conversionRate = await db.one(`
+      const conversionRate = await scopedDb.one(`
         SELECT 
           COUNT(DISTINCT po.requisition_id) as converted,
           COUNT(DISTINCT r.id) as total
@@ -668,7 +671,7 @@ class DashboardModel {
         : 0;
       
       // Délai moyen d'approbation (en jours)
-      const avgApprovalDays = await db.one(`
+      const avgApprovalDays = await scopedDb.one(`
         SELECT COALESCE(AVG(
           EXTRACT(EPOCH FROM (approved_at - submitted_at))/86400
         ), 0) as avg_days
@@ -677,7 +680,7 @@ class DashboardModel {
       `);
       
       // Réquisitions par mois cette année
-      const monthlyRequisitions = await db.select(`
+      const monthlyRequisitions = await scopedDb.select(`
         SELECT 
           EXTRACT(MONTH FROM created_at) as month,
           COUNT(*) as count,
@@ -726,7 +729,7 @@ class DashboardModel {
   async getAlerts() {
     try {
       // Réquisitions en attente depuis plus de 5 jours
-      const pendingOverdue = await db.select(`
+      const pendingOverdue = await scopedDb.select(`
         SELECT 
           id,
           requisition_number,
@@ -741,7 +744,7 @@ class DashboardModel {
       `);
 
       // Budgets avec utilisation > 80%
-      const budgetAlerts = await db.select(`
+      const budgetAlerts = await scopedDb.select(`
         SELECT 
           id,
           entity_code,
@@ -759,7 +762,7 @@ class DashboardModel {
       `);
 
       // Fournisseurs avec évaluation basse
-      const supplierAlerts = await db.select(`
+      const supplierAlerts = await scopedDb.select(`
         SELECT 
           s.id,
           s.name,
@@ -801,7 +804,7 @@ class DashboardModel {
    */
   async getProjectStats() {
     try {
-      return await db.select(`
+      return await scopedDb.select(`
         SELECT 
           p.id,
           p.code as project_code,

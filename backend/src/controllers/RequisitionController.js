@@ -5,6 +5,7 @@ const departmentModel = require('../models/DepartmentModel')
 const notificationService = require('../services/NotificationService');
 const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 const { v4: uuidv4 } = require('uuid');
 const requisitionExportService = require('../services/RequisitionExportService');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
@@ -497,11 +498,12 @@ async create(req, res) {
    */
   async list(req, res) {
     try {
-      const { status, departmentId, fromDate, priority, toDate, page = 1, limit = 20 } = req.query;
+      const { status, progress, departmentId, fromDate, priority, toDate, page = 1, limit = 20 } = req.query;
       const offset = (page - 1) * limit;
 
       const requisitions = await requisitionModel.findAll({
         status,
+        progress,
         departmentId,
         fromDate,
         toDate,
@@ -510,9 +512,10 @@ async create(req, res) {
         offset: parseInt(offset)
       });
 
+      const countParams = [];
       const totalResult = await db.one(
-        "SELECT COUNT(*) as total FROM requisitions",
-        []
+        `SELECT COUNT(*) as total FROM requisitions WHERE 1=1${tenant.filter('enterprise_id', countParams)}`,
+        countParams
       );
 
       return res.json({

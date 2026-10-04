@@ -70,4 +70,18 @@ test.describe('API › GRN (Goods Receipt Notes)', () => {
     expect(res.status()).toBeGreaterThanOrEqual(400);
     expect(res.status()).toBeLessThan(500);
   });
+
+  test('GET /api/goods-receipts/:id/pdf — PDF du bon de réception', async ({ request }) => {
+    const list = await (await request.get('/api/goods-receipts', { headers: auth(token) })).json();
+    test.skip(!list.data?.length, 'Aucun GRN en base');
+    const res = await request.get(`/api/goods-receipts/${list.data[0].id}/pdf`, { headers: auth(token) });
+    expect(res.status()).toBe(200);
+    expect(res.headers()['content-type']).toContain('application/pdf');
+    expect((await res.body()).subarray(0, 4).toString()).toBe('%PDF');
+  });
+
+  test('GET /api/goods-receipts/:id/pdf — 404 pour un GRN inexistant', async ({ request }) => {
+    const res = await request.get('/api/goods-receipts/99999/pdf', { headers: auth(token) });
+    expect(res.status()).toBe(404);
+  });
 });

@@ -1,12 +1,19 @@
 // backend/src/services/CamundaService.js
 const axios = require('axios');
 const FormData = require('form-data');
+const db = require('../config/database');
+const tenant = require('../utils/tenant');
 
 // Configuration
 let baseUrl = process.env.CAMUNDA_REST_URL || 'http://localhost:8080/engine-rest';
 let bearerToken = process.env.CAMUNDA_BEARER_TOKEN || null;
 let username = process.env.CAMUNDA_USERNAME || null;
 let password = process.env.CAMUNDA_PASSWORD || null;
+
+// URL racine du serveur GoFlow (sans /engine-rest), utilisée pour l'authentification
+function getServerUrl() {
+  return (process.env.CAMUNDA_URL || baseUrl.replace(/\/engine-rest\/?$/, '')).replace(/\/$/, '');
+}
 
 // Create axios instance
 let client = axios.create({
@@ -55,7 +62,7 @@ async function authenticate() {
   try {
     // If we have credentials, try to get a token
     if (username && password) {
-      const authUrl = `http://localhost:8080/auth/login`;
+      const authUrl = `${getServerUrl()}/auth/login`;
 
       const response = await axios.post(authUrl, {
         email: username,
@@ -147,7 +154,7 @@ async function startProcess(processKey, variables) {
       camundaVariables[key] = { value, type: getVariableType(value) };
     }
 
-    const response = await client.post(`http://localhost:8080/engine-rest/v2/process-definitions/${processKey}/start`, {
+    const response = await client.post(`/v2/process-definitions/${processKey}/start`, {
       variables: camundaVariables
     });
 
@@ -201,6 +208,23 @@ async function getUserTasks(assignee, processInstanceId = null) {
 
 
 /**
+ * Récupérer les tâches terminées (filtres optionnels : assignee, processInstanceId)
+ */
+async function getCompletedTasks(filters = {}) {
+  try {
+    const params = { status: 'completed' };
+    if (filters.assignee) params.assignee = filters.assignee;
+    if (filters.processInstanceId) params.processInstanceId = filters.processInstanceId;
+
+    const response = await client.get('/tasks', { params });
+    return response.data || [];
+  } catch (error) {
+    console.error('Error fetching completed tasks:', error.message);
+    return [];
+  }
+}
+
+/**
  * Récupérer les tâches assignées à un utilisateur
  */
 async function getJobById(taskId) {
@@ -234,8 +258,29 @@ async function getGroupTasks(candidateGroup, processInstanceId = null) {
 /**
  * Compléter une tâche
  */
+/**
+ * Multi-entreprise : pendant une requête HTTP, une tâche ne peut être complétée que si son
+ * processus appartient à l'entreprise de l'utilisateur (via la réquisition liée).
+ * Les workers Camunda (hors requête) ne sont pas concernés.
+ */
+async function taskAllowedForCurrentEnterprise(taskId) {
+  const store = tenant.current();
+  if (!store) return true;
+  if (!store.enterpriseId) return false;
+  const task = ((await getProcessTasks()) || []).find(t => t.id === taskId);
+  if (!task) return true; // tâche inconnue : Camunda renverra lui-même l'erreur
+  const row = await db.one(
+    'SELECT enterprise_id FROM requisitions WHERE process_instance_id = $1',
+    [task.processInstanceId]
+  );
+  return !!row && String(row.enterprise_id) === String(store.enterpriseId);
+}
+
 async function completeTask(taskId, variables = {}) {
   try {
+    if (!(await taskAllowedForCurrentEnterprise(taskId))) {
+      return { success: false, error: 'Tâche introuvable ou déjà terminée' };
+    }
     const camundaVariables = {};
     for (const [key, value] of Object.entries(variables)) {
       camundaVariables[key] = { value, type: getVariableType(value) };
@@ -671,6 +716,7 @@ module.exports = {
 
   // Task management
   getProcessTasks,
+  getCompletedTasks,
   getJobById,
   getUserTasks,
   getGroupTasks,

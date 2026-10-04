@@ -3,6 +3,7 @@ const puppeteer = require('puppeteer');
 const Handlebars = require('handlebars');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { getBrowserOptions } = require('../config/puppeteer');
+const { getBranding } = require('../utils/enterpriseBranding');
 
 class PurchaseOrderExportService {
   constructor() {
@@ -66,7 +67,6 @@ class PurchaseOrderExportService {
   }
 
   getTemplate() {
-    const logoUrl = (process.env.FRONTEND_URL || 'http://localhost:5173') + '/images/logo_wwf1.png';
     return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -228,9 +228,9 @@ class PurchaseOrderExportService {
 <!-- HEADER -->
 <div class="header">
   <div class="header-logo">
-    <img src="${logoUrl}" alt="WWF" onerror="this.style.display='none'" />
+    {{#if brand.logo}}<img src="{{brand.logo}}" alt="{{brand.name}}" />{{/if}}
     <div>
-      <div class="header-org">WWF — Procurement System</div>
+      <div class="header-org">{{brand.name}}</div>
       <div class="header-doc">BON DE COMMANDE</div>
       <div class="header-doc" style="font-size:18px;color:#374151">{{po.po_number}}</div>
       {{#if po.requisition_number}}
@@ -401,7 +401,7 @@ class PurchaseOrderExportService {
 <div class="sig-grid">
   <div class="sig-box">
     <div class="sig-line"></div>
-    <div class="sig-label">Responsable achats — WWF</div>
+    <div class="sig-label">Responsable achats — {{brand.name}}</div>
     <div style="margin-top:4px;color:#9CA3AF">Nom &amp; signature</div>
   </div>
   <div class="sig-box">
@@ -413,7 +413,7 @@ class PurchaseOrderExportService {
 
 <!-- FOOTER -->
 <div class="doc-footer">
-  <span>WWF — Système de gestion des achats électroniques</span>
+  <span>{{brand.name}} — généré avec {{brand.appName}}</span>
   <span>Généré le {{po_formatDate generatedAt}}</span>
 </div>
 
@@ -431,6 +431,7 @@ class PurchaseOrderExportService {
       items:       po.items       || [],
       approvals:   po.approvals   || [],
       generatedAt: new Date(),
+      brand:       await getBranding(po.enterprise_id),
     });
 
     const browser = await puppeteer.launch(getBrowserOptions());

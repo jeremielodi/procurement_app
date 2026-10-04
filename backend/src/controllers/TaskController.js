@@ -2,6 +2,26 @@
 const UserModel = require('../models/UserModel');
 const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
+
+/** Process GoFlow appartenant à l'entreprise courante (via la réquisition liée) */
+async function processIdsOfEnterprise(processIds) {
+  if (!processIds.length) return new Set();
+  const params = [processIds];
+  const rows = await db.select(
+    `SELECT process_instance_id FROM requisitions WHERE process_instance_id = ANY($1)${tenant.filter('enterprise_id', params)}`,
+    params
+  );
+  return new Set(rows.map(r => r.process_instance_id));
+}
+
+/** Tâche active de l'entreprise courante, sinon null (on ne révèle pas les tâches des autres entreprises) */
+async function findEnterpriseTask(taskId) {
+  const task = ((await camundaService.getProcessTasks()) || []).find(t => t.id === taskId);
+  if (!task) return null;
+  const allowed = await processIdsOfEnterprise([task.processInstanceId].filter(Boolean));
+  return allowed.has(task.processInstanceId) ? task : null;
+}
 const grnModel     = require('../models/GoodsReceiptModel');
 const invoiceModel = require('../models/InvoiceModel');
 const paymentModel = require('../models/PaymentModel');
@@ -30,43 +50,58 @@ function isFinalApprovalLevel(taskDefinitionKey, estimatedAmount) {
 }
 
 /**
+ * Charger l'utilisateur courant avec ses groupes Camunda.
+ * 'prof_manager' → 'manager' (correspond au candidateGroup BPMN)
+ */
+async function getCurrentUserContext(userId) {
+  const user = await UserModel.findById(userId);
+  const groups = (user?.profiles || []).map(p => p.id.replace('prof_', ''));
+  return { id: userId, email: user?.email, groups, isAdmin: groups.includes('admin') };
+}
+
+// GoFlow stocke l'assignee par email (cf. claim) ; l'id est accepté pour les anciennes tâches
+function isMine(task, currentUser) {
+  return !!task.assignee && (task.assignee === currentUser.email || task.assignee === currentUser.id);
+}
+
+function getTaskPermissions(task, currentUser) {
+  const isCompleted = task.status === 'completed';
+  const inGroup = currentUser.isAdmin || currentUser.groups.includes(task.candidateGroup);
+  return {
+    isMine: isMine(task, currentUser),
+    canClaim: !isCompleted && !task.assignee && inGroup,
+    canComplete: !isCompleted && isMine(task, currentUser)
+  };
+}
+
+/**
  * GET /api/tasks/user
  * Récupérer les tâches de l'utilisateur courant (basé sur ses profils Camunda)
  */
 async function getUserTasks(req, res) {
   try {
-    const { assignee, processInstanceId } = req.query;
-    const currentUserId = req.user.id;
-    const user = await UserModel.findById(currentUserId);
-    // Strip 'prof_' prefix: 'prof_manager' → 'manager' matches BPMN candidateGroup
-    const profiles = (user.profiles || []).map(p => p.id.replace('prof_', ''));
+    const { processInstanceId } = req.query;
+    const currentUser = await getCurrentUserContext(req.user.id);
 
-    let tasks = [];
-    if (processInstanceId) {
-      tasks = await camundaService.getUserTasks(null, processInstanceId);
-    } else {
-      tasks = await camundaService.getUserTasks(null);
-    }
+    const [activeTasks, completedTasks] = await Promise.all([
+      camundaService.getUserTasks(null, processInstanceId || null),
+      camundaService.getCompletedTasks({ assignee: currentUser.email, processInstanceId })
+    ]);
 
-    let userTasks = [];
-    if (profiles.includes('admin')) {
-      userTasks = tasks;
-    } else {
-      userTasks = (tasks || []).filter(
-        t => t.assignee == currentUserId || profiles.includes(t.candidateGroup)
-      );
-    }
+    // Tâches actives visibles : celles de ses groupes (ou toutes pour l'admin) ;
+    // tâches terminées : uniquement celles qu'il a lui-même traitées
+    let userTasks = [
+      ...(activeTasks || []).filter(t => currentUser.isAdmin || isMine(t, currentUser) || currentUser.groups.includes(t.candidateGroup)),
+      ...(completedTasks || [])
+    ];
 
     // Garder uniquement les tâches dont le processInstanceId correspond
     // à une réquisition existante en base
     if ((userTasks || []).length > 0) {
       const processIds = [...new Set(userTasks.map(t => t.processInstanceId).filter(Boolean))];
       if (processIds.length > 0) {
-        const rows = await db.select(
-          `SELECT process_instance_id FROM requisitions WHERE process_instance_id = ANY($1)`,
-          [processIds]
-        );
-        const validIds = new Set(rows.map(r => r.process_instance_id));
+        // Réquisitions existantes ET de l'entreprise courante
+        const validIds = await processIdsOfEnterprise(processIds);
         userTasks = userTasks.filter(t => validIds.has(t.processInstanceId));
       } else {
         userTasks = [];
@@ -90,15 +125,15 @@ async function getUserTasks(req, res) {
           executionId: task.executionId,
           taskDefinitionKey: task.taskDefinitionKey,
           assignee: task.assignee,
-          created: task.createTime,
+          created: task.createdAt || task.createTime,
+          completedAt: task.completedAt,
           due: task.dueDate,
           state: task.status,
           followUp: task.followUpDate,
           priority: task.priority,
-          status: task.assignee ? 'ASSIGNED' : 'UNASSIGNED',
+          status: task.status === 'completed' ? 'COMPLETED' : (task.assignee ? 'ASSIGNED' : 'UNASSIGNED'),
           variables,
-          canClaim: !task.assignee,
-          canComplete: task.assignee === assignee
+          ...getTaskPermissions(task, currentUser)
         };
       })
     );
@@ -125,7 +160,9 @@ async function getGroupTasks(req, res) {
       return res.status(400).json({ success: false, message: 'candidateGroup est requis' });
     }
 
-    const tasks = await camundaService.getGroupTasks(candidateGroup, processInstanceId);
+    const all = (await camundaService.getGroupTasks(candidateGroup, processInstanceId)) || [];
+    const allowed = await processIdsOfEnterprise([...new Set(all.map(t => t.processInstanceId).filter(Boolean))]);
+    const tasks = all.filter(t => allowed.has(t.processInstanceId));
     res.json({ success: true, data: tasks, count: tasks.length });
   } catch (error) {
     console.error('Error getting group tasks:', error);
@@ -162,18 +199,29 @@ async function getTaskForm(req, res) {
 async function claimTask(req, res) {
   try {
     const { taskId } = req.params;
-    const { userId } = req.body;
+    const currentUser = await getCurrentUserContext(req.user.id);
 
-    if (!userId) {
-      return res.status(400).json({ success: false, message: 'userId est requis' });
+    const task = await findEnterpriseTask(taskId);
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Tâche introuvable ou déjà terminée' });
+    }
+    if (task.assignee) {
+      return res.status(409).json({ success: false, message: `Tâche déjà prise en charge par ${task.assignee}` });
+    }
+    if (!getTaskPermissions(task, currentUser).canClaim) {
+      return res.status(403).json({
+        success: false,
+        message: `Cette tâche est réservée au groupe « ${task.candidateGroup} »`
+      });
     }
 
-    const result = await camundaService.assignTask(taskId, userId);
+    // L'assignee est toujours l'email de l'utilisateur connecté (pas une valeur venant du client)
+    const result = await camundaService.assignTask(taskId, currentUser.email);
     if (!result.success) {
       return res.status(500).json({ success: false, message: result.error || 'Erreur lors de la prise en charge' });
     }
 
-    res.json({ success: true, message: `Tâche ${taskId} réclamée par ${userId}` });
+    res.json({ success: true, message: `Tâche ${taskId} réclamée par ${currentUser.email}` });
   } catch (error) {
     console.error('Error claiming task:', error);
     res.status(500).json({ success: false, message: 'Erreur lors de la réclamation', error: error.message });
@@ -208,6 +256,11 @@ async function completeTask(req, res) {
       estimatedAmount
     } = req.body;
     const userId = req.user?.id;
+
+    // La tâche doit appartenir à un processus de l'entreprise courante
+    if (!(await findEnterpriseTask(taskId))) {
+      return res.status(404).json({ success: false, message: 'Tâche introuvable ou déjà terminée' });
+    }
 
     // Build Camunda variables
     const taskVariables = { ...variables };
@@ -422,9 +475,13 @@ async function getTasksByProcess(req, res) {
       return res.status(400).json({ success: false, message: 'processInstanceId est requis' });
     }
 
-    const activeTasks = await camundaService.getProcessTasks(processInstanceId);
+    const [currentUser, activeTasks, completedTasks] = await Promise.all([
+      getCurrentUserContext(req.user.id),
+      camundaService.getProcessTasks(processInstanceId),
+      camundaService.getCompletedTasks({ processInstanceId })
+    ]);
 
-    const allTasks = (activeTasks || []).map(task => ({
+    const allTasks = [...(activeTasks || []), ...(completedTasks || [])].map(task => ({
       id: task.id,
       name: task.taskName || task.name,
       processInstanceId: task.processInstanceId,
@@ -437,7 +494,8 @@ async function getTasksByProcess(req, res) {
       followUp: task.followUpDate,
       priority: task.priority,
       completedAt: task.completedAt,
-      status: task.status === 'completed' ? 'COMPLETED' : 'PENDING'
+      status: task.status === 'completed' ? 'COMPLETED' : 'PENDING',
+      ...getTaskPermissions(task, currentUser)
     }));
 
     res.json({ success: true, data: allTasks, count: allTasks.length, processInstanceId });

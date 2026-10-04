@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { AuthContext } from './AuthContext';
 
@@ -12,33 +12,43 @@ const DEFAULT_CURRENCY = {
   name: 'Dollar Américain',
 };
 
+// URL publique du logo d'une entreprise (le paramètre v invalide le cache après changement)
+export const enterpriseLogoUrl = (e) =>
+  e?.logo_path ? `/api/public/enterprises/${e.id}/logo?v=${encodeURIComponent(e.logo_path)}` : null;
+
 export function EnterpriseProvider({ children }) {
   const auth = useContext(AuthContext);
   const isAuthenticated = auth?.isAuthenticated;
+  // Fournisseurs (partagés) et super admin plateforme : pas d'entreprise courante
+  const profiles = auth?.user?.profiles || [];
+  const noEnterprise = profiles.some(p => p.id === 'prof_supplier' || p.id === 'prof_superadmin');
 
   const [enterprise, setEnterprise] = useState(null);
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    api.get('/enterprises/default')
+  const refresh = useCallback(() => {
+    if (!isAuthenticated || noEnterprise) {
+      setEnterprise(null);
+      return Promise.resolve();
+    }
+    return api.get('/enterprises/current')
       .then(r => {
         const e = r.data?.data;
-        if (e) {
-          setEnterprise(e);
-          if (e.currency_code) {
-            setCurrency({
-              id: e.currency_id,
-              code: e.currency_code,
-              symbol: e.currency_symbol || '',
-              locale: e.intel_number_format || 'en-US',
-              name: e.currency_name || e.currency_code,
-            });
-          }
+        setEnterprise(e || null);
+        if (e?.currency_code) {
+          setCurrency({
+            id: e.currency_id,
+            code: e.currency_code,
+            symbol: e.currency_symbol || '',
+            locale: e.intel_number_format || 'en-US',
+            name: e.currency_name || e.currency_code,
+          });
         }
       })
       .catch(() => {});
-  }, [isAuthenticated]);
+  }, [isAuthenticated, noEnterprise]);
+
+  useEffect(() => { refresh(); }, [refresh]);
 
   function formatAmount(value, opts = {}) {
     const amount = typeof value === 'string' ? parseFloat(value) : (value ?? 0);
@@ -52,7 +62,7 @@ export function EnterpriseProvider({ children }) {
   }
 
   return (
-    <EnterpriseContext.Provider value={{ enterprise, currency, formatAmount }}>
+    <EnterpriseContext.Provider value={{ enterprise, currency, formatAmount, refreshEnterprise: refresh }}>
       {children}
     </EnterpriseContext.Provider>
   );
@@ -64,6 +74,7 @@ export function useCurrency() {
     return {
       enterprise: null,
       currency: DEFAULT_CURRENCY,
+      refreshEnterprise: () => Promise.resolve(),
       formatAmount: (v) =>
         new Intl.NumberFormat('en-US', {
           style: 'currency',
@@ -75,3 +86,6 @@ export function useCurrency() {
   }
   return ctx;
 }
+
+// Alias plus explicite
+export const useEnterprise = useCurrency;

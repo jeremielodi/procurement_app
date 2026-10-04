@@ -98,7 +98,7 @@ export default function RequisitionTasks() {
       await loadData(); // Recharger les tâches
     } catch (error) {
       console.error('Error claiming task:', error);
-      toast.error('Erreur lors de la prise en charge');
+      toast.error(error.response?.data?.message || 'Erreur lors de la prise en charge');
     } finally {
       setClaimingTaskId(null);
     }
@@ -305,10 +305,11 @@ export default function RequisitionTasks() {
           </div>
           <div className="divide-y divide-gray-200">
             {pendingTasks.map((task) => {
-              const isAssignedToMe = task.assignee === userEmail;
+              // Droits calculés par le backend selon les groupes Camunda de l'utilisateur
+              const isAssignedToMe = task.isMine;
               const isUnassigned = !task.assignee;
-              const canClaim = isUnassigned;
-              const canProcess = isAssignedToMe;
+              const canClaim = task.canClaim;
+              const canProcess = task.canComplete;
 
               return (
                 <div key={task.id} className={`p-6 hover:bg-gray-50 transition-colors ${getTaskColor(task.name)}`}>
@@ -341,6 +342,12 @@ export default function RequisitionTasks() {
                             <span className="inline-flex items-center gap-1 text-gray-500">
                               <User size={14} />
                               Assignée à: {task.assignee}
+                            </span>
+                          )}
+                          {isUnassigned && !canClaim && task.candidateGroup && (
+                            <span className="inline-flex items-center gap-1 text-gray-500 ml-3">
+                              <AlertCircle size={14} />
+                              Réservée au groupe « {task.candidateGroup} »
                             </span>
                           )}
                         </p>

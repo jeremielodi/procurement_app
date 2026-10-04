@@ -29,7 +29,8 @@ import {
   MessageSquare,
   Paperclip,
   ExternalLink,
-  ListTodo
+  ListTodo,
+  Gavel
 } from 'lucide-react'
 import requisitionService from '../../services/requisitionService'
 import { purchaseOrderService } from '../../services/purchaseOrderService'
@@ -44,6 +45,10 @@ import PdfViewer from '../Common/PdfViewer'
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 import RequisitionViewer from './RequisitionViewer';
+import RequisitionTimeline from './RequisitionTimeline'
+import WorkflowTrackerModal from './WorkflowTrackerModal'
+import { tenderService } from '../../services/tenderService'
+import { usePermissions } from '../../hooks/usePermissions'
 
 export default function RequisitionDetail() {
   const { id } = useParams()
@@ -65,6 +70,16 @@ export default function RequisitionDetail() {
     queryFn: () => requisitionService.getById(id),
     enabled: !!id
   })
+
+  // Appel d'offres lié (procurement uniquement)
+  const { hasPermission } = usePermissions()
+  const canManageTenders = hasPermission('MANAGE_TENDERS')
+  const { data: tenderData } = useQuery({
+    queryKey: ['requisition-tender', id],
+    queryFn: () => tenderService.getByRequisition(id),
+    enabled: !!id && canManageTenders
+  })
+  const linkedTender = tenderData?.data
 
   // Récupérer les commandes associées
   const { data: purchaseOrdersData } = useQuery({
@@ -98,7 +113,6 @@ export default function RequisitionDetail() {
   const workflowHistory = workflowHistoryData?.data || workflowHistoryData || []
   
   // Extraire les activités, tâches et processus de l'historique
-  const activities = workflowHistory.activities || []
   const historyTasks = workflowHistory.tasks || []
 
   // Mutation pour annuler la réquisition
@@ -275,7 +289,6 @@ const handleGeneratePDF = async () => {
   const hasActiveProcess = requisition.process_instance_id && pendingTasksCount > 0
 
   // Générer les éléments d'historique pour l'affichage
-  const historyItems = historyTasks.length > 0 ? historyTasks : (requisition.history || [])
 
   return (
     <div className="space-y-6">
@@ -324,6 +337,16 @@ const handleGeneratePDF = async () => {
             </Link>
           )}
 
+          {linkedTender && (
+            <Link
+              to={`/tenders/${linkedTender.id}`}
+              className="flex items-center gap-2 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors"
+            >
+              <Gavel size={18} />
+              AO {linkedTender.tender_number}
+            </Link>
+          )}
+
           <button
            onClick={() => setShowViewer(true)}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -332,15 +355,13 @@ const handleGeneratePDF = async () => {
             PDF
           </button>
           
-          {requisition.process_instance_id && (
-            <button
-              onClick={handleViewWorkflow}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <RefreshCw size={18} />
-              Voir le workflow
-            </button>
-          )}
+          <button
+            onClick={handleViewWorkflow}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <RefreshCw size={18} />
+            Voir le workflow
+          </button>
           
           {canSubmit && (
             <button
@@ -449,7 +470,7 @@ const handleGeneratePDF = async () => {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Historique
+            Suivi du workflow
           </button>
         </nav>
       </div>
@@ -698,55 +719,12 @@ const handleGeneratePDF = async () => {
         )}
 
         {activeTab === 'history' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <History size={20} />
-                Historique des actions
-              </h2>
-            </div>
-            {historyItems.length === 0 ? (
-              <div className="p-12 text-center">
-                <History className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-gray-500">Aucun historique disponible.</p>
-              </div>
-            ) : (
-              <div className="flow-root">
-                <ul className="-mb-8">
-                  {historyItems.map((history, index) => (
-                    <li key={index} className="relative pb-8">
-                      {index < (historyItems.length - 1) && (
-                        <span
-                          className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                          aria-hidden="true"
-                        />
-                      )}
-                      <div className="relative flex space-x-3">
-                        <div>
-                          <span className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center ring-8 ring-white">
-                            <Clock className="h-4 w-4 text-blue-600" />
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm text-gray-500">
-                            <span className="font-medium text-gray-900">
-                              {history.action || history.taskName || history.activityName || 'Action'}
-                            </span>
-                            {' '}par {history.performed_by_name || history.assignee || 'Système'}
-                          </div>
-                          <div className="mt-1 text-sm text-gray-700">
-                            {history.comments || 'Aucun commentaire'}
-                          </div>
-                          <div className="mt-1 text-xs text-gray-400">
-                            {formatDateTime(history.performed_at || history.startTime || history.endTime || history.created_at)}
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-4">
+              <History size={20} />
+              Suivi du workflow et historique
+            </h2>
+            <RequisitionTimeline requisitionId={requisition.id} />
           </div>
         )}
       </div>
@@ -794,56 +772,10 @@ const handleGeneratePDF = async () => {
         </div>
       </Modal>
 
-      <Modal
-        isOpen={showWorkflowModal}
+      <WorkflowTrackerModal
+        requisition={showWorkflowModal ? requisition : null}
         onClose={() => setShowWorkflowModal(false)}
-        title="Workflow du processus"
-        size="xl"
-        confirmText="Fermer"
-        cancelText=""
-        onConfirm={() => setShowWorkflowModal(false)}
-      >
-        <div className="space-y-4 max-h-96 overflow-y-auto">
-          {activities.length > 0 ? (
-            activities.map((activity, index) => (
-              <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="flex-shrink-0">
-                  {activity.endTime ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  ) : activity.startTime ? (
-                    <Clock className="h-5 w-5 text-yellow-500" />
-                  ) : (
-                    <Clock className="h-5 w-5 text-gray-400" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    {activity.activityName || activity.activityType || 'Activité'}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Type: {activity.activityType || 'Inconnu'}
-                  </p>
-                  {activity.startTime && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      Débuté le: {formatDateTime(activity.startTime)}
-                    </p>
-                  )}
-                  {activity.endTime && (
-                    <p className="text-xs text-gray-400">
-                      Terminé le: {formatDateTime(activity.endTime)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center text-gray-500 py-8">
-              Aucune activité de workflow disponible
-            </div>
-          )}
-        </div>
-
-      </Modal>
+      />
 
       {/* Visualiseur PDF */}
       {viewerAttachmentId && (

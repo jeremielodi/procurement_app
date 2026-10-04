@@ -4,6 +4,7 @@ const camundaService = require('../services/CamundaService');
 const db             = require('../config/database');
 const puppeteer      = require('puppeteer');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
+const { getBranding } = require('../utils/enterpriseBranding');
 
 class PaymentController {
 
@@ -152,6 +153,8 @@ class PaymentController {
       if (!pay) return res.status(404).json({ success: false, message: 'Paiement non trouvé' });
 
       const currency = pay.currency || await getEnterpriseCurrencyCode();
+      const brand = await getBranding(pay.enterprise_id);
+      const esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       const fmt = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(parseFloat(n) || 0);
       const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
 
@@ -219,7 +222,7 @@ ${pay.bank_account ? `<div class="grid2"><div class="card"><div class="lbl">Comp
 ${pay.notes ? `<div class="notes"><strong>Notes :</strong> ${pay.notes}</div>` : ''}
 
 <div class="footer">
-  <span>Système de gestion des achats — WWF Procure</span>
+  <span>${esc(brand.name)} — généré avec procureApp</span>
   <span>Généré le ${new Date().toLocaleString('fr-FR')}</span>
 </div>
 </body></html>`;

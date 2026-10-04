@@ -1,7 +1,36 @@
 // backend/src/models/RequisitionModel.js
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 const util = require('../config/util');
 const { v4: uuidv4 } = require('uuid');
+
+// Avancement global du cycle procure-to-pay (colonne « Avancement » de la liste)
+// Source de vérité : la fin du processus GoFlow (événement de fin atteint par la dernière tâche).
+// Sans processus : terminé si tous les bons de commande non rejetés ont une facture payée.
+const processEndedAt = (endEvent) => `EXISTS (
+           SELECT 1 FROM workflow_history wh
+           WHERE r.process_instance_id IS NOT NULL AND wh.process_instance_id = r.process_instance_id
+             AND wh.action = 'TASK_COMPLETED' AND wh.comments LIKE '%"next_element":"${endEvent}"%')`;
+
+const PROGRESS_STATUS_SQL = `
+  CASE
+    WHEN r.status = 'CANCELLED' THEN 'CANCELLED'
+    WHEN r.status = 'REJECTED' THEN 'REJECTED'
+    WHEN r.status = 'DRAFT' THEN 'DRAFT'
+    WHEN r.status = 'COMPLETED' THEN 'COMPLETED'
+    WHEN ${processEndedAt('Event_Completed')} THEN 'COMPLETED'
+    WHEN ${processEndedAt('Event_Rejected')} THEN 'REJECTED'
+    WHEN r.process_instance_id IS NOT NULL THEN 'IN_PROGRESS'
+    WHEN EXISTS (
+           SELECT 1 FROM purchase_orders po
+           WHERE po.requisition_id = r.id AND po.status NOT IN ('PO_REJECTED', 'REJECTED', 'CANCELLED'))
+     AND NOT EXISTS (
+           SELECT 1 FROM purchase_orders po
+           WHERE po.requisition_id = r.id AND po.status NOT IN ('PO_REJECTED', 'REJECTED', 'CANCELLED')
+             AND NOT EXISTS (SELECT 1 FROM invoices i WHERE i.po_id = po.id AND i.status = 'PAID'))
+    THEN 'COMPLETED'
+    ELSE 'IN_PROGRESS'
+  END`;
 
 class RequisitionModel {
 
@@ -264,6 +293,7 @@ class RequisitionModel {
   async findById(id) {
     const requisition = await db.one(
       `SELECT r.*, 
+        ${PROGRESS_STATUS_SQL} AS progress_status,
         u.first_name,
         u.last_name,
         u.email,
@@ -318,7 +348,8 @@ class RequisitionModel {
     let sql = `
       SELECT r.*, u.first_name, u.last_name, 
         d.code as department_code,
-        d.name as department_name
+        d.name as department_name,
+        ${PROGRESS_STATUS_SQL} AS progress_status
       FROM requisitions r
       LEFT JOIN departments d ON d.id = r.department_id
       LEFT JOIN projects p ON p.id = r.project_id
@@ -327,6 +358,9 @@ class RequisitionModel {
     `;
     const params = [];
     let paramCount = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    sql += tenant.filter('r.enterprise_id', params);
+    paramCount = params.length + 1;
     
     if (filters.status && filters.status != 'all') {
       sql += ` AND r.status = $${paramCount}`;
@@ -365,6 +399,12 @@ class RequisitionModel {
       paramCount++;
     }
     
+    if (filters.progress && filters.progress != 'all') {
+      sql += ` AND (${PROGRESS_STATUS_SQL}) = $${paramCount}`;
+      params.push(filters.progress);
+      paramCount++;
+    }
+
     if (filters.search) {
       sql += ` AND (r.requisition_number ILIKE $${paramCount} OR r.title ILIKE $${paramCount})`;
       params.push(`%${filters.search}%`);

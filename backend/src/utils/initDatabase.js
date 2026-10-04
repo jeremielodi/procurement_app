@@ -20,6 +20,7 @@ class DatabaseInitializer {
     await this.ensureTablesExist();
     await this.assignPermissionsToAdminProfile();
     await this.createSuperUser();
+    await this.createPlatformSuperAdmin();
     
     logInfo('========================================');
   }
@@ -178,6 +179,45 @@ class DatabaseInitializer {
     }
     
     logSuccess('✅ Admin profile: %d permissions assigned', inserted);
+  }
+
+  /**
+   * Super administrateur de la plateforme procureApp (gère les entreprises, n'appartient à aucune).
+   * Identifiants : SUPERADMIN_EMAIL / SUPERADMIN_PASSWORD (sinon valeurs par défaut à changer).
+   */
+  async createPlatformSuperAdmin() {
+    if (!(await this.tableExists('profiles')) || !(await db.one("SELECT 1 FROM profiles WHERE id = 'prof_superadmin'"))) {
+      logWarn('⚠️ Profil prof_superadmin absent (migration 07_multi_enterprise.sql non appliquée), skipping');
+      return;
+    }
+    const existing = await db.one("SELECT 1 FROM user_profiles WHERE profile_id = 'prof_superadmin' LIMIT 1");
+    if (existing) {
+      logInfo('✅ Super admin procureApp déjà présent');
+      return;
+    }
+    const email = (process.env.SUPERADMIN_EMAIL || 'superadmin@procureapp.com').toLowerCase();
+    const password = process.env.SUPERADMIN_PASSWORD || 'SuperAdmin123!';
+    if (await db.one('SELECT 1 FROM users WHERE LOWER(email) = $1', [email])) {
+      logWarn('⚠️ %s existe déjà sans le profil super admin, skipping', email);
+      return;
+    }
+    const userId = uuidv4();
+    await db.insert('users', {
+      id: userId,
+      username: 'superadmin_procureapp',
+      email,
+      password_hash: await bcrypt.hash(password, 10),
+      first_name: 'Super',
+      last_name: 'Admin procureApp',
+      position: 'Administrateur plateforme',
+      is_active: true,
+      enterprise_id: null,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+    await db.insert('user_profiles', { user_id: userId, profile_id: 'prof_superadmin', assigned_at: new Date(), assigned_by: userId });
+    logSuccess('✅ Super admin procureApp créé : %s', email);
+    if (!process.env.SUPERADMIN_PASSWORD) logWarn('🔑 Mot de passe par défaut : %s — à changer !', password);
   }
 
   async createSuperUser() {

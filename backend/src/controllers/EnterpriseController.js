@@ -1,217 +1,208 @@
 // backend/src/controllers/EnterpriseController.js
+// Entreprises clientes de procureApp.
+//  - Super admin plateforme : liste, création (+ premier administrateur), modification, suspension, suppression
+//  - Administrateur d'entreprise : consultation / modification des informations de SON entreprise
+//  - Tout utilisateur : GET /enterprises/current (sa propre entreprise : nom, logo, devise)
+const bcrypt = require('bcrypt');
+const { v4: uuidv4 } = require('uuid');
+const db = require('../config/database');
 const enterpriseModel = require('../models/EnterpriseModel');
-const currencyModel = require('../models/CurrencyModel');
+const { saveLogo, removeLogo, sendLogo } = require('../utils/logoUpload');
+
+const LOGO_DIR = 'enterprise-logos';
+
+function validate(b, { creating }) {
+  const errors = [];
+  if (creating || b.name !== undefined) { if (!String(b.name || '').trim()) errors.push('Nom requis'); }
+  if (creating || b.code !== undefined) {
+    if (!/^[A-Za-z0-9_-]{2,20}$/.test(String(b.code || '').trim())) errors.push('Code : 2 à 20 caractères (lettres, chiffres, - ou _)');
+  }
+  if (creating && !b.currencyId) errors.push('Devise requise');
+  if (b.email && !/^\S+@\S+\.\S+$/.test(b.email)) errors.push('Email invalide');
+  return errors;
+}
+
+async function checkUnique(b, excludeId) {
+  if (b.name) {
+    const e = await enterpriseModel.findByName(b.name);
+    if (e && e.id !== excludeId) return 'Une entreprise avec ce nom existe déjà';
+  }
+  if (b.code) {
+    const e = await enterpriseModel.findByCode(b.code);
+    if (e && e.id !== excludeId) return 'Une entreprise avec ce code existe déjà';
+  }
+  return null;
+}
+
+/** Crée un administrateur (profil prof_admin) rattaché à l'entreprise */
+async function createAdmin(enterpriseId, a, createdBy) {
+  const email = String(a.email || '').trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email)) throw Object.assign(new Error('Email de l\'administrateur invalide'), { status: 400 });
+  if (!a.password || a.password.length < 8) throw Object.assign(new Error('Mot de passe de l\'administrateur : 8 caractères minimum'), { status: 400 });
+  if (await db.one('SELECT 1 FROM users WHERE LOWER(email) = $1', [email])) {
+    throw Object.assign(new Error('Un compte existe déjà avec cet email'), { status: 409 });
+  }
+  const id = uuidv4();
+  const t = db.transaction();
+  t.addInsertQuery('users', {
+    id, username: `${email.split('@')[0].slice(0, 40)}_${id.slice(0, 6)}`, email,
+    password_hash: await bcrypt.hash(a.password, 10),
+    first_name: a.firstName || null, last_name: a.lastName || null, position: 'Administrateur',
+    is_active: true, enterprise_id: enterpriseId, created_at: new Date(), updated_at: new Date(),
+  });
+  t.addInsertQuery('user_profiles', { user_id: id, profile_id: 'prof_admin', assigned_at: new Date(), assigned_by: createdBy });
+  await t.execute();
+  return { id, email };
+}
 
 class EnterpriseController {
-  /**
-   * Récupérer toutes les entreprises
-   * GET /api/enterprises
-   */
+  /** GET /enterprises — super admin : toutes ; sinon : uniquement la sienne (compatibilité formulaires) */
   async list(req, res) {
     try {
-      const { search, currency_id, page = 1, limit = 20 } = req.query;
-      const offset = (page - 1) * limit;
-      
-      const enterprises = await enterpriseModel.findAll({
-        search,
-        currency_id,
-        limit: parseInt(limit),
-        offset: parseInt(offset)
-      });
-      
-      const total = await enterpriseModel.count({ search, currency_id });
-      
-      res.json({
-        success: true,
-        data: enterprises,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          pages: Math.ceil(total / limit)
-        }
-      });
+      if (req.isSuperAdmin) {
+        const data = await enterpriseModel.findAll({ search: req.query.search });
+        return res.json({ success: true, data, total: data.length });
+      }
+      const own = req.enterpriseId ? await enterpriseModel.findById(req.enterpriseId) : null;
+      res.json({ success: true, data: own ? [own] : [], total: own ? 1 : 0 });
     } catch (error) {
-      console.error('Error listing enterprises:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }
 
-  /**
-   * Récupérer une entreprise par ID
-   * GET /api/enterprises/:id
-   */
+  /** GET /enterprises/current (alias /enterprises/default) — entreprise de l'utilisateur connecté */
+  async getCurrent(req, res) {
+    try {
+      if (!req.enterpriseId) return res.json({ success: true, data: null });
+      res.json({ success: true, data: await enterpriseModel.findById(req.enterpriseId) });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /** GET /enterprises/:id — super admin, ou sa propre entreprise */
   async getOne(req, res) {
     try {
-      const { id } = req.params;
-      const enterprise = await enterpriseModel.findById(id);
-      
-      if (!enterprise) {
+      if (!req.isSuperAdmin && req.params.id !== req.enterpriseId) {
         return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
       }
-      
-      res.json({ success: true, data: enterprise });
+      const enterprise = await enterpriseModel.findById(req.params.id);
+      if (!enterprise) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      const admins = req.isSuperAdmin ? await enterpriseModel.getAdmins(enterprise.id) : undefined;
+      res.json({ success: true, data: { ...enterprise, admins } });
     } catch (error) {
-      console.error('Error getting enterprise:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }
 
-  /**
-   * Récupérer une entreprise par code
-   * GET /api/enterprises/code/:code
-   */
-  async getByCode(req, res) {
-    try {
-      const { code } = req.params;
-      const enterprise = await enterpriseModel.findByCode(code);
-      
-      if (!enterprise) {
-        return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
-      }
-      
-      res.json({ success: true, data: enterprise });
-    } catch (error) {
-      console.error('Error getting enterprise by code:', error);
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  /**
-   * Créer une entreprise
-   * POST /api/enterprises
-   */
+  /** POST /enterprises (super admin, multipart) — entreprise + premier administrateur optionnel */
   async create(req, res) {
     try {
-      const { name, code, currencyId } = req.body;
-      
-      // Validation
-      if (!name || !code || !currencyId) {
-        return res.status(400).json({
-          success: false,
-          message: 'name, code et currencyId sont requis'
-        });
+      const b = req.body;
+      const errors = validate(b, { creating: true });
+      if (errors.length) return res.status(400).json({ success: false, message: errors.join(' · ') });
+      const dup = await checkUnique(b);
+      if (dup) return res.status(409).json({ success: false, message: dup });
+      if (b.adminEmail && await db.one('SELECT 1 FROM users WHERE LOWER(email) = $1', [String(b.adminEmail).trim().toLowerCase()])) {
+        return res.status(409).json({ success: false, message: 'Un compte existe déjà avec l\'email de l\'administrateur' });
       }
-      
-      // Vérifier que le nom n'existe pas déjà
-      const existingName = await enterpriseModel.findByName(name);
-      if (existingName) {
-        return res.status(400).json({
-          success: false,
-          message: 'Une entreprise avec ce nom existe déjà'
-        });
+
+      let enterprise = await enterpriseModel.create(b);
+      if (req.file) {
+        await enterpriseModel.setLogo(enterprise.id, saveLogo(req.file, LOGO_DIR, enterprise.code));
+        enterprise = await enterpriseModel.findById(enterprise.id);
       }
-      
-      // Vérifier que le code n'existe pas déjà
-      const existingCode = await enterpriseModel.findByCode(code);
-      if (existingCode) {
-        return res.status(400).json({
-          success: false,
-          message: 'Une entreprise avec ce code existe déjà'
-        });
+      let admin = null;
+      if (b.adminEmail) {
+        admin = await createAdmin(enterprise.id, {
+          email: b.adminEmail, password: b.adminPassword, firstName: b.adminFirstName, lastName: b.adminLastName,
+        }, req.user.id);
       }
-      
-      const result = await enterpriseModel.create({
-        name,
-        code,
-        currencyId
-      });
-      
-      res.status(201).json({ success: true, data: result });
+      res.status(201).json({ success: true, data: { ...enterprise, admin }, message: 'Entreprise créée' });
     } catch (error) {
-      console.error('Error creating enterprise:', error);
-      res.status(500).json({ success: false, message: error.message });
+      res.status(error.status || 500).json({ success: false, message: error.message });
     }
   }
 
-  /**
-   * Mettre à jour une entreprise
-   * PUT /api/enterprises/:id
-   */
+  /** PUT /enterprises/:id (super admin) et PUT /enterprises/current (admin d'entreprise) — multipart, logo optionnel */
   async update(req, res) {
     try {
-      const { id } = req.params;
-      const { name, code, currencyId } = req.body;
-      
-      const existing = await enterpriseModel.findById(id);
-      if (!existing) {
+      const id = req.params.id || req.enterpriseId;
+      if (!id || (!req.isSuperAdmin && id !== req.enterpriseId)) {
         return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
       }
-      
-      // Vérifier que le nom n'est pas déjà utilisé par une autre entreprise
-      if (name && name !== existing.name) {
-        const nameExists = await enterpriseModel.findByName(name);
-        if (nameExists && nameExists.id !== id) {
-          return res.status(400).json({
-            success: false,
-            message: 'Une entreprise avec ce nom existe déjà'
-          });
-        }
+      const existing = await enterpriseModel.findById(id);
+      if (!existing) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+
+      const b = { ...req.body };
+      if (!req.isSuperAdmin) delete b.code; // le code (préfixe, identifiant) est fixé par la plateforme
+      const errors = validate(b, { creating: false });
+      if (errors.length) return res.status(400).json({ success: false, message: errors.join(' · ') });
+      const dup = await checkUnique(b, id);
+      if (dup) return res.status(409).json({ success: false, message: dup });
+
+      let enterprise = await enterpriseModel.update(id, b);
+      if (req.file) {
+        await enterpriseModel.setLogo(id, saveLogo(req.file, LOGO_DIR, enterprise.code || id));
+        removeLogo(existing.logo_path);
+        enterprise = await enterpriseModel.findById(id);
       }
-      
-      // Vérifier que le code n'est pas déjà utilisé par une autre entreprise
-      if (code && code !== existing.code) {
-        const codeExists = await enterpriseModel.findByCode(code);
-        if (codeExists && codeExists.id !== id) {
-          return res.status(400).json({
-            success: false,
-            message: 'Une entreprise avec ce code existe déjà'
-          });
-        }
-      }
-      
-      await enterpriseModel.update(id, { name, code, currencyId });
-      
-      res.json({ success: true, message: 'Entreprise mise à jour' });
+      res.json({ success: true, data: enterprise, message: 'Entreprise mise à jour' });
     } catch (error) {
-      console.error('Error updating enterprise:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }
 
-  /**
-   * Supprimer une entreprise
-   * DELETE /api/enterprises/:id
-   */
+  /** PATCH /enterprises/:id/active (super admin) — suspendre / réactiver */
+  async setActive(req, res) {
+    try {
+      const enterprise = await enterpriseModel.setActive(req.params.id, req.body.isActive);
+      if (!enterprise) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      res.json({ success: true, data: enterprise, message: enterprise.is_active ? 'Entreprise réactivée' : 'Entreprise suspendue' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /** DELETE /enterprises/:id (super admin) — uniquement une entreprise vide */
   async delete(req, res) {
     try {
-      const { id } = req.params;
-      
-      const existing = await enterpriseModel.findById(id);
-      if (!existing) {
-        return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      const existing = await enterpriseModel.findById(req.params.id);
+      const result = await enterpriseModel.delete(req.params.id);
+      if (result.reason === 'NOT_FOUND') return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      if (result.reason === 'NOT_EMPTY') {
+        return res.status(400).json({ success: false, message: 'Impossible : l\'entreprise a des utilisateurs ou des réquisitions. Suspendez-la plutôt.' });
       }
-      
-      await enterpriseModel.delete(id);
-      
+      removeLogo(existing?.logo_path);
       res.json({ success: true, message: 'Entreprise supprimée' });
     } catch (error) {
-      console.error('Error deleting enterprise:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }
 
-  /**
-   * Récupérer l'entreprise par défaut
-   * GET /api/enterprises/default
-   */
-  async getDefault(req, res) {
+  /** POST /enterprises/:id/admins (super admin) — ajouter un administrateur d'entreprise */
+  async addAdmin(req, res) {
     try {
-      const enterprise = await enterpriseModel.getDefault();
-      
-      if (!enterprise) {
-        return res.status(404).json({
-          success: false,
-          message: 'Aucune entreprise trouvée'
-        });
+      if (!(await enterpriseModel.findById(req.params.id))) {
+        return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
       }
-      
-      res.json({ success: true, data: enterprise });
+      const admin = await createAdmin(req.params.id, req.body, req.user.id);
+      res.status(201).json({ success: true, data: admin, message: 'Administrateur créé' });
     } catch (error) {
-      console.error('Error getting default enterprise:', error);
-      res.status(500).json({ success: false, message: error.message });
+      res.status(error.status || 500).json({ success: false, message: error.message });
+    }
+  }
+
+  /** GET /public/enterprises/:id/logo (public — utilisé dans <img>) */
+  async getLogo(req, res) {
+    try {
+      const e = await db.one('SELECT logo_path FROM enterprise WHERE id::text = $1', [req.params.id]);
+      return sendLogo(res, e?.logo_path);
+    } catch (error) {
+      res.status(500).end();
     }
   }
 }
 
 module.exports = new EnterpriseController();
+module.exports.createAdmin = createAdmin;

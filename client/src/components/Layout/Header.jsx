@@ -10,6 +10,7 @@ export default function Header({ toggleSidebar }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const { user, logout } = useAuth()
+  const isSupplier = user?.profiles?.some(p => p.id === 'prof_supplier')
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -52,7 +53,7 @@ export default function Header({ toggleSidebar }) {
           </button>
 
           {/* Search bar */}
-          <form onSubmit={handleSearch} className="hidden md:block">
+          {!isSupplier && <form onSubmit={handleSearch} className="hidden md:block">
             <div className="relative">
               <input
                 type="text"
@@ -63,7 +64,7 @@ export default function Header({ toggleSidebar }) {
               />
               <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             </div>
-          </form>
+          </form>}
         </div>
 
         {/* Right section - Notifications & User */}
@@ -84,7 +85,7 @@ export default function Header({ toggleSidebar }) {
                 <p className="text-sm font-medium text-gray-700">
                   {user?.firstName} {user?.lastName}
                 </p>
-                <p className="text-xs text-gray-500">{user?.role || 'Utilisateur'}</p>
+                <p className="text-xs text-gray-500">{isSupplier ? 'Fournisseur' : (user?.role || 'Utilisateur')}</p>
               </div>
               <ChevronDown size={16} className="text-gray-500" />
             </button>
@@ -102,21 +103,21 @@ export default function Header({ toggleSidebar }) {
                   </div>
                   <div className="py-2">
                     <Link
-                      to="/profile"
+                      to={isSupplier ? '/supplier/profile' : '/profile'}
                       onClick={() => setIsProfileOpen(false)}
                       className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <User size={18} />
                       <span>Mon profil</span>
                     </Link>
-                    <Link
+                    {!isSupplier && <Link
                       to="/settings"
                       onClick={() => setIsProfileOpen(false)}
                       className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Settings size={18} />
                       <span>Paramètres</span>
-                    </Link>
+                    </Link>}
                     <hr className="my-1" />
                     <button
                       onClick={handleLogout}
@@ -134,7 +135,7 @@ export default function Header({ toggleSidebar }) {
       </div>
 
       {/* Mobile search bar */}
-      <div className="md:hidden px-4 pb-3">
+      {!isSupplier && <div className="md:hidden px-4 pb-3">
         <form onSubmit={handleSearch}>
           <div className="relative">
             <input
@@ -147,7 +148,7 @@ export default function Header({ toggleSidebar }) {
             <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
         </form>
-      </div>
+      </div>}
     </header>
   )
 }

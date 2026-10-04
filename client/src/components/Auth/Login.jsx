@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { homePathFor } from '../../utils/accountType';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ export default function Login() {
     const result = await login(formData.email, formData.password);
     if (result.success) {
       toast.success('Connexion réussie');
-      navigate('/dashboard');
+      navigate(homePathFor(result.user));
     } else {
       toast.error(result.message || 'Email ou mot de passe incorrect');
     }
@@ -57,10 +58,10 @@ export default function Login() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl overflow-hidden">
         {/* Header */}
         <div className="p-6 text-center login-card-header-bg">
-          <center> <img src='/images/logo_wwf1.png' style={{ height: 50, borderRadius: 20 }} /></center>
+          <center><img src='/images/procureapp-logo.svg' alt='procureApp' style={{ height: 52 }} /></center>
           <h1 className="text-2xl font-bold text-white">
-            Procurement System</h1>
-          <p className="text-blue-100 mt-2">WWF - Gestion d'achats</p>
+            procureApp</h1>
+          <p className="text-blue-100 mt-2">Gestion des achats, de la réquisition au paiement</p>
         </div>
 
         {/* Form */}
@@ -76,7 +77,7 @@ export default function Login() {
               onChange={handleChange}
               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.email ? 'border-red-500' : 'border-gray-300'
                 }`}
-              placeholder="exemple@wwf.org"
+              placeholder="nom@entreprise.com"
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
@@ -140,10 +141,17 @@ export default function Login() {
           </button>
         </form>
 
+        <div className="px-6 pb-6 text-center text-sm text-gray-600">
+          Vous êtes fournisseur ?{' '}
+          <Link to="/supplier-register" className="text-blue-600 hover:text-blue-800 font-medium">
+            Créer un compte fournisseur
+          </Link>
+        </div>
+
         {/* Footer */}
         <div className="p-4 bg-gray-50 text-center">
           <p className="text-xs text-gray-500">
-            Système de gestion d'achats - WWF
+            procureApp — plateforme de gestion des achats
           </p>
         </div>
       </div>

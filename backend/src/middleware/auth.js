@@ -79,8 +79,8 @@ function hasAllPermissions(...permissionNames) {
   };
 }
 
-module.exports = { 
-  authenticate, 
+module.exports = {
+  authenticate,
   hasPermission, 
   hasAnyPermission,
   hasAllPermissions 

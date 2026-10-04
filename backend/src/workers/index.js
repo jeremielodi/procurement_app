@@ -451,7 +451,7 @@ async function processSendPONotification(task) {
     }
 
     if (po.supplier_email) {
-      EmailNotificationService.sendEmail(
+      const emailResult = await EmailNotificationService.sendEmail(
         po.supplier_email,
         `Purchase Order ${po.po_number}`,
         `<h1>Purchase Order ${po.po_number}</h1>
@@ -465,7 +465,8 @@ async function processSendPONotification(task) {
        </ul>
        <p>Thank you for your business.</p>`
       );
-      logSuccess('Email sent to supplier %s', po.supplier_email);
+      if (emailResult.success) logSuccess('Email sent to supplier %s', po.supplier_email);
+      else logWarn('Email to supplier %s failed: %s', po.supplier_email, emailResult.error);
     } else {
       logWarn('No supplier email on PO %s, skipping email', po.po_number);
     }

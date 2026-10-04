@@ -1,25 +1,31 @@
-// Caches the enterprise currency to avoid a DB round-trip on every invoice/payment creation.
+// Devise de l'entreprise courante (multi-entreprise), mise en cache par entreprise.
+// Hors requête HTTP (workers), on retombe sur la première entreprise créée.
 const db = require('../config/database');
+const tenant = require('./tenant');
 
-let cached = null;
-let fetchedAt = 0;
+const cache = new Map(); // enterpriseId | '__first__' → { code, at }
 const TTL = 60_000; // 1 minute
 
 async function getEnterpriseCurrencyCode() {
-  if (cached && Date.now() - fetchedAt < TTL) return cached;
+  const enterpriseId = tenant.enterpriseId();
+  const key = enterpriseId || '__first__';
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < TTL) return hit.code;
   try {
-    const row = await db.one(`
-      SELECT c.format_key
-      FROM enterprise e
-      JOIN currency c ON c.id = e.currency_id
-      ORDER BY e.created_at ASC LIMIT 1
-    `);
-    cached = row?.format_key || 'USD';
-    fetchedAt = Date.now();
+    const row = enterpriseId
+      ? await db.one(
+          'SELECT c.format_key FROM enterprise e JOIN currency c ON c.id = e.currency_id WHERE e.id = $1',
+          [enterpriseId]
+        )
+      : await db.one(
+          'SELECT c.format_key FROM enterprise e JOIN currency c ON c.id = e.currency_id ORDER BY e.created_at ASC LIMIT 1'
+        );
+    const code = row?.format_key || 'USD';
+    cache.set(key, { code, at: Date.now() });
+    return code;
   } catch {
-    cached = cached || 'USD';
+    return hit?.code || 'USD';
   }
-  return cached;
 }
 
 module.exports = { getEnterpriseCurrencyCode };

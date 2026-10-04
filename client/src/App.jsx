@@ -38,6 +38,25 @@ import InvoiceDetail from './components/Invoices/InvoiceDetail';
 import PaymentList from './components/Payments/PaymentList';
 import PaymentForm from './components/Payments/PaymentForm';
 import PaymentDetail from './components/Payments/PaymentDetail';
+import SupplierRegister from './components/Auth/SupplierRegister';
+import TenderList from './components/Tenders/TenderList';
+import TenderForm from './components/Tenders/TenderForm';
+import TenderDetail from './components/Tenders/TenderDetail';
+import SupplierTenderList from './components/SupplierPortal/SupplierTenderList';
+import SupplierTenderDetail from './components/SupplierPortal/SupplierTenderDetail';
+import SupplierProfile from './components/SupplierPortal/SupplierProfile';
+import SupplierDashboard from './components/SupplierPortal/SupplierDashboard';
+import { useAuth } from './hooks/useAuth';
+import { homePathFor } from './utils/accountType';
+import EnterpriseList from './components/Enterprises/EnterpriseList';
+import EnterpriseDetail from './components/Enterprises/EnterpriseDetail';
+import EnterpriseSettings from './components/Enterprises/EnterpriseSettings';
+
+// Accueil selon le compte : super admin → entreprises, fournisseur → portail, sinon → dashboard
+function HomeRedirect() {
+  const { user } = useAuth();
+  return <Navigate to={homePathFor(user)} replace />;
+}
 import  './app.css'
 function App() {
   return (
@@ -46,11 +65,12 @@ function App() {
       <Routes>
         {/* Routes publiques */}
         <Route path="/login" element={<Login />} />
+        <Route path="/supplier-register" element={<SupplierRegister />} />
 
         {/* Routes protégées */}
         <Route path="/" element={
           <ProtectedRoute>
-            <Navigate to="/dashboard" />
+            <HomeRedirect />
           </ProtectedRoute>
         } />
 
@@ -214,7 +234,7 @@ function App() {
         } />
 
         <Route path="/budget" element={
-          <ProtectedRoute requiredPermission="VIEW_BUDGET">
+          <ProtectedRoute requiredPermission="MANAGE_BUDGET">
             <Layout>
               <BudgetList />
             </Layout>
@@ -235,6 +255,22 @@ function App() {
         <Route path="/invoices" element={<ProtectedRoute><Layout><InvoiceList /></Layout></ProtectedRoute>} />
         <Route path="/invoices/new" element={<ProtectedRoute><Layout><InvoiceForm /></Layout></ProtectedRoute>} />
         <Route path="/invoices/:id" element={<ProtectedRoute><Layout><InvoiceDetail /></Layout></ProtectedRoute>} />
+
+        {/* Appels d'offres (procurement) */}
+        <Route path="/tenders" element={<ProtectedRoute requiredPermission="MANAGE_TENDERS"><Layout><TenderList /></Layout></ProtectedRoute>} />
+        <Route path="/tenders/new" element={<ProtectedRoute requiredPermission="MANAGE_TENDERS"><Layout><TenderForm /></Layout></ProtectedRoute>} />
+        <Route path="/tenders/:id" element={<ProtectedRoute requiredPermission="MANAGE_TENDERS"><Layout><TenderDetail /></Layout></ProtectedRoute>} />
+
+        {/* Plateforme (super admin) et paramètres d'entreprise */}
+        <Route path="/admin/enterprises" element={<ProtectedRoute superAdminOnly><Layout><EnterpriseList /></Layout></ProtectedRoute>} />
+        <Route path="/admin/enterprises/:id" element={<ProtectedRoute superAdminOnly><Layout><EnterpriseDetail /></Layout></ProtectedRoute>} />
+        <Route path="/settings/enterprise" element={<ProtectedRoute requiredPermission="MANAGE_USERS"><Layout><EnterpriseSettings /></Layout></ProtectedRoute>} />
+
+        {/* Portail fournisseur */}
+        <Route path="/supplier/dashboard" element={<ProtectedRoute requiredPermission="SUPPLIER_PORTAL"><Layout><SupplierDashboard /></Layout></ProtectedRoute>} />
+        <Route path="/supplier/tenders" element={<ProtectedRoute requiredPermission="SUPPLIER_PORTAL"><Layout><SupplierTenderList /></Layout></ProtectedRoute>} />
+        <Route path="/supplier/tenders/:id" element={<ProtectedRoute requiredPermission="SUPPLIER_PORTAL"><Layout><SupplierTenderDetail /></Layout></ProtectedRoute>} />
+        <Route path="/supplier/profile" element={<ProtectedRoute requiredPermission="SUPPLIER_PORTAL"><Layout><SupplierProfile /></Layout></ProtectedRoute>} />
 
         {/* Paiements */}
         <Route path="/payments" element={<ProtectedRoute><Layout><PaymentList /></Layout></ProtectedRoute>} />

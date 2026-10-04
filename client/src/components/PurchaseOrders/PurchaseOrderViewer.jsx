@@ -136,7 +136,7 @@ const PurchaseOrderViewer = ({ poId, po, onClose }) => {
         {/* PDF embed */}
         <div className="flex-1 p-4 overflow-auto bg-gray-50 rounded-b-lg">
           {pdfUrl ? (
-            <embed key={pdfUrl} src={pdfUrl} type="application/pdf" className="w-full h-full bg-white rounded shadow-inner" style={{ minHeight: '600px' }} />
+            <iframe key={pdfUrl} src={pdfUrl} title="Bon de commande PDF" className="w-full h-full bg-white rounded shadow-inner" style={{ minHeight: '600px' }} />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <FileText size={48} />

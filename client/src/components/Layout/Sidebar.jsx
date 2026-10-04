@@ -25,14 +25,27 @@ import {
   Database,
   FileText,
   CreditCard,
-  ClipboardCheck
+  ClipboardCheck,
+  Gavel,
+  Briefcase
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
 import api from '../../services/api'
+import { useEnterprise, enterpriseLogoUrl } from '../../contexts/EnterpriseContext'
 
 // Définition des groupes de menu
 const menuGroups = [
+  {
+    id: 'platform',
+    label: 'Plateforme procureApp',
+    icon: Briefcase,
+    superAdminOnly: true,
+    items: [
+      { path: '/admin/enterprises', icon: Building2, label: 'Entreprises', permission: null },
+      { path: '/admin/profiles', icon: Shield, label: 'Rôles et permissions', permission: null }
+    ]
+  },
   {
     id: 'main',
     label: 'Principal',
@@ -48,7 +61,8 @@ const menuGroups = [
         path: '/tasks', 
         icon: CheckSquare, 
         label: 'Mes tâches',
-        permission: null
+        permission: null,
+        hideForSupplier: true
       }
     ]
   },
@@ -76,6 +90,12 @@ const menuGroups = [
         permission: 'VIEW_SUPPLIERS'
       },
       {
+        path: '/tenders',
+        icon: Gavel,
+        label: "Appels d'offres",
+        permission: 'MANAGE_TENDERS'
+      },
+      {
         path: '/goods-receipts',
         icon: PackageCheck,
         label: 'Réceptions GRN',
@@ -86,6 +106,32 @@ const menuGroups = [
         icon: ClipboardCheck,
         label: 'Acceptation Service (SAN)',
         permission: 'VIEW_PURCHASE_ORDERS'
+      }
+    ]
+  },
+  {
+    id: 'supplier-portal',
+    label: 'Portail fournisseur',
+    icon: Gavel,
+    supplierOnly: true,
+    items: [
+      {
+        path: '/supplier/dashboard',
+        icon: LayoutDashboard,
+        label: 'Tableau de bord',
+        permission: 'SUPPLIER_PORTAL'
+      },
+      {
+        path: '/supplier/tenders',
+        icon: Gavel,
+        label: "Appels d'offres",
+        permission: 'SUPPLIER_PORTAL'
+      },
+      {
+        path: '/supplier/profile',
+        icon: Building2,
+        label: 'Mon entreprise',
+        permission: 'SUPPLIER_PORTAL'
       }
     ]
   },
@@ -144,6 +190,12 @@ const menuGroups = [
         icon: Shield, 
         label: 'Profils BPMN',
         permission: 'MANAGE_USERS'
+      },
+      {
+        path: '/settings/enterprise',
+        icon: Building2,
+        label: 'Mon entreprise',
+        permission: 'MANAGE_USERS'
       }
     ]
   },
@@ -169,7 +221,7 @@ const menuGroups = [
       path: '/budget', 
       icon: DollarSign, 
       label: 'Gestion budgétaire',
-      permission: 'VIEW_BUDGET'
+      permission: 'MANAGE_BUDGET'
     }
   ]
 }
@@ -238,14 +290,25 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   }
 
   // Vérifier si l'utilisateur peut voir un élément du menu
+  const isSupplier = user?.profiles?.some(p => p.id === 'prof_supplier')
+  const isSuperAdmin = user?.profiles?.some(p => p.id === 'prof_superadmin')
+  const { enterprise } = useEnterprise()
+  const enterpriseLogo = enterpriseLogoUrl(enterprise)
+
   const canSeeMenuItem = (item) => {
+    if (item.hideForSupplier && (isSupplier || isSuperAdmin)) return false
+    if (isSuperAdmin) return true
     if (item.permission && !hasPermission(item.permission)) return false
     return true
   }
 
   // Vérifier si un groupe est visible
   const isGroupVisible = (group) => {
+    // Super admin : uniquement la gestion de la plateforme (+ notifications)
+    if (isSuperAdmin) return group.superAdminOnly || group.id === 'system'
+    if (group.superAdminOnly) return false
     if (group.adminOnly && !isAdmin()) return false
+    if (group.supplierOnly && !isSupplier) return false
     return group.items.some(item => canSeeMenuItem(item))
   }
 
@@ -300,8 +363,12 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       <div className="flex items-center justify-between p-4 border-b">
         {isOpen && (
           <>
-            <img src='/images/logo_wwf1.png' style={{height:30}}/>
-            <span className="text-xl font-bold text-blue-600">Procurement App</span>
+            {/* Logo et nom de l'entreprise de l'utilisateur ; procureApp sinon (super admin, fournisseur) */}
+            <img src={enterpriseLogo || '/images/procureapp-logo.svg'} alt="" style={{ height: 30, maxWidth: 40, objectFit: 'contain' }} />
+            <div className="flex-1 min-w-0 ml-2" data-testid="sidebar-brand">
+              <div className="text-base font-bold text-blue-600 truncate" title={enterprise?.name || 'procureApp'}>{enterprise?.name || 'procureApp'}</div>
+              {enterprise && <div className="text-[10px] text-gray-400 leading-none">procureApp</div>}
+            </div>
           </>
          
         )}
@@ -373,7 +440,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         })}
 
         {/* Profils BPMN de l'utilisateur */}
-        {userProfiles.length > 0 && isOpen && (
+        {userProfiles.length > 0 && isOpen && !isSupplier && !isSuperAdmin && (
           <div className="mt-6 px-4">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
               Mes profils BPMN
@@ -408,19 +475,19 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         {showProfileMenu && isOpen && (
           <div className="mt-2 space-y-2">
             <Link
-              to="/profile"
+              to={isSupplier ? '/supplier/profile' : '/profile'}
               className="flex items-center gap-3 px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg"
             >
               <User size={16} />
               <span>Mon profil</span>
             </Link>
-            <Link
+            {!isSupplier && <Link
               to="/settings"
               className="flex items-center gap-3 px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg"
             >
               <Settings size={16} />
               <span>Paramètres</span>
-            </Link>
+            </Link>}
             <hr className="my-1" />
             <button
               onClick={handleLogout}

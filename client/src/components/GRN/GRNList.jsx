@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Plus, Search, RefreshCw, Eye } from 'lucide-react';
+import { Package, Plus, Search, RefreshCw, Eye, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { grnService } from '../../services/grnService';
 
@@ -125,6 +125,13 @@ export default function GRNList() {
                         title="Voir"
                       >
                         <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => grnService.downloadPDF(grn.id, grn.grn_number).catch(() => {})}
+                        className="p-1.5 hover:bg-green-50 rounded text-green-600"
+                        title="Télécharger le PDF"
+                      >
+                        <Download size={16} />
                       </button>
                     </td>
                   </tr>

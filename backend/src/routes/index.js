@@ -15,13 +15,34 @@ const departmentController = require('../controllers/DepartmentController');
 const projectController = require('../controllers/ProjectController');
 const profileController = require('../controllers/ProfileController');
 const budgetController = require('../controllers/BudgetController');
+const userModelForBudget = require('../models/UserModel');
+
+// Liste complète des lignes budgétaires = Finance ; les autres profils (VIEW_BUDGET) seulement par projet
+async function budgetListAccess(req, res, next) {
+  if (req.query.projectId) return next();
+  if (await userModelForBudget.hasPermission(req.user.id, 'MANAGE_BUDGET')) return next();
+  return res.status(403).json({ success: false, message: 'Permission MANAGE_BUDGET requise' });
+}
 const enterpriseController = require('../controllers/EnterpriseController');
 const currencyController = require('../controllers/CurrencyController');
 const grnController = require('../controllers/GoodsReceiptController');
 const sanController = require('../controllers/ServiceAcceptanceController');
 const invoiceController = require('../controllers/InvoiceController');
 const paymentController = require('../controllers/PaymentController');
+const supplierPortalController = require('../controllers/SupplierPortalController');
+const tenderController = require('../controllers/TenderController');
+const requisitionImport = require('../controllers/requisition/importItems');
+const requisitionTimeline = require('../services/RequisitionTimelineService');
 const { authenticate, hasPermission, hasAnyPermission } = require('../middleware/auth');
+const { tenantContext, tenantGuard } = require('../middleware/tenant');
+const { logoMiddleware } = require('../utils/logoUpload');
+
+// Réservé au super administrateur de la plateforme
+const requireSuperAdmin = (req, res, next) => req.isSuperAdmin
+  ? next()
+  : res.status(403).json({ success: false, message: 'Réservé au super administrateur procureApp' });
+// Consultation des profils : super admin ou administrateur d'entreprise
+const superAdminOr = (permission) => (req, res, next) => (req.isSuperAdmin ? next() : hasPermission(permission)(req, res, next));
 
 const uploadRoutes = require('./upload');
 
@@ -31,18 +52,37 @@ const uploadRoutes = require('./upload');
 router.post('/auth/login', authController.login);
 router.get('/auth/profile', authenticate, authController.getProfile);
 
+// Inscription fournisseur + logo (publics)
+router.post('/auth/register-supplier',
+  supplierPortalController.handleLogoUpload,
+  supplierPortalController.register.bind(supplierPortalController)
+);
+router.get('/public/suppliers/:id/logo', supplierPortalController.getLogo.bind(supplierPortalController));
+router.get('/public/enterprises/:id/logo', enterpriseController.getLogo.bind(enterpriseController));
+
 router.use(authenticate);
+// Multi-entreprise : type de compte + entreprise courante, puis contrôle des identifiants cités
+router.use(tenantContext);
+router.use(tenantGuard);
 
 // Routes publiques (lecture)
-router.get('/enterprises', authenticate, enterpriseController.list);
-router.get('/enterprises/default', authenticate, enterpriseController.getDefault);
-router.get('/enterprises/code/:code', authenticate, enterpriseController.getByCode);
-router.get('/enterprises/:uuid', authenticate, enterpriseController.getOne);
-
-// Routes protégées (écriture)
-router.post('/enterprises/', authenticate, hasPermission('MANAGE_ENTERPRISES'), enterpriseController.create);
-router.put('/enterprises/:id', authenticate, hasPermission('MANAGE_ENTERPRISES'), enterpriseController.update);
-router.delete('/enterprises/:id', authenticate, hasPermission('MANAGE_ENTERPRISES'), enterpriseController.delete);
+// ============================================
+// ENTREPRISES (multi-entreprise procureApp)
+// ============================================
+const e = enterpriseController;
+// Entreprise de l'utilisateur connecté (nom, logo, devise)
+router.get('/enterprises/current', e.getCurrent.bind(e));
+router.get('/enterprises/default', e.getCurrent.bind(e)); // ancien nom, conservé
+router.put('/enterprises/current', hasPermission('MANAGE_USERS'), logoMiddleware, e.update.bind(e));
+// Liste : super admin = toutes ; utilisateur = la sienne
+router.get('/enterprises', e.list.bind(e));
+router.get('/enterprises/:id', e.getOne.bind(e));
+// Gestion de la plateforme : super admin uniquement
+router.post('/enterprises', requireSuperAdmin, logoMiddleware, e.create.bind(e));
+router.put('/enterprises/:id', requireSuperAdmin, logoMiddleware, e.update.bind(e));
+router.patch('/enterprises/:id/active', requireSuperAdmin, e.setActive.bind(e));
+router.delete('/enterprises/:id', requireSuperAdmin, e.delete.bind(e));
+router.post('/enterprises/:id/admins', requireSuperAdmin, e.addAdmin.bind(e));
 
 
 router.get('/currencies', authenticate, currencyController.list);
@@ -62,6 +102,28 @@ router.post('/requisitions',
   authenticate,
   hasPermission('CREATE_REQUISITIONS'),
   (req, res) => requisitionController.create(req, res)
+);
+
+// Import d'articles Excel/CSV (avant /requisitions/:id)
+router.post('/requisitions/import-items',
+  hasPermission('CREATE_REQUISITIONS'),
+  requisitionImport.handleUpload,
+  requisitionImport.importItems
+);
+
+// Suivi lisible du workflow (étapes + historique en français)
+router.get('/requisitions/:id/timeline',
+  hasPermission('VIEW_REQUISITIONS'),
+  async (req, res) => {
+    try {
+      const data = await requisitionTimeline.build(req.params.id);
+      if (!data) return res.status(404).json({ success: false, message: 'Réquisition introuvable' });
+      res.json({ success: true, data });
+    } catch (error) {
+      console.error('Timeline error:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
 );
 
 router.get('/requisitions/:id',
@@ -138,7 +200,7 @@ router.get('/suppliers',
   hasPermission('VIEW_SUPPLIERS'),
   async (req, res) => {
     try {
-      const suppliers = await supplierModel.getPrequalifiedSuppliers();
+      const suppliers = req.query.all ? await supplierModel.getAll() : await supplierModel.getPrequalifiedSuppliers();
       res.json({ success: true, data: suppliers });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -375,15 +437,16 @@ router.post('/users/:id/reset-password',authenticate, hasPermission('MANAGE_USER
 router.delete('/users/:id',authenticate, hasPermission('MANAGE_USERS'), userController.delete);
 
 
-router.get('/profiles', hasPermission('MANAGE_USERS'), profileController.list);
-router.get('/profiles/permissions', hasPermission('MANAGE_USERS'), profileController.getPermissions);
-router.get('/profiles/:id', hasPermission('MANAGE_USERS'), profileController.getOne);
-router.get('/profiles/:profileId/permissions', hasPermission('MANAGE_USERS'), profileController.getProfilePermissions);
-router.post('/profiles/', hasPermission('MANAGE_USERS'), profileController.create);
-router.put('/profiles/:id',hasPermission('MANAGE_USERS'), profileController.update);
-router.delete('/profiles/:id', profileController.delete);
-router.post('/profiles/:profileId/permissions/:permissionId', hasPermission('MANAGE_USERS'), profileController.assignPermission);
-router.delete('/profiles/:profileId/permissions/:permissionId', hasPermission('MANAGE_USERS'), profileController.removePermission);
+// Profils (rôles) partagés par toutes les entreprises : lecture admin, modification super admin
+router.get('/profiles', superAdminOr('MANAGE_USERS'), profileController.list);
+router.get('/profiles/permissions', superAdminOr('MANAGE_USERS'), profileController.getPermissions);
+router.get('/profiles/:id', superAdminOr('MANAGE_USERS'), profileController.getOne);
+router.get('/profiles/:profileId/permissions', superAdminOr('MANAGE_USERS'), profileController.getProfilePermissions);
+router.post('/profiles/', requireSuperAdmin, profileController.create);
+router.put('/profiles/:id', requireSuperAdmin, profileController.update);
+router.delete('/profiles/:id', requireSuperAdmin, profileController.delete);
+router.post('/profiles/:profileId/permissions/:permissionId', requireSuperAdmin, profileController.assignPermission);
+router.delete('/profiles/:profileId/permissions/:permissionId', requireSuperAdmin, profileController.removePermission);
 
 
 
@@ -406,10 +469,12 @@ router.delete('/projects/members/:projectId/:userId', hasPermission('MANAGE_PROJ
 
 
 
-router.get('/budget', hasPermission('VIEW_BUDGET'), budgetController.list);
+router.get('/budget', hasPermission('VIEW_BUDGET'), budgetListAccess, budgetController.list);
+// Module Budget (consultation détaillée + édition) : Finance uniquement (MANAGE_BUDGET).
+// VIEW_BUDGET ne sert qu'à choisir une ligne budgétaire du projet dans le formulaire de réquisition.
 router.get('/budget/search', hasPermission('VIEW_BUDGET'), budgetController.search);
-router.get('/budget/summary', hasPermission('VIEW_BUDGET'), budgetController.getSummary);
-router.get('/budget/:id', hasPermission('VIEW_BUDGET'), budgetController.getOne);
+router.get('/budget/summary', hasPermission('MANAGE_BUDGET'), budgetController.getSummary);
+router.get('/budget/:id', hasPermission('MANAGE_BUDGET'), budgetController.getOne);
 router.post('/budget', hasPermission('MANAGE_BUDGET'), budgetController.create);
 router.post('/budget/expenses', hasPermission('MANAGE_BUDGET'), budgetController.addExpense);
 router.put('/budget/:id', hasPermission('MANAGE_BUDGET'), budgetController.update);
@@ -423,6 +488,10 @@ router.get('/budget/by-project/:projectId', hasPermission('VIEW_BUDGET'), budget
 router.get('/goods-receipts',
   authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
   grnController.getAll.bind(grnController)
+);
+router.get('/goods-receipts/:id/pdf',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  grnController.generatePDF.bind(grnController)
 );
 router.get('/goods-receipts/:id',
   authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
@@ -516,6 +585,32 @@ router.get('/payments/:id/pdf',
   authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
   paymentController.generatePDF.bind(paymentController)
 );
+
+// ============================================
+// APPELS D'OFFRES (procurement)
+// ============================================
+router.get('/tenders', hasPermission('MANAGE_TENDERS'), tenderController.list.bind(tenderController));
+router.get('/tenders/by-requisition/:requisitionId', hasPermission('MANAGE_TENDERS'), tenderController.getByRequisition.bind(tenderController));
+router.get('/tenders/:id', hasPermission('MANAGE_TENDERS'), tenderController.getOne.bind(tenderController));
+router.get('/tenders/:id/export/excel', hasPermission('MANAGE_TENDERS'), tenderController.exportExcel.bind(tenderController));
+router.post('/tenders', hasPermission('MANAGE_TENDERS'), tenderController.create.bind(tenderController));
+router.put('/tenders/:id', hasPermission('MANAGE_TENDERS'), tenderController.update.bind(tenderController));
+router.post('/tenders/:id/close', hasPermission('MANAGE_TENDERS'), tenderController.close.bind(tenderController));
+router.post('/tenders/:id/cancel', hasPermission('MANAGE_TENDERS'), tenderController.cancel.bind(tenderController));
+router.post('/tenders/:id/award', hasPermission('MANAGE_TENDERS'), tenderController.award.bind(tenderController));
+
+// ============================================
+// PORTAIL FOURNISSEUR
+// ============================================
+router.get('/supplier-portal/dashboard', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierDashboard.bind(tenderController));
+router.get('/supplier-portal/me', hasPermission('SUPPLIER_PORTAL'), supplierPortalController.getMe.bind(supplierPortalController));
+router.put('/supplier-portal/me', hasPermission('SUPPLIER_PORTAL'),
+  supplierPortalController.handleLogoUpload,
+  supplierPortalController.updateMe.bind(supplierPortalController));
+router.get('/supplier-portal/tenders', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierList.bind(tenderController));
+router.get('/supplier-portal/tenders/:id', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierGetOne.bind(tenderController));
+router.put('/supplier-portal/tenders/:id/submission', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierSubmit.bind(tenderController));
+router.get('/supplier-portal/tenders/:id/submission/pdf', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierSubmissionPdf.bind(tenderController));
 
 router.use('/upload',  uploadRoutes);
 module.exports = router;

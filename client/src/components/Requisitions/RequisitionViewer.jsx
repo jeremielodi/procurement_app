@@ -221,10 +221,10 @@ const RequisitionViewer = ({ requisitionId, requisition, onClose }) => {
         {/* Zone d'affichage du PDF avec embed */}
         <div className="flex-1 p-4 overflow-auto bg-gray-50 rounded-b-lg">
           {pdfUrl ? (
-            <embed
+            <iframe
               key={pdfUrl} // Utiliser pdfUrl comme key pour forcer le re-render
               src={pdfUrl}
-              type="application/pdf"
+              title="Réquisition PDF"
               className="w-full h-full bg-white rounded shadow-inner"
               style={{ minHeight: '600px' }}
             />

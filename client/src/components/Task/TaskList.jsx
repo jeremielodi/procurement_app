@@ -177,6 +177,7 @@ const TaskList = () => {
   // Tâches qui ont un formulaire dédié → redirection au lieu de la modale
   const FORM_TASKS = {
     'Activity_POApproval':        (t) => `/purchase-orders/${t.variables?.poId || ''}?taskId=${t.id}`,
+    'Activity_RFPProcess':        (t) => `/tenders/new?taskId=${t.id}&requisitionId=${t.variables?.requisitionId || ''}`,
     'Activity_GoodsReceipt':      (t) => `/goods-receipts/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
     'Activity_ServiceAcceptance': (t) => `/service-acceptance-notes/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
     'Activity_EnterInvoice':      (t) => `/invoices/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
@@ -468,6 +469,11 @@ const TaskList = () => {
                     <p className="text-xs text-gray-400 mt-2">
                       Créée le: {variables.createdAt ? new Date(variables.createdAt).toLocaleString() : 'Date inconnue'}
                     </p>
+                    {isCompleted && task.completedAt && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Terminée le: {new Date(task.completedAt).toLocaleString()}
+                      </p>
+                    )}
                     {task.assignee && (
                       <p className="text-xs text-gray-400 mt-1">
                         Assignée à: {task.assignee}
@@ -491,7 +497,7 @@ const TaskList = () => {
                     
                     {!isCompleted && task.status !== 'COMPLETED' && (
                       <>
-                        {task.status === 'UNASSIGNED' && (
+                        {task.canClaim && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

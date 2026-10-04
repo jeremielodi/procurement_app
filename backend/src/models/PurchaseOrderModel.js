@@ -1,5 +1,6 @@
 // backend/src/models/PurchaseOrderModel.js
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 
 class PurchaseOrderModel {
@@ -13,7 +14,7 @@ class PurchaseOrderModel {
       [year]
     );
     const poNumber = `PO-${year}-${String(parseInt(countResult.count) + 1).padStart(4, '0')}`;
-    const defaultCurrency = await getEnterpriseCurrencyCode();
+    const currencyId = await this.resolveCurrencyId(poData);
 
     const transaction = db.transaction();
 
@@ -26,7 +27,7 @@ class PurchaseOrderModel {
       delivery_date: poData.deliveryDate,
       shipping_address: poData.shippingAddress,
       total_amount: poData.totalAmount,
-      currency: poData.currency || defaultCurrency,
+      currency_id: currencyId,
       status: 'PO_PENDING',
       created_by: poData.createdBy,
       created_at: new Date(),
@@ -60,6 +61,29 @@ class PurchaseOrderModel {
   }
 
   /**
+   * Devise du PO (currency_id) : code envoyé (ex. 'USD') → devise de la réquisition → devise de l'entreprise
+   */
+  async resolveCurrencyId(poData) {
+    if (poData.currencyId) return poData.currencyId;
+
+    if (poData.currency) {
+      const row = await db.one('SELECT id FROM currency WHERE format_key = $1', [poData.currency]);
+      if (row) return row.id;
+    }
+
+    if (poData.requisitionId) {
+      const row = await db.one('SELECT currency_id FROM requisitions WHERE id = $1', [poData.requisitionId]);
+      if (row?.currency_id) return row.currency_id;
+    }
+
+    const row = await db.one(
+      'SELECT c.id FROM currency c WHERE c.format_key = $1',
+      [await getEnterpriseCurrencyCode()]
+    );
+    return row?.id;
+  }
+
+  /**
    * Récupérer une commande par ID
    */
   async findById(id) {
@@ -74,11 +98,13 @@ class PurchaseOrderModel {
         s.phone as supplier_phone,
         s.address as supplier_address,
         u.first_name as created_by_name,
-        u.email as created_by_email
+        u.email as created_by_email,
+        c.format_key as currency
       FROM purchase_orders po
       LEFT JOIN requisitions r ON po.requisition_id = r.id
       LEFT JOIN suppliers s ON po.supplier_id = s.id
       LEFT JOIN users u ON po.created_by = u.id
+      LEFT JOIN currency c ON po.currency_id = c.id
       WHERE po.id = $1
     `, [id]);
     
@@ -127,14 +153,19 @@ class PurchaseOrderModel {
         po.*,
         s.name as supplier_name,
         s.supplier_code,
-        r.requisition_number
+        r.requisition_number,
+        c.format_key as currency
       FROM purchase_orders po
       LEFT JOIN suppliers s ON po.supplier_id = s.id
       LEFT JOIN requisitions r ON po.requisition_id = r.id
+      LEFT JOIN currency c ON po.currency_id = c.id
       WHERE 1=1
     `;
     const params = [];
     let paramCount = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    sql += tenant.filter('po.enterprise_id', params);
+    paramCount = params.length + 1;
     
     if (filters.status && filters.status !== 'all') {
       sql += ` AND po.status = $${paramCount}`;
@@ -189,6 +220,9 @@ class PurchaseOrderModel {
     let sql = `SELECT COUNT(*) as count FROM purchase_orders WHERE 1=1`;
     const params = [];
     let paramCount = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    sql += tenant.filter('enterprise_id', params);
+    paramCount = params.length + 1;
     
     if (filters.status && filters.status !== 'all') {
       sql += ` AND status = $${paramCount}`;
@@ -294,29 +328,31 @@ class PurchaseOrderModel {
    * Récupérer les statistiques des commandes
    */
   async getStats() {
+    const p = [];
+    const scope = `WHERE 1=1${tenant.filter('enterprise_id', p)}`;
     // Total des commandes
-    const total = await db.one("SELECT COUNT(*) as count FROM purchase_orders");
+    const total = await db.one(`SELECT COUNT(*) as count FROM purchase_orders ${scope}`, p);
     
     // Par statut
     const byStatus = await db.select(`
       SELECT status, COUNT(*) as count 
-      FROM purchase_orders 
+      FROM purchase_orders ${scope}
       GROUP BY status
-    `);
+    `, p);
     
     // Montant total
     const totalAmount = await db.one(`
       SELECT COALESCE(SUM(total_amount), 0) as total 
-      FROM purchase_orders
-    `);
+      FROM purchase_orders ${scope}
+    `, p);
     
     // Commandes du mois
     const monthlyOrders = await db.one(`
       SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount
-      FROM purchase_orders
-      WHERE EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+      FROM purchase_orders ${scope}
+      AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
       AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
-    `);
+    `, p);
     
     return {
       total: parseInt(total.count),

@@ -5,7 +5,7 @@ import { Check, X, Search, Shield, Lock, Unlock } from 'lucide-react';
 import { profileService } from '../../services/profileService';
 import toast from 'react-hot-toast';
 
-export default function ProfilePermissions({ profile, onClose }) {
+export default function ProfilePermissions({ profile, onClose, readOnly = false }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [selectedResource, setSelectedResource] = useState('all');
@@ -149,7 +149,7 @@ export default function ProfilePermissions({ profile, onClose }) {
                         key={permission.id}
                         permission={permission}
                         isAssigned={profilePermissionIds.has(permission.id)}
-                        onToggle={() => togglePermission(permission.id)}
+                        onToggle={() => !readOnly && togglePermission(permission.id)}
                         isLoading={assignMutation.isPending || removeMutation.isPending}
                       />
                     ))}
@@ -162,7 +162,7 @@ export default function ProfilePermissions({ profile, onClose }) {
                   key={permission.id}
                   permission={permission}
                   isAssigned={profilePermissionIds.has(permission.id)}
-                  onToggle={() => togglePermission(permission.id)}
+                  onToggle={() => !readOnly && togglePermission(permission.id)}
                   isLoading={assignMutation.isPending || removeMutation.isPending}
                 />
               ))

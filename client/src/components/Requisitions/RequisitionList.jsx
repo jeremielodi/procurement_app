@@ -25,9 +25,11 @@ import {
   User,
   MoreVertical,
   FileSpreadsheet,
-  Printer
+  Printer,
+  GitBranch
 } from 'lucide-react'
 import requisitionService from '../../services/requisitionService'
+import WorkflowTrackerModal from './WorkflowTrackerModal'
 import { departmentService } from '../../services/departmentService'
 import StatusBadge from '../Common/StatusBadge'
 import LoadingSpinner from '../Common/LoadingSpinner'
@@ -47,12 +49,22 @@ const priorityOptions = [
   { value: 'URGENT', label: 'Urgent' }
 ]
 
+// Avancement global du cycle (calculé côté backend : progress_status)
+const PROGRESS = {
+  DRAFT:       { label: 'Brouillon', cls: 'bg-gray-100 text-gray-700' },
+  IN_PROGRESS: { label: 'En cours',  cls: 'bg-blue-100 text-blue-700' },
+  COMPLETED:   { label: 'Terminé',   cls: 'bg-green-100 text-green-700' },
+  REJECTED:    { label: 'Rejeté',    cls: 'bg-red-100 text-red-700' },
+  CANCELLED:   { label: 'Annulé',    cls: 'bg-gray-200 text-gray-600' },
+}
+
 export default function RequisitionList() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   // États pour les filtres
   const [filters, setFilters] = useState({
+    progress: 'all',
     status: 'all',
     priority: 'all',
     departmentId: 'all',
@@ -61,6 +73,7 @@ export default function RequisitionList() {
     toDate: ''
   })
   const [showFilters, setShowFilters] = useState(false)
+  const [workflowFor, setWorkflowFor] = useState(null)
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20
@@ -154,6 +167,7 @@ export default function RequisitionList() {
 
   const handleResetFilters = () => {
     setFilters({
+      progress: 'all',
       status: 'all',
       priority: 'all',
       departmentId: 'all',
@@ -294,7 +308,7 @@ export default function RequisitionList() {
           >
             <Filter size={18} />
             Filtres
-            {(filters.status !== 'all' || filters.priority !== 'all' || filters.departmentId !== 'all' || filters.fromDate || filters.toDate) && (
+            {(filters.progress !== 'all' || filters.status !== 'all' || filters.priority !== 'all' || filters.departmentId !== 'all' || filters.fromDate || filters.toDate) && (
               <span className="ml-1 w-2 h-2 bg-blue-600 rounded-full" />
             )}
           </button>
@@ -341,11 +355,22 @@ export default function RequisitionList() {
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <select
+                value={filters.progress}
+                onChange={(e) => handleFilterChange('progress', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                aria-label="Avancement"
+              >
+                <option value="all">Tous les avancements</option>
+                {Object.entries(PROGRESS).map(([value, p]) => (
+                  <option key={value} value={value}>{p.label}</option>
+                ))}
+              </select>
+              <select
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                {requisitionService.getStatusOptions.map(opt => (
+                {requisitionService.getStatusOptions().map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -447,7 +472,10 @@ export default function RequisitionList() {
                   Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Statut
+                  Avancement
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Étape
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Priorité
@@ -460,7 +488,7 @@ export default function RequisitionList() {
             <tbody className="bg-white divide-y divide-gray-200">
               {requisitions.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="10" className="px-6 py-12 text-center text-gray-500">
                     <FileText className="mx-auto h-12 w-12 text-gray-300 mb-3" />
                     <p>Aucune réquisition trouvée</p>
                     <Link
@@ -513,6 +541,12 @@ export default function RequisitionList() {
                         {formatDate(requisition.created_at)}
                       </div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap" data-testid="progress-status">
+                      {(() => {
+                        const p = PROGRESS[requisition.progress_status] || PROGRESS.IN_PROGRESS
+                        return <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.cls}`}>{p.label}</span>
+                      })()}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={requisitionService.getStatusOptionLabel(requisition.status)} size="sm" />
                     </td>
@@ -528,6 +562,15 @@ export default function RequisitionList() {
                         >
                           <Eye size={18} />
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => setWorkflowFor(requisition)}
+                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Suivi du workflow"
+                          aria-label={`Suivi du workflow ${requisition.requisition_number}`}
+                        >
+                          <GitBranch size={18} />
+                        </button>
                         {requisition.status === 'DRAFT' && (
                           <>
                             <Link
@@ -659,6 +702,8 @@ export default function RequisitionList() {
         <p>Êtes-vous sûr de vouloir supprimer <strong>{selectedRequisitions.length}</strong> réquisition(s) ?</p>
         <p className="text-sm text-gray-500 mt-2">Cette action est irréversible.</p>
       </Modal>
+
+      <WorkflowTrackerModal requisition={workflowFor} onClose={() => setWorkflowFor(null)} />
     </div>
   )
 }

@@ -1,6 +1,10 @@
 // backend/src/controllers/UserController.js
 const userModel = require('../models/UserModel');
 
+// Profils non attribuables par un administrateur d'entreprise
+const RESERVED_PROFILES = ['prof_superadmin', 'prof_supplier'];
+const hasReservedProfile = (ids) => Array.isArray(ids) && ids.some(p => RESERVED_PROFILES.includes(p));
+
 class UserController {
   /**
    * Lister les utilisateurs
@@ -42,6 +46,9 @@ class UserController {
   async create(req, res) {
     try {
       const { username, email, password, firstName, lastName, department, position, profileIds } = req.body;
+      if (hasReservedProfile(profileIds)) {
+        return res.status(403).json({ success: false, message: 'Profil réservé à la plateforme (super admin / fournisseur)' });
+      }
       
       // Validation
       if (!username || !email || !password) {
@@ -98,6 +105,9 @@ class UserController {
     try {
       const { id } = req.params;
       const { firstName, lastName, department, position, profileIds } = req.body;
+      if (hasReservedProfile(profileIds)) {
+        return res.status(403).json({ success: false, message: 'Profil réservé à la plateforme (super admin / fournisseur)' });
+      }
       
       const existing = await userModel.findById(id);
       if (!existing) {
@@ -196,7 +206,7 @@ class UserController {
    */
   async getProfiles(req, res) {
     try {
-      const profiles = await userModel.getAllProfiles();
+      const profiles = (await userModel.getAllProfiles()).filter(p => !RESERVED_PROFILES.includes(p.id));
       res.json({ success: true, data: profiles });
     } catch (error) {
       console.error('Error getting profiles:', error);

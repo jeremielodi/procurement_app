@@ -1,5 +1,9 @@
 // backend/src/controllers/DashboardController.js
 const dashboardModel = require('../models/DashboardModel');
+const userModel = require('../models/UserModel');
+
+// Le budget n'est visible que par la Finance (et l'admin)
+const budgetOpts = async (req) => ({ includeBudget: await userModel.hasPermission(req.user.id, 'MANAGE_BUDGET') });
 
 class DashboardController {
   /**
@@ -39,7 +43,7 @@ class DashboardController {
         });
       }
       
-      const chartData = await dashboardModel.getChartData(period);
+      const chartData = await dashboardModel.getChartData(period, await budgetOpts(req));
       
       res.json({
         success: true,
@@ -227,7 +231,7 @@ class DashboardController {
         projectStats
       ] = await Promise.all([
         dashboardModel.getStats(),
-        dashboardModel.getChartData(period),
+        dashboardModel.getChartData(period, await budgetOpts(req)),
         dashboardModel.getRecentRequisitions(10),
         dashboardModel.getRecentActivities(10),
         dashboardModel.getKPIs(),
@@ -269,7 +273,7 @@ class DashboardController {
     try {
       const { format = 'json' } = req.query;
       
-      const data = await dashboardModel.getChartData('year');
+      const data = await dashboardModel.getChartData('year', await budgetOpts(req));
       
       if (format === 'json') {
         res.json({

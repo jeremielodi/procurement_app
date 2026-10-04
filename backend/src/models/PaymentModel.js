@@ -1,5 +1,6 @@
 // backend/src/models/PaymentModel.js
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 
 class PaymentModel {
@@ -77,6 +78,9 @@ class PaymentModel {
     const params = [];
     let where = 'WHERE 1=1';
     let i = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    where += tenant.filter('pay.enterprise_id', params);
+    i = params.length + 1;
 
     if (invoiceId) { where += ` AND pay.invoice_id = $${i++}`; params.push(invoiceId); }
     if (poId)      { where += ` AND pay.po_id = $${i++}`;      params.push(poId); }
@@ -104,6 +108,9 @@ class PaymentModel {
     const params = [];
     let where = 'WHERE 1=1';
     let i = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    where += tenant.filter('enterprise_id', params);
+    i = params.length + 1;
     if (status) { where += ` AND status = $${i++}`; params.push(status); }
     const result = await db.one(`SELECT COUNT(*) AS count FROM payments ${where}`, params);
     return parseInt(result.count);

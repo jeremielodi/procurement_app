@@ -29,6 +29,8 @@ app.use(
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
         // Allows the browser to load blob URLs inside iframes
         "frame-src": ["'self'", "blob:"], 
+        // Aperçu local des images avant upload (logo fournisseur)
+        "img-src": ["'self'", "data:", "blob:"],
         // Optional: Add to worker-src if you are also using web workers
         "worker-src": ["'self'", "blob:"], 
       },

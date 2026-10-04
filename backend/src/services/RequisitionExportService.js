@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const ExcelJS = require('exceljs');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
+const { getBranding } = require('../utils/enterpriseBranding');
 
 class RequisitionExportService {
   constructor() {
@@ -95,7 +96,7 @@ class RequisitionExportService {
   /**
    * Générer le template HTML pour l'export PDF
    */
-  generateHTML(requisitions, title = 'Liste des réquisitions') {
+  generateHTML(requisitions, title = 'Liste des réquisitions', brand = null) {
     // Validation
     if (!Array.isArray(requisitions)) {
       throw new Error('requisitions must be an array');
@@ -290,7 +291,7 @@ class RequisitionExportService {
           {{/if}}
 
           <div class="footer">
-            <p>Document généré automatiquement par Procurement System</p>
+            <p>{{brand.name}} — document généré automatiquement par {{brand.appName}}</p>
             <p>Page <span class="font-bold"></span> / <span class="font-bold"></span></p>
           </div>
         </body>
@@ -307,6 +308,7 @@ class RequisitionExportService {
 
     // Données pour le template
     const data = {
+      brand,
       title,
       requisitions,
       totalRequisitions: requisitions.length,
@@ -341,7 +343,7 @@ class RequisitionExportService {
       const page = await browser.newPage();
 
       // Générer le HTML
-      const html = this.generateHTML(requisitions, title);
+      const html = this.generateHTML(requisitions, title, await getBranding());
 
       // Charger le HTML
       await page.setContent(html, {
@@ -359,7 +361,7 @@ class RequisitionExportService {
           right: '20px'
         },
         displayHeaderFooter: true,
-        headerTemplate: '<div style="font-size: 10px; color: #6B7280; padding-left: 20px; padding-top: 10px;">Procurement System</div>',
+        headerTemplate: '<div style="font-size: 10px; color: #6B7280; padding-left: 20px; padding-top: 10px;">procureApp</div>',
         footerTemplate: '<div style="font-size: 10px; color: #6B7280; padding-right: 20px; padding-bottom: 10px; text-align: right;">Page <span class="pageNumber"></span> / <span class="totalPages"></span></div>'
       });
 
@@ -518,7 +520,7 @@ class RequisitionExportService {
         </head>
         <body>
           <div class="header">
-            <img src='${process.env.FRONTEND_URL}/images/logo_wwf1.png' height='30'/>
+            {{#if brand.logo}}<img src='{{brand.logo}}' height='30'/>{{/if}}
             <div class="title">Réquisition {{requisition.requisition_number}}</div>
             <div class="subtitle">Généré le {{formatDate generatedAt}} à {{formatTime generatedAt}}</div>
           </div>
@@ -620,7 +622,7 @@ class RequisitionExportService {
           {{/if}}
 
           <div class="footer">
-            <p>Document généré automatiquement par Procurement System</p>
+            <p>{{brand.name}} — document généré automatiquement par {{brand.appName}}</p>
           </div>
         </body>
       </html>
@@ -630,6 +632,7 @@ class RequisitionExportService {
     
     const data = {
       requisition: safeRequisition,
+      brand: await getBranding(requisition.enterprise_id),
       generatedAt: new Date()
     };
 
@@ -707,7 +710,7 @@ class RequisitionExportService {
 
     const enterpriseCurrency = await getEnterpriseCurrencyCode();
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Procurement System';
+    workbook.creator = 'procureApp';
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet('Réquisitions', {

@@ -1,5 +1,6 @@
 // backend/src/models/UserModel.js
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 
@@ -77,6 +78,9 @@ class UserModel {
     `;
     const params = [];
     let paramCount = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    sql += tenant.filter('u.enterprise_id', params);
+    paramCount = params.length + 1;
     
     if (filters.search) {
       sql += ` AND (u.username ILIKE $${paramCount} OR u.email ILIKE $${paramCount} OR u.first_name ILIKE $${paramCount} OR u.last_name ILIKE $${paramCount})`;
@@ -120,6 +124,9 @@ class UserModel {
     let sql = `SELECT COUNT(*) as count FROM users WHERE 1=1`;
     const params = [];
     let paramCount = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    sql += tenant.filter('enterprise_id', params);
+    paramCount = params.length + 1;
     
     if (filters.search) {
       sql += ` AND (username ILIKE $${paramCount} OR email ILIKE $${paramCount})`;

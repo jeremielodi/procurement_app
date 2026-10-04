@@ -49,7 +49,7 @@ COMMENT ON COLUMN currency.symbol IS 'Currency symbol';
 COMMENT ON COLUMN currency.note IS 'Additional notes about the currency';
 
 COMMENT ON TABLE enterprise IS 'Enterprise/organization information';
-COMMENT ON COLUMN enterprise.uuid IS 'Unique enterprise identifier (UUID)';
+COMMENT ON COLUMN enterprise.id IS 'Unique enterprise identifier (UUID)';
 COMMENT ON COLUMN enterprise.name IS 'Enterprise name (unique)';
 COMMENT ON COLUMN enterprise.currency_id IS 'Reference to currency table';
 COMMENT ON COLUMN enterprise.created_at IS 'Creation timestamp (auto-set)';
@@ -105,9 +105,7 @@ CREATE TABLE IF NOT EXISTS permissions (
     resource VARCHAR(50),
     action VARCHAR(50)
 );
-VIEW_PROJECTS
-VIEW_BUDGET
-VIEW_DEPARTMENTS
+
 -- ============================================
 -- 5. TABLE PROFILE_PERMISSIONS (liaison profil - permission)
 -- ============================================
@@ -185,9 +183,10 @@ CREATE TABLE IF NOT EXISTS requisitions (
     project_id UUID NOT NULL,
     budget_line VARCHAR(100),
     estimated_amount DECIMAL(19,4),
-    currency_id SMALLINT NOT NULL,  -- tinyint unsigned -> SMALLINT
-    CONSTRAINT requisitions_currency_fkey FOREIGN KEY (currency_id) 
+    currency_id SMALLINT NOT NULL,
 
+    CONSTRAINT requisitions_currency_fkey FOREIGN KEY (currency_id) 
+        REFERENCES currency (id) ON UPDATE CASCADE,
     requester_id UUID REFERENCES users(id),
     status VARCHAR(50) DEFAULT 'DRAFT',
     priority VARCHAR(20),
@@ -268,8 +267,9 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     total_amount DECIMAL(19,4),
     
     currency_id SMALLINT NOT NULL,  -- tinyint unsigned -> SMALLINT
-    CONSTRAINT requisitions_currency_fkey FOREIGN KEY (currency_id) 
 
+    CONSTRAINT requisitions_currency_fkey FOREIGN KEY (currency_id) 
+        REFERENCES currency (id) ON UPDATE CASCADE,
     status VARCHAR(50) DEFAULT 'DRAFT',
     approved_by UUID REFERENCES users(id),
     approved_at TIMESTAMP,

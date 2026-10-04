@@ -1,5 +1,6 @@
 // backend/src/models/DepartmentModel.js
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 const { v4: uuidv4 } = require('uuid');
 
 class DepartmentModel {
@@ -32,6 +33,9 @@ class DepartmentModel {
     `;
     const params = [];
     let paramCount = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    sql += tenant.filter('d.enterprise_id', params);
+    paramCount = params.length + 1;
     
     if (filters.is_active !== undefined && filters.is_active !== 'all') {
       sql += ` AND d.is_active = $${paramCount}`;
@@ -80,12 +84,13 @@ class DepartmentModel {
   }
 
   async getUsers() {
+    const p = [];
     return await db.select(`
       SELECT id, username, email, first_name, last_name, department
       FROM users 
-      WHERE is_active = true 
+      WHERE is_active = true ${tenant.filter('enterprise_id', p)}
       ORDER BY first_name, last_name
-    `);
+    `, p);
   }
 }
 

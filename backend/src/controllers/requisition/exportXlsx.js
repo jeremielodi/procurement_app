@@ -10,7 +10,7 @@ const { getEnterpriseCurrencyCode } = require('../../utils/enterpriseCurrency');
     const enterpriseCurrency = await getEnterpriseCurrencyCode();
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Procurement System';
+    workbook.creator = 'procureApp';
     workbook.created = new Date();
     
     const worksheet = workbook.addWorksheet('Réquisitions', {

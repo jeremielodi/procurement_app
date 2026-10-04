@@ -1,5 +1,6 @@
 // backend/src/models/InvoiceModel.js
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 
 const PRICE_TOLERANCE = 0.02; // 2%
@@ -119,12 +120,13 @@ class InvoiceModel {
   async findById(id, { withMatch = true } = {}) {
     const inv = await db.one(
       `SELECT inv.*,
-              po.po_number, po.total_amount AS po_amount, po.currency AS po_currency,
+              po.po_number, po.total_amount AS po_amount, pc.format_key AS po_currency,
               grn.grn_number, grn.status AS grn_status,
               s.name AS supplier_name, s.email AS supplier_email,
               u.first_name || ' ' || u.last_name AS created_by_name
        FROM invoices inv
        LEFT JOIN purchase_orders    po  ON inv.po_id = po.id
+       LEFT JOIN currency           pc  ON po.currency_id = pc.id
        LEFT JOIN goods_receipt_notes grn ON inv.grn_id = grn.id
        LEFT JOIN suppliers           s   ON inv.supplier_id = s.id
        LEFT JOIN users               u   ON inv.created_by = u.id
@@ -142,6 +144,9 @@ class InvoiceModel {
     const params = [];
     let where = 'WHERE 1=1';
     let i = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    where += tenant.filter('inv.enterprise_id', params);
+    i = params.length + 1;
 
     if (poId)        { where += ` AND inv.po_id = $${i++}`;          params.push(poId); }
     if (grnId)       { where += ` AND inv.grn_id = $${i++}`;         params.push(grnId); }
@@ -169,6 +174,9 @@ class InvoiceModel {
     const params = [];
     let where = 'WHERE 1=1';
     let i = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    where += tenant.filter('enterprise_id', params);
+    i = params.length + 1;
     if (status)      { where += ` AND status = $${i++}`;       params.push(status); }
     if (matchStatus) { where += ` AND match_status = $${i++}`; params.push(matchStatus); }
     const result = await db.one(`SELECT COUNT(*) AS count FROM invoices ${where}`, params);

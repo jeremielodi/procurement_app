@@ -1,5 +1,6 @@
 // backend/src/models/GoodsReceiptModel.js
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 
 class GoodsReceiptModel {
 
@@ -82,6 +83,9 @@ class GoodsReceiptModel {
     const params = [];
     let where = 'WHERE 1=1';
     let i = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    where += tenant.filter('grn.enterprise_id', params);
+    i = params.length + 1;
 
     if (poId)   { where += ` AND grn.po_id = $${i++}`;    params.push(poId); }
     if (status) { where += ` AND grn.status = $${i++}`;   params.push(status); }
@@ -109,6 +113,9 @@ class GoodsReceiptModel {
     const params = [];
     let where = 'WHERE 1=1';
     let i = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    where += tenant.filter('enterprise_id', params);
+    i = params.length + 1;
     if (poId)   { where += ` AND po_id = $${i++}`;  params.push(poId); }
     if (status) { where += ` AND status = $${i++}`; params.push(status); }
     const result = await db.one(

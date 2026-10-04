@@ -1,5 +1,6 @@
 // backend/src/models/BudgetModel.js
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 const { v4: uuidv4 } = require('uuid');
 
 class BudgetModel {
@@ -46,6 +47,9 @@ class BudgetModel {
     `;
     const params = [];
     let paramCount = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    sql += tenant.filter('b.enterprise_id', params);
+    paramCount = params.length + 1;
 
     if (filters.entityCode) {
       sql += ` AND b.entity_code ILIKE $${paramCount}`;
@@ -158,6 +162,8 @@ class BudgetModel {
     return { success: true, id };
   }
   async getSummary() {
+    const p = [];
+    const scope = tenant.filter('enterprise_id', p);
     const summary = await db.one(`
       SELECT 
         COUNT(*) as total_budgets,
@@ -165,8 +171,8 @@ class BudgetModel {
         COALESCE(SUM(utilized_amount), 0) as total_utilized,
         COALESCE(SUM(allocated_amount - utilized_amount), 0) as total_remaining
       FROM budget_allocations
-      WHERE is_active = true
-    `);
+      WHERE is_active = true${scope}
+    `, p);
 
     const byFundingSource = await db.select(`
       SELECT 
@@ -175,10 +181,10 @@ class BudgetModel {
         COALESCE(SUM(allocated_amount), 0) as allocated,
         COALESCE(SUM(utilized_amount), 0) as utilized
       FROM budget_allocations
-      WHERE is_active = true AND funding_source IS NOT NULL
+      WHERE is_active = true AND funding_source IS NOT NULL${scope}
       GROUP BY funding_source
       ORDER BY allocated DESC
-    `);
+    `, p);
 
     return { summary, byFundingSource };
   }
@@ -198,6 +204,9 @@ class BudgetModel {
     `;
     const params = [];
     let paramCount = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    sql += tenant.filter('b.enterprise_id', params);
+    paramCount = params.length + 1;
 
     if (filters.search) {
       sql += ` AND (

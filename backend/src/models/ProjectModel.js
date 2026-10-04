@@ -1,5 +1,6 @@
 // backend/src/models/ProjectModel.js
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 const { v4: uuidv4 } = require('uuid');
 
 class ProjectModel {
@@ -35,6 +36,9 @@ class ProjectModel {
     `;
     const params = [];
     let paramCount = 1;
+    // Multi-entreprise : uniquement les données de l'entreprise courante
+    sql += tenant.filter('p.enterprise_id', params);
+    paramCount = params.length + 1;
     
  
     if (filters.status && filters.status !== 'all') {
@@ -131,12 +135,13 @@ class ProjectModel {
   }
 
   async getAvailableUsers() {
+    const p = [];
     return await db.select(`
       SELECT id, username, email, first_name, last_name, department
       FROM users 
-      WHERE is_active = true 
+      WHERE is_active = true ${tenant.filter('enterprise_id', p)}
       ORDER BY first_name, last_name
-    `);
+    `, p);
   }
 }
 

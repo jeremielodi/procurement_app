@@ -1,275 +1,109 @@
 // backend/src/models/EnterpriseModel.js
+// Entreprises clientes de procureApp (multi-entreprise)
 const db = require('../config/database');
-const { v4: uuidv4 } = require('uuid');
+
+const SELECT = `
+  SELECT
+    e.id, e.name, e.code, e.currency_id,
+    c.name AS currency_name, c.symbol AS currency_symbol, c.format_key AS currency_code, c.intel_number_format,
+    e.logo_path, e.address, e.phone, e.email, e.website, e.tax_id, e.registration_number,
+    e.is_active, e.created_at, e.last_update,
+    (SELECT COUNT(*) FROM users u WHERE u.enterprise_id = e.id)::int AS user_count,
+    (SELECT COUNT(*) FROM requisitions r WHERE r.enterprise_id = e.id)::int AS requisition_count
+  FROM enterprise e
+  LEFT JOIN currency c ON e.currency_id = c.id`;
+
+// Champs modifiables : clé API → colonne
+const FIELDS = {
+  name: 'name', code: 'code', currencyId: 'currency_id', address: 'address', phone: 'phone',
+  email: 'email', website: 'website', taxId: 'tax_id', registrationNumber: 'registration_number',
+};
 
 class EnterpriseModel {
-  /**
-   * Récupérer toutes les entreprises
-   */
   async findAll(filters = {}) {
-    let sql = `
-      SELECT 
-        e.id,
-        e.name,
-        e.code,
-        e.currency_id,
-        c.name as currency_name,
-        c.symbol as currency_symbol,
-        c.format_key as currency_code,
-        e.created_at,
-        e.last_update
-      FROM enterprise e
-      LEFT JOIN currency c ON e.currency_id = c.id
-      WHERE 1=1
-    `;
     const params = [];
-    let paramCount = 1;
-    
+    let sql = `${SELECT} WHERE 1=1`;
     if (filters.search) {
-      sql += ` AND (e.name ILIKE $${paramCount} OR e.code ILIKE $${paramCount})`;
       params.push(`%${filters.search}%`);
-      paramCount++;
+      sql += ` AND (e.name ILIKE $${params.length} OR e.code ILIKE $${params.length})`;
     }
-    
-    if (filters.currency_id) {
-      sql += ` AND e.currency_id = $${paramCount}`;
-      params.push(filters.currency_id);
-      paramCount++;
-    }
-    
-    sql += ` ORDER BY e.name ASC`;
-    
-    if (filters.limit) {
-      sql += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-      params.push(filters.limit, filters.offset || 0);
-    }
-    
-    return await db.select(sql, params);
+    sql += ' ORDER BY e.name ASC';
+    return db.select(sql, params);
   }
 
-  /**
-   * Récupérer une entreprise par son ID
-   */
-  async findById(id) {
-    const enterprise = await db.one(`
-      SELECT 
-        e.id,
-        e.name,
-        e.code,
-        e.currency_id,
-        c.name as currency_name,
-        c.symbol as currency_symbol,
-        c.format_key as currency_code,
-        c.intel_number_format,
-        e.created_at,
-        e.last_update
-      FROM enterprise e
-      LEFT JOIN currency c ON e.currency_id = c.id
-      WHERE e.id = $1
-    `, [id]);
-    
-    if (!enterprise) return null;
-    
-    return enterprise;
-  }
-
-  /**
-   * Récupérer une entreprise par son code
-   */
-  async findByCode(code) {
-    const enterprise = await db.one(`
-      SELECT 
-        e.id,
-        e.name,
-        e.code,
-        e.currency_id,
-        c.name as currency_name,
-        c.symbol as currency_symbol,
-        c.format_key as currency_code,
-        e.created_at,
-        e.last_update
-      FROM enterprise e
-      LEFT JOIN currency c ON e.currency_id = c.id
-      WHERE e.code = $1
-    `, [code]);
-    
-    if (!enterprise) return null;
-    
-    return enterprise;
-  }
-
-  /**
-   * Récupérer une entreprise par son nom
-   */
-  async findByName(name) {
-    const enterprise = await db.one(`
-      SELECT 
-        e.id,
-        e.name,
-        e.code,
-        e.currency_id,
-        c.name as currency_name,
-        c.symbol as currency_symbol,
-        c.format_key as currency_code,
-        e.created_at,
-        e.last_update
-      FROM enterprise e
-      LEFT JOIN currency c ON e.currency_id = c.id
-      WHERE e.name = $1
-    `, [name]);
-    
-    if (!enterprise) return null;
-    
-    return enterprise;
-  }
-
-  /**
-   * Créer une nouvelle entreprise
-   */
-  async create(data) {
-    const { name, code, currencyId } = data;
-    const uuid = uuidv4();
-    
-    // Vérifier que la devise existe
-    const currency = await db.one('SELECT id FROM currency WHERE id = $1', [currencyId]);
-    if (!currency) {
-      throw new Error('Devise non trouvée');
-    }
-    
-    await db.insert('enterprise', {
-      id: uuid,
-      name,
-      code,
-      currency_id: currencyId,
-      created_at: new Date(),
-      last_update: new Date()
-    });
-    
-    return {
-      success: true,
-      id: uuid,
-      name,
-      code,
-      currency_id: currencyId
-    };
-  }
-
-  /**
-   * Mettre à jour une entreprise
-   */
-  async update(id, data) {
-    const { name, code, currencyId } = data;
-    
-    // Vérifier que l'entreprise existe
-    const existing = await this.findById(id);
-    if (!existing) {
-      throw new Error('Entreprise non trouvée');
-    }
-    
-    // Vérifier que la devise existe si elle est fournie
-    if (currencyId) {
-      const currency = await db.one('SELECT id FROM currency WHERE id = $1', [currencyId]);
-      if (!currency) {
-        throw new Error('Devise non trouvée');
-      }
-    }
-    
-    const updateData = {
-      name: name || existing.name,
-      code: code || existing.code,
-      currency_id: currencyId || existing.currency_id,
-      last_update: new Date()
-    };
-    
-    await db.update('enterprise', updateData, 'id', uuid);
-    
-    return { success: true };
-  }
-
-  /**
-   * Supprimer une entreprise
-   */
-  async delete(id) {
-    // Vérifier que l'entreprise existe
-    const existing = await this.findById(id);
-    if (!existing) {
-      throw new Error('Entreprise non trouvée');
-    }
-    
-    // Vérifier si l'entreprise est utilisée (par exemple dans des réquisitions)
-    // À adapter selon votre schéma
-    const usageCount = await db.one(`
-      SELECT COUNT(*) as count FROM requisitions WHERE enterprise_id = $1
-    `, [id]);
-    
-    if (parseInt(usageCount.count) > 0) {
-      throw new Error('Cette entreprise est utilisée et ne peut pas être supprimée');
-    }
-    
-    await db.delete('enterprise', 'id', id);
-    
-    return { success: true };
-  }
-
-  /**
-   * Récupérer l'entreprise par défaut (la première)
-   */
-  async getDefault() {
-    const enterprise = await db.one(`
-      SELECT
-        e.id,
-        e.name,
-        e.code,
-        e.currency_id,
-        c.name as currency_name,
-        c.symbol as currency_symbol,
-        c.format_key as currency_code,
-        c.intel_number_format,
-        c.min_monentary_unit,
-        e.created_at,
-        e.last_update
-      FROM enterprise e
-      LEFT JOIN currency c ON e.currency_id = c.id
-      ORDER BY e.created_at ASC
-      LIMIT 1
-    `);
-    
-    return enterprise || null;
-  }
-
-  /**
-   * Compter les entreprises
-   */
   async count(filters = {}) {
-    let sql = `SELECT COUNT(*) as count FROM enterprise WHERE 1=1`;
     const params = [];
-    let paramCount = 1;
-    
+    let sql = 'SELECT COUNT(*)::int AS count FROM enterprise e WHERE 1=1';
     if (filters.search) {
-      sql += ` AND (name ILIKE $${paramCount} OR code ILIKE $${paramCount})`;
       params.push(`%${filters.search}%`);
-      paramCount++;
+      sql += ` AND (e.name ILIKE $${params.length} OR e.code ILIKE $${params.length})`;
     }
-    
-    if (filters.currency_id) {
-      sql += ` AND currency_id = $${paramCount}`;
-      params.push(filters.currency_id);
-      paramCount++;
-    }
-    
-    const result = await db.one(sql, params);
-    return parseInt(result.count);
+    return (await db.one(sql, params)).count;
   }
 
-  /**
-   * Mettre à jour le timestamp de dernière modification
-   */
-  async updateTimestamp(id) {
-    await db.update('enterprise', {
-      last_update: new Date()
-    }, 'id', id);
-    
-    return { success: true };
+  async findById(id) {
+    return db.one(`${SELECT} WHERE e.id = $1`, [id]);
+  }
+
+  async findByCode(code) {
+    return db.one(`${SELECT} WHERE LOWER(e.code) = LOWER($1)`, [code]);
+  }
+
+  async findByName(name) {
+    return db.one(`${SELECT} WHERE LOWER(e.name) = LOWER($1)`, [name]);
+  }
+
+  async create(data) {
+    const row = await db.one(
+      `INSERT INTO enterprise (name, code, currency_id, address, phone, email, website, tax_id, registration_number, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE) RETURNING id`,
+      [data.name.trim(), data.code.trim().toUpperCase(), data.currencyId, data.address || null, data.phone || null,
+       data.email || null, data.website || null, data.taxId || null, data.registrationNumber || null]
+    );
+    return this.findById(row.id);
+  }
+
+  async update(id, data) {
+    const fields = {};
+    for (const [key, col] of Object.entries(FIELDS)) {
+      if (data[key] === undefined) continue;
+      let v = data[key] === '' ? null : data[key];
+      if (key === 'code' && v) v = String(v).trim().toUpperCase();
+      if (key === 'name' && v) v = String(v).trim();
+      fields[col] = v;
+    }
+    if (Object.keys(fields).length === 0) return this.findById(id);
+    fields.last_update = new Date();
+    await db.update('enterprise', fields, 'id', id);
+    return this.findById(id);
+  }
+
+  async setLogo(id, logoPath) {
+    await db.update('enterprise', { logo_path: logoPath, last_update: new Date() }, 'id', id);
+  }
+
+  async setActive(id, isActive) {
+    await db.update('enterprise', { is_active: !!isActive, last_update: new Date() }, 'id', id);
+    return this.findById(id);
+  }
+
+  /** Suppression uniquement d'une entreprise vide (aucun utilisateur ni réquisition) */
+  async delete(id) {
+    const e = await this.findById(id);
+    if (!e) return { deleted: false, reason: 'NOT_FOUND' };
+    if (e.user_count > 0 || e.requisition_count > 0) return { deleted: false, reason: 'NOT_EMPTY' };
+    await db.delete('enterprise', 'id', id);
+    return { deleted: true };
+  }
+
+  /** Administrateurs (profil prof_admin) d'une entreprise */
+  async getAdmins(id) {
+    return db.select(
+      `SELECT u.id, u.email, u.first_name, u.last_name, u.is_active, u.last_login
+       FROM users u JOIN user_profiles up ON up.user_id = u.id AND up.profile_id = 'prof_admin'
+       WHERE u.enterprise_id = $1 ORDER BY u.created_at`,
+      [id]
+    );
   }
 }
 

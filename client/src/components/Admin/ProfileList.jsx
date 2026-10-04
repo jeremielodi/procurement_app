@@ -7,12 +7,17 @@ import Modal from '../Common/Modal';
 import ProfileForm from './ProfileForm';
 import ProfilePermissions from './ProfilePermissions';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../hooks/useAuth';
+import { isSuperAdminUser } from '../../utils/accountType';
 
 export default function ProfileList() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
+  // Rôles partagés par toutes les entreprises : seul le super admin procureApp les modifie
+  const { user } = useAuth();
+  const canEdit = isSuperAdminUser(user);
 
   const { data, isLoading } = useQuery({
     queryKey: ['profiles'],
@@ -37,9 +42,9 @@ export default function ProfileList() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Profils BPMN</h1>
-          <p className="text-gray-500 mt-1">Gérer les profils et leurs permissions</p>
+          <p className="text-gray-500 mt-1">{canEdit ? 'Gérer les profils et leurs permissions (communs à toutes les entreprises)' : 'Profils disponibles pour vos utilisateurs et leurs permissions'}</p>
         </div>
-        <button
+        {canEdit && <button
           onClick={() => {
             setSelectedProfile(null);
             setShowModal(true);
@@ -48,8 +53,14 @@ export default function ProfileList() {
         >
           <Plus size={18} />
           Nouveau profil
-        </button>
+        </button>}
       </div>
+
+      {!canEdit && (
+        <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800" data-testid="profiles-readonly">
+          Les profils et leurs permissions sont communs à toutes les entreprises de procureApp et gérés par l'administrateur de la plateforme. Attribuez-les à vos utilisateurs depuis la page Utilisateurs.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
@@ -64,12 +75,12 @@ export default function ProfileList() {
           <div className="col-span-full text-center py-12 bg-white rounded-lg shadow">
             <Shield size={48} className="mx-auto text-gray-400 mb-3" />
             <p className="text-gray-500">Aucun profil</p>
-            <button
+            {canEdit && <button
               onClick={() => setShowModal(true)}
               className="mt-2 text-blue-600 hover:text-blue-800"
             >
               Créer le premier profil
-            </button>
+            </button>}
           </div>
         ) : (
           profiles.map((profile) => (
@@ -87,11 +98,11 @@ export default function ProfileList() {
                         setShowPermissionsModal(true);
                       }}
                       className="text-purple-600 hover:text-purple-800"
-                      title="Gérer les permissions"
+                      title={canEdit ? 'Gérer les permissions' : 'Voir les permissions'}
                     >
                       <Key size={18} />
                     </button>
-                    <button
+                    {canEdit && <button
                       onClick={() => {
                         setSelectedProfile(profile);
                         setShowModal(true);
@@ -100,8 +111,8 @@ export default function ProfileList() {
                       title="Modifier"
                     >
                       <Edit size={18} />
-                    </button>
-                    {profile.id !== 'prof_admin' && (
+                    </button>}
+                    {canEdit && profile.id !== 'prof_admin' && (
                       <button
                         onClick={() => {
                           if (confirm(`Supprimer le profil "${profile.name}" ?`)) {
@@ -160,6 +171,7 @@ export default function ProfileList() {
       >
         <ProfilePermissions
           profile={selectedProfile}
+          readOnly={!canEdit}
           onClose={() => setShowPermissionsModal(false)}
         />
       </Modal>

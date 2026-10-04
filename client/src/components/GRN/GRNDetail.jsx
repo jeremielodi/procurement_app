@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Package, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle, AlertTriangle, Clock, Eye, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { grnService } from '../../services/grnService';
+import BlobPdfViewer from '../Common/BlobPdfViewer';
 
 const STATUS_CONFIG = {
   COMPLETE: { label: 'Complète', icon: CheckCircle, cls: 'text-green-600 bg-green-50 border-green-200' },
@@ -16,6 +17,7 @@ export default function GRNDetail() {
   const navigate = useNavigate();
   const [grn, setGrn] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showPdf, setShowPdf] = useState(false);
 
   useEffect(() => {
     grnService.getById(id)
@@ -38,9 +40,35 @@ export default function GRNDetail() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 text-sm">
-        <ArrowLeft size={16} /> Retour
-      </button>
+      <div className="flex items-center justify-between mb-6">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <ArrowLeft size={16} /> Retour
+        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowPdf(true)}
+            className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+            <Eye size={16} /> Aperçu PDF
+          </button>
+          <button onClick={() => grnService.downloadPDF(grn.id, grn.grn_number).catch(() => {})}
+            className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+            <Download size={16} /> Télécharger
+          </button>
+        </div>
+      </div>
+
+      {showPdf && (
+        <BlobPdfViewer
+          title={grn.grn_number}
+          fileName={`${grn.grn_number}.pdf`}
+          fetchPdf={() => grnService.getPDF(grn.id)}
+          onClose={() => setShowPdf(false)}
+          infoBar={<>
+            <span><span className="text-gray-500">Commande :</span> <b>{grn.po_number || '—'}</b></span>
+            <span><span className="text-gray-500">Fournisseur :</span> <b>{grn.supplier_name || '—'}</b></span>
+            <span><span className="text-gray-500">Réception :</span> <b>{grn.receipt_date ? new Date(grn.receipt_date).toLocaleDateString('fr-FR') : '—'}</b></span>
+          </>}
+        />
+      )}
 
       {/* Header */}
       <div className={`flex items-center justify-between p-4 rounded-xl border mb-6 ${status.cls}`}>

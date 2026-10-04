@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Save, X, Search, AlertCircle, CheckCircle, Paperclip } from 'lucide-react'
+import { Plus, Trash2, Save, X, Search, AlertCircle, CheckCircle, Paperclip, Upload, Tag } from 'lucide-react'
 import toast from 'react-hot-toast'
 import requisitionService from '../../services/requisitionService'
 import { projectService } from '../../services/projectService'
@@ -12,6 +12,7 @@ import { departmentService } from '../../services/departmentService'
 import { uploadService } from '../../services/uploadService'
 import { enterpriseService } from '../../services/enterpriseService'
 import BudgetLineSearchModal from './BudgetLineSearchModal'
+import ImportItemsModal from './ImportItemsModal'
 import FileUpload from '../Common/FileUpload'
 
 const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
@@ -32,6 +33,10 @@ export default function RequisitionForm() {
   const [selectedEnterprise, setSelectedEnterprise] = useState(null)
   const [attachments, setAttachments] = useState([])
   const [createdRequisitionId, setCreatedRequisitionId] = useState(null)
+  const [showImportModal, setShowImportModal] = useState(false)
+  // Sélection multiple d'articles (field.id) pour assigner une ligne budgétaire en une fois
+  const [selectedIds, setSelectedIds] = useState([])
+  const [bulkAssign, setBulkAssign] = useState(false)
 
   const {
     register,
@@ -58,7 +63,7 @@ export default function RequisitionForm() {
     },
   })
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace: replaceItems } = useFieldArray({
     control,
     name: 'items',
   })
@@ -210,13 +215,52 @@ export default function RequisitionForm() {
   }
 
   const handleBudgetLineSelect = (budgetLine) => {
-    if (selectedItemIndex !== null) {
+    if (bulkAssign) {
+      const indexes = fields.map((f, i) => (selectedIds.includes(f.id) ? i : -1)).filter(i => i >= 0)
+      indexes.forEach(i => {
+        setValue(`items.${i}.budgetLineId`, budgetLine.id)
+        setValue(`items.${i}.budgetLineInfo`, budgetLine)
+      })
+      toast.success(`Ligne budgétaire ${budgetLine.entity_code} assignée à ${indexes.length} article(s)`)
+      setBulkAssign(false)
+      setSelectedIds([])
+    } else if (selectedItemIndex !== null) {
       setValue(`items.${selectedItemIndex}.budgetLineId`, budgetLine.id)
       setValue(`items.${selectedItemIndex}.budgetLineInfo`, budgetLine)
       toast.success(`Ligne budgétaire ${budgetLine.entity_code} assignée à l'article ${selectedItemIndex + 1}`)
     }
     setShowBudgetModal(false)
     setSelectedItemIndex(null)
+  }
+
+  const openBulkBudgetSearch = () => {
+    if (!projectId) {
+      toast.error('Veuillez d’abord sélectionner un projet')
+      return
+    }
+    setBulkAssign(true)
+    setShowBudgetModal(true)
+  }
+
+  const toggleSelected = (id) =>
+    setSelectedIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
+
+  const allSelected = fields.length > 0 && selectedIds.length === fields.length
+  const toggleSelectAll = () => setSelectedIds(allSelected ? [] : fields.map(f => f.id))
+
+  const removeSelected = () => {
+    const indexes = fields.map((f, i) => (selectedIds.includes(f.id) ? i : -1)).filter(i => i >= 0)
+    remove(indexes)
+    setSelectedIds([])
+  }
+
+  // Articles importés : remplacent la ligne vide par défaut, ou tout si demandé
+  const handleImport = (imported, { replace }) => {
+    const current = getValues('items') || []
+    const onlyEmptyRow = current.length === 1 && !current[0].description?.trim()
+    if (replace || current.length === 0 || onlyEmptyRow) replaceItems(imported)
+    else append(imported)
+    setSelectedIds([])
   }
 
   const openBudgetSearch = (index) => {
@@ -409,6 +453,15 @@ export default function RequisitionForm() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Articles</h2>
+            <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center px-3 py-1 text-sm text-green-700 border border-green-600 rounded-lg hover:bg-green-50"
+            >
+              <Upload size={16} className="mr-1" />
+              Importer (Excel / CSV)
+            </button>
             <button
               type="button"
               onClick={() => append({
@@ -424,12 +477,34 @@ export default function RequisitionForm() {
               <Plus size={16} className="mr-1" />
               Ajouter un article
             </button>
+            </div>
           </div>
+
+          {selectedIds.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-3 p-2 rounded-lg bg-blue-50 border border-blue-200 text-sm" data-testid="bulk-bar">
+              <span className="font-medium text-blue-800">{selectedIds.length} article(s) sélectionné(s)</span>
+              <button type="button" onClick={openBulkBudgetSearch}
+                className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <Tag size={14} /> Assigner une ligne budgétaire
+              </button>
+              <button type="button" onClick={removeSelected}
+                className="flex items-center gap-1 px-3 py-1 text-red-600 border border-red-300 rounded-lg hover:bg-red-50">
+                <Trash2 size={14} /> Supprimer
+              </button>
+              <button type="button" onClick={() => setSelectedIds([])} className="text-gray-600 hover:underline">
+                Désélectionner
+              </button>
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-2 py-2 text-center w-8">
+                    <input type="checkbox" checked={allSelected} onChange={toggleSelectAll}
+                      aria-label="Sélectionner tous les articles" className="rounded border-gray-300 text-blue-600" />
+                  </th>
                   <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 w-10">Status</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Description</th>
                   <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 w-20">Quantité</th>
@@ -452,7 +527,11 @@ export default function RequisitionForm() {
                   )
 
                   return (
-                    <tr key={field.id} className={!status.isComplete ? 'bg-red-50' : ''}>
+                    <tr key={field.id} className={selectedIds.includes(field.id) ? 'bg-blue-50' : !status.isComplete ? 'bg-red-50' : ''}>
+                      <td className="px-2 py-2 text-center">
+                        <input type="checkbox" checked={selectedIds.includes(field.id)} onChange={() => toggleSelected(field.id)}
+                          aria-label={`Sélectionner l'article ${index + 1}`} className="rounded border-gray-300 text-blue-600" />
+                      </td>
                       <td className="px-2 py-2 text-center" title={status.tooltip}>
                         {status.icon}
                       </td>
@@ -536,7 +615,7 @@ export default function RequisitionForm() {
                       <td className="px-2 py-2 text-center">
                         <button
                           type="button"
-                          onClick={() => remove(index)}
+                          onClick={() => { remove(index); setSelectedIds(prev => prev.filter(x => x !== field.id)) }}
                           className="p-1 text-red-500 hover:bg-red-50 rounded"
                         >
                           <Trash2 size={16} />
@@ -548,7 +627,7 @@ export default function RequisitionForm() {
               </tbody>
               <tfoot className="bg-gray-50">
                 <tr>
-                  <td colSpan="5" className="px-3 py-3 text-right font-semibold">
+                  <td colSpan="6" className="px-3 py-3 text-right font-semibold">
                     Total général:
                   </td>
                   <td className="px-2 py-3 text-right font-bold text-blue-600">
@@ -607,9 +686,17 @@ export default function RequisitionForm() {
         onClose={() => {
           setShowBudgetModal(false)
           setSelectedItemIndex(null)
+          setBulkAssign(false)
         }}
         onSelect={handleBudgetLineSelect}
         projectId={projectId}
+      />
+
+      <ImportItemsModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImport}
+        formatCurrency={formatCurrency}
       />
     </div>
   )

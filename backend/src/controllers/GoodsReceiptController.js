@@ -2,6 +2,7 @@
 const grnModel       = require('../models/GoodsReceiptModel');
 const camundaService = require('../services/CamundaService');
 const db             = require('../config/database');
+const grnExportService = require('../services/GoodsReceiptExportService');
 
 class GoodsReceiptController {
 
@@ -104,6 +105,20 @@ class GoodsReceiptController {
       res.json({ success: true, data: grn });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Erreur récupération GRN', error: error.message });
+    }
+  }
+
+  /** GET /api/goods-receipts/:id/pdf — aperçu / téléchargement du bon de réception */
+  async generatePDF(req, res) {
+    try {
+      const result = await grnExportService.generatePDF(req.params.id);
+      if (!result) return res.status(404).json({ success: false, message: 'GRN introuvable' });
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', `inline; filename="${String(result.grn.grn_number).replace(/[^\w.-]+/g, '_')}.pdf"`);
+      res.end(result.pdf);
+    } catch (error) {
+      console.error('Error generating GRN PDF:', error);
+      res.status(500).json({ success: false, message: 'Erreur lors de la génération du PDF', error: error.message });
     }
   }
 

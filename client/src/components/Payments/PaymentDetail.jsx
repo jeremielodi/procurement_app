@@ -181,10 +181,10 @@ export default function PaymentDetail() {
               </button>
             </div>
           ) : pdfUrl ? (
-            <embed
+            <iframe
               key={pdfUrl}
               src={pdfUrl}
-              type="application/pdf"
+              title="Paiement PDF"
               className="w-full bg-white"
               style={{ minHeight: '70vh' }}
             />

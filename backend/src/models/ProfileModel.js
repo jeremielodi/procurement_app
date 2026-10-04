@@ -1,5 +1,6 @@
 // backend/src/models/ProfileModel.js
 const db = require('../config/database');
+const tenant = require('../utils/tenant');
 const { v4: uuidv4 } = require('uuid');
 
 class ProfileModel {
@@ -18,16 +19,22 @@ class ProfileModel {
   }
 
   async findAll() {
+    // Admin d'entreprise : utilisateurs comptés dans SON entreprise, profils plateforme masqués.
+    // Super admin (pas d'entreprise) : comptes globaux, tous les profils.
+    const enterpriseId = tenant.enterpriseId();
+    const params = enterpriseId ? [enterpriseId] : [];
     const profiles = await db.select(`
       SELECT p.*, 
-             COUNT(DISTINCT up.user_id) as user_count,
+             COUNT(DISTINCT u.id) as user_count,
              COUNT(DISTINCT pp.permission_id) as permission_count
       FROM profiles p
       LEFT JOIN user_profiles up ON p.id = up.profile_id
+      LEFT JOIN users u ON u.id = up.user_id ${enterpriseId ? 'AND u.enterprise_id = $1' : ''}
       LEFT JOIN profile_permissions pp ON p.id = pp.profile_id
+      ${enterpriseId ? "WHERE p.id NOT IN ('prof_superadmin', 'prof_supplier')" : ''}
       GROUP BY p.id
       ORDER BY p.name
-    `);
+    `, params);
     
     return profiles;
   }

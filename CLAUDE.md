@@ -1,8 +1,23 @@
-# WWF Procure — Contexte Projet
+# procureApp — Contexte Projet
 
 ## Ce que fait l'application
-Système de gestion des achats électroniques (e-procurement) couvrant le cycle complet :
-Réquisition → Approbation → PO → GRN → SAN → Facture → Paiement
+**procureApp** (anciennement « WWF Procure ») : plateforme **multi-entreprise** de gestion des achats électroniques (e-procurement) couvrant le cycle complet :
+Réquisition → Approbation → PO → GRN → SAN → Facture → Paiement.
+WWF n'est plus la marque de l'application : c'est la première entreprise cliente (données existantes rattachées).
+
+## Multi-entreprise — règles à respecter pour TOUT nouveau code
+- Migration : `database/07_multi_enterprise.sql` (idempotente). `enterprise_id` sur departments, projects, budget_allocations, requisitions, purchase_orders, goods_receipt_notes, service_acceptance_notes, invoices, payments, tenders, supplier_evaluations. Infos entreprise : logo_path, adresse, téléphone, email, site, NIF, RCCM, is_active
+- **Insertion** : le trigger `fill_enterprise_id()` remplit `enterprise_id` depuis le parent (projet → réquisition → PO → GRN/SAN/facture → paiement ; département/projet ← `created_by`). Une nouvelle table métier doit avoir la colonne + le trigger
+- **Contexte** : `middleware/tenant.js` → `tenantContext` (type de compte + `AsyncLocalStorage` via `utils/tenant.js`) puis `tenantGuard` (tout id dans l'URL / la query / le body doit appartenir à l'entreprise, sinon 404 — tables dans `PATH_RESOURCES` / `KEY_TABLES`). Nouvelle route `/xxx/:id` sur une table métier → l'ajouter à `PATH_RESOURCES`
+- **Listes** : toute requête de liste/compte doit appeler `tenant.filter('<alias>.enterprise_id', params)` (hors requête HTTP — workers — le filtre est vide). Requêtes d'agrégation : `scopedDb` (`utils/tenantSql.js`, utilisé par `DashboardModel`) qui restreint chaque FROM/JOIN
+- **GoFlow** : tâches filtrées par l'entreprise de la réquisition (`TaskController`), `CamundaService.completeTask` refuse une tâche d'une autre entreprise pendant une requête HTTP, notifications de tâches limitées à l'entreprise (`task_listner.getUsersByProfile`)
+- **Comptes** :
+  - Super admin plateforme (`prof_superadmin`, aucune entreprise ; `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD`, créé par `initDatabase.createPlatformSuperAdmin`) : entreprises (`/admin/enterprises`), rôles et permissions — aucun accès aux achats
+  - Admin d'entreprise (`prof_admin`) : utilisateurs/projets/budgets de SON entreprise, « Mon entreprise » (`PUT /enterprises/current`) ; rôles en lecture seule ; ne peut pas attribuer `prof_superadmin` / `prof_supplier`
+  - Fournisseurs : partagés (aucune entreprise), voient les AO de toutes les entreprises actives avec le nom de l'acheteur
+- Codes département/projet et n° d'appel d'offres uniques **par entreprise** ; numéros REQ/PO/GRN/… restent uniques sur la plateforme
+- Branding : `utils/enterpriseBranding.getBranding(enterpriseId)` (nom + logo data URI) dans les PDF ; front : `EnterpriseContext` (`useEnterprise`, `enterpriseLogoUrl`), logo plateforme `client/public/images/procureapp-logo.svg`
+- Tests : `tests/api/multi-enterprise.spec.js`
 
 ## Stack technique
 - **Frontend** : React 18 + Vite + Tailwind CSS + Recharts/ECharts
@@ -59,6 +74,7 @@ Le fichier `backend/src/services/CamundaService.js` montre comment appeler GoFlo
 - Invoices (Factures) : table, model, controller, routes, UI, 3-way matching (PO + GRN + Facture)
 - Payments (Paiements) : table, model, controller, routes, UI, PDF
 - **TaskList → redirect vers formulaires dédiés** (GRN/SAN/Facture/Paiement via GoFlow)
+- **Portail fournisseur & appels d'offres** (2026-10-04) — voir section dédiée ci-dessous
 
 ### ⚠️ Manquant — à implémenter
 | Module | DB | Model | Controller | Routes | Frontend | Worker |
@@ -89,7 +105,7 @@ Process ID : `ProcurementProcess`
 | `Activity_DetermineType` | Determine Procurement Type | `procurement` | Modale TaskList |
 | `Activity_DirectPurchase` | Direct Purchase | `procurement` | Modale TaskList |
 | `Activity_RequestQuotations` | Request Multiple Quotations | `procurement` | Modale TaskList |
-| `Activity_RFPProcess` | Call for Tenders / RFP | `procurement` | Modale TaskList |
+| `Activity_RFPProcess` | Call for Tenders / RFP | `procurement` | **→ `/tenders/new?taskId=&requisitionId=`** (complétée à l'attribution) |
 | `Activity_SoleSource` | Sole Source Justification | `procurement` | Modale TaskList |
 | `Activity_CreatePO` | Create Purchase Order | `procurement` | Modale TaskList |
 | `Activity_POApproval` | Approve Purchase Order | `management` | Modale TaskList |
@@ -123,6 +139,41 @@ const FORM_TASKS = {
 Chaque formulaire lit `taskId` depuis `useSearchParams()` et le passe au backend via le service.
 Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherche via `process_instance_id` de la réquisition liée.
 
+## Réquisitions — import & avancement
+
+- Import d'articles : `POST /requisitions/import-items` (multipart `.xlsx`/`.csv`, ≤ 2 Mo, ≤ 500 lignes) → aperçu `{ items, errors }` sans stockage (`controllers/requisition/importItems.js`). Colonnes : Description, Quantité, Fréquence, Prix unitaire — **pas de ligne budgétaire** (assignée ensuite dans le formulaire). Le modèle est généré côté navigateur dans `ImportItemsModal` (CSV `;` + BOM UTF-8, ouvrable dans Excel)
+- Sélection multiple d'articles dans `RequisitionForm` → assignation d'une ligne budgétaire / suppression en une fois
+- Colonne « Avancement » de la liste : `progress_status` calculé en SQL (`PROGRESS_STATUS_SQL` dans `RequisitionModel`) — Brouillon / En cours / Terminé (tous les PO non rejetés ont une facture `PAID`) / Rejeté / Annulé ; filtre `?progress=`
+
+## Suivi du workflow (historique lisible)
+
+- `GET /requisitions/:id/timeline` → `RequisitionTimelineService` : `steps` (12 étapes du cycle complet : création → paiement, statut done/current/pending/failed/skipped + liens vers PO/GRN/SAN/facture/paiement/AO) et `events` (une ligne par action réelle, en français : décision, auteur, commentaire, délai de traitement, tâches en attente)
+- Traductions côté backend : `src/utils/workflowLabels.js` (tâches, rôles, méthodes d'achat, messages des workers ; mêmes libellés que `client/src/utils/taskLabels.js`). Les événements techniques (TASK_CREATED/CLAIMED, NOTIFICATION_SENT, doublons CLASSIFIED_*) sont fusionnés ou masqués
+- Frontend : `RequisitionTimeline` (onglet « Suivi du workflow » de la fiche) et `WorkflowTrackerModal` (bouton « Voir le workflow » de la fiche + icône dans la colonne Actions de la liste)
+
+## Accès au budget
+
+- Module Budget (menu, `/budget`, `GET /budget/summary`, `GET /budget/:id`, édition) : `MANAGE_BUDGET` = Finance + admin uniquement. Résumé budgétaire du dashboard (`getChartData(..., { includeBudget })`) et onglet « Budget » : idem
+- `VIEW_BUDGET` sert seulement au choix d'une ligne budgétaire par projet dans le formulaire de réquisition : `GET /budget` exige `?projectId=` sans `MANAGE_BUDGET`
+- Le profil Achats (`prof_procurement`) n'a plus aucun droit budget (`database/06_budget_access.sql`)
+
+## Portail fournisseur & appels d'offres
+
+- Migration : `database/05_supplier_portal.sql` (idempotente) — colonnes `suppliers.user_id/logo_path/contact_name/self_registered`, tables `tenders`, `tender_submissions`, `tender_submission_items`, permissions `MANAGE_TENDERS` (procurement, admin) et `SUPPLIER_PORTAL` (profil `prof_supplier`)
+- Inscription publique : `POST /api/auth/register-supplier` (multipart, logo PNG/JPG/WEBP ≤ 2 Mo stocké dans `UPLOAD_DIR/supplier-logos/`), logo servi par `GET /api/public/suppliers/:id/logo`
+- Un AO est lié à **une** réquisition (un seul AO non annulé par réquisition) ; les items à chiffrer = `requisition_items`. Le **numéro d'AO est saisi** par le procurement (unique, insensible à la casse)
+- Statut calculé (`effective_status`) : `UPCOMING` / `OPEN` / `CLOSED` selon `start_date`/`end_date` (TIMESTAMPTZ), sinon `AWARDED` / `CANCELLED`
+- Publication → notification in-app + email à tous les fournisseurs inscrits actifs
+- Fournisseur : soumet/modifie tant que `OPEN`, délai ≤ `max_delivery_days`, ne voit jamais les offres concurrentes ; PDF de son offre (logo, entreprise, zone cachet/signature) via `TenderSubmissionPdfService` (helpers `tsub_`)
+- **Offres scellées** : tant que l'AO est `OPEN`/`UPCOMING`, `GET /tenders/:id` ne renvoie que le nom du soumissionnaire et la date (pas de prix, `sealed: true`) et l'export Excel répond 400. Après clôture avec des offres, l'AO ne peut plus être prolongé
+- Comptes fournisseurs actifs dès l'inscription (pas de validation procurement) ; dates affichées en `APP_TIMEZONE` (défaut `Africa/Kinshasa`)
+- Procurement : `TenderController` — comparatif Excel (`TenderExportService` : croisé items × fournisseurs, détail plat, fournisseurs), clôture anticipée, attribution après clôture → complète `Activity_RFPProcess` avec `offers` = offre retenue (repris par `analyze_offers`) + `allOffers`
+- **Isolation des comptes fournisseurs** : middleware `restrictSupplierAccounts` (après `authenticate`) — un compte n'ayant que `prof_supplier` n'accède qu'à `/auth/profile`, `/supplier-portal/*` et à ses propres notifications (403 sinon). Côté client, `ProtectedRoute` redirige tout le reste vers `/supplier/dashboard` ; pas d'appel `/enterprises/default`, ni recherche globale
+- Tableau de bord fournisseur : `GET /supplier-portal/dashboard` (AO ouverts/à venir, offres, marchés remportés, résultats, profil incomplet)
+- Frontend : `Tenders/` (TenderList/Form/Detail), `SupplierPortal/` (SupplierDashboard, SupplierTenderList/Detail, SupplierProfile), `Auth/SupplierRegister` ; un fournisseur arrive sur `/supplier/dashboard` à la connexion
+- CSP (`server.js`) : `img-src` autorise `blob:` (aperçu du logo avant upload) ; le PDF fournisseur s'affiche dans une `<iframe>` (`frame-src blob:`), `object-src 'none'` bloquant `<embed>`
+- Tests : `tests/api/tenders.spec.js`
+
 ## Génération PDF
 
 ### Pattern commun (Puppeteer + Handlebars)
@@ -130,7 +181,7 @@ Tous les PDFs suivent le même pattern :
 1. Template HTML avec expressions Handlebars compilées à l'exécution (pas de fichiers `.hbs`)
 2. `puppeteer.launch(getBrowserOptions())` → `page.setContent(html)` → `page.pdf({ format: 'A4' })`
 3. Réponse : `res.set('Content-Type', 'application/pdf')` + `res.end(pdfBuffer)`
-4. Frontend : `api.get(url, { responseType: 'blob' })` → `URL.createObjectURL(blob)` → `<embed key={blobUrl}>`
+4. Frontend : `api.get(url, { responseType: 'blob' })` → `URL.createObjectURL(blob)` → **`<iframe key={blobUrl}>`** (jamais `<embed>` : la CSP helmet `object-src 'none'` le bloque en production). Composant générique : `Common/BlobPdfViewer.jsx`
 
 ### Services PDF existants
 | Module | Fichier service | Entrée |
@@ -139,6 +190,8 @@ Tous les PDFs suivent le même pattern :
 | Réquisition (détail) | `RequisitionExportService.generateRequisitionDetailPDF()` | réquisition unique |
 | Purchase Order | `PurchaseOrderExportService.js` | objet PO avec items + approvals |
 | Paiement | inline dans `PaymentController.generatePDF()` | objet paiement |
+| GRN (bon de réception) | `GoodsReceiptExportService.js` (helpers `grn_`) — `GET /goods-receipts/:id/pdf` | id du GRN |
+| Offre fournisseur (AO) | `TenderSubmissionPdfService.js` | AO + fournisseur + soumission + items |
 
 ### PurchaseOrderExportService — helpers Handlebars
 Tous préfixés `po_` pour éviter les conflits avec les helpers de `RequisitionExportService` :
@@ -167,12 +220,13 @@ Tous préfixés `po_` pour éviter les conflits avec les helpers de `Requisition
 | Profile DB | candidateGroup BPMN | Rôle |
 |------------|--------------------|----|
 | `prof_manager` | `manager` | Approbation N1 (< 25 000) |
-| `prof_finance` | `finance` | Approbation N2 (25k–100k) + Factures |
+| `prof_finance` | `finance` | Approbation N2 (25k–100k) + Factures + **seul profil avec le module Budget** (`MANAGE_BUDGET`) |
 | `prof_dg` | `dg` | Approbation N3 (≥ 100 000) |
 | `prof_management` | `management` | Approbation PO |
 | `prof_procurement` | `procurement` | Création PO, méthode d'achat |
 | `prof_logistic` | `logistic` | Réception marchandises (GRN) |
 | `prof_requester` | `requester` | Création réquisition, SAN |
+| `prof_supplier` | — | Fournisseur externe : portail AO uniquement |
 
 ## Conventions de code
 - Backend : CommonJS (require/module.exports), classes pour les models

@@ -1,60 +1,57 @@
-// src/services/enterpriseService.js
+// src/services/enterpriseService.js — entreprises clientes de procureApp
 import api from './api';
 
+// Formulaire (avec logo optionnel) → multipart
+function toFormData(data, logo) {
+  const fd = new FormData();
+  Object.entries(data).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) fd.append(k, v);
+  });
+  if (logo) fd.append('logo', logo);
+  return fd;
+}
+const multipart = { headers: { 'Content-Type': 'multipart/form-data' } };
+
 export const enterpriseService = {
-  /**
-   * Récupérer toutes les entreprises
-   */
+  // Super admin : toutes les entreprises ; utilisateur : la sienne (tableau d'un élément)
   getAll: async (params = {}) => {
     const response = await api.get('/enterprises', { params });
     return response.data;
   },
-
-  /**
-   * Récupérer une entreprise par UUID
-   */
-  getById: async (uuid) => {
-    const response = await api.get(`/enterprises/${uuid}`);
+  getById: async (id) => {
+    const response = await api.get(`/enterprises/${id}`);
     return response.data;
   },
-
-  /**
-   * Récupérer une entreprise par code
-   */
-  getByCode: async (code) => {
-    const response = await api.get(`/enterprises/code/${code}`);
+  // Entreprise de l'utilisateur connecté
+  getCurrent: async () => {
+    const response = await api.get('/enterprises/current');
     return response.data;
   },
-
-  /**
-   * Récupérer l'entreprise par défaut
-   */
-  getDefault: async () => {
-    const response = await api.get('/enterprises/default');
+  updateCurrent: async (data, logo) => {
+    const response = await api.put('/enterprises/current', toFormData(data, logo), multipart);
     return response.data;
   },
-
-  /**
-   * Créer une entreprise
-   */
-  create: async (data) => {
-    const response = await api.post('/enterprises', data);
+  // --- Super admin ---
+  create: async (data, logo) => {
+    const response = await api.post('/enterprises', toFormData(data, logo), multipart);
     return response.data;
   },
-
-  /**
-   * Mettre à jour une entreprise
-   */
-  update: async (uuid, data) => {
-    const response = await api.put(`/enterprises/${uuid}`, data);
+  update: async (id, data, logo) => {
+    const response = await api.put(`/enterprises/${id}`, toFormData(data, logo), multipart);
     return response.data;
   },
-
-  /**
-   * Supprimer une entreprise
-   */
-  delete: async (uuid) => {
-    const response = await api.delete(`/enterprises/${uuid}`);
+  setActive: async (id, isActive) => {
+    const response = await api.patch(`/enterprises/${id}/active`, { isActive });
     return response.data;
-  }
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/enterprises/${id}`);
+    return response.data;
+  },
+  addAdmin: async (id, admin) => {
+    const response = await api.post(`/enterprises/${id}/admins`, admin);
+    return response.data;
+  },
 };
+
+export default enterpriseService;

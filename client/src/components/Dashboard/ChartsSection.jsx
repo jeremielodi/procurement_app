@@ -37,8 +37,9 @@ export default function ChartsSection({ chartData, period }) {
         { id: 'status', label: 'Statuts', icon: PieChart, description: 'Distribution des statuts' },
         { id: 'methods', label: 'Méthodes', icon: PieChart, description: 'Méthodes d\'achat' },
         { id: 'supplier', label: 'Fournisseurs', icon: BarChart3, description: 'Top fournisseurs' },
-        { id: 'budget', label: 'Budget', icon: BarChart3, description: 'Allocation budgétaire' }
-    ], []);
+        // Onglet budget seulement si le backend l'a fourni (profil Finance)
+        ...(chartData?.budgetSummary ? [{ id: 'budget', label: 'Budget', icon: BarChart3, description: 'Allocation budgétaire' }] : [])
+    ], [chartData?.budgetSummary]);
 
     // Couleurs ECharts
     const colors = useMemo(() => ({

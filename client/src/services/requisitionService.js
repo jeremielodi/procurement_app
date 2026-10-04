@@ -73,6 +73,22 @@ class RequisitionService {
     const response = await api.delete(`/requisitions/${id}`)
     return response.data
   }
+  // Suivi lisible du workflow (étapes + historique)
+  async getTimeline(id) {
+    const response = await api.get(`/requisitions/${id}/timeline`)
+    return response.data
+  }
+
+  // Import d'articles depuis Excel/CSV → aperçu { items, errors }
+  async importItems(file) {
+    const fd = new FormData()
+    fd.append('file', file)
+    const response = await api.post('/requisitions/import-items', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data
+  }
+
   // Ajouter l'historique du workflow
   async addWorkflowHistory(data) {
     const response = await api.post('/requisitions/history', data)

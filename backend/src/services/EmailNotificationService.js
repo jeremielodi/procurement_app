@@ -1,37 +1,41 @@
 const nodemailer = require('nodemailer');
 
-// 1. Configure the transporter
+// 1. Configure the transporter (SMTP_HOST est un nom d'hôte, pas un "service" nodemailer)
+const smtpPort = parseInt(process.env.SMTP_PORT, 10) || 587;
 const transporter = nodemailer.createTransport({
-  service: process.env.SMTP_HOST,
+  host: process.env.SMTP_HOST,
+  port: smtpPort,
+  secure: smtpPort === 465,
   auth: {
-    user: process.env.SMTP_USER, // Replace with your Gmail address
-    pass: process.env.SMTP_PASS    // Replace with your 16-digit Google App Password
+    user: process.env.SMTP_USER,
+    // Les mots de passe d'application Google sont affichés avec des espaces
+    pass: (process.env.SMTP_PASS || '').replace(/\s/g, '')
   }
 });
 
 class EmailNotificationService {
- sendEmail(receiverAddress, subject, htmlContent) {
- try {
-   // 2. Define the email options
-  const mailOptions = {
-    from: process.env.SMTP_FROM,     // Sender address
-    to: receiverAddress, // Receiver address
-    subject: subject, // Subject line
-    html: htmlContent,
-  };
+  /**
+   * Envoie un email. Ne lève jamais d'exception : retourne { success, error? }
+   */
+  async sendEmail(receiverAddress, subject, htmlContent) {
+    try {
+      // 2. Define the email options
+      const mailOptions = {
+        from: process.env.SMTP_FROM,
+        to: receiverAddress,
+        subject,
+        html: htmlContent,
+      };
 
-  // 3. Send the email
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.log('Error occurred:', error.message);
-    } else {
-      console.log('Email sent successfully:', info.response);
+      // 3. Send the email
+      const info = await transporter.sendMail(mailOptions);
+      console.log('Email sent successfully to %s: %s', receiverAddress, info.response);
+      return { success: true };
+    } catch (error) {
+      console.log('EmailNotification : Error occurred (%s): %s', receiverAddress, error.message);
+      return { success: false, error: error.message };
     }
-  });
- } catch (error) {
-   console.log('EmailNotification : Error occurred:', error.message);
- }
-}
+  }
 }
 
 module.exports = new EmailNotificationService();

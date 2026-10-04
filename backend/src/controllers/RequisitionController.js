@@ -836,7 +836,8 @@ async exportRequisitionPDF(req, res) {
       });
     }
 
-    const pdfBuffer = await requisitionExportService.generateRequisitionDetailPDF(requisition);
+    // Langue du document : ?lang=fr (défaut) ou ?lang=en
+    const pdfBuffer = await requisitionExportService.generateRequisitionDetailPDF(requisition, { lang: req.query.lang });
 
     res.set({
       'Content-Type': 'application/pdf',

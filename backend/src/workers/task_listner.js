@@ -9,25 +9,8 @@ const UserModel = require('../models/UserModel');
 const notificationService = require('../services/NotificationService');
 const EmailNotificationService = require('../services/EmailNotificationService');
 
-// Libellés français des tâches (même table que client/src/utils/taskLabels.js)
-const TASK_LABELS = {
-  Activity_ValidationN1_Manager: 'Approbation hiérarchique N1 (Manager)',
-  Activity_ValidationN2_Finance: 'Approbation hiérarchique N2 (Finance)',
-  Activity_ValidationN3_DG:      'Approbation hiérarchique N3 (Direction Générale)',
-  Activity_BudgetAdjustment:     'Ajustement budgétaire',
-  Activity_DetermineType:        'Déterminer la méthode d\'achat',
-  Activity_DirectPurchase:       'Achat direct',
-  Activity_RequestQuotations:    'Demande de devis multiples',
-  Activity_RFPProcess:           'Appel d\'offres (RFP)',
-  Activity_SoleSource:           'Justification source unique',
-  Activity_CreatePO:             'Créer le bon de commande',
-  Activity_POApproval:           'Approbation du bon de commande',
-  Activity_SupplierConfirmation: 'Confirmation de commande fournisseur',
-  Activity_GoodsReceipt:         'Bon de réception (GRN)',
-  Activity_ServiceAcceptance:    'Acceptation de service (SAN)',
-  Activity_EnterInvoice:         'Saisie de la facture fournisseur',
-  Activity_ProcessPayment:       'Traitement du paiement',
-};
+// Libellés français et rôles (candidateGroups) des tâches : module partagé
+const { TASK_LABELS, TASK_CANDIDATE_GROUPS } = require('../utils/workflowLabels');
 
 // URL de l'application (servie par le backend) utilisée dans les liens des emails
 const APP_URL = (process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`).replace(/\/$/, '');
@@ -175,6 +158,25 @@ async function notifyCandidateGroup(candidateGroup, taskId, taskName, processIns
 /**
  * Email aux utilisateurs actifs ayant le profil du candidateGroup ET membres du projet de la réquisition
  */
+const escapeHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/** Utilisateurs actifs ayant le profil du groupe, membres du projet de la réquisition, de la même entreprise */
+async function getTaskEmailRecipients(candidateGroup, requisitionId) {
+  return db.select(
+    `SELECT DISTINCT u.email, u.first_name
+     FROM users u
+     JOIN user_profiles up ON up.user_id = u.id
+     JOIN project_members pm ON pm.user_id = u.id
+     JOIN requisitions r ON r.project_id = pm.project_id
+     WHERE r.id = $1
+       AND up.profile_id IN ($2, $3)
+       AND u.is_active = true
+       AND u.enterprise_id = r.enterprise_id
+       AND u.email IS NOT NULL`,
+    [requisitionId, candidateGroup, `prof_${candidateGroup}`]
+  );
+}
+
 async function emailCandidateGroup(candidateGroup, taskName, taskDefinitionKey, requisitionId) {
   try {
     const requisition = await db.one(
@@ -186,51 +188,44 @@ async function emailCandidateGroup(candidateGroup, taskName, taskDefinitionKey, 
        WHERE r.id = $1`,
       [requisitionId]
     );
-    if (!requisition) return;
+    if (!requisition) return { sent: 0, failed: 0, recipients: [] };
 
-    const recipients = await db.select(
-      `SELECT DISTINCT u.email, u.first_name
-       FROM users u
-       JOIN user_profiles up ON up.user_id = u.id
-       JOIN project_members pm ON pm.user_id = u.id
-       JOIN requisitions r ON r.project_id = pm.project_id
-       WHERE r.id = $1
-         AND up.profile_id IN ($2, $3)
-         AND u.is_active = true
-         AND u.enterprise_id = r.enterprise_id
-         AND u.email IS NOT NULL`,
-      [requisitionId, candidateGroup, `prof_${candidateGroup}`]
-    );
+    const recipients = await getTaskEmailRecipients(candidateGroup, requisitionId);
     if (recipients.length === 0) {
-      logInfo('No project member with profile %s for requisition %s, no email sent', candidateGroup, requisitionId);
-      return;
+      consoleLog.warn(`Tâche « ${TASK_LABELS[taskDefinitionKey] || taskName} » (${requisition.requisition_number}) : aucun membre du projet avec le profil ${candidateGroup} — aucun email envoyé`);
+      return { sent: 0, failed: 0, recipients: [] };
     }
 
     const label = TASK_LABELS[taskDefinitionKey] || taskName;
     const link = `${APP_URL}/requisitions/${requisitionId}/tasks`;
     const amount = Number(requisition.estimated_amount || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 });
     const subject = `[procureApp] Nouvelle tâche : ${label} — ${requisition.requisition_number}`;
+    let sent = 0;
+    let failed = 0;
 
     for (const recipient of recipients) {
       const html = `
         <div style="font-family: Arial, sans-serif; color: #1f2937; max-width: 600px;">
           <h2 style="color: #1d4ed8;">Nouvelle tâche à traiter</h2>
-          <p>Bonjour ${recipient.first_name || ''},</p>
-          <p>La tâche <strong>${label}</strong> est disponible pour votre groupe.</p>
+          <p>Bonjour ${escapeHtml(recipient.first_name)},</p>
+          <p>La tâche <strong>${escapeHtml(label)}</strong> est disponible pour votre groupe.</p>
           <table style="border-collapse: collapse; margin: 16px 0;">
-            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">Réquisition</td><td><strong>${requisition.requisition_number}</strong></td></tr>
-            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">Objet</td><td>${requisition.title || '-'}</td></tr>
-            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">Projet</td><td>${requisition.project_code || ''} ${requisition.project_name || ''}</td></tr>
+            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">Réquisition</td><td><strong>${escapeHtml(requisition.requisition_number)}</strong></td></tr>
+            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">Objet</td><td>${escapeHtml(requisition.title || '-')}</td></tr>
+            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">Projet</td><td>${escapeHtml(requisition.project_code)} ${escapeHtml(requisition.project_name)}</td></tr>
             <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">Montant</td><td>${amount} ${requisition.currency || ''}</td></tr>
           </table>
           <p><a href="${link}" style="background: #2563eb; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none;">Ouvrir la tâche</a></p>
           <p style="font-size: 12px; color: #9ca3af;">Message automatique — procureApp</p>
         </div>`;
-      await EmailNotificationService.sendEmail(recipient.email, subject, html);
+      const result = await EmailNotificationService.sendEmail(recipient.email, subject, html);
+      if (result?.success) sent++; else failed++;
     }
-    logInfo('Task email sent to %d user(s) of group %s', recipients.length, candidateGroup);
+    consoleLog.info(`📧 Tâche « ${label} » (${requisition.requisition_number}) : ${sent} email(s) envoyé(s)${failed ? `, ${failed} échec(s)` : ''} au groupe ${candidateGroup}`);
+    return { sent, failed, recipients: recipients.map(r => r.email) };
   } catch (err) {
-    logError('Failed to send task emails: %s', err.message);
+    consoleLog.error(`Envoi des emails de tâche impossible : ${err.message}`);
+    return { sent: 0, failed: 0, error: err.message };
   }
 }
 
@@ -263,7 +258,7 @@ async function logWorkflowHistory(task) {
       entity_type: 'requisition',
       entity_id: requisitionId,
       task_id: task.taskId,
-      task_definition_id: task.TaskDefinitionKey,
+      task_definition_id: task.taskDefinitionKey || task.TaskDefinitionKey,
       task_name: task.taskName,
       action: task.eventType,
       comments: task.variables ? JSON.stringify(task.variables) : null,
@@ -279,9 +274,11 @@ async function logWorkflowHistory(task) {
 async function handleTaskCreated(task) {
   logEvent('Task created: %s (ID: %s)', task.taskName, task.taskId);
 
-  const candidateGroup = task.candidateGroup;
+  // GoFlow peut envoyer la clé avec ou sans majuscule ; rôle déduit du BPMN si absent de l'événement
+  const taskDefinitionKey = task.taskDefinitionKey || task.TaskDefinitionKey;
+  const candidateGroup = task.candidateGroup || TASK_CANDIDATE_GROUPS[taskDefinitionKey];
   if (!candidateGroup) {
-    logDebug('No candidate group for task %s, skipping notification', task.taskId);
+    consoleLog.warn(`Tâche ${task.taskName} (${task.taskId}) sans groupe : aucune notification ni email`);
     return;
   }
 
@@ -291,16 +288,13 @@ async function handleTaskCreated(task) {
     return;
   }
 
-  await notifyCandidateGroup(
-    candidateGroup,
-    task.taskId,
-    task.taskName,
-    task.processInstanceId,
-    requisitionId,
-    task.taskDefinitionKey
-  );
-
-  await emailCandidateGroup(candidateGroup, task.taskName, task.taskDefinitionKey, requisitionId);
+  // Notifications in-app et emails indépendants : l'échec de l'un n'empêche pas l'autre
+  try {
+    await notifyCandidateGroup(candidateGroup, task.taskId, task.taskName, task.processInstanceId, requisitionId, taskDefinitionKey);
+  } catch (err) {
+    consoleLog.error(`Notifications de la tâche ${task.taskId} impossibles : ${err.message}`);
+  }
+  return emailCandidateGroup(candidateGroup, task.taskName, taskDefinitionKey, requisitionId);
 }
 
 async function handleTaskClaimed(task) {
@@ -373,4 +367,4 @@ process.on('SIGTERM', () => {
 
 // Exported for server.js: startTaskListener(io)
 // Do NOT call main() here — it must be called with io from server.js
-module.exports = { startTaskListener: main };
+module.exports = { startTaskListener: main, handleTaskCreated, getTaskEmailRecipients };

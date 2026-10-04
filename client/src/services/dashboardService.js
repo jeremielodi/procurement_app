@@ -53,6 +53,14 @@ export const dashboardService = {
   /**
    * Récupérer les KPI
    */
+  /** Tâches GoFlow en cours par profil (projectId optionnel) */
+  async getPendingTasks(projectId) {
+    const response = await apiClient.get('/dashboard/pending-tasks', {
+      params: projectId ? { projectId } : {}
+    });
+    return response.data;
+  },
+
   async getKPIs() {
     const response = await apiClient.get('/dashboard/kpis');
     return response.data;

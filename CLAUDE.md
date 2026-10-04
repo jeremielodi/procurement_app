@@ -174,6 +174,34 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - CSP (`server.js`) : `img-src` autorise `blob:` (aperçu du logo avant upload) ; le PDF fournisseur s'affiche dans une `<iframe>` (`frame-src blob:`), `object-src 'none'` bloquant `<embed>`
 - Tests : `tests/api/tenders.spec.js`
 
+## Stockage des fichiers (MinIO)
+
+- `services/StorageService.js` : `put / getBuffer / exists / remove / send` ; driver `STORAGE_DRIVER=minio` (docker compose) ou `local` (UPLOAD_DIR, dev sans Docker). **Tout nouveau code qui stocke un fichier passe par ce service** (jamais `fs` directement)
+- Bucket MinIO **privé et versionné** (créé au démarrage par `server.js > initStorage`, avec plusieurs tentatives) : un fichier écrasé/supprimé reste récupérable
+- Les fichiers ne sont **jamais servis en statique** : pièces jointes via `GET /api/upload/download/file/:id` (authentifié + contrôle entreprise, y compris à l'upload multipart via `attachmentEntityAllowed`), logos via `/api/public/{suppliers,enterprises}/:id/logo` ; logos embarqués dans les PDF par `utils/logoUpload.logoDataUri`
+- Clés = chemins déjà enregistrés en base (`attachments.file_path`, `suppliers.logo_path`, `enterprise.logo_path`) : `YYYY/MM/<ts>_<uuid>.<ext>`, `supplier-logos/…`, `enterprise-logos/…`
+- Docker : service `minio` (image `cgr.dev/chainguard/minio` — MinIO ne publie plus d'images communautaires sur Docker Hub/Quay), volume `wwf_minio_data`, ports liés à 127.0.0.1 (9000 API, 9001 console). Identifiants `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` dans le `.env` racine (non versionné)
+- Migration disque → MinIO : `docker exec wwf_app node scripts/migrate-uploads-to-minio.js [--dry-run]` (idempotente, vérifie toutes les références en base)
+- Tests : `tests/api/attachments.spec.js`
+
+## Emails de tâche GoFlow
+
+- `task_listner.handleTaskCreated` : à chaque TASK_CREATED, email aux utilisateurs **actifs**, ayant le **profil de la tâche** (`prof_<candidateGroup>`), **membres du projet** de la réquisition et de la **même entreprise** (`getTaskEmailRecipients`) + notification in-app
+- Rôle déduit de `TASK_CANDIDATE_GROUPS` si l'événement n'a pas de `candidateGroup` ; clé lue en `taskDefinitionKey` ou `TaskDefinitionKey` ; notifications et emails indépendants (l'échec de l'un n'empêche pas l'autre) ; bilan « 📧 … email(s) envoyé(s) » ou « aucun membre du projet avec le profil » dans les logs
+- Liens des emails : `APP_URL` (défaut `http://localhost:5000`) — à définir avec l'adresse publique
+
+## Tableau de bord — « Qui bloque ? »
+
+- `GET /dashboard/pending-tasks[?projectId=]` → `DashboardModel.getPendingTasksByProfile` : tâches GoFlow en attente (TASK_CREATED sans TASK_COMPLETED dans `workflow_history`, processus non terminé, réquisition ni annulée/rejetée/terminée), regroupées par profil via `TASK_CANDIDATE_GROUPS` (`utils/workflowLabels.js`). Fonctionne même si GoFlow est injoignable ; cloisonné par entreprise (`scopedDb`), projet contrôlé par `tenantGuard`
+- Composant `Dashboard/PendingTasksByProfile.jsx` (rafraîchi toutes les 5 min) : barres horizontales (série unique), ancienneté en texte + statut (orange ≥ 3 j, rouge « bloqué » ≥ 7 j), alerte si aucun utilisateur n'a le profil, détail dépliable (réquisition, projet, tâche, pris en charge par), filtre par projet
+
+## Traductions des documents (FR / EN)
+
+- `backend/src/i18n/index.js` : dictionnaires `fr` / `en` (statuts de réquisition y compris `CLASSIFIED_*`, avancement, priorités, libellés du PDF). `i18n.translator(lang)` → `t('status.APPROVED')` ; `i18n.locale(lang)` pour les dates/montants ; langue inconnue → `fr`
+- PDF de réquisition : `GET /requisitions/:id/export/pdf?lang=fr|en` — en-tête avec l'identité de l'entreprise (logo, nom, adresse, contact, NIF/RCCM via `getBranding`), badges « Étape » (statut) et « Avancement » (progress_status). Le viewer (`RequisitionViewer`) a un sélecteur FR/EN
+- Piège Handlebars : une clé de données portant le même nom qu'un helper enregistré (ex. `priorityLabel`) est masquée par le helper → nommer autrement
+- Nouveau document à traduire : ajouter ses libellés dans les deux dictionnaires et passer `L` (libellés) + valeurs déjà formatées au template
+
 ## Génération PDF
 
 ### Pattern commun (Puppeteer + Handlebars)

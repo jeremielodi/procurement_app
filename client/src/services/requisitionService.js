@@ -18,9 +18,11 @@ class RequisitionService {
     return response.data
   }
 
-  async generatePDF(id) {
+  // lang : 'fr' (défaut) ou 'en' — langue du document
+  async generatePDF(id, lang = 'fr') {
     try {
       const response = await api.get(`requisitions/${id}/export/pdf`, {
+        params: { lang },
         responseType: 'blob'
       });
 

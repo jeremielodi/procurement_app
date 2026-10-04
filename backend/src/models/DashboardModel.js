@@ -2,6 +2,7 @@
 const db = require('../config/database');
 // Multi-entreprise : toutes les requêtes du tableau de bord sont restreintes à l'entreprise courante
 const { scopedDb } = require('../utils/tenantSql');
+const { TASK_GROUPS, TASK_CANDIDATE_GROUPS, taskKey, taskLabel } = require('../utils/workflowLabels');
 
 class DashboardModel {
   /**
@@ -830,6 +831,120 @@ class DashboardModel {
       console.error('Error in getProjectStats:', error);
       throw error;
     }
+  }
+  /**
+   * Tâches GoFlow en cours, regroupées par profil (candidateGroup) — « qui bloque ? ».
+   * Source : workflow_history (TASK_CREATED sans TASK_COMPLETED), toujours disponible même si
+   * GoFlow est injoignable. Exclut les réquisitions terminées/annulées/rejetées et les processus
+   * arrivés à un événement de fin. Restreint à l'entreprise courante (scopedDb).
+   */
+  async getPendingTasksByProfile({ projectId } = {}) {
+    const params = projectId ? [projectId] : [];
+    const rows = await scopedDb.select(`
+      WITH created AS (
+        SELECT DISTINCT ON (wh.task_id)
+               wh.task_id, wh.task_definition_id, wh.task_name, wh.entity_id,
+               wh.process_instance_id, wh.performed_at AS created_at
+        FROM workflow_history wh
+        WHERE wh.action = 'TASK_CREATED' AND wh.task_id IS NOT NULL
+        ORDER BY wh.task_id, wh.performed_at
+      ),
+      done AS (
+        SELECT DISTINCT task_id FROM workflow_history WHERE action = 'TASK_COMPLETED' AND task_id IS NOT NULL
+      ),
+      ended AS (
+        SELECT DISTINCT process_instance_id FROM workflow_history
+        WHERE action = 'TASK_COMPLETED' AND comments LIKE '%"next_element":"Event\_%' ESCAPE '\'
+      ),
+      claimed AS (
+        SELECT DISTINCT ON (task_id) task_id, comments, performed_by
+        FROM workflow_history WHERE action = 'TASK_CLAIMED' AND task_id IS NOT NULL
+        ORDER BY task_id, performed_at DESC
+      )
+      SELECT c.task_id, c.task_definition_id, c.task_name, c.created_at,
+             r.id AS requisition_id, r.requisition_number, r.title AS requisition_title,
+             p.name AS project_name,
+             cl.comments AS claim, cl.performed_by AS claimed_by
+      FROM created c
+      JOIN requisitions r ON r.id = c.entity_id
+      LEFT JOIN projects p ON p.id = r.project_id
+      LEFT JOIN claimed cl ON cl.task_id = c.task_id
+      WHERE c.task_id NOT IN (SELECT task_id FROM done)
+        AND r.status NOT IN ('CANCELLED', 'REJECTED', 'COMPLETED')
+        AND (c.process_instance_id IS NULL OR r.process_instance_id IS NULL OR c.process_instance_id = r.process_instance_id)
+        AND (c.process_instance_id IS NULL OR c.process_instance_id NOT IN (SELECT process_instance_id FROM ended))
+        ${projectId ? 'AND r.project_id = $1' : ''}
+      ORDER BY c.created_at
+    `, params);
+
+    // Profils et utilisateurs de l'entreprise courante (scopedDb restreint « users »)
+    const [profiles, members, users] = await Promise.all([
+      db.select('SELECT id, name FROM profiles', []),
+      scopedDb.select(`SELECT up.profile_id, COUNT(DISTINCT u.id)::int AS n
+                       FROM users u JOIN user_profiles up ON up.user_id = u.id
+                       WHERE u.is_active = true GROUP BY up.profile_id`, []),
+      scopedDb.select(`SELECT id, email, TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) AS name FROM users`, []),
+    ]);
+    const profileName = new Map(profiles.map(p => [p.id, p.name]));
+    const memberCount = new Map(members.map(m => [m.profile_id, m.n]));
+    const nameById = new Map(users.map(u => [u.id, u.name || u.email]));
+    const nameByEmail = new Map(users.map(u => [String(u.email).toLowerCase(), u.name || u.email]));
+
+    const now = Date.now();
+    const groups = new Map();
+    for (const row of rows) {
+      const key = taskKey(row);
+      const group = TASK_CANDIDATE_GROUPS[key] || 'autre';
+      const profileId = group === 'autre' ? null : `prof_${group}`;
+      if (!groups.has(group)) {
+        groups.set(group, {
+          group,
+          profileId,
+          profileName: profileName.get(profileId) || TASK_GROUPS[key] || 'Autre',
+          users: profileId ? memberCount.get(profileId) || 0 : null,
+          count: 0, claimed: 0,
+          oldestSince: null,
+          tasks: [],
+          assignees: {},
+        });
+      }
+      const g = groups.get(group);
+      let assignee = null;
+      if (row.claim) {
+        try { assignee = nameByEmail.get(String(JSON.parse(row.claim).assignee || '').toLowerCase()) || JSON.parse(row.claim).assignee; } catch (_) { /* commentaire non JSON */ }
+      }
+      assignee = assignee || (row.claimed_by && nameById.get(row.claimed_by)) || null;
+      g.count++;
+      if (assignee) { g.claimed++; g.assignees[assignee] = (g.assignees[assignee] || 0) + 1; }
+      if (!g.oldestSince || new Date(row.created_at) < new Date(g.oldestSince)) g.oldestSince = row.created_at;
+      g.tasks.push({
+        taskId: row.task_id,
+        label: taskLabel(key || row.task_name),
+        requisitionId: row.requisition_id,
+        requisitionNumber: row.requisition_number,
+        requisitionTitle: row.requisition_title,
+        projectName: row.project_name,
+        since: row.created_at,
+        ageDays: Math.floor((now - new Date(row.created_at)) / 86400000),
+        assignee,
+      });
+    }
+
+    const byProfile = [...groups.values()]
+      .map(g => ({
+        ...g,
+        oldestAgeDays: g.oldestSince ? Math.floor((now - new Date(g.oldestSince)) / 86400000) : 0,
+        assignees: Object.entries(g.assignees).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+      }))
+      .sort((a, b) => b.count - a.count || b.oldestAgeDays - a.oldestAgeDays);
+
+    return {
+      total: rows.length,
+      byProfile,
+      projectId: projectId || null,
+      source: 'workflow_history',
+      generatedAt: new Date().toISOString(),
+    };
   }
 }
 

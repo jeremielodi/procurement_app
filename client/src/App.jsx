@@ -170,6 +170,14 @@ function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/suppliers/:id/edit" element={
+          <ProtectedRoute requiredPermission="MANAGE_SUPPLIERS">
+            <Layout>
+              <SupplierForm />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
         {/* ROUTES POUR LA GESTION DES UTILISATEURS */}
         <Route path="/users" element={
           <Layout>

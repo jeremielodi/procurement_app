@@ -8,6 +8,7 @@ import RecentRequisitions from './RecentRequisitions';
 import RecentActivities from './RecentActivities';
 import AlertsSection from './AlertsSection';
 import KpiCards from './KpiCards';
+import PendingTasksByProfile from './PendingTasksByProfile';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
 import ErrorBoundary from '../../components/Common/ErrorBoundary';
 
@@ -116,6 +117,9 @@ export default function Dashboard() {
         <div className="p-6 space-y-6">
           {/* KPI Cards */}
           <KpiCards kpis={dashboardData.kpis} />
+
+          {/* Qui bloque ? Tâches GoFlow en attente par profil */}
+          <PendingTasksByProfile />
 
           {/* Alertes */}
           {dashboardData.alerts && (

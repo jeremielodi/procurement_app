@@ -61,7 +61,9 @@ class PurchaseOrderController {
 
   async getAll(req, res) {
     try {
-      const { status, supplierId, requisitionId, search, fromDate, toDate, page = 1, limit = 20 } = req.query;
+      const { status, requisitionId, search, fromDate, toDate, page = 1, limit = 20 } = req.query;
+      // supplier_id accepté aussi (fiche fournisseur)
+      const supplierId = req.query.supplierId || req.query.supplier_id;
       const offset = (parseInt(page) - 1) * parseInt(limit);
 
       const purchaseOrders = await purchaseOrderModel.findAll({

@@ -25,6 +25,27 @@ services:
       timeout: 5s
       retries: 5
 
+  # Stockage des fichiers uploadés (pièces jointes, logos) — compatible S3
+  # Bucket privé et versionné, créé par l'application au démarrage.
+  # Identifiants : MINIO_ROOT_USER / MINIO_ROOT_PASSWORD dans le fichier .env à la racine.
+  # Image : MinIO ne publie plus d'images communautaires (Docker Hub / Quay) ; Chainguard la construit
+  # depuis les sources officielles et la maintient à jour (image minimale, utilisateur non-root 65532).
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: wwf_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?définir MINIO_ROOT_USER dans .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?définir MINIO_ROOT_PASSWORD dans .env}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "127.0.0.1:9000:9000"   # API S3 (scripts, développement local)
+      - "127.0.0.1:9001:9001"   # Console web d'administration
+    networks:
+      - wwf_network
+
   # Service Application Node.js
   app:
     build:
@@ -35,6 +56,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      # Image minimale sans outil de healthcheck : l'application réessaie la connexion au démarrage
+      minio:
+        condition: service_started
     env_file: ./backend/.env
     environment:
       # Database
@@ -45,7 +69,15 @@ services:
       PORT: 5000
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      # Uploads
+      # Stockage des fichiers : MinIO
+      STORAGE_DRIVER: minio
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET:-procureapp}
+      # Ancien stockage disque : conservé pour la migration (scripts/migrate-uploads-to-minio.js)
       UPLOAD_DIR: /app/uploads
     volumes:
       - uploads_data:/app/uploads
@@ -73,5 +105,7 @@ volumes:
     name: wwf_postgres_data
   uploads_data:
     name: wwf_uploads_data
+  minio_data:
+    name: wwf_minio_data
   logs_data:
     name: wwf_logs_data

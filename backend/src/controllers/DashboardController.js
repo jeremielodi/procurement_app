@@ -151,6 +151,18 @@ class DashboardController {
   /**
    * Récupérer les KPI
    */
+  /** GET /api/dashboard/pending-tasks — tâches en cours par profil (qui bloque ?) */
+  async getPendingTasksByProfile(req, res) {
+    try {
+      // ?projectId= : filtre optionnel (le projet est contrôlé par tenantGuard : même entreprise)
+      const data = await dashboardModel.getPendingTasksByProfile({ projectId: req.query.projectId || undefined });
+      res.json({ success: true, data });
+    } catch (error) {
+      console.error('Error getting pending tasks by profile:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
   async getKPIs(req, res) {
     try {
       const kpis = await dashboardModel.getKPIs();

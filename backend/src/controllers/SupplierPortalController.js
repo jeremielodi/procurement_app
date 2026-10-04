@@ -1,50 +1,14 @@
 // backend/src/controllers/SupplierPortalController.js
-const fs = require('fs');
-const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const userModel = require('../models/UserModel');
 const notificationModel = require('../models/NotificationModel');
+const { logoMiddleware, saveLogo, removeLogo, sendLogo } = require('../utils/logoUpload');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const LOGO_DIR = 'supplier-logos';
-const LOGO_TYPES = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp' };
-
-function uploadBaseDir() {
-  return process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
-}
-
-// Logo gardé en mémoire puis écrit sur disque une fois la validation passée
-const logoUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (LOGO_TYPES[file.mimetype]) return cb(null, true);
-    cb(new Error('Logo : formats acceptés PNG, JPG ou WEBP'));
-  }
-}).single('logo');
-
-function handleLogoUpload(req, res, next) {
-  logoUpload(req, res, (err) => {
-    if (err) {
-      const message = err.code === 'LIMIT_FILE_SIZE' ? 'Logo trop volumineux (2 Mo maximum)' : err.message;
-      return res.status(400).json({ success: false, message });
-    }
-    next();
-  });
-}
-
-function saveLogo(file, supplierCode) {
-  const dir = path.join(uploadBaseDir(), LOGO_DIR);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  const fileName = `${supplierCode}_${Date.now()}${LOGO_TYPES[file.mimetype]}`;
-  fs.writeFileSync(path.join(dir, fileName), file.buffer);
-  return path.posix.join(LOGO_DIR, fileName);
-}
-
 async function generateSupplierCode() {
   const year = new Date().getFullYear();
   const row = await db.one(
@@ -61,7 +25,7 @@ async function getSupplierByUser(userId) {
 
 class SupplierPortalController {
   constructor() {
-    this.handleLogoUpload = handleLogoUpload;
+    this.handleLogoUpload = logoMiddleware;
   }
 
   /**
@@ -87,7 +51,7 @@ class SupplierPortalController {
       const passwordHash = await bcrypt.hash(b.password, 10);
       const username = `${email.split('@')[0].slice(0, 40)}_${userId.slice(0, 6)}`;
       const [firstName, ...rest] = b.contactName.trim().split(/\s+/);
-      const logoPath = req.file ? saveLogo(req.file, supplierCode) : null;
+      const logoPath = req.file ? await saveLogo(req.file, LOGO_DIR, supplierCode) : null;
 
       const transaction = db.transaction();
       transaction.addInsertQuery('users', {
@@ -129,7 +93,7 @@ class SupplierPortalController {
       try {
         await transaction.execute();
       } catch (e) {
-        if (logoPath) fs.rmSync(path.join(uploadBaseDir(), logoPath), { force: true });
+        await removeLogo(logoPath);
         throw e;
       }
 
@@ -168,12 +132,7 @@ class SupplierPortalController {
   async getLogo(req, res) {
     try {
       const supplier = await db.one('SELECT logo_path FROM suppliers WHERE id = $1', [req.params.id]);
-      if (!supplier?.logo_path) return res.status(404).end();
-      const base = path.resolve(uploadBaseDir());
-      const filePath = path.resolve(base, supplier.logo_path);
-      if (!filePath.startsWith(base) || !fs.existsSync(filePath)) return res.status(404).end();
-      res.set('Cache-Control', 'public, max-age=300');
-      res.sendFile(filePath);
+      return sendLogo(res, supplier?.logo_path);
     } catch (error) {
       res.status(500).end();
     }
@@ -206,8 +165,8 @@ class SupplierPortalController {
         if (b[key] !== undefined) fields[col] = b[key] === '' ? null : b[key];
       }
       if (req.file) {
-        fields.logo_path = saveLogo(req.file, supplier.supplier_code);
-        if (supplier.logo_path) fs.rmSync(path.join(uploadBaseDir(), supplier.logo_path), { force: true });
+        fields.logo_path = await saveLogo(req.file, LOGO_DIR, supplier.supplier_code);
+        await removeLogo(supplier.logo_path);
       }
       await db.update('suppliers', fields, 'id', supplier.id);
       res.json({ success: true, data: await getSupplierByUser(req.user.id) });

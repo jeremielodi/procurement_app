@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const requisitionController = require('../controllers/RequisitionController');
-const supplierModel = require('../models/SupplierModel');
+const supplierController = require('../controllers/SupplierController');
 const notificationController = require('../controllers/NotificationController');
 const dashboardController = require('../controllers/DashboardController');
 const purchaseOrderModel = require('../models/PurchaseOrderModel');
@@ -195,45 +195,15 @@ router.get('/tasks/process/:processInstanceId',
 // ============================================
 // ROUTES DES FOURNISSEURS (protégées)
 // ============================================
-router.get('/suppliers',
-  authenticate,
-  hasPermission('VIEW_SUPPLIERS'),
-  async (req, res) => {
-    try {
-      const suppliers = req.query.all ? await supplierModel.getAll() : await supplierModel.getPrequalifiedSuppliers();
-      res.json({ success: true, data: suppliers });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  }
-);
-
-router.get('/suppliers/:id',
-  authenticate,
-  hasPermission('VIEW_SUPPLIERS'),
-  async (req, res) => {
-    try {
-      const supplier = await supplierModel.getById(req.params.id);
-      if (!supplier) return res.status(404).json({ success: false, message: 'Fournisseur introuvable' });
-      res.json({ success: true, data: supplier });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  }
-);
-
-router.post('/suppliers',
-  authenticate,
-  hasPermission('MANAGE_SUPPLIERS'),
-  async (req, res) => {
-    try {
-      const result = await supplierModel.create(req.body);
-      res.json({ success: true, data: result });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  }
-);
+const sup = supplierController;
+router.get('/suppliers', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.list.bind(sup));
+router.get('/suppliers/:id', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.getOne.bind(sup));
+router.get('/suppliers/:id/evaluations', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.getEvaluations.bind(sup));
+router.post('/suppliers', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.create.bind(sup));
+router.put('/suppliers/:id', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.update.bind(sup));
+router.delete('/suppliers/:id', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.delete.bind(sup));
+router.post('/suppliers/:id/prequalify', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.prequalify.bind(sup));
+router.post('/suppliers/:id/evaluations', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.addEvaluation.bind(sup));
 
 // ============================================
 // ROUTES DES COMMANDES D'ACHAT (protégées)
@@ -370,6 +340,9 @@ router.get('/dashboard/supplier-summary', dashboardController.getSupplierSummary
 
 // KPI
 router.get('/dashboard/kpis', dashboardController.getKPIs);
+
+// Tâches GoFlow en cours par profil (goulots d'étranglement)
+router.get('/dashboard/pending-tasks', hasPermission('VIEW_DASHBOARD'), dashboardController.getPendingTasksByProfile.bind(dashboardController));
 
 // Alertes
 router.get('/dashboard/alerts', dashboardController.getAlerts);

@@ -35,7 +35,8 @@ import {
   Briefcase,
   Users,
   MessageSquare,
-  ExternalLink
+  ExternalLink,
+  TrendingUp
 } from 'lucide-react'
 import { supplierService } from '../../services/supplierService'
 import { purchaseOrderService } from '../../services/purchaseOrderService'
@@ -126,7 +127,8 @@ export default function SupplierDetail() {
   })
 
   const calculateTotalSpent = () => {
-    return purchaseOrders.reduce((sum, po) => sum + (po.total_amount || 0), 0)
+    // total_amount arrive en texte (DECIMAL PostgreSQL) : conversion avant l'addition
+    return purchaseOrders.reduce((sum, po) => sum + (parseFloat(po.total_amount) || 0), 0)
   }
 
   const calculateAverageRating = () => {

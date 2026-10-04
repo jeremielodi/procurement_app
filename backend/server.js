@@ -9,6 +9,22 @@ const db = require('./src/config/database');
 const { startWorkers } = require('./src/workers');
 const { startTaskListener } = require('./src/workers/task_listner')
 const databaseInitializer = require('./src/utils/initDatabase');
+const storage = require('./src/services/StorageService');
+
+// MinIO peut démarrer après l'application : quelques tentatives avant d'abandonner
+async function initStorage(attempts = 10) {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await storage.init();
+      console.log(`✅ Stockage des fichiers : ${storage.driver}${storage.driver === 'minio' ? ` (bucket ${storage.bucket})` : ''}`);
+      return;
+    } catch (error) {
+      console.error(`⚠️ Stockage indisponible (tentative ${i}/${attempts}) : ${error.message}`);
+      if (i === attempts) throw error;
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+}
 const path = require('path');
 const helmet = require('helmet');
 const app = express();
@@ -50,7 +66,8 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api', routes);
 
-app.use(express.static(process.env.UPLOAD_DIR));
+// Les fichiers uploadés ne sont PAS servis en statique : uniquement via l'API (authentifiée,
+// cloisonnée par entreprise) depuis le stockage (MinIO ou disque) — voir services/StorageService.js
 app.use(express.static( path.resolve(__dirname, '../client/dist')));
 // Health check
 app.get('/health', async (req, res) => {
@@ -159,6 +176,9 @@ async function startServer() {
   try {
     // Initialiser la base de données (créer les profils, permissions, superuser)
     await databaseInitializer.init();
+
+    // Stockage des fichiers (bucket MinIO privé et versionné, ou dossier local)
+    await initStorage();
     
     // Démarrer les workers Camunda
     startWorkers();

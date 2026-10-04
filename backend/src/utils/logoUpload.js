@@ -1,14 +1,11 @@
 // backend/src/utils/logoUpload.js
-// Upload de logo (PNG/JPG/WEBP ≤ 2 Mo) : multer en mémoire, écriture sur disque après validation.
-const fs = require('fs');
+// Logos (entreprises, fournisseurs) : PNG/JPG/WEBP ≤ 2 Mo, stockés via StorageService (MinIO ou disque).
 const path = require('path');
 const multer = require('multer');
+const storage = require('../services/StorageService');
 
 const TYPES = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp' };
-
-function baseDir() {
-  return path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads'));
-}
+const MIME_BY_EXT = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
 
 /** Middleware Express : champ multipart « logo » optionnel → req.file */
 function logoMiddleware(req, res, next) {
@@ -25,28 +22,32 @@ function logoMiddleware(req, res, next) {
   });
 }
 
-/** Écrit le logo dans UPLOAD_DIR/<dir>/ et renvoie le chemin relatif */
-function saveLogo(file, dir, prefix) {
-  const target = path.join(baseDir(), dir);
-  if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true });
+/** Enregistre le logo sous <dir>/<prefix>_<horodatage>.<ext> ; renvoie la clé */
+async function saveLogo(file, dir, prefix) {
   const name = `${String(prefix).replace(/[^\w-]+/g, '_')}_${Date.now()}${TYPES[file.mimetype]}`;
-  fs.writeFileSync(path.join(target, name), file.buffer);
-  return path.posix.join(dir, name);
+  return storage.put(path.posix.join(dir, name), file.buffer, file.mimetype);
 }
 
-function removeLogo(relPath) {
-  if (!relPath) return;
-  const file = path.resolve(baseDir(), relPath);
-  if (file.startsWith(baseDir())) fs.rmSync(file, { force: true });
+async function removeLogo(key) {
+  if (key) await storage.remove(key);
 }
 
 /** Envoie le logo (route publique) ; 404 si absent */
-function sendLogo(res, relPath) {
-  if (!relPath) return res.status(404).end();
-  const file = path.resolve(baseDir(), relPath);
-  if (!file.startsWith(baseDir()) || !fs.existsSync(file)) return res.status(404).end();
-  res.set('Cache-Control', 'public, max-age=300');
-  return res.sendFile(file);
+async function sendLogo(res, key) {
+  const sent = key && await storage.send(res, key, {
+    contentType: MIME_BY_EXT[path.extname(key).toLowerCase()],
+    cacheControl: 'public, max-age=300',
+  });
+  if (!sent) res.status(404).end();
 }
 
-module.exports = { logoMiddleware, saveLogo, removeLogo, sendLogo };
+/** Logo en data URI (embarqué dans les PDF générés par Puppeteer) ; null si absent */
+async function logoDataUri(key) {
+  if (!key) return null;
+  const mime = MIME_BY_EXT[path.extname(key).toLowerCase()];
+  if (!mime) return null;
+  const buffer = await storage.getBuffer(key);
+  return buffer ? `data:${mime};base64,${buffer.toString('base64')}` : null;
+}
+
+module.exports = { logoMiddleware, saveLogo, removeLogo, sendLogo, logoDataUri };

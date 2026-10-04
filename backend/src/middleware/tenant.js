@@ -169,4 +169,12 @@ async function tenantGuard(req, res, next) {
   }
 }
 
-module.exports = { tenantContext, tenantGuard };
+/** Pièce jointe multipart : l'entité cible doit appartenir à l'entreprise (body lu après multer) */
+async function attachmentEntityAllowed(req, entityType, entityId) {
+  if (!req.enterpriseId) return false;
+  const table = ATTACHMENT_TABLES[entityType];
+  if (!table) return true; // type non rattaché à une table métier
+  return belongs(table, entityId, req.enterpriseId);
+}
+
+module.exports = { tenantContext, tenantGuard, attachmentEntityAllowed };

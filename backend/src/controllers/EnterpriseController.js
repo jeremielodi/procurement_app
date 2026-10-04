@@ -109,7 +109,7 @@ class EnterpriseController {
 
       let enterprise = await enterpriseModel.create(b);
       if (req.file) {
-        await enterpriseModel.setLogo(enterprise.id, saveLogo(req.file, LOGO_DIR, enterprise.code));
+        await enterpriseModel.setLogo(enterprise.id, await saveLogo(req.file, LOGO_DIR, enterprise.code));
         enterprise = await enterpriseModel.findById(enterprise.id);
       }
       let admin = null;
@@ -143,8 +143,8 @@ class EnterpriseController {
 
       let enterprise = await enterpriseModel.update(id, b);
       if (req.file) {
-        await enterpriseModel.setLogo(id, saveLogo(req.file, LOGO_DIR, enterprise.code || id));
-        removeLogo(existing.logo_path);
+        await enterpriseModel.setLogo(id, await saveLogo(req.file, LOGO_DIR, enterprise.code || id));
+        await removeLogo(existing.logo_path);
         enterprise = await enterpriseModel.findById(id);
       }
       res.json({ success: true, data: enterprise, message: 'Entreprise mise à jour' });
@@ -173,7 +173,7 @@ class EnterpriseController {
       if (result.reason === 'NOT_EMPTY') {
         return res.status(400).json({ success: false, message: 'Impossible : l\'entreprise a des utilisateurs ou des réquisitions. Suspendez-la plutôt.' });
       }
-      removeLogo(existing?.logo_path);
+      await removeLogo(existing?.logo_path);
       res.json({ success: true, message: 'Entreprise supprimée' });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
@@ -197,7 +197,7 @@ class EnterpriseController {
   async getLogo(req, res) {
     try {
       const e = await db.one('SELECT logo_path FROM enterprise WHERE id::text = $1', [req.params.id]);
-      return sendLogo(res, e?.logo_path);
+      return await sendLogo(res, e?.logo_path);
     } catch (error) {
       res.status(500).end();
     }

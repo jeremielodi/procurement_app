@@ -15,6 +15,11 @@ FROM node:24-alpine AS backend-builder
 
 WORKDIR /app/backend
 
+# Pas de téléchargement de Chrome par Puppeteer : l'image finale utilise le Chromium système
+# (PUPPETEER_EXECUTABLE_PATH). Évite un téléchargement long et fragile pendant le build.
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 COPY backend/package*.json ./
 RUN npm install --omit=dev
 

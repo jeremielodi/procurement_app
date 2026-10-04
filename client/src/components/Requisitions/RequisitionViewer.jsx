@@ -10,29 +10,23 @@ const RequisitionViewer = ({ requisitionId, requisition, onClose }) => {
   const [pdfUrl, setPdfUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lang, setLang] = useState('fr'); // langue du PDF
   const objectRef = useRef(null);
   const hasLoadedRef = useRef(false); // Ref pour suivre si le PDF a déjà été chargé
 
+  // (Re)génère le PDF à l'ouverture et à chaque changement de langue
   useEffect(() => {
-    // Vérifier si le PDF a déjà été chargé
-    if (!hasLoadedRef.current) {
-      hasLoadedRef.current = true;
-      loadPDF();
-    }
-    
-    return () => {
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
-      }
-    };
-  }, [requisitionId]);
+    loadPDF();
+  }, [requisitionId, lang]);
+
+  useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); }, [pdfUrl]);
 
   const loadPDF = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const pdfBlob = await requisitionService.generatePDF(requisitionId);
+      const pdfBlob = await requisitionService.generatePDF(requisitionId, lang);
       
       console.log('PDF Blob reçu:', {
         size: pdfBlob.size,
@@ -58,7 +52,7 @@ const RequisitionViewer = ({ requisitionId, requisition, onClose }) => {
 
   const handleDownload = async () => {
     try {
-      const pdfBlob = await requisitionService.generatePDF(requisitionId);
+      const pdfBlob = await requisitionService.generatePDF(requisitionId, lang);
       
       if (!pdfBlob || pdfBlob.size === 0) {
         throw new Error('Le PDF est vide');
@@ -67,7 +61,7 @@ const RequisitionViewer = ({ requisitionId, requisition, onClose }) => {
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Requisition_${requisition?.requisition_number || 'document'}.pdf`;
+      link.download = `Requisition_${requisition?.requisition_number || 'document'}_${lang.toUpperCase()}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -171,6 +165,15 @@ const RequisitionViewer = ({ requisitionId, requisition, onClose }) => {
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Langue du document */}
+            <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm" role="group" aria-label="Langue du PDF">
+              {[['fr', 'FR'], ['en', 'EN']].map(([code, label]) => (
+                <button key={code} type="button" onClick={() => setLang(code)} aria-pressed={lang === code}
+                  className={`px-3 py-1.5 ${lang === code ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
             <button
               onClick={handleDownload}
               className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
@@ -193,7 +196,7 @@ const RequisitionViewer = ({ requisitionId, requisition, onClose }) => {
           <div className="bg-blue-50 px-4 py-2 border-b border-blue-100 flex flex-wrap gap-4 text-sm">
             <div>
               <span className="text-gray-500">Statut:</span>
-              <span className="ml-1 font-medium">{requisition.status || '-'}</span>
+              <span className="ml-1 font-medium">{requisition.status ? requisitionService.getStatusOptionLabel(requisition.status) : '-'}</span>
             </div>
             <div>
               <span className="text-gray-500">Montant:</span>

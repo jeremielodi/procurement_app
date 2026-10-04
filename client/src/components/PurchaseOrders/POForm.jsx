@@ -25,7 +25,8 @@ export default function POForm() {
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    supplierService.getAll()
+    // Bons de commande : fournisseurs préqualifiés uniquement (comportement inchangé)
+    supplierService.getAll({ prequalifiedOnly: true })
       .then(r => setSuppliers(r.data || r || []))
       .catch(() => toast.error('Impossible de charger les fournisseurs'));
   }, []);

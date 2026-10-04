@@ -59,6 +59,25 @@ const TASK_GROUPS = {
   Activity_ProcessPayment:       'Finance',
 };
 
+// candidateGroups du BPMN (= profil prof_<groupe>) — utilisé pour « tâches en cours par profil »
+const TASK_CANDIDATE_GROUPS = {
+  Activity_ValidationN1_Manager: 'manager',
+  Activity_ValidationN2_Finance: 'finance',
+  Activity_ValidationN3_DG:      'dg',
+  Activity_DetermineType:        'procurement',
+  Activity_DirectPurchase:       'procurement',
+  Activity_RequestQuotations:    'procurement',
+  Activity_RFPProcess:           'procurement',
+  Activity_SoleSource:           'procurement',
+  Activity_CreatePO:             'procurement',
+  Activity_POApproval:           'management',
+  Activity_SupplierConfirmation: 'procurement',
+  Activity_GoodsReceipt:         'logistic',
+  Activity_ServiceAcceptance:    'requester',
+  Activity_EnterInvoice:         'finance',
+  Activity_ProcessPayment:       'finance',
+};
+
 const METHOD_LABELS = {
   DIRECT_PURCHASE:     'Achat direct',
   MULTIPLE_QUOTATIONS: 'Devis multiples',
@@ -89,5 +108,5 @@ function taskLabel(keyOrName) {
 }
 
 module.exports = {
-  TASK_LABELS, TASK_NAME_EN, TASK_GROUPS, METHOD_LABELS, REASON_LABELS, MATCH_LABELS, taskKey, taskLabel,
+  TASK_LABELS, TASK_NAME_EN, TASK_GROUPS, TASK_CANDIDATE_GROUPS, METHOD_LABELS, REASON_LABELS, MATCH_LABELS, taskKey, taskLabel,
 };

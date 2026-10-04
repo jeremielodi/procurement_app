@@ -1,12 +1,9 @@
 // backend/src/services/TenderSubmissionPdfService.js
 // PDF de l'offre d'un fournisseur (à imprimer, cacheter, signer et renvoyer)
-const fs = require('fs');
-const path = require('path');
 const puppeteer = require('puppeteer');
 const Handlebars = require('handlebars');
 const { getBrowserOptions } = require('../config/puppeteer');
-
-const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
+const { logoDataUri } = require('../utils/logoUpload');
 
 class TenderSubmissionPdfService {
   constructor() {
@@ -20,17 +17,6 @@ class TenderSubmissionPdfService {
       .format(parseFloat(n) || 0));
     safe('tsub_qty', (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(parseFloat(n) || 0));
     safe('tsub_index1', (i) => i + 1);
-  }
-
-  // Logo embarqué en data URI : pas de requête réseau depuis Chromium
-  logoDataUri(logoPath) {
-    if (!logoPath) return null;
-    const base = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads'));
-    const file = path.resolve(base, logoPath);
-    if (!file.startsWith(base) || !fs.existsSync(file)) return null;
-    const mime = MIME[path.extname(file).toLowerCase()];
-    if (!mime) return null;
-    return `data:${mime};base64,${fs.readFileSync(file).toString('base64')}`;
   }
 
   getTemplate() {
@@ -156,7 +142,7 @@ class TenderSubmissionPdfService {
     const html = Handlebars.compile(this.getTemplate())({
       tender, supplier, submission, lines,
       currency: tender.currency_code || '',
-      logo: this.logoDataUri(supplier.logo_path)
+      logo: await logoDataUri(supplier.logo_path) // data URI : pas de requête réseau depuis Chromium
     });
 
     const browser = await puppeteer.launch(getBrowserOptions());

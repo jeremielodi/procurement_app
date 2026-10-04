@@ -38,11 +38,20 @@ const io = socketIo(server, {
 });
 
 // Middleware
+// HTTPS uniquement si l'application est publiée en https (APP_URL). En HTTP (ex. http://domaine:5000),
+// « upgrade-insecure-requests » ferait charger JS/CSS/images en https → ERR_SSL_PROTOCOL_ERROR, page blanche.
+const HTTPS_ENABLED = /^https:/i.test(process.env.APP_URL || '');
+
 app.use(
   helmet({
+    // En-têtes qui n'ont de sens qu'en HTTPS (sinon simples avertissements du navigateur)
+    crossOriginOpenerPolicy: HTTPS_ENABLED,
+    originAgentCluster: HTTPS_ENABLED,
+    strictTransportSecurity: HTTPS_ENABLED,
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'upgrade-insecure-requests': HTTPS_ENABLED ? [] : null,
         // Allows the browser to load blob URLs inside iframes
         "frame-src": ["'self'", "blob:"], 
         // Aperçu local des images avant upload (logo fournisseur)

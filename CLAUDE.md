@@ -184,6 +184,12 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - Migration disque → MinIO : `docker exec wwf_app node scripts/migrate-uploads-to-minio.js [--dry-run]` (idempotente, vérifie toutes les références en base)
 - Tests : `tests/api/attachments.spec.js`
 
+## Déploiement HTTP / HTTPS
+
+- `server.js` : en-têtes HTTPS stricts de helmet (`upgrade-insecure-requests`, HSTS, COOP, Origin-Agent-Cluster) **seulement si `APP_URL` commence par `https://`**. En HTTP (ex. `http://domaine:5000`) ils provoquaient le chargement des JS/CSS en https → `ERR_SSL_PROTOCOL_ERROR`, page blanche
+- Client : Socket.io se connecte à `window.location.origin` (ou `VITE_WS_URL`) — jamais `localhost` en dur
+- Production recommandée : reverse proxy HTTPS (Caddy / Nginx + Let's Encrypt) devant le port 5000, puis `APP_URL=https://…`
+
 ## Emails de tâche GoFlow
 
 - `task_listner.handleTaskCreated` : à chaque TASK_CREATED, email aux utilisateurs **actifs**, ayant le **profil de la tâche** (`prof_<candidateGroup>`), **membres du projet** de la réquisition et de la **même entreprise** (`getTaskEmailRecipients`) + notification in-app

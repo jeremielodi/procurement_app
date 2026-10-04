@@ -88,7 +88,8 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!userId) return
 
-    const SOCKET_URL = import.meta.env.VITE_WS_URL || 'http://localhost:5000'
+    // Même serveur que la page (en dev, le proxy Vite redirige /socket.io vers le backend)
+    const SOCKET_URL = import.meta.env.VITE_WS_URL || window.location.origin
     
     const newSocket = io(SOCKET_URL, {
       transports: ['websocket'],

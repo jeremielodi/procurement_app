@@ -26,8 +26,9 @@ function minioClient() {
       endPoint: process.env.MINIO_ENDPOINT || 'localhost',
       port: parseInt(process.env.MINIO_PORT || '9000', 10),
       useSSL: String(process.env.MINIO_USE_SSL || 'false') === 'true',
-      accessKey: process.env.MINIO_ACCESS_KEY,
-      secretKey: process.env.MINIO_SECRET_KEY,
+      // Identifiants dédiés si fournis, sinon ceux du serveur MinIO (backend/.env, partagé avec le service minio)
+      accessKey: process.env.MINIO_ACCESS_KEY || process.env.MINIO_ROOT_USER,
+      secretKey: process.env.MINIO_SECRET_KEY || process.env.MINIO_ROOT_PASSWORD,
     });
   }
   return minio;

@@ -180,7 +180,7 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - Bucket MinIO **privé et versionné** (créé au démarrage par `server.js > initStorage`, avec plusieurs tentatives) : un fichier écrasé/supprimé reste récupérable
 - Les fichiers ne sont **jamais servis en statique** : pièces jointes via `GET /api/upload/download/file/:id` (authentifié + contrôle entreprise, y compris à l'upload multipart via `attachmentEntityAllowed`), logos via `/api/public/{suppliers,enterprises}/:id/logo` ; logos embarqués dans les PDF par `utils/logoUpload.logoDataUri`
 - Clés = chemins déjà enregistrés en base (`attachments.file_path`, `suppliers.logo_path`, `enterprise.logo_path`) : `YYYY/MM/<ts>_<uuid>.<ext>`, `supplier-logos/…`, `enterprise-logos/…`
-- Docker : service `minio` (image `cgr.dev/chainguard/minio` — MinIO ne publie plus d'images communautaires sur Docker Hub/Quay), volume `wwf_minio_data`, ports liés à 127.0.0.1 (9000 API, 9001 console). Identifiants `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` dans le `.env` racine (non versionné)
+- Docker : service `minio` (image `cgr.dev/chainguard/minio` — MinIO ne publie plus d'images communautaires sur Docker Hub/Quay), volume `wwf_minio_data`, ports liés à 127.0.0.1 (9000 API, 9001 console). Identifiants `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` / `MINIO_BUCKET` dans **`backend/.env`** (lu par le service `minio` et par l'app via `env_file`, comme PostgreSQL — pas d'interpolation `${…}` dans docker-compose)
 - Migration disque → MinIO : `docker exec wwf_app node scripts/migrate-uploads-to-minio.js [--dry-run]` (idempotente, vérifie toutes les références en base)
 - Tests : `tests/api/attachments.spec.js`
 

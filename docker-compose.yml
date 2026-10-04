@@ -27,7 +27,7 @@ services:
 
   # Stockage des fichiers uploadés (pièces jointes, logos) — compatible S3
   # Bucket privé et versionné, créé par l'application au démarrage.
-  # Identifiants : MINIO_ROOT_USER / MINIO_ROOT_PASSWORD dans le fichier .env à la racine.
+  # Identifiants : MINIO_ROOT_USER / MINIO_ROOT_PASSWORD dans backend/.env (comme PostgreSQL).
   # Image : MinIO ne publie plus d'images communautaires (Docker Hub / Quay) ; Chainguard la construit
   # depuis les sources officielles et la maintient à jour (image minimale, utilisateur non-root 65532).
   minio:
@@ -35,9 +35,7 @@ services:
     container_name: wwf_minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?définir MINIO_ROOT_USER dans .env}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?définir MINIO_ROOT_PASSWORD dans .env}
+    env_file: ./backend/.env
     volumes:
       - minio_data:/data
     ports:
@@ -74,9 +72,7 @@ services:
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
       MINIO_USE_SSL: "false"
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      MINIO_BUCKET: ${MINIO_BUCKET:-procureapp}
+      # MINIO_ROOT_USER / MINIO_ROOT_PASSWORD / MINIO_BUCKET : lus depuis backend/.env (env_file)
       # Ancien stockage disque : conservé pour la migration (scripts/migrate-uploads-to-minio.js)
       UPLOAD_DIR: /app/uploads
     volumes:

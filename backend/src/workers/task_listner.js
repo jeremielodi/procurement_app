@@ -13,7 +13,7 @@ const EmailNotificationService = require('../services/EmailNotificationService')
 const { TASK_LABELS, TASK_CANDIDATE_GROUPS } = require('../utils/workflowLabels');
 
 // URL de l'application (servie par le backend) utilisée dans les liens des emails
-const APP_URL = (process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`).replace(/\/$/, '');
+const { APP_URL } = require('../utils/appUrl');
 
 const logInfo = debug('task-listener:info');
 const logError = debug('task-listener:error');

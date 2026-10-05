@@ -8,7 +8,8 @@ const { generateComparisonWorkbook } = require('../services/TenderExportService'
 const submissionPdfService = require('../services/TenderSubmissionPdfService');
 const { getSupplierByUser } = require('./SupplierPortalController');
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const { appLink } = require('../utils/appUrl');
+
 const EDITABLE = ['OPEN', 'UPCOMING'];
 
 // Les prix restent scellés tant que les soumissions sont ouvertes (ou pas encore ouvertes)
@@ -62,7 +63,7 @@ async function notifySuppliers(io, tender, { title, intro }) {
           <tr><td><b>Clôture</b></td><td>${fmtDate(tender.end_date)}</td></tr>
           <tr><td><b>Délai de livraison max</b></td><td>${tender.max_delivery_days} jours</td></tr>
         </table>
-        <p><a href="${FRONTEND_URL}${link}">Consulter l'appel d'offres et soumettre vos prix</a></p>`;
+        <p><a href="${appLink(link)}">Consulter l'appel d'offres et soumettre vos prix</a></p>`;
       // Pas d'await : l'envoi SMTP ne doit pas bloquer la réponse
       emailService.sendEmail(r.user_email || r.supplier_email, `${title} — ${tender.tender_number}`, html);
     }

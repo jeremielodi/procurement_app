@@ -194,7 +194,7 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 
 - `task_listner.handleTaskCreated` : à chaque TASK_CREATED, email aux utilisateurs **actifs**, ayant le **profil de la tâche** (`prof_<candidateGroup>`), **membres du projet** de la réquisition et de la **même entreprise** (`getTaskEmailRecipients`) + notification in-app
 - Rôle déduit de `TASK_CANDIDATE_GROUPS` si l'événement n'a pas de `candidateGroup` ; clé lue en `taskDefinitionKey` ou `TaskDefinitionKey` ; notifications et emails indépendants (l'échec de l'un n'empêche pas l'autre) ; bilan « 📧 … email(s) envoyé(s) » ou « aucun membre du projet avec le profil » dans les logs
-- Liens des emails : `APP_URL` (défaut `http://localhost:5000`) — à définir avec l'adresse publique
+- Liens des emails (tâches GoFlow et appels d'offres) : `utils/appUrl.js` (`APP_URL`, `appLink(path)`) — `APP_URL` à définir dans `backend/.env` avec l'adresse publique (défaut `http://localhost:5000`, avertissement au démarrage en production)
 
 ## Tableau de bord — « Qui bloque ? »
 

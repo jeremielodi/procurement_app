@@ -25,6 +25,10 @@ export const supplierPortalService = {
     });
     return response.data;
   },
+  getMyDocumentBlob: async (documentId) => {
+    const response = await api.get(`/supplier-portal/me/documents/${documentId}/file`, { responseType: 'blob' });
+    return response.data;
+  },
   getTenders: async () => {
     const response = await api.get('/supplier-portal/tenders');
     return response.data;

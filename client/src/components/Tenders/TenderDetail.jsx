@@ -9,6 +9,7 @@ import Modal from '../Common/Modal';
 import { tenderService } from '../../services/tenderService';
 import { supplierLogoUrl } from '../../services/supplierPortalService';
 import { TENDER_STATUS, fmtDateTime, fmtMoney, timeLeft, toLocalInput } from '../../utils/tenderStatus';
+import TenderTargetingFields, { AUDIENCE_LABELS } from './TenderTargetingFields';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -84,8 +85,13 @@ export default function TenderDetail() {
 
   const saveEdit = async () => {
     if (new Date(editForm.endDate) <= new Date(editForm.startDate)) return toast.error('La date de fin doit être après la date de début');
+    if (editForm.audience === 'PREQUALIFIED' && !editForm.categoryId) {
+      return toast.error('Choisissez la catégorie de marché des fournisseurs préqualifiés');
+    }
     const ok = await run(() => tenderService.update(tender.id, {
       ...editForm,
+      categoryId: editForm.categoryId || null,
+      locationId: editForm.locationId || null,
       startDate: new Date(editForm.startDate).toISOString(),
       endDate: new Date(editForm.endDate).toISOString(),
       maxDeliveryDays: parseInt(editForm.maxDeliveryDays),
@@ -132,6 +138,7 @@ export default function TenderDetail() {
               title: tender.title, description: tender.description || '',
               startDate: toLocalInput(tender.start_date), endDate: toLocalInput(tender.end_date),
               maxDeliveryDays: tender.max_delivery_days,
+              audience: tender.audience || 'ALL', categoryId: tender.category_id || '', locationId: tender.location_id || '',
             })} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
               <Pencil size={16} /> {tender.effective_status === 'CLOSED' ? 'Prolonger' : 'Modifier'}
             </button>
@@ -155,7 +162,10 @@ export default function TenderDetail() {
           ['Ouverture', fmtDateTime(tender.start_date)],
           ['Date limite', <>{fmtDateTime(tender.end_date)}{left && <div className="text-xs text-green-600 flex items-center gap-1"><Clock size={12} /> reste {left}</div>}</>],
           ['Délai de livraison max', `${tender.max_delivery_days} jours`],
-          ['Soumissions', <span className="flex items-center gap-1"><Users size={14} /> {subs.length} / {tender.registeredSuppliers} fournisseurs inscrits</span>],
+          ['Soumissions', <span className="flex items-center gap-1"><Users size={14} /> {subs.length} / {tender.registeredSuppliers} fournisseur(s) {tender.audience === 'PREQUALIFIED' ? 'éligibles' : 'inscrits'}</span>],
+          ['Diffusion', AUDIENCE_LABELS[tender.audience || 'ALL']],
+          ['Catégorie de marché', tender.category_name || '—'],
+          ['Localisation', tender.location_name || 'Toutes'],
         ].map(([k, v]) => (
           <div key={k} className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="text-xs uppercase text-gray-500">{k}</div>
@@ -312,6 +322,11 @@ export default function TenderDetail() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Délai de livraison max (jours)</label>
               <input type="number" min="1" className={inputCls} value={editForm.maxDeliveryDays} onChange={e => setEditForm(f => ({ ...f, maxDeliveryDays: e.target.value }))} />
+            </div>
+            <div className="col-span-2 border-t pt-3">
+              <TenderTargetingFields
+                value={{ audience: editForm.audience, categoryId: editForm.categoryId, locationId: editForm.locationId }}
+                onChange={(v) => setEditForm(f => ({ ...f, ...v }))} />
             </div>
           </div>
         )}

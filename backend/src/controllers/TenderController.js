@@ -7,6 +7,9 @@ const emailService = require('../services/EmailNotificationService');
 const { generateComparisonWorkbook } = require('../services/TenderExportService');
 const submissionPdfService = require('../services/TenderSubmissionPdfService');
 const { getSupplierByUser } = require('./SupplierPortalController');
+const referenceModel = require('../models/ReferenceModel');
+const supplierModel = require('../models/SupplierModel');
+const { DOC_LABELS } = require('../utils/supplierDocuments');
 
 const { appLink } = require('../utils/appUrl');
 
@@ -38,7 +41,26 @@ function validateTenderPayload(b, { requireNumber }) {
   if (!isNaN(end) && end <= new Date()) errors.push('La date de fin doit être dans le futur');
   const days = parseInt(b.maxDeliveryDays);
   if (!Number.isInteger(days) || days <= 0) errors.push('Nombre de jours de livraison invalide');
+  if (b.audience !== undefined && !AUDIENCES.includes(b.audience)) errors.push('Type de diffusion invalide');
+  if (b.audience === 'PREQUALIFIED' && !parseInt(b.categoryId)) {
+    errors.push('Catégorie de marché requise pour un appel d\'offres réservé aux fournisseurs préqualifiés');
+  }
   return errors;
+}
+
+const AUDIENCES = ['ALL', 'PREQUALIFIED'];
+
+/** Diffusion, catégorie et localisation validées (catégorie / localisation existantes) */
+async function targeting(b) {
+  const categoryId = parseInt(b.categoryId) || null;
+  const locationId = parseInt(b.locationId) || null;
+  if (categoryId && !(await referenceModel.getById('market_categories', categoryId))) {
+    throw Object.assign(new Error('Catégorie de marché inconnue'), { status: 400 });
+  }
+  if (locationId && !(await referenceModel.getById('locations', locationId))) {
+    throw Object.assign(new Error('Localisation inconnue'), { status: 400 });
+  }
+  return { audience: AUDIENCES.includes(b.audience) ? b.audience : 'ALL', categoryId, locationId };
 }
 
 async function notifyUser(io, userId, title, message, type, link) {
@@ -49,7 +71,7 @@ async function notifyUser(io, userId, title, message, type, link) {
 /** Notifie (in-app + email) tous les fournisseurs inscrits. Ne lève pas d'erreur. */
 async function notifySuppliers(io, tender, { title, intro }) {
   try {
-    const recipients = await tenderModel.getRegisteredSupplierRecipients();
+    const recipients = await tenderModel.getRegisteredSupplierRecipients(tender.id);
     const link = `/supplier/tenders/${tender.id}`;
     for (const r of recipients) {
       await notifyUser(io, r.user_id, title, `${tender.tender_number} — ${tender.title}`, 'INFO', link);
@@ -87,6 +109,26 @@ class TenderController {
     }
   }
 
+  /** GET /tenders/eligible-count?audience=&categoryId=&locationId= — fournisseurs qui verront l'AO */
+  async eligibleCount(req, res) {
+    try {
+      const { audience, categoryId, locationId } = await targeting(req.query);
+      const r = await db.one(
+        `SELECT COUNT(*)::int AS count FROM suppliers s
+         JOIN users u ON u.id = s.user_id
+         WHERE u.is_active = true AND s.status = 'ACTIVE'
+           AND ($1 = 'ALL' OR (
+             EXISTS (SELECT 1 FROM supplier_prequalifications sp
+                     WHERE sp.supplier_id = s.id AND sp.enterprise_id = $2 AND sp.category_id = $3 AND sp.status = 'APPROVED')
+             AND ($4::int IS NULL OR EXISTS (SELECT 1 FROM supplier_locations sl WHERE sl.supplier_id = s.id AND sl.location_id = $4))))`,
+        [audience, req.enterpriseId, categoryId, locationId]
+      );
+      res.json({ success: true, data: { count: r.count } });
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: error.message });
+    }
+  }
+
   async getByRequisition(req, res) {
     try {
       const tender = await tenderModel.getByRequisition(req.params.requisitionId);
@@ -103,7 +145,7 @@ class TenderController {
       const [items, allSubmissions, registeredSuppliers] = await Promise.all([
         tenderModel.getItems(tender.requisition_id),
         tenderModel.getSubmissions(tender.id),
-        tenderModel.countRegisteredSuppliers()
+        tenderModel.countRegisteredSuppliers(tender.id)
       ]);
       // Offres scellées : avant la clôture, seuls le nom du soumissionnaire et la date sont visibles
       const sealed = isSealed(tender);
@@ -147,7 +189,9 @@ class TenderController {
         });
       }
 
+      const target = await targeting(b);
       const tender = await tenderModel.create({
+        ...target,
         tenderNumber: b.tenderNumber.trim(),
         requisitionId: b.requisitionId,
         taskId: b.taskId,
@@ -180,6 +224,7 @@ class TenderController {
       if (error.code === '23505') {
         return res.status(409).json({ success: false, message: 'Ce numéro d\'appel d\'offres est déjà utilisé' });
       }
+      if (error.status) return res.status(error.status).json({ success: false, message: error.message });
       console.error('Error creating tender:', error);
       res.status(500).json({ success: false, message: error.message });
     }
@@ -202,7 +247,9 @@ class TenderController {
       const errors = validateTenderPayload(req.body, { requireNumber: false });
       if (errors.length) return res.status(400).json({ success: false, message: errors.join(' · ') });
 
+      const target = await targeting({ audience: tender.audience, categoryId: tender.category_id, locationId: tender.location_id, ...req.body });
       await tenderModel.update(tender.id, {
+        ...target,
         title: req.body.title.trim(),
         description: req.body.description,
         startDate: new Date(req.body.startDate),
@@ -216,7 +263,7 @@ class TenderController {
       });
       res.json({ success: true, data: updated });
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      res.status(error.status || 500).json({ success: false, message: error.message });
     }
   }
 
@@ -410,11 +457,18 @@ class TenderController {
           result: t.effective_status === 'CLOSED' ? 'PENDING' : (t.is_awarded_to_me ? 'WON' : 'LOST')
         }));
 
-      const profileFields = [
-        ['logo_path', 'Logo'], ['phone', 'Téléphone'], ['address', 'Adresse'],
-        ['registration_number', 'RCCM'], ['tax_id', 'N° impôt'], ['bank_name', 'Banque'], ['bank_account', 'N° de compte']
+      // Dossier de préqualification : champs, documents, catégories et localisations manquants
+      const full = await supplierModel.getFullProfile(supplier.id);
+      const profileFields = full.supplier_type === 'INDIVIDUAL'
+        ? [['address', 'Adresse'], ['bank_name', 'Banque'], ['bank_account', 'N° de compte']]
+        : [['logo_path', 'Logo'], ['phone', 'Téléphone'], ['address', 'Adresse'], ['registration_number', 'N° RCCM'],
+          ['tax_id', 'N° impôt'], ['id_nat', 'N° ID Nat'], ['bank_name', 'Banque'], ['bank_account', 'N° de compte']];
+      const missingProfile = [
+        ...profileFields.filter(([col]) => !full[col]).map(([, label]) => label),
+        ...full.missing_documents.map(t => DOC_LABELS[t]),
+        ...(full.categories.length ? [] : ['Catégories de marché']),
+        ...(full.locations.length ? [] : ['Localisations']),
       ];
-      const missingProfile = profileFields.filter(([col]) => !supplier[col]).map(([, label]) => label);
 
       res.json({
         success: true,
@@ -450,10 +504,14 @@ class TenderController {
       if (!tender || tender.status === 'CANCELLED') {
         return res.status(404).json({ success: false, message: 'Appel d\'offres introuvable' });
       }
-      const [items, mySubmission] = await Promise.all([
+      const [items, mySubmission, eligible] = await Promise.all([
         tenderModel.getItems(tender.requisition_id),
-        tenderModel.getSubmission(tender.id, supplier.id)
+        tenderModel.getSubmission(tender.id, supplier.id),
+        tenderModel.isSupplierEligible(supplier.id, tender.id)
       ]);
+      if (!eligible && !mySubmission) {
+        return res.status(404).json({ success: false, message: 'Appel d\'offres introuvable' });
+      }
       // Uniquement les infos publiques : pas de montant estimé, ni d'offres concurrentes
       res.json({
         success: true,
@@ -466,6 +524,10 @@ class TenderController {
           end_date: tender.end_date,
           max_delivery_days: tender.max_delivery_days,
           effective_status: tender.effective_status,
+          audience: tender.audience,
+          category_name: tender.category_name,
+          location_name: tender.location_name,
+          eligible,
           currency_code: tender.currency_code,
           enterprise_id: tender.enterprise_id,
           enterprise_name: tender.enterprise_name,
@@ -490,6 +552,12 @@ class TenderController {
       const tender = await tenderModel.getById(req.params.id);
       if (!tender || tender.status === 'CANCELLED') {
         return res.status(404).json({ success: false, message: 'Appel d\'offres introuvable' });
+      }
+      if (!(await tenderModel.isSupplierEligible(supplier.id, tender.id))) {
+        return res.status(403).json({
+          success: false,
+          message: 'Cet appel d\'offres est réservé aux fournisseurs préqualifiés dans sa catégorie et sa localisation'
+        });
       }
       if (tender.effective_status !== 'OPEN') {
         return res.status(400).json({

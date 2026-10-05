@@ -54,6 +54,10 @@ export default function SupplierTenderList() {
             {left && <span className="text-green-600 ml-1">(reste {left})</span>}</div>
           {t.effective_status === 'UPCOMING' && <div>Ouverture : {fmtDateTime(t.start_date)}</div>}
           <div>Livraison max : {t.max_delivery_days} jours</div>
+          {(t.category_name || t.location_name) && (
+            <div className="text-gray-500">{[t.category_name, t.location_name && `Livraison : ${t.location_name}`].filter(Boolean).join(' · ')}</div>
+          )}
+          {t.audience === 'PREQUALIFIED' && <div className="text-green-700 text-xs">Réservé aux fournisseurs préqualifiés</div>}
         </div>
         <div className="mt-3 pt-3 border-t border-gray-100 text-sm">
           {t.my_submission_id

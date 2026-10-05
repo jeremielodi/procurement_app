@@ -12,7 +12,7 @@ const userModel = require('../models/UserModel');
 const tenant = require('../utils/tenant');
 
 const SUPPLIER_PATHS = [/^\/auth\/profile$/, /^\/supplier-portal(\/|$)/, /^\/notifications(\/|$)/];
-const SUPERADMIN_PATHS = [/^\/auth\/profile$/, /^\/enterprises(\/|$)/, /^\/currencies(\/|$)/, /^\/notifications(\/|$)/, /^\/profiles(\/|$)/];
+const SUPERADMIN_PATHS = [/^\/auth\/profile$/, /^\/locations(\/|$)/, /^\/market-categories(\/|$)/,/^\/enterprises(\/|$)/, /^\/currencies(\/|$)/, /^\/notifications(\/|$)/, /^\/profiles(\/|$)/];
 
 async function ownsNotification(notificationId, userId) {
   if (!/^\d+$/.test(String(notificationId))) return false;

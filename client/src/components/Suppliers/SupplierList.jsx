@@ -468,8 +468,13 @@ export default function SupplierList() {
                             {supplier.name}
                           </Link>
                           <div className="text-xs text-gray-500">
-                            Code: {supplier.supplier_code}
+                            Code: {supplier.supplier_code}{supplier.supplier_type === 'INDIVIDUAL' ? ' · Personne physique' : ''}
                           </div>
+                          {(supplier.category_names || []).length > 0 && (
+                            <div className="text-xs text-gray-400 truncate max-w-[260px]" title={supplier.category_names.join(', ')}>
+                              {supplier.category_names.join(', ')}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -493,7 +498,7 @@ export default function SupplierList() {
                           status={supplier.status === 'ACTIVE' ? 'SUPPLIER_ACTIVE' : 'SUPPLIER_INACTIVE'} 
                           size="sm" 
                         />
-                        {supplier.prequalified && (
+                        {(supplier.approved_category_count > 0 || supplier.prequalified) && (
                           <StatusBadge status="SUPPLIER_PREQUALIFIED" size="sm" />
                         )}
                       </div>
@@ -533,17 +538,14 @@ export default function SupplierList() {
                         >
                           <Edit size={18} />
                         </Link>
-                        {!supplier.prequalified && supplier.status === 'ACTIVE' && (
-                          <button
-                            onClick={() => {
-                              setSupplierToPrequalify(supplier)
-                              setShowPrequalifyModal(true)
-                            }}
+                        {supplier.status === 'ACTIVE' && (
+                          <Link
+                            to={`/suppliers/${supplier.id}?tab=prequalification`}
                             className="text-gray-400 hover:text-purple-600 transition-colors"
-                            title="Préqualifier"
+                            title="Préqualification & documents"
                           >
                             <Shield size={18} />
-                          </button>
+                          </Link>
                         )}
                         <button
                           onClick={() => {

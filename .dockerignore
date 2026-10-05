@@ -27,3 +27,6 @@ coverage/
 .dockerignore
 Dockerfile
 docker-compose*.yml
+# Secrets : fournis au conteneur par env_file, jamais copiés dans l'image
+backend/.env
+**/node_modules

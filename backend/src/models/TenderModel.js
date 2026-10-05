@@ -19,11 +19,14 @@ class TenderModel {
              r.requisition_number, r.title AS requisition_title, r.estimated_amount,
              c.format_key AS currency_code,
              s.name AS awarded_supplier_name,
+             mc.name AS category_name, loc.name AS location_name,
              (SELECT COUNT(*) FROM tender_submissions ts WHERE ts.tender_id = t.id)::int AS submission_count
       FROM tenders t
       JOIN requisitions r ON r.id = t.requisition_id
       LEFT JOIN currency c ON c.id = r.currency_id
       LEFT JOIN suppliers s ON s.id = t.awarded_supplier_id
+      LEFT JOIN market_categories mc ON mc.id = t.category_id
+      LEFT JOIN locations loc ON loc.id = t.location_id
       WHERE 1=1`;
     const params = [];
     sql += tenant.filter('t.enterprise_id', params);
@@ -49,7 +52,8 @@ class TenderModel {
               d.name AS department_name, p.name AS project_name,
               s.name AS awarded_supplier_name,
               u.first_name || ' ' || u.last_name AS created_by_name,
-              e.name AS enterprise_name, e.logo_path AS enterprise_logo_path
+              e.name AS enterprise_name, e.logo_path AS enterprise_logo_path,
+              mc.name AS category_name, loc.name AS location_name
        FROM tenders t
        JOIN requisitions r ON r.id = t.requisition_id
        LEFT JOIN currency c ON c.id = r.currency_id
@@ -58,6 +62,8 @@ class TenderModel {
        LEFT JOIN suppliers s ON s.id = t.awarded_supplier_id
        LEFT JOIN users u ON u.id = t.created_by
        LEFT JOIN enterprise e ON e.id = t.enterprise_id
+       LEFT JOIN market_categories mc ON mc.id = t.category_id
+       LEFT JOIN locations loc ON loc.id = t.location_id
        WHERE t.id = $1`,
       [id]
     );
@@ -90,11 +96,12 @@ class TenderModel {
     return db.one(
       `INSERT INTO tenders
          (tender_number, requisition_id, task_id, title, description,
-          start_date, end_date, max_delivery_days, status, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'OPEN', $9)
+          start_date, end_date, max_delivery_days, status, created_by, audience, category_id, location_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'OPEN', $9, $10, $11, $12)
        RETURNING *`,
       [data.tenderNumber, data.requisitionId, data.taskId || null, data.title, data.description || null,
-       data.startDate, data.endDate, data.maxDeliveryDays, data.createdBy]
+       data.startDate, data.endDate, data.maxDeliveryDays, data.createdBy,
+       data.audience, data.categoryId, data.locationId]
     );
   }
 
@@ -105,6 +112,9 @@ class TenderModel {
       start_date: data.startDate,
       end_date: data.endDate,
       max_delivery_days: data.maxDeliveryDays,
+      audience: data.audience,
+      category_id: data.categoryId,
+      location_id: data.locationId,
       updated_at: new Date()
     }, 'id', id);
   }
@@ -220,6 +230,7 @@ class TenderModel {
       `SELECT * FROM (
          SELECT t.id, t.tender_number, t.title, t.description, t.start_date, t.end_date,
                 t.max_delivery_days, ${EFFECTIVE_STATUS_SQL} AS effective_status,
+                t.audience, mc.name AS category_name, loc.name AS location_name,
                 (t.awarded_supplier_id = $1) AS is_awarded_to_me,
                 c.format_key AS currency_code,
                 e.id AS enterprise_id, e.name AS enterprise_name, e.logo_path AS enterprise_logo_path,
@@ -229,30 +240,41 @@ class TenderModel {
          LEFT JOIN currency c ON c.id = r.currency_id
          LEFT JOIN tender_submissions ts ON ts.tender_id = t.id AND ts.supplier_id = $1
          LEFT JOIN enterprise e ON e.id = t.enterprise_id
+         LEFT JOIN market_categories mc ON mc.id = t.category_id
+         LEFT JOIN locations loc ON loc.id = t.location_id
          WHERE t.status <> 'CANCELLED' AND COALESCE(e.is_active, TRUE)
+           AND (ts.id IS NOT NULL OR supplier_eligible_for_tender($1, t.id))
        ) x
        ORDER BY x.end_date DESC`,
       [supplierId]
     );
   }
 
-  async countRegisteredSuppliers() {
+  /** Fournisseurs inscrits actifs ; avec un AO : seulement ceux qui y sont éligibles */
+  async countRegisteredSuppliers(tenderId = null) {
     const r = await db.one(
       `SELECT COUNT(*)::int AS count FROM suppliers s
        JOIN users u ON u.id = s.user_id
-       WHERE u.is_active = true AND s.status = 'ACTIVE'`,
-      []
+       WHERE u.is_active = true AND s.status = 'ACTIVE'
+         AND ($1::int IS NULL OR supplier_eligible_for_tender(s.id, $1))`,
+      [tenderId]
     );
     return r.count;
   }
 
-  async getRegisteredSupplierRecipients() {
+  async getRegisteredSupplierRecipients(tenderId = null) {
     return db.select(
       `SELECT s.id, s.name, s.email AS supplier_email, u.id AS user_id, u.email AS user_email
        FROM suppliers s JOIN users u ON u.id = s.user_id
-       WHERE u.is_active = true AND s.status = 'ACTIVE'`,
-      []
+       WHERE u.is_active = true AND s.status = 'ACTIVE'
+         AND ($1::int IS NULL OR supplier_eligible_for_tender(s.id, $1))`,
+      [tenderId]
     );
+  }
+
+  async isSupplierEligible(supplierId, tenderId) {
+    const r = await db.one('SELECT supplier_eligible_for_tender($1, $2) AS ok', [supplierId, tenderId]);
+    return !!r?.ok;
   }
 }
 

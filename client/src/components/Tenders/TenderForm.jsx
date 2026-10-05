@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { tenderService } from '../../services/tenderService';
 import requisitionService from '../../services/requisitionService';
 import { toLocalInput, fmtMoney } from '../../utils/tenderStatus';
+import TenderTargetingFields from './TenderTargetingFields';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -32,6 +33,7 @@ export default function TenderForm() {
     endDate: toLocalInput(new Date(Date.now() + 7 * 86400000)),
     maxDeliveryDays: 30,
   });
+  const [targeting, setTargeting] = useState({ audience: 'ALL', categoryId: '', locationId: '' });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -71,6 +73,9 @@ export default function TenderForm() {
     if (!requisitionId) return toast.error('Choisissez une réquisition');
     if (!form.tenderNumber.trim()) return toast.error("Saisissez le numéro de l'appel d'offres");
     if (new Date(form.endDate) <= new Date(form.startDate)) return toast.error('La date de fin doit être après la date de début');
+    if (targeting.audience === 'PREQUALIFIED' && !targeting.categoryId) {
+      return toast.error('Choisissez la catégorie de marché des fournisseurs préqualifiés');
+    }
     setSubmitting(true);
     try {
       const res = await tenderService.create({
@@ -80,6 +85,9 @@ export default function TenderForm() {
         startDate: new Date(form.startDate).toISOString(),
         endDate: new Date(form.endDate).toISOString(),
         maxDeliveryDays: parseInt(form.maxDeliveryDays),
+        audience: targeting.audience,
+        categoryId: targeting.categoryId || null,
+        locationId: targeting.locationId || null,
       });
       toast.success(`Appel d'offres publié — ${res.notifiedSuppliers} fournisseur(s) notifié(s)`);
       navigate(`/tenders/${res.data.id}`);
@@ -205,6 +213,11 @@ export default function TenderForm() {
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="endDate">Date limite de soumission *</label>
             <input id="endDate" type="datetime-local" className={inputCls} value={form.endDate} onChange={e => set('endDate', e.target.value)} />
           </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+          <h2 className="font-semibold text-gray-800">Diffusion</h2>
+          <TenderTargetingFields value={targeting} onChange={setTargeting} />
         </div>
 
         <div className="flex justify-end gap-3">

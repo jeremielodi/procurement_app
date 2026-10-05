@@ -7,7 +7,7 @@ import { isSupplierUser, isSuperAdminUser } from '../../utils/accountType';
 
 // Pages accessibles à un compte fournisseur / au super admin de la plateforme
 const SUPPLIER_PATHS = ['/supplier/', '/notifications'];
-const SUPERADMIN_PATHS = ['/admin/enterprises', '/admin/profiles', '/notifications'];
+const SUPERADMIN_PATHS = ['/admin/enterprises', '/admin/profiles', '/admin/references', '/notifications'];
 
 export default function ProtectedRoute({ 
   children, 

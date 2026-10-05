@@ -3,6 +3,7 @@
 // Les évaluations, elles, sont propres à chaque entreprise (supplier_evaluations.enterprise_id).
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
+const { missingDocuments } = require('../utils/supplierDocuments');
 
 // Champs modifiables par un acheteur : clé API (camelCase ou snake_case) → colonne
 const FIELDS = {
@@ -19,10 +20,14 @@ const FIELDS = {
   bank_iban: 'bank_iban', bankIban: 'bank_iban',
   bank_swift: 'bank_swift', bankSwift: 'bank_swift',
   notes: 'notes',
+  supplier_type: 'supplier_type', supplierType: 'supplier_type',
+  id_nat: 'id_nat', idNat: 'id_nat',
+  id_document_number: 'id_document_number', idDocumentNumber: 'id_document_number',
+  contact_name: 'contact_name', contactName: 'contact_name',
 };
 // Identité d'un fournisseur inscrit sur le portail : gérée par le fournisseur lui-même
 const SELF_MANAGED = ['name', 'registration_number', 'tax_id', 'email', 'phone', 'address', 'website',
-  'bank_name', 'bank_account', 'bank_iban', 'bank_swift'];
+  'bank_name', 'bank_account', 'bank_iban', 'bank_swift', 'supplier_type', 'id_nat', 'id_document_number', 'contact_name'];
 
 function pickFields(data, { exclude = [] } = {}) {
   const out = {};
@@ -30,6 +35,7 @@ function pickFields(data, { exclude = [] } = {}) {
     if (data[key] === undefined || exclude.includes(col)) continue;
     let v = data[key];
     if (col === 'prequalified') v = v === true || v === 'true';
+    else if (col === 'supplier_type') v = v === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'COMPANY';
     else if (typeof v === 'string') v = v.trim() === '' ? null : v.trim();
     out[col] = v;
   }
@@ -97,12 +103,191 @@ class SupplierModel {
     return db.one('SELECT * FROM suppliers WHERE id = $1', [id]);
   }
 
+  /** Tous les fournisseurs + catégories / localisations déclarées et nombre de catégories préqualifiées (entreprise courante) */
   async getAll() {
-    return db.select('SELECT * FROM suppliers ORDER BY name', []);
+    const params = [];
+    const preqFilter = tenant.filter('sp.enterprise_id', params);
+    return db.select(
+      `SELECT s.*,
+              ARRAY(SELECT c.name FROM supplier_categories sc JOIN market_categories c ON c.id = sc.category_id
+                    WHERE sc.supplier_id = s.id ORDER BY c.name) AS category_names,
+              ARRAY(SELECT l.name FROM supplier_locations sl JOIN locations l ON l.id = sl.location_id
+                    WHERE sl.supplier_id = s.id ORDER BY l.name) AS location_names,
+              (SELECT COUNT(*) FROM supplier_prequalifications sp
+                WHERE sp.supplier_id = s.id AND sp.status = 'APPROVED'${preqFilter})::int AS approved_category_count
+       FROM suppliers s ORDER BY s.name`,
+      params
+    );
   }
 
+  /**
+   * Fournisseurs actifs utilisables dans un bon de commande : préqualifiés par l'entreprise courante
+   * (au moins une catégorie approuvée) ou marqués préqualifiés (ancienne case globale).
+   */
   async getPrequalifiedSuppliers() {
-    return db.select("SELECT * FROM suppliers WHERE prequalified = true AND status = 'ACTIVE' ORDER BY name", []);
+    const params = [];
+    const preqFilter = tenant.filter('sp.enterprise_id', params);
+    return db.select(
+      `SELECT s.* FROM suppliers s
+       WHERE s.status = 'ACTIVE'
+         AND (s.prequalified = true OR EXISTS (
+               SELECT 1 FROM supplier_prequalifications sp
+               WHERE sp.supplier_id = s.id AND sp.status = 'APPROVED'${preqFilter}))
+       ORDER BY s.name`,
+      params
+    );
+  }
+
+  // ---------------- Localisations / catégories déclarées ----------------
+
+  async getLocations(supplierId) {
+    return db.select(
+      `SELECT l.id, l.name, l.province, l.is_active FROM supplier_locations sl
+       JOIN locations l ON l.id = sl.location_id WHERE sl.supplier_id = $1 ORDER BY l.name`,
+      [supplierId]
+    );
+  }
+
+  async getCategories(supplierId) {
+    return db.select(
+      `SELECT c.id, c.name, c.is_active FROM supplier_categories sc
+       JOIN market_categories c ON c.id = sc.category_id WHERE sc.supplier_id = $1 ORDER BY c.name`,
+      [supplierId]
+    );
+  }
+
+  /** Remplace la liste (ids déjà validés) */
+  async setLinks(table, column, supplierId, ids) {
+    const t = db.transaction();
+    t.addDeleteQuery(table, 'supplier_id', supplierId);
+    for (const id of ids) t.addInsertQuery(table, { supplier_id: supplierId, [column]: id });
+    await t.execute();
+  }
+
+  async setLocations(supplierId, ids) { return this.setLinks('supplier_locations', 'location_id', supplierId, ids); }
+  async setCategories(supplierId, ids) { return this.setLinks('supplier_categories', 'category_id', supplierId, ids); }
+
+  // ---------------- Documents ----------------
+
+  async getDocuments(supplierId) {
+    return db.select(
+      `SELECT d.id, d.doc_type, d.file_name, d.mime_type, d.file_size, d.uploaded_at,
+              TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS uploaded_by_name
+       FROM supplier_documents d LEFT JOIN users u ON u.id = d.uploaded_by
+       WHERE d.supplier_id = $1 ORDER BY d.doc_type`,
+      [supplierId]
+    );
+  }
+
+  async getDocument(supplierId, documentId) {
+    if (!/^\d+$/.test(String(documentId))) return null;
+    return db.one('SELECT * FROM supplier_documents WHERE id = $1 AND supplier_id = $2', [documentId, supplierId]);
+  }
+
+  /** Crée ou remplace le document de ce type ; renvoie la clé de l'ancien fichier (à supprimer) */
+  async saveDocument(supplierId, doc, uploadedBy) {
+    const previous = await db.one(
+      'SELECT file_path FROM supplier_documents WHERE supplier_id = $1 AND doc_type = $2',
+      [supplierId, doc.doc_type]
+    );
+    await db.exec(
+      `INSERT INTO supplier_documents (supplier_id, doc_type, file_path, file_name, mime_type, file_size, uploaded_by, uploaded_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+       ON CONFLICT (supplier_id, doc_type) DO UPDATE SET
+         file_path = EXCLUDED.file_path, file_name = EXCLUDED.file_name, mime_type = EXCLUDED.mime_type,
+         file_size = EXCLUDED.file_size, uploaded_by = EXCLUDED.uploaded_by, uploaded_at = NOW()`,
+      [supplierId, doc.doc_type, doc.file_path, doc.file_name, doc.mime_type, doc.file_size, uploadedBy || null]
+    );
+    return previous?.file_path || null;
+  }
+
+  /** Types de documents obligatoires manquants */
+  async getMissingDocuments(supplier) {
+    const docs = await db.select('SELECT doc_type FROM supplier_documents WHERE supplier_id = $1', [supplier.id]);
+    return missingDocuments(supplier.supplier_type, docs.map(d => d.doc_type));
+  }
+
+  /** Fiche complète : fournisseur + localisations + catégories + documents + documents manquants */
+  async getFullProfile(id) {
+    const supplier = await this.getById(id);
+    if (!supplier) return null;
+    const [locations, categories, documents] = await Promise.all([
+      this.getLocations(id), this.getCategories(id), this.getDocuments(id),
+    ]);
+    return {
+      ...supplier, locations, categories, documents,
+      missing_documents: missingDocuments(supplier.supplier_type, documents.map(d => d.doc_type)),
+    };
+  }
+
+  // ---------------- Préqualification (par entreprise et par catégorie) ----------------
+
+  /** Catégories déclarées par le fournisseur + décision de l'entreprise courante (status null = en attente) */
+  async getPrequalification(supplierId) {
+    const params = [supplierId];
+    const preqFilter = tenant.filter('sp.enterprise_id', params);
+    return db.select(
+      `SELECT c.id AS category_id, c.name AS category_name, c.is_active,
+              sp.status, sp.comment, sp.decided_at,
+              TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS decided_by_name
+       FROM supplier_categories sc
+       JOIN market_categories c ON c.id = sc.category_id
+       LEFT JOIN supplier_prequalifications sp
+              ON sp.supplier_id = sc.supplier_id AND sp.category_id = sc.category_id${preqFilter}
+       LEFT JOIN users u ON u.id = sp.decided_by
+       WHERE sc.supplier_id = $1
+       ORDER BY c.name`,
+      params
+    );
+  }
+
+  /** status : APPROVED | REJECTED | null (remise en attente) */
+  async setPrequalification(enterpriseId, supplierId, categoryId, status, comment, userId) {
+    if (!status) {
+      await db.exec(
+        'DELETE FROM supplier_prequalifications WHERE enterprise_id = $1 AND supplier_id = $2 AND category_id = $3',
+        [enterpriseId, supplierId, categoryId]
+      );
+      return;
+    }
+    await db.exec(
+      `INSERT INTO supplier_prequalifications (enterprise_id, supplier_id, category_id, status, comment, decided_by, decided_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       ON CONFLICT (enterprise_id, supplier_id, category_id) DO UPDATE SET
+         status = EXCLUDED.status, comment = EXCLUDED.comment, decided_by = EXCLUDED.decided_by, decided_at = NOW()`,
+      [enterpriseId, supplierId, categoryId, status, comment || null, userId]
+    );
+  }
+
+  /**
+   * Fournisseurs préqualifiés par l'entreprise courante : une ligne par fournisseur × catégorie approuvée.
+   * Filtres : categoryId, locationId (localisation desservie), supplierType, search.
+   */
+  async getPrequalifiedList({ categoryId, locationId, supplierType, search } = {}) {
+    const params = [];
+    let sql = `
+      SELECT s.id, s.supplier_code, s.name, s.supplier_type, s.contact_name, s.email, s.phone, s.address,
+             s.registration_number, s.tax_id, s.id_nat, s.bank_name, s.bank_account, s.status,
+             c.id AS category_id, c.name AS category_name, sp.decided_at, sp.comment,
+             ARRAY(SELECT l.name FROM supplier_locations sl JOIN locations l ON l.id = sl.location_id
+                   WHERE sl.supplier_id = s.id ORDER BY l.name) AS location_names
+      FROM supplier_prequalifications sp
+      JOIN suppliers s ON s.id = sp.supplier_id
+      JOIN market_categories c ON c.id = sp.category_id
+      WHERE sp.status = 'APPROVED' AND s.status = 'ACTIVE'`;
+    sql += tenant.filter('sp.enterprise_id', params);
+    if (categoryId) { params.push(categoryId); sql += ` AND sp.category_id = $${params.length}`; }
+    if (locationId) {
+      params.push(locationId);
+      sql += ` AND EXISTS (SELECT 1 FROM supplier_locations sl WHERE sl.supplier_id = s.id AND sl.location_id = $${params.length})`;
+    }
+    if (supplierType) { params.push(supplierType); sql += ` AND s.supplier_type = $${params.length}`; }
+    if (search) {
+      params.push(`%${search}%`);
+      sql += ` AND (s.name ILIKE $${params.length} OR s.supplier_code ILIKE $${params.length} OR s.email ILIKE $${params.length})`;
+    }
+    sql += ' ORDER BY c.name, s.name';
+    return db.select(sql, params);
   }
 
   async search(searchTerm) {

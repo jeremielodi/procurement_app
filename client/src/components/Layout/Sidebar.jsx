@@ -27,7 +27,9 @@ import {
   CreditCard,
   ClipboardCheck,
   Gavel,
-  Briefcase
+  Briefcase,
+  MapPin,
+  BadgeCheck
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -43,6 +45,7 @@ const menuGroups = [
     superAdminOnly: true,
     items: [
       { path: '/admin/enterprises', icon: Building2, label: 'Entreprises', permission: null },
+      { path: '/admin/references', icon: MapPin, label: 'Localisations et catégories', permission: null },
       { path: '/admin/profiles', icon: Shield, label: 'Rôles et permissions', permission: null }
     ]
   },
@@ -87,6 +90,12 @@ const menuGroups = [
         path: '/suppliers',
         icon: Truck,
         label: 'Fournisseurs',
+        permission: 'VIEW_SUPPLIERS'
+      },
+      {
+        path: '/suppliers/prequalified',
+        icon: BadgeCheck,
+        label: 'Fournisseurs préqualifiés',
         permission: 'VIEW_SUPPLIERS'
       },
       {

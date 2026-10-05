@@ -1,6 +1,6 @@
 // src/components/Suppliers/SupplierDetail.jsx
 import React, { useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
@@ -46,6 +46,9 @@ import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
 import { formatDate, formatDateTime } from '../../utils/formatters'
 import { useCurrency } from '../../contexts/EnterpriseContext'
+import { usePermissions } from '../../hooks/usePermissions'
+import { SUPPLIER_TYPE_LABELS } from '../../utils/supplierDocs'
+import SupplierPrequalificationPanel from './prequal/SupplierPrequalificationPanel'
 import toast from 'react-hot-toast'
 
 export default function SupplierDetail() {
@@ -53,12 +56,14 @@ export default function SupplierDetail() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { formatAmount } = useCurrency()
+  const { hasPermission } = usePermissions()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showPrequalifyModal, setShowPrequalifyModal] = useState(false)
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [ratingValue, setRatingValue] = useState(5)
   const [ratingComment, setRatingComment] = useState('')
-  const [activeTab, setActiveTab] = useState('details')
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'details')
 
   // Récupérer les détails du fournisseur
   const { data: supplierData, isLoading, error, refetch } = useQuery({
@@ -186,7 +191,9 @@ export default function SupplierDetail() {
   const averageRating = calculateAverageRating()
   const performance = getPerformanceLevel(averageRating)
   const totalSpent = calculateTotalSpent()
-  const canPrequalify = !supplier.prequalified && supplier.status === 'ACTIVE'
+  // Préqualification par catégorie (mon entreprise) : gérée dans l'onglet dédié
+  const canPrequalify = hasPermission('MANAGE_SUPPLIERS')
+  const approvedCount = (supplier.prequalification || []).filter(p => p.status === 'APPROVED').length
 
   return (
     <div className="space-y-6">
@@ -204,7 +211,9 @@ export default function SupplierDetail() {
               <h1 className="text-2xl font-bold text-gray-800">
                 {supplier.name}
               </h1>
-              <StatusBadge status={supplier.prequalified ? 'SUPPLIER_PREQUALIFIED' : 'SUPPLIER_ACTIVE'} size="lg" />
+              {approvedCount > 0 || supplier.prequalified
+                ? <StatusBadge status="SUPPLIER_PREQUALIFIED" size="lg" />
+                : <span className="px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm">Non préqualifié</span>}
               {supplier.status === 'ACTIVE' ? (
                 <StatusBadge status="SUPPLIER_ACTIVE" size="lg" />
               ) : (
@@ -212,7 +221,8 @@ export default function SupplierDetail() {
               )}
             </div>
             <p className="text-gray-500 mt-1">
-              Code: {supplier.supplier_code}
+              Code : {supplier.supplier_code} · {SUPPLIER_TYPE_LABELS[supplier.supplier_type] || 'Entreprise'}
+              {approvedCount > 0 && <> · préqualifié dans {approvedCount} catégorie(s)</>}
             </p>
           </div>
         </div>
@@ -226,7 +236,7 @@ export default function SupplierDetail() {
           </Link>
           {canPrequalify && (
             <button
-              onClick={() => setShowPrequalifyModal(true)}
+              onClick={() => setActiveTab('prequalification')}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <Shield size={18} />
@@ -315,6 +325,17 @@ export default function SupplierDetail() {
             Informations
           </button>
           <button
+            onClick={() => setActiveTab('prequalification')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'prequalification'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Préqualification & documents
+            {(supplier.missing_documents || []).length > 0 && <span className="ml-1 text-orange-500">●</span>}
+          </button>
+          <button
             onClick={() => setActiveTab('purchase-orders')}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'purchase-orders'
@@ -338,6 +359,9 @@ export default function SupplierDetail() {
       </div>
 
       {/* Contenu des tabs */}
+      {activeTab === 'prequalification' && (
+        <SupplierPrequalificationPanel supplier={supplier} canManage={canPrequalify} onChanged={refetch} />
+      )}
       {activeTab === 'details' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Colonne de gauche - Informations de contact */}

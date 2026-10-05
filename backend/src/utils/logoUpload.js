@@ -50,4 +50,4 @@ async function logoDataUri(key) {
   return buffer ? `data:${mime};base64,${buffer.toString('base64')}` : null;
 }
 
-module.exports = { logoMiddleware, saveLogo, removeLogo, sendLogo, logoDataUri };
+module.exports = { logoMiddleware, saveLogo, removeLogo, sendLogo, logoDataUri, TYPES };

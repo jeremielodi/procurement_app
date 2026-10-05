@@ -103,6 +103,12 @@ export default function SupplierTenderDetail() {
             <span>Acheteur : <b>{tender.enterprise_name}</b></span>
           </div>
         )}
+            {(tender.category_name || tender.location_name) && (
+              <p className="text-sm text-gray-500 mt-1">
+                {[tender.category_name, tender.location_name && `Livraison : ${tender.location_name}`].filter(Boolean).join(' · ')}
+                {tender.audience === 'PREQUALIFIED' && <span className="ml-2 text-green-700">· réservé aux fournisseurs préqualifiés</span>}
+              </p>
+            )}
           </div>
         </div>
         {tender.mySubmission && (

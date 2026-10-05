@@ -32,6 +32,8 @@ const paymentController = require('../controllers/PaymentController');
 const supplierPortalController = require('../controllers/SupplierPortalController');
 const tenderController = require('../controllers/TenderController');
 const requisitionImport = require('../controllers/requisition/importItems');
+const referenceController = require('../controllers/ReferenceController');
+const { singleDocumentMiddleware } = require('../utils/supplierDocuments');
 const requisitionTimeline = require('../services/RequisitionTimelineService');
 const { authenticate, hasPermission, hasAnyPermission } = require('../middleware/auth');
 const { tenantContext, tenantGuard } = require('../middleware/tenant');
@@ -62,6 +64,9 @@ router.post('/auth/register-supplier',
 );
 router.get('/public/suppliers/:id/logo', supplierPortalController.getLogo.bind(supplierPortalController));
 router.get('/public/enterprises/:id/logo', enterpriseController.getLogo.bind(enterpriseController));
+// Localisations et catégories de marché actives (formulaire d'inscription fournisseur)
+router.get('/public/locations', referenceController.locations.list);
+router.get('/public/market-categories', referenceController.categories.list);
 
 router.use(authenticate);
 // Multi-entreprise : type de compte + entreprise courante, puis contrôle des identifiants cités
@@ -86,6 +91,18 @@ router.put('/enterprises/:id', requireSuperAdmin, logoMiddleware, e.update.bind(
 router.patch('/enterprises/:id/active', requireSuperAdmin, e.setActive.bind(e));
 router.delete('/enterprises/:id', requireSuperAdmin, e.delete.bind(e));
 router.post('/enterprises/:id/admins', requireSuperAdmin, e.addAdmin.bind(e));
+
+// Référentiels de la plateforme : localisations (bureaux) et catégories de marché — écriture super admin
+const loc = referenceController.locations;
+const cat = referenceController.categories;
+router.get('/locations', loc.list);
+router.post('/locations', requireSuperAdmin, loc.create);
+router.put('/locations/:id', requireSuperAdmin, loc.update);
+router.delete('/locations/:id', requireSuperAdmin, loc.delete);
+router.get('/market-categories', cat.list);
+router.post('/market-categories', requireSuperAdmin, cat.create);
+router.put('/market-categories/:id', requireSuperAdmin, cat.update);
+router.delete('/market-categories/:id', requireSuperAdmin, cat.delete);
 
 
 router.get('/currencies', authenticate, currencyController.list);
@@ -200,6 +217,9 @@ router.get('/tasks/process/:processInstanceId',
 // ============================================
 const sup = supplierController;
 router.get('/suppliers', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.list.bind(sup));
+// Liste des préqualifiés de l'entreprise (avant /suppliers/:id)
+router.get('/suppliers/prequalified', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.listPrequalified.bind(sup));
+router.get('/suppliers/prequalified/export', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.exportPrequalified.bind(sup));
 router.get('/suppliers/:id', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.getOne.bind(sup));
 router.get('/suppliers/:id/evaluations', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.getEvaluations.bind(sup));
 router.post('/suppliers', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.create.bind(sup));
@@ -207,6 +227,10 @@ router.put('/suppliers/:id', authenticate, hasPermission('MANAGE_SUPPLIERS'), su
 router.delete('/suppliers/:id', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.delete.bind(sup));
 router.post('/suppliers/:id/prequalify', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.prequalify.bind(sup));
 router.post('/suppliers/:id/evaluations', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.addEvaluation.bind(sup));
+router.get('/suppliers/:id/documents/:documentId/file', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.getDocument.bind(sup));
+router.put('/suppliers/:id/documents/:type', authenticate, hasPermission('MANAGE_SUPPLIERS'), singleDocumentMiddleware, sup.uploadDocument.bind(sup));
+router.get('/suppliers/:id/prequalification', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.getPrequalification.bind(sup));
+router.put('/suppliers/:id/prequalification', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.setPrequalification.bind(sup));
 
 // ============================================
 // ROUTES DES COMMANDES D'ACHAT (protégées)
@@ -566,6 +590,7 @@ router.get('/payments/:id/pdf',
 // APPELS D'OFFRES (procurement)
 // ============================================
 router.get('/tenders', hasPermission('MANAGE_TENDERS'), tenderController.list.bind(tenderController));
+router.get('/tenders/eligible-count', hasPermission('MANAGE_TENDERS'), tenderController.eligibleCount.bind(tenderController));
 router.get('/tenders/by-requisition/:requisitionId', hasPermission('MANAGE_TENDERS'), tenderController.getByRequisition.bind(tenderController));
 router.get('/tenders/:id', hasPermission('MANAGE_TENDERS'), tenderController.getOne.bind(tenderController));
 router.get('/tenders/:id/export/excel', hasPermission('MANAGE_TENDERS'), tenderController.exportExcel.bind(tenderController));
@@ -581,8 +606,9 @@ router.post('/tenders/:id/award', hasPermission('MANAGE_TENDERS'), tenderControl
 router.get('/supplier-portal/dashboard', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierDashboard.bind(tenderController));
 router.get('/supplier-portal/me', hasPermission('SUPPLIER_PORTAL'), supplierPortalController.getMe.bind(supplierPortalController));
 router.put('/supplier-portal/me', hasPermission('SUPPLIER_PORTAL'),
-  supplierPortalController.handleLogoUpload,
+  supplierPortalController.handleFiles,
   supplierPortalController.updateMe.bind(supplierPortalController));
+router.get('/supplier-portal/me/documents/:documentId/file', hasPermission('SUPPLIER_PORTAL'), supplierPortalController.getMyDocument.bind(supplierPortalController));
 router.get('/supplier-portal/tenders', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierList.bind(tenderController));
 router.get('/supplier-portal/tenders/:id', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierGetOne.bind(tenderController));
 router.put('/supplier-portal/tenders/:id/submission', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierSubmit.bind(tenderController));

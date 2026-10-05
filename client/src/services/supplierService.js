@@ -60,6 +60,36 @@ export const supplierService = {
   },
 
   // Non implémentés côté serveur : erreur explicite plutôt qu'un plantage
+  // ---------- Documents de préqualification ----------
+  getDocumentBlob: async (supplierId, documentId) => {
+    const response = await api.get(`/suppliers/${supplierId}/documents/${documentId}/file`, { responseType: 'blob' })
+    return response.data
+  },
+
+  // Fournisseurs saisis par un acheteur uniquement (les inscrits gèrent leurs documents)
+  uploadDocument: async (supplierId, docType, file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const response = await api.put(`/suppliers/${supplierId}/documents/${docType}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    return response.data
+  },
+
+  // ---------- Préqualification (mon entreprise, par catégorie) ----------
+  setPrequalification: async (supplierId, { categoryId, status, comment }) => {
+    const response = await api.put(`/suppliers/${supplierId}/prequalification`, { categoryId, status, comment })
+    return response.data
+  },
+
+  listPrequalified: async (filters = {}) => {
+    const response = await api.get('/suppliers/prequalified', { params: filters })
+    return response.data
+  },
+
+  exportPrequalified: async (filters = {}) => {
+    const response = await api.get('/suppliers/prequalified/export', { params: filters, responseType: 'blob' })
+    return response.data
+  },
+
   uploadDocuments: async () => unavailable('Documents du fournisseur'),
   exportToExcel: async () => unavailable('Export Excel des fournisseurs'),
   exportToPDF: async () => unavailable('Export PDF des fournisseurs'),

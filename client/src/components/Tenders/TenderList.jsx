@@ -89,14 +89,22 @@ export default function TenderList() {
                 return (
                   <tr key={t.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/tenders/${t.id}`)}>
                     <td className="px-4 py-3 font-mono font-medium text-gray-900">{t.tender_number}</td>
-                    <td className="px-4 py-3 text-gray-700">{t.title}</td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {t.title}
+                      {(t.category_name || t.audience === 'PREQUALIFIED') && (
+                        <div className="text-xs text-gray-500">
+                          {[t.category_name, t.location_name].filter(Boolean).join(' · ')}
+                          {t.audience === 'PREQUALIFIED' && <span className="ml-1 text-green-700">· préqualifiés</span>}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-blue-600">{t.requisition_number}</td>
                     <td className="px-4 py-3 text-gray-600">
                       {fmtDateTime(t.end_date)}
                       {left && <div className="text-xs text-green-600">reste {left}</div>}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{t.max_delivery_days} j</td>
-                    <td className="px-4 py-3 text-gray-700">{t.submission_count} / {registered}</td>
+                    <td className="px-4 py-3 text-gray-700">{t.submission_count}{t.audience === 'PREQUALIFIED' ? '' : ` / ${registered}`}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>
                       {t.awarded_supplier_name && <div className="text-xs text-gray-500 mt-1">{t.awarded_supplier_name}</div>}

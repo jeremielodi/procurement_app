@@ -68,5 +68,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 EXPOSE 5000
 
 WORKDIR /app/backend
-COPY ./backend/.env .env
+# Pas de .env dans l image : la configuration vient de backend/.env via env_file (docker-compose.yml)
 CMD ["node", "server.js"]

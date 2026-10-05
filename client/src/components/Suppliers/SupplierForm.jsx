@@ -24,6 +24,9 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { supplierService } from '../../services/supplierService'
+import { locationService, categoryService } from '../../services/referenceService'
+import { SUPPLIER_TYPE_LABELS } from '../../utils/supplierDocs'
+import MultiCheckList from './prequal/MultiCheckList'
 import LoadingSpinner from '../Common/LoadingSpinner'
 import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
@@ -37,6 +40,9 @@ export default function SupplierForm() {
   const isEditMode = !!id
 
   const [formData, setFormData] = useState({
+    supplier_type: 'COMPANY',
+    id_nat: '',
+    id_document_number: '',
     name: '',
     registration_number: '',
     tax_id: '',
@@ -58,6 +64,15 @@ export default function SupplierForm() {
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
   const [documents, setDocuments] = useState([])
+  // Localisations desservies et catégories de marché (référentiels de la plateforme)
+  const [locationIds, setLocationIds] = useState([])
+  const [categoryIds, setCategoryIds] = useState([])
+  const [refs, setRefs] = useState({ locations: [], categories: [] })
+  useEffect(() => {
+    Promise.all([locationService.list(), categoryService.list()])
+      .then(([l, c]) => setRefs({ locations: l.data || [], categories: c.data || [] }))
+      .catch(() => {})
+  }, [])
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -67,6 +82,8 @@ export default function SupplierForm() {
     queryFn: () => supplierService.getById(id),
     enabled: isEditMode && !!id
   })
+
+  const isSelfRegistered = isEditMode && !!supplierData?.data?.self_registered
 
   // Mutation pour créer un fournisseur
   const createMutation = useMutation({
@@ -112,7 +129,12 @@ export default function SupplierForm() {
   useEffect(() => {
     if (isEditMode && supplierData?.data) {
       const supplier = supplierData.data
+      setLocationIds((supplier.locations || []).map(l => l.id))
+      setCategoryIds((supplier.categories || []).map(c => c.id))
       setFormData({
+        supplier_type: supplier.supplier_type || 'COMPANY',
+        id_nat: supplier.id_nat || '',
+        id_document_number: supplier.id_document_number || '',
         name: supplier.name || '',
         registration_number: supplier.registration_number || '',
         tax_id: supplier.tax_id || '',
@@ -216,16 +238,12 @@ export default function SupplierForm() {
     setIsSubmitting(true)
 
     try {
+      const data = { ...formData, locationIds, categoryIds }
       if (isEditMode) {
-        await updateMutation.mutateAsync({ id, data: formData })
+        await updateMutation.mutateAsync({ id, data })
       } else {
-        const result = await createMutation.mutateAsync(formData)
-        // Upload des documents temporaires si nécessaire
-        const tempDocs = documents.filter(d => d.temporary)
-        if (tempDocs.length > 0 && result.data?.id) {
-          const files = tempDocs.map(d => d.file)
-          await supplierService.uploadDocuments(result.data.id, files)
-        }
+        // Documents de préqualification : déposés ensuite depuis l'onglet « Préqualification » de la fiche
+        await createMutation.mutateAsync(data)
       }
     } catch (error) {
       console.error('Submit error:', error)
@@ -294,10 +312,24 @@ export default function SupplierForm() {
             </h2>
           </div>
           <div className="p-6">
+            {isSelfRegistered && (
+              <p className="mb-4 text-sm text-blue-800 bg-blue-50 rounded-lg p-3">
+                Fournisseur inscrit sur le portail : son identité, ses documents, catégories et localisations sont gérés par lui-même.
+                Vous pouvez modifier ici le statut, les conditions et les notes.
+              </p>
+            )}
+            <div className="flex gap-2 mb-6">
+              {Object.entries(SUPPLIER_TYPE_LABELS).map(([v, label]) => (
+                <button key={v} type="button" onClick={() => setFormData(f => ({ ...f, supplier_type: v }))}
+                  className={`px-3 py-1.5 rounded-lg text-sm border ${formData.supplier_type === v ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-600'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom du fournisseur *
+                  {formData.supplier_type === 'INDIVIDUAL' ? 'Nom complet *' : 'Raison sociale *'}
                 </label>
                 <input
                   type="text"
@@ -317,7 +349,7 @@ export default function SupplierForm() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  N° d'enregistrement
+                  N° RCCM
                 </label>
                 <input
                   type="text"
@@ -325,13 +357,25 @@ export default function SupplierForm() {
                   value={formData.registration_number}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Ex: RC 12345"
+                  placeholder="Ex: CD/GOM/RCCM/24-B-0001"
                 />
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">N° ID Nat</label>
+                <input type="text" name="id_nat" value={formData.id_nat} onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">N° pièce d'identité</label>
+                <input type="text" name="id_document_number" value={formData.id_document_number} onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  N° TVA
+                  N° d'impôt (NIF)
                 </label>
                 <input
                   type="text"
@@ -339,7 +383,7 @@ export default function SupplierForm() {
                   value={formData.tax_id}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Ex: FR12345678901"
+                  placeholder="Ex: A1234567X"
                 />
               </div>
 
@@ -587,18 +631,9 @@ export default function SupplierForm() {
                 </select>
               </div>
 
-              <div className="flex items-center">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="prequalified"
-                    checked={formData.prequalified}
-                    onChange={handleChange}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Préqualifié</span>
-                </label>
-              </div>
+              <p className="text-sm text-gray-500 self-center">
+                La préqualification se fait par catégorie de marché, depuis l'onglet « Préqualification & documents » de la fiche.
+              </p>
             </div>
           </div>
         </div>
@@ -623,64 +658,31 @@ export default function SupplierForm() {
           </div>
         </div>
 
-        {/* Documents */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              <Upload size={20} />
-              Documents
-            </h2>
-          </div>
-          <div className="p-6">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
-              <input
-                type="file"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-                id="file-upload"
-              />
-              <label
-                htmlFor="file-upload"
-                className="cursor-pointer inline-flex flex-col items-center"
-              >
-                <Upload size={40} className="text-gray-400 mb-2" />
-                <span className="text-sm text-gray-600">
-                  Cliquez ou glissez-déposez des fichiers
-                </span>
-                <span className="text-xs text-gray-400 mt-1">
-                  PDF, DOC, XLS, JPG, PNG (max 10MB)
-                </span>
-              </label>
+        {/* Localisations et catégories */}
+        {!isSelfRegistered && (
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <MapPin size={20} />
+                Localisations et catégories de marché
+              </h2>
             </div>
-
-            {documents.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <h3 className="text-sm font-medium text-gray-700">Documents uploadés</h3>
-                {documents.map((doc, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <FileText size={18} className="text-blue-500" />
-                      <span className="text-sm text-gray-700">{doc.name || doc.file_name}</span>
-                      {doc.size && (
-                        <span className="text-xs text-gray-400">
-                          ({(doc.size / 1024).toFixed(0)} KB)
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveDocument(index)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Localisations desservies</p>
+                <MultiCheckList options={refs.locations} value={locationIds} onChange={setLocationIds} columns={1} />
               </div>
-            )}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Catégories fournies</p>
+                <MultiCheckList options={refs.categories} value={categoryIds} onChange={setCategoryIds} columns={1} />
+              </div>
+              <p className="md:col-span-2 text-xs text-gray-500">
+                Les documents (pièce d'identité, RCCM, attestation fiscale, ID Nat, RIB) se déposent après l'enregistrement,
+                dans l'onglet « Préqualification & documents » de la fiche.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-3">

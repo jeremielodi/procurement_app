@@ -9,6 +9,13 @@ export const tenderService = {
     const response = await api.get(`/tenders/${id}`);
     return response.data;
   },
+  // Nombre de fournisseurs qui verront l'AO selon sa diffusion
+  eligibleCount: async ({ audience, categoryId, locationId }) => {
+    const response = await api.get('/tenders/eligible-count', {
+      params: { audience, ...(categoryId ? { categoryId } : {}), ...(locationId ? { locationId } : {}) },
+    });
+    return response.data;
+  },
   getByRequisition: async (requisitionId) => {
     const response = await api.get(`/tenders/by-requisition/${requisitionId}`);
     return response.data;

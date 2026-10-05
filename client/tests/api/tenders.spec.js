@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getToken, auth } from './helpers.js';
+import { getToken, auth, supplierRegistration, firstReferenceIds } from './helpers.js';
 
 // Flux complet : inscription fournisseur → appel d'offres → soumission → modification
 // → clôture → comparatif Excel → PDF fournisseur → annulation (libère la réquisition)
@@ -13,12 +13,13 @@ test.describe.serial('API › Portail fournisseur & appels d\'offres', () => {
   });
 
   test('POST /api/auth/register-supplier — crée un compte fournisseur', async ({ request }) => {
+    const { locationId, categoryId } = await firstReferenceIds(request);
     const res = await request.post('/api/auth/register-supplier', {
       multipart: {
-        name: `Fournisseur Test ${stamp}`,
-        contactName: 'Jean Test',
-        email: supplierCreds.email,
-        password: supplierCreds.password,
+        ...supplierRegistration({
+          name: `Fournisseur Test ${stamp}`, email: supplierCreds.email, password: supplierCreds.password,
+          locationIds: [locationId], categoryIds: [categoryId],
+        }),
         logo: { name: 'logo.png', mimeType: 'image/png', buffer: Buffer.from(
           'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') },
       },

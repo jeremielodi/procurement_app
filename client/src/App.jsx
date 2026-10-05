@@ -49,6 +49,8 @@ import SupplierDashboard from './components/SupplierPortal/SupplierDashboard';
 import { useAuth } from './hooks/useAuth';
 import { homePathFor } from './utils/accountType';
 import EnterpriseList from './components/Enterprises/EnterpriseList';
+import ReferenceData from './components/Admin/ReferenceData';
+import PrequalifiedSupplierList from './components/Suppliers/PrequalifiedSupplierList';
 import EnterpriseDetail from './components/Enterprises/EnterpriseDetail';
 import EnterpriseSettings from './components/Enterprises/EnterpriseSettings';
 
@@ -154,6 +156,8 @@ function App() {
             </Layout>
           </ProtectedRoute>
         } />
+
+        <Route path="/suppliers/prequalified" element={<ProtectedRoute requiredPermission="VIEW_SUPPLIERS"><Layout><PrequalifiedSupplierList /></Layout></ProtectedRoute>} />
 
         <Route path="/suppliers/new" element={
           <ProtectedRoute>
@@ -272,6 +276,7 @@ function App() {
 
         {/* Plateforme (super admin) et paramètres d'entreprise */}
         <Route path="/admin/enterprises" element={<ProtectedRoute superAdminOnly><Layout><EnterpriseList /></Layout></ProtectedRoute>} />
+        <Route path="/admin/references" element={<ProtectedRoute superAdminOnly><Layout><ReferenceData /></Layout></ProtectedRoute>} />
         <Route path="/admin/enterprises/:id" element={<ProtectedRoute superAdminOnly><Layout><EnterpriseDetail /></Layout></ProtectedRoute>} />
         <Route path="/settings/enterprise" element={<ProtectedRoute requiredPermission="MANAGE_USERS"><Layout><EnterpriseSettings /></Layout></ProtectedRoute>} />
 

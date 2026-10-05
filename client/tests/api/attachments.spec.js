@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getToken, auth } from './helpers.js';
+import { getToken, auth, supplierRegistration, firstReferenceIds } from './helpers.js';
 
 // Fichiers uploadés (pièces jointes, logos) via le stockage (MinIO ou disque)
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
@@ -91,8 +91,12 @@ test.describe.serial('API › Pièces jointes & stockage', () => {
   });
 
   test('Logo fournisseur : stocké puis servi par l\'API publique', async ({ request }) => {
+    const { locationId, categoryId } = await firstReferenceIds(request);
     const reg = await request.post('/api/auth/register-supplier', {
-      multipart: { name: `Logo SARL ${stamp}`, contactName: 'L O', email: `logo.${stamp}@example.com`, password: 'Secret123', logo: { name: 'logo.png', mimeType: 'image/png', buffer: PNG } },
+      multipart: {
+        ...supplierRegistration({ name: `Logo SARL ${stamp}`, email: `logo.${stamp}@example.com`, locationIds: [locationId], categoryIds: [categoryId] }),
+        logo: { name: 'logo.png', mimeType: 'image/png', buffer: PNG },
+      },
     });
     expect(reg.status()).toBe(201);
     const supplierToken = (await reg.json()).data.token;

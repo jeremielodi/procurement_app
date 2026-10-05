@@ -207,6 +207,11 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - Rôle déduit de `TASK_CANDIDATE_GROUPS` si l'événement n'a pas de `candidateGroup` ; clé lue en `taskDefinitionKey` ou `TaskDefinitionKey` ; notifications et emails indépendants (l'échec de l'un n'empêche pas l'autre) ; bilan « 📧 … email(s) envoyé(s) » ou « aucun membre du projet avec le profil » dans les logs
 - Liens des emails (tâches GoFlow et appels d'offres) : `utils/appUrl.js` (`APP_URL`, `appLink(path)`) — `APP_URL` à définir dans `backend/.env` avec l'adresse publique (défaut `http://localhost:5000`, avertissement au démarrage en production)
 
+## Site vitrine (FR / EN)
+
+- `client/src/components/Landing/LandingPage.jsx` : page unique publique sur `/` (visiteur non connecté ; connecté → `HomeRedirect`, via `Home` dans `App.jsx`). Éditeur : **Digitales Solutions**
+- Textes dans l'objet `TEXT` (`fr` / `en`) du composant ; langue = `localStorage.landing_lang`, sinon langue du navigateur. Liens : `/login`, `/supplier-register`, contact (`CONTACT_EMAIL` / `CONTACT_PHONE` en tête du fichier)
+
 ## Mot de passe oublié / changement
 
 - `POST /auth/forgot-password { email }` (public, `AuthController.forgotPassword`) : réponse **générique identique** que le compte existe ou non ; après la réponse, génère un mot de passe (`utils/passwordGenerator.js`, 12 car.) et l'envoie par email à l'utilisateur **actif** ; le mot de passe n'est remplacé que si l'email est parti. Limites en mémoire : 1 régénération / email / 5 min, 5 demandes / IP / 15 min (429)

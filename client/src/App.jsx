@@ -53,11 +53,20 @@ import ReferenceData from './components/Admin/ReferenceData';
 import PrequalifiedSupplierList from './components/Suppliers/PrequalifiedSupplierList';
 import EnterpriseDetail from './components/Enterprises/EnterpriseDetail';
 import EnterpriseSettings from './components/Enterprises/EnterpriseSettings';
+import LandingPage from './components/Landing/LandingPage';
+import LoadingSpinner from './components/Common/LoadingSpinner';
 
 // Accueil selon le compte : super admin → entreprises, fournisseur → portail, sinon → dashboard
 function HomeRedirect() {
   const { user } = useAuth();
   return <Navigate to={homePathFor(user)} replace />;
+}
+
+// « / » : page vitrine pour un visiteur, accueil de son compte pour un utilisateur connecté
+function Home() {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <LoadingSpinner fullScreen />;
+  return isAuthenticated ? <HomeRedirect /> : <LandingPage />;
 }
 import  './app.css'
 function App() {
@@ -70,12 +79,9 @@ function App() {
         <Route path="/supplier-register" element={<SupplierRegister />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
+        <Route path="/" element={<Home />} />
+
         {/* Routes protégées */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            <HomeRedirect />
-          </ProtectedRoute>
-        } />
 
         <Route path="/dashboard" element={
           <ProtectedRoute>

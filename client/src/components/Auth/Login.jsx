@@ -153,6 +153,9 @@ export default function Login() {
           <p className="text-xs text-gray-500">
             procureApp — plateforme de gestion des achats
           </p>
+          <Link to="/" className="mt-1 inline-block text-xs text-blue-600 hover:text-blue-800">
+            ← Retour au site
+          </Link>
         </div>
       </div>
     </div>

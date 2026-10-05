@@ -132,8 +132,9 @@ export default function SupplierDetail() {
   }
 
   const calculateAverageRating = () => {
-    if (evaluations.length === 0) return supplier?.rating || 0
-    const sum = evaluations.reduce((acc, eval1) => acc + (eval1.rating || 0), 0)
+    // rating arrive en texte (DECIMAL PostgreSQL) : conversion avant l'addition
+    if (evaluations.length === 0) return Number(supplier?.rating) || 0
+    const sum = evaluations.reduce((acc, eval1) => acc + (Number(eval1.rating) || 0), 0)
     return (sum / evaluations.length).toFixed(1)
   }
 

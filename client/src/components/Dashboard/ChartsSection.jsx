@@ -421,7 +421,7 @@ export default function ChartsSection({ chartData, period }) {
                     return `<div style="font-weight: bold; margin-bottom: 4px;">${p.name}</div>
             <div>Montant: <strong>${formatCurrency(p.value)}</strong></div>
             <div>Commandes: <strong>${item?.orders || 0}</strong></div>
-            <div>Note: <strong>${item?.rating?.toFixed(1) || 'N/A'}/5</strong></div>`;
+            <div>Note: <strong>${Number(item?.rating) ? Number(item.rating).toFixed(1) : 'N/A'}/5</strong></div>`;
                 }
             },
             grid: { left: 120, right: 60, top: 20, bottom: 20 },

@@ -501,10 +501,11 @@ export default function SupplierList() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1">
                         <div className="flex">
-                          {getRatingStars(supplier.rating || 0)}
+                          {getRatingStars(Number(supplier.rating) || 0)}
                         </div>
                         <span className="text-sm font-medium ml-1">
-                          {supplier.rating ? supplier.rating.toFixed(1) : '-'}
+                          {/* rating arrive en texte (DECIMAL PostgreSQL) */}
+                          {Number(supplier.rating) ? Number(supplier.rating).toFixed(1) : '-'}
                         </span>
                       </div>
                     </td>

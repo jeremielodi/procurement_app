@@ -115,7 +115,7 @@ export default function SupplierProfile() {
       {stillMissing.length > 0 && (
         <div className="flex gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-sm">
           <AlertTriangle size={18} className="shrink-0 mt-0.5" />
-          <p>Documents non fournis (facultatifs, mais utiles aux entreprises pour vous préqualifier) :{' '}
+          <p>Documents non fournis — tous les documents sont requis, puis vérifiés par chaque entreprise, pour être préqualifié :{' '}
             <b>{stillMissing.map(t => DOC_LABELS[t]).join(', ')}</b>.</p>
         </div>
       )}

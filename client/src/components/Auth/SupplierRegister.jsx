@@ -205,7 +205,7 @@ export default function SupplierRegister() {
           </Section>
 
           <Section icon={FileText} title="Documents de préqualification"
-            hint={`Facultatifs, mais ils facilitent votre préqualification — vous pourrez les ajouter plus tard depuis votre profil. ${type === 'COMPANY' ? "PDF (pièce d'identité : PDF, JPG ou PNG)" : "Pièce d'identité : PDF, JPG ou PNG ; RIB : PDF"} — 5 Mo max. chacun`}>
+            hint={`Facultatifs à l'inscription — mais tous les documents sont requis (et vérifiés par l'entreprise) pour être préqualifié. Vous pourrez les ajouter plus tard depuis votre profil. ${type === 'COMPANY' ? "PDF (pièce d'identité : PDF, JPG ou PNG)" : "Pièce d'identité : PDF, JPG ou PNG ; RIB : PDF"} — 5 Mo max. chacun`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {EXPECTED_DOCS[type].map(t => (
                 <DocumentField key={t} type={t} file={docs[t]} onFile={(dt, f) => setDocs(d => ({ ...d, [dt]: f }))} />

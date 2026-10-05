@@ -272,6 +272,68 @@ class TenderModel {
     );
   }
 
+  // ---------- AO réservé : candidats et invitations ----------
+
+  /**
+   * Fournisseurs que l'acheteur peut inviter : préqualifiés par l'entreprise courante dans la catégorie,
+   * actifs, desservant la localisation (si définie). has_account = peut se connecter au portail pour soumettre.
+   */
+  async getCandidates({ categoryId, locationId }) {
+    const params = [categoryId, locationId || null];
+    return db.select(
+      `SELECT s.id, s.supplier_code, s.name, s.supplier_type, s.rating,
+              (u.id IS NOT NULL AND u.is_active) AS has_account,
+              ARRAY(SELECT l.name FROM supplier_locations sl JOIN locations l ON l.id = sl.location_id
+                    WHERE sl.supplier_id = s.id ORDER BY l.name) AS location_names
+       FROM supplier_prequalifications sp
+       JOIN suppliers s ON s.id = sp.supplier_id
+       LEFT JOIN users u ON u.id = s.user_id
+       WHERE sp.category_id = $1 AND sp.status = 'APPROVED' AND s.status = 'ACTIVE'
+         AND ($2::int IS NULL OR EXISTS (SELECT 1 FROM supplier_locations sl WHERE sl.supplier_id = s.id AND sl.location_id = $2))
+         ${tenant.filter('sp.enterprise_id', params)}
+       ORDER BY s.name`,
+      params
+    );
+  }
+
+  async getInvitations(tenderId) {
+    return db.select(
+      `SELECT ti.supplier_id, ti.invited_at, s.supplier_code, s.name AS supplier_name, s.supplier_type,
+              (u.id IS NOT NULL AND u.is_active) AS has_account,
+              EXISTS (SELECT 1 FROM tender_submissions ts WHERE ts.tender_id = ti.tender_id AND ts.supplier_id = ti.supplier_id) AS submitted
+       FROM tender_invitations ti
+       JOIN suppliers s ON s.id = ti.supplier_id
+       LEFT JOIN users u ON u.id = s.user_id
+       WHERE ti.tender_id = $1
+       ORDER BY s.name`,
+      [tenderId]
+    );
+  }
+
+  /**
+   * Remplace la liste des invités : ajoute les nouveaux, retire les autres SAUF ceux qui ont déjà soumis.
+   * Renvoie { added, removed, kept } (ids).
+   */
+  async setInvitations(tenderId, supplierIds, userId) {
+    const wanted = new Set(supplierIds.map(Number));
+    const current = await this.getInvitations(tenderId);
+    const currentIds = new Set(current.map(i => i.supplier_id));
+    const added = [...wanted].filter(id => !currentIds.has(id));
+    const removable = current.filter(i => !wanted.has(i.supplier_id) && !i.submitted).map(i => i.supplier_id);
+    const kept = current.filter(i => !wanted.has(i.supplier_id) && i.submitted).map(i => i.supplier_id);
+    for (const id of added) {
+      await db.exec(
+        `INSERT INTO tender_invitations (tender_id, supplier_id, invited_by) VALUES ($1, $2, $3)
+         ON CONFLICT DO NOTHING`,
+        [tenderId, id, userId]
+      );
+    }
+    if (removable.length) {
+      await db.exec('DELETE FROM tender_invitations WHERE tender_id = $1 AND supplier_id = ANY($2::int[])', [tenderId, removable]);
+    }
+    return { added, removed: removable, kept };
+  }
+
   async isSupplierEligible(supplierId, tenderId) {
     const r = await db.one('SELECT supplier_eligible_for_tender($1, $2) AS ok', [supplierId, tenderId]);
     return !!r?.ok;

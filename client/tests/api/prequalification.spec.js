@@ -14,7 +14,7 @@ test.describe.serial('API › Préqualification des fournisseurs', () => {
   const company = { email: `preq.company.${stamp}@example.com`, password: 'Secret123' };
   const person = { email: `preq.person.${stamp}@example.com`, password: 'Secret123' };
   let adminToken, superToken, companyToken, personToken;
-  let ref, companyId, personId, tenderId, requisitionId;
+  let ref, companyId, personId, bareId, bareToken, tenderId, requisitionId;
 
   test.beforeAll(async ({ request }) => {
     adminToken = await getToken(request);
@@ -52,19 +52,22 @@ test.describe.serial('API › Préqualification des fournisseurs', () => {
     expect(bad.status()).toBe(400);
     expect((await bad.json()).message).toContain('ID Nat');
 
-    // Sans aucun document : accepté (documents facultatifs), puis préqualifiable
+    // Sans aucun document : inscription acceptée (documents facultatifs) mais NON préqualifiable
     const { doc_ID_CARD, doc_RCCM, doc_TAX, doc_ID_NAT, doc_RIB, ...noDocs } = full;
     const bare = await request.post('/api/auth/register-supplier', {
       multipart: { ...noDocs, name: `Sans docs ${stamp}`, email: `nodocs.${stamp}@example.com` },
     });
     expect(bare.status()).toBe(201);
-    const bareMe = (await (await request.get('/api/supplier-portal/me', { headers: auth((await bare.json()).data.token) })).json()).data;
+    bareToken = (await bare.json()).data.token;
+    const bareMe = (await (await request.get('/api/supplier-portal/me', { headers: auth(bareToken) })).json()).data;
+    bareId = bareMe.id;
     expect(bareMe.documents).toEqual([]);
     expect(bareMe.missing_documents).toHaveLength(5);
     const approveBare = await request.put(`/api/suppliers/${bareMe.id}/prequalification`, {
       headers: auth(adminToken), data: { categoryId: ref.categoryId, status: 'APPROVED' },
     });
-    expect(approveBare.status()).toBe(200);
+    expect(approveBare.status()).toBe(400);
+    expect((await approveBare.json()).message).toContain('non déposés');
 
     const noCategory = await request.post('/api/auth/register-supplier', {
       multipart: { ...full, categoryIds: '[]', email: `nocat.${stamp}@example.com` },
@@ -144,17 +147,48 @@ test.describe.serial('API › Préqualification des fournisseurs', () => {
     });
     expect(rejectNoReason.status()).toBe(400);
 
-    const ok = await request.put(`/api/suppliers/${companyId}/prequalification`, {
+    // Tous les documents déposés mais pas encore vérifiés : préqualification refusée
+    const approve = () => request.put(`/api/suppliers/${companyId}/prequalification`, {
       headers: auth(adminToken), data: { categoryId: ref.categoryId, status: 'APPROVED', comment: 'Dossier complet' },
     });
+    const early = await approve();
+    expect(early.status()).toBe(400);
+    expect((await early.json()).message).toContain('à vérifier');
+
+    const reviewDoc = (supplierId, docId, data) =>
+      request.put(`/api/suppliers/${supplierId}/documents/${docId}/review`, { headers: auth(adminToken), data });
+    const [first, ...others] = sup.documents;
+    expect((await reviewDoc(companyId, first.id, { status: 'REJECTED' })).status()).toBe(400); // motif obligatoire
+    expect((await reviewDoc(companyId, first.id, { status: 'REJECTED', comment: 'Illisible' })).status()).toBe(200);
+    for (const d of others) expect((await reviewDoc(companyId, d.id, { status: 'VERIFIED' })).status()).toBe(200);
+    const withRejected = await approve();
+    expect(withRejected.status()).toBe(400);
+    expect((await withRejected.json()).message).toContain('refusés');
+
+    const verified = await reviewDoc(companyId, first.id, { status: 'VERIFIED' });
+    expect((await verified.json()).data.dossier.complete).toBe(true);
+    const ok = await approve();
     expect(ok.status()).toBe(200);
     expect((await ok.json()).data[0].status).toBe('APPROVED');
+
+    // Le refus d'un document est notifié au fournisseur
+    const me = (await (await request.get('/api/auth/profile', { headers: auth(companyToken) })).json()).data;
+    const notes = (await (await request.get(`/api/notifications/${me.id}`, { headers: auth(companyToken) })).json()).data;
+    expect(notes.some(n => n.title === 'Document refusé')).toBe(true);
+
+    // Personne physique : pièce d'identité + RIB vérifiés → préqualifiable
+    const person = (await (await request.get(`/api/suppliers/${personId}`, { headers: auth(adminToken) })).json()).data;
+    for (const d of person.documents) await reviewDoc(personId, d.id, { status: 'VERIFIED' });
+    expect((await request.put(`/api/suppliers/${personId}/prequalification`, {
+      headers: auth(adminToken), data: { categoryId: ref.categoryId, status: 'APPROVED' },
+    })).status()).toBe(200);
   });
 
   test('Liste des préqualifiés : filtres et export Excel', async ({ request }) => {
     const all = (await (await request.get(`/api/suppliers/prequalified?categoryId=${ref.categoryId}`, { headers: auth(adminToken) })).json()).data;
     expect(all.map(r => r.id)).toContain(companyId);
-    expect(all.map(r => r.id)).not.toContain(personId); // pas encore préqualifié
+    expect(all.map(r => r.id)).toContain(personId);
+    expect(all.map(r => r.id)).not.toContain(bareId); // dossier incomplet
 
     const otherLoc = ref.locations.find(l => ![ref.locationId, ref.locations[2].id].includes(l.id)).id;
     const byLoc = (await (await request.get(`/api/suppliers/prequalified?locationId=${otherLoc}`, { headers: auth(adminToken) })).json()).data;
@@ -165,7 +199,7 @@ test.describe.serial('API › Préqualification des fournisseurs', () => {
     expect(xlsx.headers()['content-type']).toContain('spreadsheetml');
   });
 
-  test('Appel d\'offres réservé aux préqualifiés : visible et ouvert aux seuls éligibles', async ({ request }) => {
+  test('Appel d\'offres réservé : seuls les préqualifiés sélectionnés le voient et peuvent soumettre', async ({ request }) => {
     const list = await (await request.get('/api/requisitions?limit=100', { headers: auth(adminToken) })).json();
     for (const r of list.data) {
       const existing = await (await request.get(`/api/tenders/by-requisition/${r.id}`, { headers: auth(adminToken) })).json();
@@ -182,13 +216,22 @@ test.describe.serial('API › Préqualification des fournisseurs', () => {
     };
     expect((await request.post('/api/tenders', { headers: auth(adminToken), data: payload })).status()).toBe(400); // catégorie requise
 
-    const count = await (await request.get(
-      `/api/tenders/eligible-count?audience=PREQUALIFIED&categoryId=${ref.categoryId}&locationId=${ref.locationId}`,
-      { headers: auth(adminToken) })).json();
-    expect(count.data.count).toBeGreaterThanOrEqual(1);
+    // Candidats : préqualifiés de la catégorie (la localisation restreint encore la liste)
+    const candidates = (await (await request.get(`/api/tenders/candidates?categoryId=${ref.categoryId}`,
+      { headers: auth(adminToken) })).json()).data;
+    expect(candidates.map(c => c.id)).toEqual(expect.arrayContaining([companyId, personId]));
+    expect(candidates.map(c => c.id)).not.toContain(bareId);
+    const atLocation = (await (await request.get(
+      `/api/tenders/candidates?categoryId=${ref.categoryId}&locationId=${ref.locationId}`,
+      { headers: auth(adminToken) })).json()).data;
+    expect(atLocation.map(c => c.id)).not.toContain(personId);
+
+    const target = { ...payload, categoryId: ref.categoryId };
+    expect((await request.post('/api/tenders', { headers: auth(adminToken), data: target })).status()).toBe(400); // aucun invité
+    expect((await request.post('/api/tenders', { headers: auth(adminToken), data: { ...target, supplierIds: [bareId] } })).status()).toBe(400); // non préqualifié
 
     const res = await request.post('/api/tenders', {
-      headers: auth(adminToken), data: { ...payload, categoryId: ref.categoryId, locationId: ref.locationId },
+      headers: auth(adminToken), data: { ...target, supplierIds: [companyId] },
     });
     expect(res.status()).toBe(201);
     tenderId = (await res.json()).data.id;
@@ -196,14 +239,15 @@ test.describe.serial('API › Préqualification des fournisseurs', () => {
     const detail = (await (await request.get(`/api/tenders/${tenderId}`, { headers: auth(adminToken) })).json()).data;
     expect(detail.audience).toBe('PREQUALIFIED');
     expect(detail.category_name).toBeTruthy();
+    expect(detail.invitations.map(i => i.supplier_id)).toEqual([companyId]);
 
-    // Préqualifié + localisation desservie : voit l'AO
+    // Invité : voit l'AO
     const mine = (await (await request.get('/api/supplier-portal/tenders', { headers: auth(companyToken) })).json()).data;
     expect(mine.some(t => t.id === tenderId)).toBe(true);
     const one = await request.get(`/api/supplier-portal/tenders/${tenderId}`, { headers: auth(companyToken) });
     expect(one.status()).toBe(200);
 
-    // Non préqualifié : ne le voit pas, ne peut pas soumettre
+    // Préqualifié mais NON invité : ne le voit pas, ne peut pas soumettre
     const theirs = (await (await request.get('/api/supplier-portal/tenders', { headers: auth(personToken) })).json()).data;
     expect(theirs.some(t => t.id === tenderId)).toBe(false);
     expect((await request.get(`/api/supplier-portal/tenders/${tenderId}`, { headers: auth(personToken) })).status()).toBe(404);
@@ -211,6 +255,23 @@ test.describe.serial('API › Préqualification des fournisseurs', () => {
       headers: auth(personToken), data: { deliveryDays: 10, items: [] },
     });
     expect(submit.status()).toBe(403);
+
+    // Non préqualifié : ne le voit pas non plus
+    const bareList = (await (await request.get('/api/supplier-portal/tenders', { headers: auth(bareToken) })).json()).data;
+    expect(bareList.some(t => t.id === tenderId)).toBe(false);
+    expect((await request.get(`/api/supplier-portal/tenders/${tenderId}`, { headers: auth(bareToken) })).status()).toBe(404);
+
+    // Ajout d'un invité après publication : il voit désormais l'AO
+    const upd = await request.put(`/api/tenders/${tenderId}`, {
+      headers: auth(adminToken),
+      data: {
+        title: payload.title, startDate: payload.startDate, endDate: payload.endDate, maxDeliveryDays: 30,
+        supplierIds: [companyId, personId],
+      },
+    });
+    expect(upd.status()).toBe(200);
+    expect((await upd.json()).invitations.added).toEqual([personId]);
+    expect((await request.get(`/api/supplier-portal/tenders/${tenderId}`, { headers: auth(personToken) })).status()).toBe(200);
   });
 
   test.afterAll(async ({ request }) => {

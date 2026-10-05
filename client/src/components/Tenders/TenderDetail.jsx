@@ -88,10 +88,14 @@ export default function TenderDetail() {
     if (editForm.audience === 'PREQUALIFIED' && !editForm.categoryId) {
       return toast.error('Choisissez la catégorie de marché des fournisseurs préqualifiés');
     }
+    if (editForm.audience === 'PREQUALIFIED' && !(editForm.supplierIds || []).length) {
+      return toast.error('Sélectionnez au moins un fournisseur à inviter');
+    }
     const ok = await run(() => tenderService.update(tender.id, {
       ...editForm,
       categoryId: editForm.categoryId || null,
       locationId: editForm.locationId || null,
+      supplierIds: editForm.audience === 'PREQUALIFIED' ? editForm.supplierIds : undefined,
       startDate: new Date(editForm.startDate).toISOString(),
       endDate: new Date(editForm.endDate).toISOString(),
       maxDeliveryDays: parseInt(editForm.maxDeliveryDays),
@@ -139,6 +143,7 @@ export default function TenderDetail() {
               startDate: toLocalInput(tender.start_date), endDate: toLocalInput(tender.end_date),
               maxDeliveryDays: tender.max_delivery_days,
               audience: tender.audience || 'ALL', categoryId: tender.category_id || '', locationId: tender.location_id || '',
+              supplierIds: (tender.invitations || []).map(i => i.supplier_id),
             })} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
               <Pencil size={16} /> {tender.effective_status === 'CLOSED' ? 'Prolonger' : 'Modifier'}
             </button>
@@ -211,6 +216,22 @@ export default function TenderDetail() {
       {canAward && (
         <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-sm text-green-800">
           Soumissions clôturées : choisissez le fournisseur à retenir avec le bouton « Attribuer » ci-dessous.
+        </div>
+      )}
+
+      {/* AO réservé : fournisseurs invités */}
+      {tender.audience === 'PREQUALIFIED' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5" data-testid="tender-invitations">
+          <h2 className="font-semibold text-gray-800 mb-1">Fournisseurs invités ({(tender.invitations || []).length})</h2>
+          <p className="text-xs text-gray-500 mb-3">Seuls ces fournisseurs ont été notifiés et voient cet appel d'offres dans leur portail.</p>
+          <div className="flex flex-wrap gap-2">
+            {(tender.invitations || []).map(i => (
+              <span key={i.supplier_id} className={`px-3 py-1 rounded-full text-sm border ${i.submitted ? 'border-green-300 bg-green-50 text-green-800' : 'border-gray-200 text-gray-700'}`}>
+                {i.supplier_name}
+                <span className="text-xs ml-1 opacity-70">{i.submitted ? '· a soumis' : (i.has_account ? '· en attente' : '· sans compte portail')}</span>
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
@@ -325,7 +346,8 @@ export default function TenderDetail() {
             </div>
             <div className="col-span-2 border-t pt-3">
               <TenderTargetingFields
-                value={{ audience: editForm.audience, categoryId: editForm.categoryId, locationId: editForm.locationId }}
+                value={{ audience: editForm.audience, categoryId: editForm.categoryId, locationId: editForm.locationId, supplierIds: editForm.supplierIds }}
+                lockedIds={(tender.invitations || []).filter(i => i.submitted).map(i => i.supplier_id)}
                 onChange={(v) => setEditForm(f => ({ ...f, ...v }))} />
             </div>
           </div>

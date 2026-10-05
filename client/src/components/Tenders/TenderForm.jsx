@@ -33,7 +33,7 @@ export default function TenderForm() {
     endDate: toLocalInput(new Date(Date.now() + 7 * 86400000)),
     maxDeliveryDays: 30,
   });
-  const [targeting, setTargeting] = useState({ audience: 'ALL', categoryId: '', locationId: '' });
+  const [targeting, setTargeting] = useState({ audience: 'ALL', categoryId: '', locationId: '', supplierIds: [] });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -76,6 +76,9 @@ export default function TenderForm() {
     if (targeting.audience === 'PREQUALIFIED' && !targeting.categoryId) {
       return toast.error('Choisissez la catégorie de marché des fournisseurs préqualifiés');
     }
+    if (targeting.audience === 'PREQUALIFIED' && !targeting.supplierIds.length) {
+      return toast.error('Sélectionnez au moins un fournisseur à inviter');
+    }
     setSubmitting(true);
     try {
       const res = await tenderService.create({
@@ -88,6 +91,7 @@ export default function TenderForm() {
         audience: targeting.audience,
         categoryId: targeting.categoryId || null,
         locationId: targeting.locationId || null,
+        ...(targeting.audience === 'PREQUALIFIED' ? { supplierIds: targeting.supplierIds } : {}),
       });
       toast.success(`Appel d'offres publié — ${res.notifiedSuppliers} fournisseur(s) notifié(s)`);
       navigate(`/tenders/${res.data.id}`);

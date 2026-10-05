@@ -333,7 +333,7 @@ export default function SupplierDetail() {
             }`}
           >
             Préqualification & documents
-            {(supplier.missing_documents || []).length > 0 && <span className="ml-1 text-orange-500">●</span>}
+            {supplier.dossier && !supplier.dossier.complete && <span className="ml-1 text-orange-500" title="Dossier incomplet ou à vérifier">●</span>}
           </button>
           <button
             onClick={() => setActiveTab('purchase-orders')}
@@ -360,7 +360,8 @@ export default function SupplierDetail() {
 
       {/* Contenu des tabs */}
       {activeTab === 'prequalification' && (
-        <SupplierPrequalificationPanel supplier={supplier} canManage={canPrequalify} onChanged={refetch} />
+        <SupplierPrequalificationPanel supplier={supplier} canReview={hasPermission('PREQUALIFY_SUPPLIERS')}
+          canUpload={hasPermission('MANAGE_SUPPLIERS')} onChanged={refetch} />
       )}
       {activeTab === 'details' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -3,7 +3,7 @@
 // Les évaluations, elles, sont propres à chaque entreprise (supplier_evaluations.enterprise_id).
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
-const { missingDocuments } = require('../utils/supplierDocuments');
+const { missingDocuments, EXPECTED_DOCS } = require('../utils/supplierDocuments');
 
 // Champs modifiables par un acheteur : clé API (camelCase ou snake_case) → colonne
 const FIELDS = {
@@ -169,14 +169,58 @@ class SupplierModel {
 
   // ---------------- Documents ----------------
 
+  /**
+   * Documents du fournisseur + vérification par l'entreprise courante (review_status VERIFIED / REJECTED / null).
+   * Une vérification ne vaut que pour la version vérifiée du fichier : remplacé → à revérifier.
+   */
   async getDocuments(supplierId) {
+    const params = [supplierId];
+    const reviewFilter = tenant.filter('r.enterprise_id', params);
     return db.select(
       `SELECT d.id, d.doc_type, d.file_name, d.mime_type, d.file_size, d.uploaded_at,
-              TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS uploaded_by_name
-       FROM supplier_documents d LEFT JOIN users u ON u.id = d.uploaded_by
+              TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS uploaded_by_name,
+              r.status AS review_status, r.comment AS review_comment, r.reviewed_at,
+              TRIM(COALESCE(ru.first_name, '') || ' ' || COALESCE(ru.last_name, '')) AS reviewed_by_name
+       FROM supplier_documents d
+       LEFT JOIN users u ON u.id = d.uploaded_by
+       LEFT JOIN supplier_document_reviews r ON r.document_id = d.id AND r.file_path = d.file_path${reviewFilter}
+       LEFT JOIN users ru ON ru.id = r.reviewed_by
        WHERE d.supplier_id = $1 ORDER BY d.doc_type`,
-      [supplierId]
+      params
     );
+  }
+
+  /** status : VERIFIED | REJECTED | null (annule la vérification) — porte sur la version courante du fichier */
+  async reviewDocument(enterpriseId, document, status, comment, userId) {
+    if (!status) {
+      await db.exec('DELETE FROM supplier_document_reviews WHERE enterprise_id = $1 AND document_id = $2', [enterpriseId, document.id]);
+      return;
+    }
+    await db.exec(
+      `INSERT INTO supplier_document_reviews (enterprise_id, document_id, file_path, status, comment, reviewed_by, reviewed_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       ON CONFLICT (enterprise_id, document_id) DO UPDATE SET
+         file_path = EXCLUDED.file_path, status = EXCLUDED.status, comment = EXCLUDED.comment,
+         reviewed_by = EXCLUDED.reviewed_by, reviewed_at = NOW()`,
+      [enterpriseId, document.id, document.file_path, status, comment || null, userId]
+    );
+  }
+
+  /**
+   * État du dossier pour l'entreprise courante : complet = tous les documents attendus déposés ET vérifiés.
+   * { missing, toVerify, rejected, complete } (types de documents)
+   */
+  dossierStatus(supplierType, documents) {
+    const byType = Object.fromEntries(documents.map(d => [d.doc_type, d]));
+    const expected = EXPECTED_DOCS[supplierType] || EXPECTED_DOCS.COMPANY;
+    const missing = expected.filter(t => !byType[t]);
+    const rejected = expected.filter(t => byType[t]?.review_status === 'REJECTED');
+    const toVerify = expected.filter(t => byType[t] && !byType[t].review_status);
+    return { missing, toVerify, rejected, complete: !missing.length && !rejected.length && !toVerify.length };
+  }
+
+  async getDossierStatus(supplier) {
+    return this.dossierStatus(supplier.supplier_type, await this.getDocuments(supplier.id));
   }
 
   async getDocument(supplierId, documentId) {
@@ -217,6 +261,7 @@ class SupplierModel {
     return {
       ...supplier, locations, categories, documents,
       missing_documents: missingDocuments(supplier.supplier_type, documents.map(d => d.doc_type)),
+      dossier: this.dossierStatus(supplier.supplier_type, documents),
     };
   }
 

@@ -8,9 +8,20 @@ const storage = require('../services/StorageService');
 const { storeDocument, DOC_LABELS } = require('../utils/supplierDocuments');
 const { parseIdList, sendDocument } = require('./SupplierPortalController');
 const { generatePrequalifiedWorkbook } = require('../services/PrequalifiedSupplierExportService');
+const notificationModel = require('../models/NotificationModel');
 
 const fail = (res, error) => res.status(error.status || 500).json({ success: false, message: error.message });
 const PREQ_STATUSES = ['APPROVED', 'REJECTED'];
+const REVIEW_STATUSES = ['VERIFIED', 'REJECTED'];
+
+/** Message expliquant pourquoi le dossier n'est pas préqualifiable */
+function dossierProblem(d) {
+  const parts = [];
+  if (d.missing.length) parts.push(`documents non déposés : ${d.missing.map(t => DOC_LABELS[t]).join(', ')}`);
+  if (d.rejected.length) parts.push(`documents refusés : ${d.rejected.map(t => DOC_LABELS[t]).join(', ')}`);
+  if (d.toVerify.length) parts.push(`documents à vérifier : ${d.toVerify.map(t => DOC_LABELS[t]).join(', ')}`);
+  return `Dossier non préqualifiable — ${parts.join(' ; ')}`;
+}
 
 /** Localisations / catégories envoyées par un acheteur (fournisseurs saisis à la main uniquement) */
 async function applyLinks(supplier, body) {
@@ -130,6 +141,42 @@ class SupplierController {
     } catch (error) { fail(res, error); }
   }
 
+  /**
+   * PUT /suppliers/:id/documents/:documentId/review  body { status: 'VERIFIED' | 'REJECTED' | null, comment }
+   * Vérification par l'entreprise courante de la version actuelle du document (motif obligatoire au refus).
+   */
+  async reviewDocument(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(403).json({ success: false, message: 'Réservé aux utilisateurs d\'une entreprise' });
+      const supplier = await supplierModel.getById(req.params.id);
+      if (!supplier) return res.status(404).json({ success: false, message: 'Fournisseur introuvable' });
+      const document = await supplierModel.getDocument(supplier.id, req.params.documentId);
+      if (!document) return res.status(404).json({ success: false, message: 'Document introuvable' });
+      const status = req.body.status || null;
+      if (status && !REVIEW_STATUSES.includes(status)) return res.status(400).json({ success: false, message: 'Statut invalide' });
+      const comment = req.body.comment?.trim();
+      if (status === 'REJECTED' && !comment) return res.status(400).json({ success: false, message: 'Indiquez le motif du refus' });
+
+      await supplierModel.reviewDocument(req.enterpriseId, document, status, comment, req.user.id);
+
+      // Le fournisseur est prévenu d'un refus pour pouvoir déposer un nouveau fichier
+      if (status === 'REJECTED' && supplier.user_id) {
+        const enterprise = await db.one('SELECT name FROM enterprise WHERE id = $1', [req.enterpriseId]);
+        const title = 'Document refusé';
+        const message = `${enterprise?.name || 'Une entreprise'} a refusé votre document « ${DOC_LABELS[document.doc_type]} » : ${comment}`;
+        await notificationModel.create({ userId: supplier.user_id, title, message, type: 'WARNING', link: '/supplier/profile' });
+        req.io?.to(`user-${supplier.user_id}`).emit('notification', { title, message, type: 'WARNING', link: '/supplier/profile' });
+      }
+
+      const documents = await supplierModel.getDocuments(supplier.id);
+      res.json({
+        success: true,
+        data: { documents, dossier: supplierModel.dossierStatus(supplier.supplier_type, documents) },
+        message: { VERIFIED: 'Document vérifié', REJECTED: 'Document refusé' }[status] || 'Vérification annulée',
+      });
+    } catch (error) { fail(res, error); }
+  }
+
   // ---------------- Préqualification (entreprise courante, par catégorie) ----------------
 
   /** GET /suppliers/:id/prequalification */
@@ -142,6 +189,7 @@ class SupplierController {
         data: {
           categories: await supplierModel.getPrequalification(supplier.id),
           missing_documents: await supplierModel.getMissingDocuments(supplier),
+          dossier: await supplierModel.getDossierStatus(supplier),
         },
       });
     } catch (error) { fail(res, error); }
@@ -149,8 +197,8 @@ class SupplierController {
 
   /**
    * PUT /suppliers/:id/prequalification  body { categoryId, status: 'APPROVED' | 'REJECTED' | null, comment }
-   * Approbation : catégorie déclarée par le fournisseur, fournisseur actif. Les documents manquants
-   * n'empêchent pas la décision (l'acheteur les voit sur la fiche).
+   * Approbation : catégorie déclarée, fournisseur actif et dossier complet = tous les documents attendus
+   * déposés ET vérifiés par l'entreprise (documents facultatifs à l'inscription, obligatoires ici).
    */
   async setPrequalification(req, res) {
     try {
@@ -168,6 +216,8 @@ class SupplierController {
 
       if (status === 'APPROVED') {
         if (supplier.status !== 'ACTIVE') return res.status(400).json({ success: false, message: 'Fournisseur inactif' });
+        const dossier = await supplierModel.getDossierStatus(supplier);
+        if (!dossier.complete) return res.status(400).json({ success: false, message: dossierProblem(dossier), data: dossier });
       }
       if (status === 'REJECTED' && !req.body.comment?.trim()) {
         return res.status(400).json({ success: false, message: 'Indiquez le motif du rejet' });

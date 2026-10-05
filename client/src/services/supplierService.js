@@ -74,6 +74,12 @@ export const supplierService = {
     return response.data
   },
 
+  // Vérification d'un document par mon entreprise : VERIFIED | REJECTED (motif) | null
+  reviewDocument: async (supplierId, documentId, { status, comment }) => {
+    const response = await api.put(`/suppliers/${supplierId}/documents/${documentId}/review`, { status, comment })
+    return response.data
+  },
+
   // ---------- Préqualification (mon entreprise, par catégorie) ----------
   setPrequalification: async (supplierId, { categoryId, status, comment }) => {
     const response = await api.put(`/suppliers/${supplierId}/prequalification`, { categoryId, status, comment })

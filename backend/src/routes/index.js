@@ -230,7 +230,9 @@ router.post('/suppliers/:id/evaluations', authenticate, hasPermission('MANAGE_SU
 router.get('/suppliers/:id/documents/:documentId/file', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.getDocument.bind(sup));
 router.put('/suppliers/:id/documents/:type', authenticate, hasPermission('MANAGE_SUPPLIERS'), singleDocumentMiddleware, sup.uploadDocument.bind(sup));
 router.get('/suppliers/:id/prequalification', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.getPrequalification.bind(sup));
-router.put('/suppliers/:id/prequalification', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.setPrequalification.bind(sup));
+// Vérification des documents et décision de préqualification : administrateur d'entreprise (PREQUALIFY_SUPPLIERS)
+router.put('/suppliers/:id/documents/:documentId/review', authenticate, hasPermission('PREQUALIFY_SUPPLIERS'), sup.reviewDocument.bind(sup));
+router.put('/suppliers/:id/prequalification', authenticate, hasPermission('PREQUALIFY_SUPPLIERS'), sup.setPrequalification.bind(sup));
 
 // ============================================
 // ROUTES DES COMMANDES D'ACHAT (protégées)
@@ -590,6 +592,7 @@ router.get('/payments/:id/pdf',
 // APPELS D'OFFRES (procurement)
 // ============================================
 router.get('/tenders', hasPermission('MANAGE_TENDERS'), tenderController.list.bind(tenderController));
+router.get('/tenders/candidates', hasPermission('MANAGE_TENDERS'), tenderController.candidates.bind(tenderController));
 router.get('/tenders/eligible-count', hasPermission('MANAGE_TENDERS'), tenderController.eligibleCount.bind(tenderController));
 router.get('/tenders/by-requisition/:requisitionId', hasPermission('MANAGE_TENDERS'), tenderController.getByRequisition.bind(tenderController));
 router.get('/tenders/:id', hasPermission('MANAGE_TENDERS'), tenderController.getOne.bind(tenderController));

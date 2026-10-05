@@ -6,7 +6,7 @@ const camundaService = require('../services/CamundaService');
 const emailService = require('../services/EmailNotificationService');
 const { generateComparisonWorkbook } = require('../services/TenderExportService');
 const submissionPdfService = require('../services/TenderSubmissionPdfService');
-const { getSupplierByUser } = require('./SupplierPortalController');
+const { getSupplierByUser, parseIdList } = require('./SupplierPortalController');
 const referenceModel = require('../models/ReferenceModel');
 const supplierModel = require('../models/SupplierModel');
 const { DOC_LABELS } = require('../utils/supplierDocuments');
@@ -50,6 +50,23 @@ function validateTenderPayload(b, { requireNumber }) {
 
 const AUDIENCES = ['ALL', 'PREQUALIFIED'];
 
+/**
+ * AO réservé : fournisseurs sélectionnés, tous parmi les candidats (préqualifiés de la catégorie et de la
+ * localisation). allowed = ids acceptés en plus (déjà invités ayant soumis, conservés de toute façon).
+ */
+async function selectedSuppliers(body, target, allowed = new Set()) {
+  const ids = [...new Set(parseIdList(body.supplierIds))];
+  if (!ids.length) {
+    throw Object.assign(new Error('Sélectionnez au moins un fournisseur préqualifié à inviter'), { status: 400 });
+  }
+  const candidates = new Set((await tenderModel.getCandidates(target)).map(c => c.id));
+  const invalid = ids.filter(id => !candidates.has(id) && !allowed.has(id));
+  if (invalid.length) {
+    throw Object.assign(new Error('Certains fournisseurs sélectionnés ne sont pas préqualifiés dans cette catégorie / localisation'), { status: 400 });
+  }
+  return ids;
+}
+
 /** Diffusion, catégorie et localisation validées (catégorie / localisation existantes) */
 async function targeting(b) {
   const categoryId = parseInt(b.categoryId) || null;
@@ -69,9 +86,10 @@ async function notifyUser(io, userId, title, message, type, link) {
 }
 
 /** Notifie (in-app + email) tous les fournisseurs inscrits. Ne lève pas d'erreur. */
-async function notifySuppliers(io, tender, { title, intro }) {
+async function notifySuppliers(io, tender, { title, intro }, { only, exclude } = {}) {
   try {
-    const recipients = await tenderModel.getRegisteredSupplierRecipients(tender.id);
+    const recipients = (await tenderModel.getRegisteredSupplierRecipients(tender.id))
+      .filter(r => (!only || only.has(r.id)) && (!exclude || !exclude.has(r.id)));
     const link = `/supplier/tenders/${tender.id}`;
     for (const r of recipients) {
       await notifyUser(io, r.user_id, title, `${tender.tender_number} — ${tender.title}`, 'INFO', link);
@@ -109,7 +127,18 @@ class TenderController {
     }
   }
 
-  /** GET /tenders/eligible-count?audience=&categoryId=&locationId= — fournisseurs qui verront l'AO */
+  /** GET /tenders/candidates?categoryId=&locationId= — préqualifiés que l'acheteur peut inviter */
+  async candidates(req, res) {
+    try {
+      const { categoryId, locationId } = await targeting(req.query);
+      if (!categoryId) return res.status(400).json({ success: false, message: 'categoryId est requis' });
+      res.json({ success: true, data: await tenderModel.getCandidates({ categoryId, locationId }) });
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: error.message });
+    }
+  }
+
+  /** GET /tenders/eligible-count?audience=&categoryId=&locationId= — fournisseurs qui verront l'AO (diffusion « tous ») */
   async eligibleCount(req, res) {
     try {
       const { audience, categoryId, locationId } = await targeting(req.query);
@@ -157,7 +186,8 @@ class TenderController {
           }))
           .sort((a, b) => a.supplier_name.localeCompare(b.supplier_name))
         : allSubmissions;
-      res.json({ success: true, data: { ...tender, items, submissions, registeredSuppliers, sealed } });
+      const invitations = tender.audience === 'PREQUALIFIED' ? await tenderModel.getInvitations(tender.id) : [];
+      res.json({ success: true, data: { ...tender, items, submissions, registeredSuppliers, sealed, invitations } });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
@@ -190,6 +220,7 @@ class TenderController {
       }
 
       const target = await targeting(b);
+      const invited = target.audience === 'PREQUALIFIED' ? await selectedSuppliers(b, target) : [];
       const tender = await tenderModel.create({
         ...target,
         tenderNumber: b.tenderNumber.trim(),
@@ -209,15 +240,15 @@ class TenderController {
         task_id: b.taskId || null,
         task_name: 'Activity_RFPProcess',
         action: 'TENDER_PUBLISHED',
-        comments: `Appel d'offres ${tender.tender_number} publié`,
+        comments: `Appel d'offres ${tender.tender_number} publié${invited.length ? ` (${invited.length} fournisseur(s) invité(s))` : ''}`,
         performed_by: req.user.id,
         performed_at: new Date()
       });
+      if (invited.length) await tenderModel.setInvitations(tender.id, invited, req.user.id);
 
-      const notified = await notifySuppliers(req.io, tender, {
-        title: 'Nouvel appel d\'offres',
-        intro: 'Un nouvel appel d\'offres est ouvert. Vous pouvez saisir vos prix sur le portail fournisseur.'
-      });
+      const notified = await notifySuppliers(req.io, tender, invited.length
+        ? { title: 'Invitation à soumettre une offre', intro: 'Vous êtes invité à soumettre une offre pour cet appel d\'offres réservé. Vous pouvez saisir vos prix sur le portail fournisseur.' }
+        : { title: 'Nouvel appel d\'offres', intro: 'Un nouvel appel d\'offres est ouvert. Vous pouvez saisir vos prix sur le portail fournisseur.' });
 
       res.status(201).json({ success: true, data: tender, notifiedSuppliers: notified, message: 'Appel d\'offres publié' });
     } catch (error) {
@@ -248,6 +279,12 @@ class TenderController {
       if (errors.length) return res.status(400).json({ success: false, message: errors.join(' · ') });
 
       const target = await targeting({ audience: tender.audience, categoryId: tender.category_id, locationId: tender.location_id, ...req.body });
+      let invitedChange = null;
+      let invited = null;
+      if (target.audience === 'PREQUALIFIED' && (req.body.supplierIds !== undefined || tender.audience !== 'PREQUALIFIED')) {
+        const submittedIds = new Set((await tenderModel.getInvitations(tender.id)).filter(i => i.submitted).map(i => i.supplier_id));
+        invited = await selectedSuppliers(req.body, target, submittedIds);
+      }
       await tenderModel.update(tender.id, {
         ...target,
         title: req.body.title.trim(),
@@ -256,12 +293,20 @@ class TenderController {
         endDate: new Date(req.body.endDate),
         maxDeliveryDays: parseInt(req.body.maxDeliveryDays)
       });
+      if (invited) invitedChange = await tenderModel.setInvitations(tender.id, invited, req.user.id);
       const updated = await tenderModel.getById(tender.id);
+      const newlyInvited = new Set(invitedChange?.added || []);
+      if (newlyInvited.size) {
+        await notifySuppliers(req.io, updated, {
+          title: 'Invitation à soumettre une offre',
+          intro: 'Vous êtes invité à soumettre une offre pour cet appel d\'offres réservé. Vous pouvez saisir vos prix sur le portail fournisseur.'
+        }, { only: newlyInvited });
+      }
       await notifySuppliers(req.io, updated, {
         title: 'Appel d\'offres modifié',
         intro: 'Les conditions de cet appel d\'offres ont été modifiées. Merci de vérifier les nouvelles dates et le délai de livraison.'
-      });
-      res.json({ success: true, data: updated });
+      }, { exclude: newlyInvited });
+      res.json({ success: true, data: updated, invitations: invitedChange });
     } catch (error) {
       res.status(error.status || 500).json({ success: false, message: error.message });
     }

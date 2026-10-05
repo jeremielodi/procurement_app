@@ -69,7 +69,7 @@ docker compose up -d --build
 
 Le premier démarrage prend quelques minutes (construction du client React, installation de Chromium). Au **premier lancement uniquement** (volume PostgreSQL vide) :
 
-1. PostgreSQL exécute les scripts du dossier `database/` par ordre alphabétique : schéma, fonctions, triggers, vues, migrations `05` à `08` (dont les localisations et catégories de marché initiales), puis les données de référence (`data.sql` : profils, permissions, devise, première entreprise « World Wide Fund for Nature »).
+1. PostgreSQL exécute les scripts du dossier `database/` par ordre alphabétique : schéma, fonctions, triggers, vues, migrations `05` à `09` (dont les localisations et catégories de marché initiales), puis les données de référence (`data.sql` : profils, permissions, devise, première entreprise « World Wide Fund for Nature »).
 2. L'application crée le bucket MinIO, puis deux comptes s'ils n'existent pas :
    - **Administrateur de la première entreprise** : `admin@procurement.com` / `Admin123!`
    - **Super administrateur de la plateforme** : `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD`
@@ -219,12 +219,12 @@ docker compose up -d --build
 Les scripts SQL de `database/` ne sont exécutés automatiquement **qu'à la création de la base**. Sur une base existante, appliquer les nouvelles migrations à la main (elles sont idempotentes, on peut les relancer) :
 
 ```bash
-for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification; do
+for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations; do
   docker exec -i wwf_postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < database/$f.sql
 done
 ```
 
-> `08_supplier_prequalification.sql` ajoute la préqualification des fournisseurs : à appliquer **avant** de démarrer la nouvelle version de l'application.
+> `08_supplier_prequalification.sql` et `09_tender_invitations.sql` ajoutent la préqualification des fournisseurs, la vérification des documents et les appels d'offres sur invitation : à appliquer **avant** de démarrer la nouvelle version de l'application.
 
 ---
 

@@ -1,6 +1,9 @@
-// Diffusion d'un appel d'offres : tous les fournisseurs ou préqualifiés seulement (catégorie + localisation)
+// Diffusion d'un appel d'offres :
+//  - ouvert à tous les fournisseurs
+//  - réservé : l'acheteur SÉLECTIONNE les fournisseurs invités parmi les préqualifiés de la catégorie
+//    (et de la localisation) ; seuls eux sont notifiés et voient l'AO dans leur portail
 import { useEffect, useState } from 'react';
-import { Globe, BadgeCheck, Users } from 'lucide-react';
+import { Globe, BadgeCheck, Users, Building2, User, Lock } from 'lucide-react';
 import { locationService, categoryService } from '../../services/referenceService';
 import { tenderService } from '../../services/tenderService';
 
@@ -8,14 +11,21 @@ const selectCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg
 
 export const AUDIENCE_LABELS = {
   ALL: 'Ouvert à tous les fournisseurs',
-  PREQUALIFIED: 'Réservé aux fournisseurs préqualifiés',
+  PREQUALIFIED: 'Réservé aux fournisseurs invités',
 };
 
-/** value = { audience, categoryId, locationId } */
-export default function TenderTargetingFields({ value, onChange }) {
+/**
+ * value = { audience, categoryId, locationId, supplierIds }
+ * lockedIds : invités qui ont déjà soumis (ne peuvent plus être retirés)
+ */
+export default function TenderTargetingFields({ value, onChange, lockedIds = [] }) {
   const [refs, setRefs] = useState({ locations: [], categories: [] });
   const [count, setCount] = useState(null);
-  const set = (k, v) => onChange({ ...value, [k]: v });
+  const [candidates, setCandidates] = useState(null);
+  const set = (patch) => onChange({ ...value, ...patch });
+  const reserved = value.audience === 'PREQUALIFIED';
+  const selected = new Set((value.supplierIds || []).map(Number));
+  const locked = new Set(lockedIds.map(Number));
 
   useEffect(() => {
     Promise.all([locationService.list(), categoryService.list()])
@@ -23,52 +33,120 @@ export default function TenderTargetingFields({ value, onChange }) {
       .catch(() => {});
   }, []);
 
-  // Nombre de fournisseurs qui verront l'AO (et seront notifiés)
+  // Diffusion « tous » : nombre de fournisseurs notifiés
   useEffect(() => {
-    if (value.audience === 'PREQUALIFIED' && !value.categoryId) { setCount(null); return; }
-    const t = setTimeout(() => {
-      tenderService.eligibleCount(value).then(r => setCount(r.data.count)).catch(() => setCount(null));
-    }, 250);
-    return () => clearTimeout(t);
-  }, [value.audience, value.categoryId, value.locationId]);
+    if (reserved) { setCount(null); return; }
+    tenderService.eligibleCount({ audience: 'ALL' }).then(r => setCount(r.data.count)).catch(() => setCount(null));
+  }, [reserved]);
+
+  // Diffusion réservée : préqualifiés invitables ; la sélection est limitée aux candidats (+ invités verrouillés)
+  useEffect(() => {
+    if (!reserved || !value.categoryId) { setCandidates(null); return; }
+    tenderService.getCandidates({ categoryId: value.categoryId, locationId: value.locationId })
+      .then(r => {
+        const list = r.data || [];
+        setCandidates(list);
+        const allowed = new Set([...list.map(c => c.id), ...locked]);
+        const kept = (value.supplierIds || []).map(Number).filter(id => allowed.has(id));
+        if (kept.length !== (value.supplierIds || []).length) set({ supplierIds: kept });
+      })
+      .catch(() => setCandidates([]));
+  }, [reserved, value.categoryId, value.locationId]);
+
+  const toggle = (id) => {
+    if (locked.has(id)) return;
+    const next = new Set(selected);
+    next.has(id) ? next.delete(id) : next.add(id);
+    set({ supplierIds: [...next] });
+  };
+  const selectable = (candidates || []).filter(c => c.has_account);
+  const allSelected = selectable.length > 0 && selectable.every(c => selected.has(c.id));
+  const toggleAll = () => set({
+    supplierIds: allSelected ? [...locked] : [...new Set([...locked, ...selectable.map(c => c.id)])],
+  });
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3" role="radiogroup" aria-label="Diffusion">
         {[['ALL', Globe, 'Toutes les entreprises intéressées peuvent consulter et soumettre'],
-          ['PREQUALIFIED', BadgeCheck, 'Seuls les fournisseurs préqualifiés dans la catégorie (et la localisation) le voient']].map(([v, Icon, hint]) => (
-          <button key={v} type="button" role="radio" aria-checked={value.audience === v} onClick={() => set('audience', v)}
+          ['PREQUALIFIED', BadgeCheck, 'Vous choisissez les fournisseurs invités parmi les préqualifiés : eux seuls sont notifiés et voient l\'appel d\'offres']].map(([v, Icon, hint]) => (
+          <button key={v} type="button" role="radio" aria-checked={value.audience === v} onClick={() => set({ audience: v })}
             className={`flex items-start gap-3 p-3 border-2 rounded-lg text-left ${value.audience === v ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
             <Icon size={20} className={`mt-0.5 ${value.audience === v ? 'text-blue-600' : 'text-gray-400'}`} />
             <span><span className="block text-sm font-medium text-gray-900">{AUDIENCE_LABELS[v]}</span><span className="block text-xs text-gray-500">{hint}</span></span>
           </button>
         ))}
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="categoryId">
-            Catégorie de marché {value.audience === 'PREQUALIFIED' && '*'}
+            Catégorie de marché {reserved && '*'}
           </label>
-          <select id="categoryId" className={selectCls} value={value.categoryId || ''} onChange={e => set('categoryId', e.target.value)}>
+          <select id="categoryId" className={selectCls} value={value.categoryId || ''} onChange={e => set({ categoryId: e.target.value })}>
             <option value="">— Aucune —</option>
             {refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="locationId">Localisation (livraison)</label>
-          <select id="locationId" className={selectCls} value={value.locationId || ''} onChange={e => set('locationId', e.target.value)}>
+          <select id="locationId" className={selectCls} value={value.locationId || ''} onChange={e => set({ locationId: e.target.value })}>
             <option value="">— Toutes —</option>
             {refs.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         </div>
       </div>
-      {count !== null && (
-        <p className={`text-sm flex items-center gap-1 ${count === 0 ? 'text-orange-600' : 'text-gray-600'}`}>
-          <Users size={14} />
-          {count === 0
-            ? 'Aucun fournisseur ne correspond : personne ne pourra soumettre.'
-            : `${count} fournisseur(s) pourront voir cet appel d'offres et seront notifiés.`}
+
+      {!reserved && count !== null && (
+        <p className="text-sm flex items-center gap-1 text-gray-600">
+          <Users size={14} /> {count} fournisseur(s) inscrit(s) seront notifiés.
         </p>
+      )}
+
+      {reserved && !value.categoryId && (
+        <p className="text-sm text-gray-500">Choisissez la catégorie pour afficher les fournisseurs préqualifiés à inviter.</p>
+      )}
+
+      {reserved && candidates && (
+        <div data-testid="tender-candidates">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-gray-700">
+              Fournisseurs invités * <span className="font-normal text-gray-500">— {selected.size} sélectionné(s) sur {candidates.length} préqualifié(s)</span>
+            </p>
+            {selectable.length > 1 && (
+              <button type="button" onClick={toggleAll} className="text-sm text-blue-600 hover:underline">
+                {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+              </button>
+            )}
+          </div>
+          {candidates.length === 0 ? (
+            <p className="text-sm text-orange-600 border border-orange-200 bg-orange-50 rounded-lg p-3">
+              Aucun fournisseur préqualifié dans cette catégorie{value.locationId ? ' pour cette localisation' : ''}.
+              Préqualifiez des fournisseurs depuis leur fiche, ou choisissez la diffusion « ouvert à tous ».
+            </p>
+          ) : (
+            <div className="border border-gray-200 rounded-lg divide-y max-h-72 overflow-y-auto">
+              {candidates.map(c => {
+                const isLocked = locked.has(c.id);
+                const disabled = isLocked || !c.has_account;
+                return (
+                  <label key={c.id} className={`flex items-center gap-3 px-3 py-2 text-sm ${disabled ? 'opacity-70' : 'cursor-pointer hover:bg-gray-50'}`}>
+                    <input type="checkbox" checked={selected.has(c.id)} disabled={disabled} onChange={() => toggle(c.id)}
+                      className="rounded border-gray-300 text-blue-600" />
+                    {c.supplier_type === 'INDIVIDUAL' ? <User size={14} className="text-gray-400" /> : <Building2 size={14} className="text-gray-400" />}
+                    <span className="flex-1 min-w-0">
+                      <span className="font-medium text-gray-900">{c.name}</span>
+                      <span className="text-gray-400 font-mono text-xs ml-2">{c.supplier_code}</span>
+                      <span className="block text-xs text-gray-500 truncate">{(c.location_names || []).join(', ')}</span>
+                    </span>
+                    {isLocked && <span className="text-xs text-green-700 flex items-center gap-1"><Lock size={12} /> a soumis</span>}
+                    {!c.has_account && <span className="text-xs text-gray-500">sans compte portail</span>}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

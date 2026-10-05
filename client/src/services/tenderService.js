@@ -16,6 +16,11 @@ export const tenderService = {
     });
     return response.data;
   },
+  // Préqualifiés invitables pour un AO réservé
+  getCandidates: async ({ categoryId, locationId }) => {
+    const response = await api.get('/tenders/candidates', { params: { categoryId, ...(locationId ? { locationId } : {}) } });
+    return response.data;
+  },
   getByRequisition: async (requisitionId) => {
     const response = await api.get(`/tenders/by-requisition/${requisitionId}`);
     return response.data;

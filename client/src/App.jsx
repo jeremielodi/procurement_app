@@ -39,6 +39,7 @@ import PaymentList from './components/Payments/PaymentList';
 import PaymentForm from './components/Payments/PaymentForm';
 import PaymentDetail from './components/Payments/PaymentDetail';
 import SupplierRegister from './components/Auth/SupplierRegister';
+import ForgotPassword from './components/Auth/ForgotPassword';
 import TenderList from './components/Tenders/TenderList';
 import TenderForm from './components/Tenders/TenderForm';
 import TenderDetail from './components/Tenders/TenderDetail';
@@ -66,6 +67,7 @@ function App() {
         {/* Routes publiques */}
         <Route path="/login" element={<Login />} />
         <Route path="/supplier-register" element={<SupplierRegister />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
         {/* Routes protégées */}
         <Route path="/" element={

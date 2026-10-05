@@ -196,6 +196,13 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - Rôle déduit de `TASK_CANDIDATE_GROUPS` si l'événement n'a pas de `candidateGroup` ; clé lue en `taskDefinitionKey` ou `TaskDefinitionKey` ; notifications et emails indépendants (l'échec de l'un n'empêche pas l'autre) ; bilan « 📧 … email(s) envoyé(s) » ou « aucun membre du projet avec le profil » dans les logs
 - Liens des emails (tâches GoFlow et appels d'offres) : `utils/appUrl.js` (`APP_URL`, `appLink(path)`) — `APP_URL` à définir dans `backend/.env` avec l'adresse publique (défaut `http://localhost:5000`, avertissement au démarrage en production)
 
+## Mot de passe oublié / changement
+
+- `POST /auth/forgot-password { email }` (public, `AuthController.forgotPassword`) : réponse **générique identique** que le compte existe ou non ; après la réponse, génère un mot de passe (`utils/passwordGenerator.js`, 12 car.) et l'envoie par email à l'utilisateur **actif** ; le mot de passe n'est remplacé que si l'email est parti. Limites en mémoire : 1 régénération / email / 5 min, 5 demandes / IP / 15 min (429)
+- `POST /auth/change-password { oldPassword, newPassword }` (authentifié, déclaré avant `tenantContext` → ouvert aux fournisseurs et au super admin) : ancien mot de passe faux → **400** (un 401 déconnecterait le client), ≥ 8 caractères
+- Frontend : `Auth/ForgotPassword` (`/forgot-password`, lien depuis le login) ; changement depuis `Auth/Profile`
+- Tests : `client/tests/api/password.spec.js` (n'utilise jamais un vrai email pour forgot-password)
+
 ## Tableau de bord — « Qui bloque ? »
 
 - `GET /dashboard/pending-tasks[?projectId=]` → `DashboardModel.getPendingTasksByProfile` : tâches GoFlow en attente (TASK_CREATED sans TASK_COMPLETED dans `workflow_history`, processus non terminé, réquisition ni annulée/rejetée/terminée), regroupées par profil via `TASK_CANDIDATE_GROUPS` (`utils/workflowLabels.js`). Fonctionne même si GoFlow est injoignable ; cloisonné par entreprise (`scopedDb`), projet contrôlé par `tenantGuard`

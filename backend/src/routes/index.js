@@ -51,6 +51,9 @@ const uploadRoutes = require('./upload');
 // ============================================
 router.post('/auth/login', authController.login);
 router.get('/auth/profile', authenticate, authController.getProfile);
+router.post('/auth/forgot-password', authController.forgotPassword);
+// Avant tenantContext : accessible à tous les types de compte (fournisseur, super admin)
+router.post('/auth/change-password', authenticate, authController.changePassword);
 
 // Inscription fournisseur + logo (publics)
 router.post('/auth/register-supplier',

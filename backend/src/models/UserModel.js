@@ -337,6 +337,17 @@ class UserModel {
   }
 
   /**
+   * Utilisateur actif par email (insensible à la casse) — mot de passe oublié
+   */
+  async findActiveByEmail(email) {
+    return await db.one(
+      `SELECT id, email, first_name, last_name FROM users
+       WHERE LOWER(email) = LOWER($1) AND is_active = true`,
+      [email]
+    );
+  }
+
+  /**
    * Réinitialiser le mot de passe
    */
   async resetPassword(id, newPassword) {

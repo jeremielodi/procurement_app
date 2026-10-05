@@ -1,6 +1,6 @@
 // src/components/Layout/Sidebar.jsx
 import React, { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   CheckSquare,
@@ -229,6 +229,7 @@ const menuGroups = [
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation()
+  const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { hasPermission, isAdmin } = usePermissions()
   const [userProfiles, setUserProfiles] = useState([])
@@ -345,8 +346,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   }
 
   const handleLogout = () => {
-    logout()
-    window.location.href = '/login'
+    logout() // session, WebSocket, requêtes et cache
+    navigate('/login', { replace: true })
   }
 
   // Vérifier si un lien est actif

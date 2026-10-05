@@ -27,8 +27,18 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (axios.isCancel(error)) return Promise.reject(error)
+
+    // Requête partie avec un token qui n'est plus le token courant (déconnexion / changement de compte) :
+    // réponse obsolète, ni message ni redirection
+    const sentAuth = error.config?.headers?.Authorization
+    const currentToken = localStorage.getItem('token')
+    if (sentAuth && sentAuth !== `Bearer ${currentToken}`) return Promise.reject(error)
+
     // Si erreur 401 (non autorisé), rediriger vers login
     if (error.response?.status === 401) {
+      // Pas de session (déjà déconnecté, ex. login / mot de passe oublié) : l'appelant gère l'erreur
+      if (!currentToken) return Promise.reject(error)
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'

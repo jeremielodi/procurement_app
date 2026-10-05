@@ -1,7 +1,6 @@
 // src/App.jsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
 import { EnterpriseProvider } from './contexts/EnterpriseContext';
 import Login from './components/Auth/Login';
 import Profile from './components/Auth/Profile';
@@ -61,7 +60,7 @@ function HomeRedirect() {
 import  './app.css'
 function App() {
   return (
-    <AuthProvider>
+    <>
       <EnterpriseProvider>
       <Routes>
         {/* Routes publiques */}
@@ -289,7 +288,7 @@ function App() {
       </Routes>
 
       </EnterpriseProvider>
-    </AuthProvider>
+    </>
 
 
   );

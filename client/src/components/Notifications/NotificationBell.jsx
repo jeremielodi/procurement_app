@@ -6,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { formatDistanceToNow, isValid } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import toast from 'react-hot-toast'
-import io from 'socket.io-client'
+import { useWebSocket } from '../../hooks/useWebSocket'
 
 const getNotificationIcon = (type) => {
   switch (type) {
@@ -76,48 +76,19 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
-  const [socket, setSocket] = useState(null)
-  const [isConnected, setIsConnected] = useState(false)
   const dropdownRef = useRef(null)
   const { user } = useAuth()
+  // Socket partagé, ouvert à la connexion et fermé à la déconnexion (AuthContext)
+  const { socket, isConnected } = useWebSocket()
 
   // Récupérer l'ID de l'utilisateur connecté depuis le contexte d'authentification
   const userId = user?.id
 
-  // Initialiser la connexion WebSocket
+  // Écouter les nouvelles notifications (le serveur place le socket dans la room de l'utilisateur)
   useEffect(() => {
-    if (!userId) return
+    if (!userId || !socket) return
 
-    // Même serveur que la page (en dev, le proxy Vite redirige /socket.io vers le backend)
-    const SOCKET_URL = import.meta.env.VITE_WS_URL || window.location.origin
-    
-    const newSocket = io(SOCKET_URL, {
-      transports: ['websocket'],
-      autoConnect: true,
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000
-    })
-
-    newSocket.on('connect', () => {
-      console.log('🔌 WebSocket connected for user:', userId)
-      setIsConnected(true)
-      // Rejoindre la room de l'utilisateur
-      newSocket.emit('join', userId)
-    })
-
-    newSocket.on('disconnect', () => {
-      console.log('🔌 WebSocket disconnected')
-      setIsConnected(false)
-    })
-
-    newSocket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error)
-      setIsConnected(false)
-    })
-
-    // Écouter les nouvelles notifications
-    newSocket.on('notification', (data) => {
+    const handleNotification = (data) => {
       console.log('🔔 New notification received via WebSocket:', data)
       
       // Vérifier que la notification est pour cet utilisateur
@@ -153,16 +124,11 @@ export default function NotificationBell() {
           </div>
         ), { duration: 5000, position: 'top-right' })
       }
-    })
-
-    setSocket(newSocket)
-
-    return () => {
-      if (newSocket) {
-        newSocket.disconnect()
-      }
     }
-  }, [userId])
+
+    socket.on('notification', handleNotification)
+    return () => socket.off('notification', handleNotification)
+  }, [userId, socket])
 
   // Charger les notifications depuis l'API
   const loadNotifications = async () => {

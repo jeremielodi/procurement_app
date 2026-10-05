@@ -203,6 +203,13 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - Frontend : `Auth/ForgotPassword` (`/forgot-password`, lien depuis le login) ; changement depuis `Auth/Profile`
 - Tests : `client/tests/api/password.spec.js` (n'utilise jamais un vrai email pour forgot-password)
 
+## Session, déconnexion et WebSocket
+
+- **Un seul socket** : `client/src/services/realtime.js` (`connectRealtime(token)` / `disconnectRealtime()`), ouvert par `AuthContext` à la connexion, fermé au `logout`. Composants : `useWebSocket()` → `{ socket, isConnected }` (n'ouvre jamais de connexion). Ne pas créer d'autre `io(...)`
+- `logout()` (`AuthContext`) : vide le stockage, ferme le socket, `queryClient.cancelQueries()` + `clear()`, ferme les toasts. Un seul `AuthProvider` (dans `index.jsx`)
+- `api.js` : une réponse à une requête partie avec un autre token que le token courant (déconnexion) est ignorée ; 401 sans token → pas de « Session expirée »
+- Serveur (`server.js`) : `io.use` vérifie le JWT du handshake (`auth.token`) et place le socket dans `user-<id>` ; le `join` d'une autre room utilisateur est refusé
+
 ## Tableau de bord — « Qui bloque ? »
 
 - `GET /dashboard/pending-tasks[?projectId=]` → `DashboardModel.getPendingTasksByProfile` : tâches GoFlow en attente (TASK_CREATED sans TASK_COMPLETED dans `workflow_history`, processus non terminé, réquisition ni annulée/rejetée/terminée), regroupées par profil via `TASK_CANDIDATE_GROUPS` (`utils/workflowLabels.js`). Fonctionne même si GoFlow est injoignable ; cloisonné par entreprise (`scopedDb`), projet contrôlé par `tenantGuard`

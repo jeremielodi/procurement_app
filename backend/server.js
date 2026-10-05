@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
+const jwt = require('jsonwebtoken');
 const routes = require('./src/routes');
 const db = require('./src/config/database');
 const { startWorkers } = require('./src/workers');
@@ -93,14 +94,27 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
 });
 // Socket.IO connection handling
+// Authentification du WebSocket : token JWT du handshake (auth.token), sinon connexion refusée
+io.use((socket, next) => {
+  try {
+    const { id } = jwt.verify(socket.handshake.auth?.token, process.env.JWT_SECRET);
+    socket.data.userId = id;
+    next();
+  } catch {
+    next(new Error('Non authentifié'));
+  }
+});
+
 io.on('connection', (socket) => {
-  console.log(`🟢 New client connected: ${socket.id}`);
-  
-  // Rejoindre une room spécifique à un utilisateur
-  socket.on('join', (userId) => {
-    if (userId) {
-      socket.join(`user-${userId}`);
-      console.log(`📌 User ${userId} joined room user-${userId}`);
+  const userId = socket.data.userId;
+  // Room personnelle rejointe côté serveur : un client ne peut écouter que ses propres notifications
+  socket.join(`user-${userId}`);
+  console.log(`🟢 New client connected: ${socket.id} (user ${userId})`);
+
+  // Compatibilité anciens clients : seule sa propre room est acceptée
+  socket.on('join', (requestedUserId) => {
+    if (requestedUserId && String(requestedUserId) !== String(userId)) {
+      console.warn(`⛔ Socket ${socket.id} : room user-${requestedUserId} refusée (user ${userId})`);
     }
   });
   

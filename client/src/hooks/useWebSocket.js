@@ -1,95 +1,19 @@
-// src/hooks/useWebSocket.js
-import { useEffect, useState, useRef, useCallback } from 'react'
-import io from 'socket.io-client'
+// src/hooks/useWebSocket.js — accès au socket partagé (services/realtime.js), sans en ouvrir un nouveau
+import { useEffect, useState } from 'react'
+import { getSocket, subscribeRealtime } from '../services/realtime'
+
+const snapshot = () => {
+  const socket = getSocket()
+  return { socket, isConnected: !!socket?.connected }
+}
 
 export const useWebSocket = () => {
-  const [isConnected, setIsConnected] = useState(false)
-  const socketRef = useRef(null)
-  const listenersRef = useRef(new Map())
-
-  const connect = useCallback(() => {
-    // Même serveur que la page (en dev, le proxy Vite redirige /socket.io vers le backend)
-    const SOCKET_URL = import.meta.env.VITE_WS_URL || window.location.origin
-    
-    if (socketRef.current?.connected) {
-      return socketRef.current
-    }
-
-    socketRef.current = io(SOCKET_URL, {
-      transports: ['websocket'],
-      autoConnect: true,
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000
-    })
-
-    socketRef.current.on('connect', () => {
-      console.log('🔌 WebSocket connected')
-      setIsConnected(true)
-      
-      // Rejoindre la room de l'utilisateur
-      const userId = sessionStorage.getItem('userId')
-      if (userId) {
-        socketRef.current.emit('join', userId)
-      }
-    })
-
-    socketRef.current.on('disconnect', () => {
-      console.log('🔌 WebSocket disconnected')
-      setIsConnected(false)
-    })
-
-    socketRef.current.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error)
-      setIsConnected(false)
-    })
-
-    return socketRef.current
-  }, [])
-
-  const disconnect = useCallback(() => {
-    if (socketRef.current) {
-      socketRef.current.disconnect()
-      socketRef.current = null
-      setIsConnected(false)
-    }
-  }, [])
-
-  const on = useCallback((event, callback) => {
-    if (socketRef.current) {
-      socketRef.current.on(event, callback)
-      listenersRef.current.set(event, callback)
-    }
-  }, [])
-
-  const off = useCallback((event, callback) => {
-    if (socketRef.current) {
-      socketRef.current.off(event, callback)
-      listenersRef.current.delete(event)
-    }
-  }, [])
-
-  const emit = useCallback((event, data) => {
-    if (socketRef.current && isConnected) {
-      socketRef.current.emit(event, data)
-    }
-  }, [isConnected])
+  const [state, setState] = useState(snapshot)
 
   useEffect(() => {
-    connect()
-    
-    return () => {
-      disconnect()
-    }
-  }, [connect, disconnect])
+    setState(snapshot())
+    return subscribeRealtime(() => setState(snapshot()))
+  }, [])
 
-  return {
-    socket: socketRef.current,
-    isConnected,
-    connect,
-    disconnect,
-    on,
-    off,
-    emit
-  }
+  return state
 }

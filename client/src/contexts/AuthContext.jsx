@@ -1,10 +1,21 @@
 // src/contexts/AuthContext.jsx
 import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import api from '../services/api';
+import { connectRealtime, disconnectRealtime } from '../services/realtime';
 
 export const AuthContext = createContext(null);
 
+const clearStoredSession = () => {
+  for (const storage of [localStorage, sessionStorage]) {
+    storage.removeItem('token');
+    storage.removeItem('user');
+  }
+};
+
 export const AuthProvider = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -25,10 +36,10 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         setIsAuthenticated(true);
         localStorage.setItem('user', JSON.stringify(userData));
+        connectRealtime(token);
       } catch (error) {
         console.error('Error loading user:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        clearStoredSession();
         setUser(null);
         setIsAuthenticated(false);
       } finally {
@@ -49,6 +60,7 @@ export const AuthProvider = ({ children }) => {
       
       setUser(userData);
       setIsAuthenticated(true);
+      connectRealtime(token);
       
       return { success: true, user: userData };
     } catch (error) {
@@ -59,12 +71,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Déconnexion : ferme le WebSocket, arrête les requêtes en cours / rafraîchissements
+   * et vide le cache (aucune donnée de l'ancien compte ne reste en mémoire).
+   * Les réponses 401 des requêtes encore en vol sont ignorées par api.js (plus de token).
+   */
   const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearStoredSession();
+    disconnectRealtime();
+    queryClient.cancelQueries();
+    queryClient.clear();
+    toast.dismiss();
     setUser(null);
     setIsAuthenticated(false);
-  }, []);
+  }, [queryClient]);
 
   const updateUser = useCallback((updatedUser) => {
     setUser(updatedUser);

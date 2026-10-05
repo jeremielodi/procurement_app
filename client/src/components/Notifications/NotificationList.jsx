@@ -84,44 +84,13 @@ export default function NotificationList() {
     enabled: !!user?.id
   });
 
-  // Écouter les nouvelles notifications via WebSocket
+  // Nouvelle notification via WebSocket : recharger la liste (le toast est affiché par NotificationBell)
   useEffect(() => {
-    if (!socket || !isConnected) return;
-
-    const handleNewNotification = (data) => {
-      console.log('🔔 New notification received:', data);
-      refetch();
-      toast.custom((t) => (
-        <div className="max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5">
-          <div className="flex-1 w-0 p-4">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 pt-0.5">
-                {getNotificationIcon(data.type)}
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-gray-900">{data.title}</p>
-                <p className="mt-1 text-sm text-gray-500">{data.message}</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex border-l border-gray-200">
-            <button
-              onClick={() => {
-                toast.dismiss(t.id);
-                if (data.link) window.location.href = data.link;
-              }}
-              className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500"
-            >
-              Voir
-            </button>
-          </div>
-        </div>
-      ), { duration: 5000, position: 'top-right' });
-    };
-
+    if (!socket) return;
+    const handleNewNotification = () => refetch();
     socket.on('notification', handleNewNotification);
     return () => socket.off('notification', handleNewNotification);
-  }, [socket, isConnected, refetch]);
+  }, [socket, refetch]);
 
   // Mutations
   const markAsReadMutation = useMutation({

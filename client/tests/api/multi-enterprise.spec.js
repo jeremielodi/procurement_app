@@ -80,6 +80,24 @@ test.describe.serial('API › Multi-entreprise', () => {
     expect(theirs.map(d => d.name)).not.toContain(`Dept ${stamp}`);
   });
 
+  test('Utilisateur créé par un admin : rattaché à son entreprise et peut se connecter', async ({ request }) => {
+    test.skip(!otherToken);
+    const user = { username: `user_${stamp.toLowerCase()}`, email: `user.${stamp.toLowerCase()}@example.com`, password: 'Secret123' };
+    const res = await request.post('/api/users', {
+      headers: auth(otherToken), data: { ...user, firstName: 'Nouvel', profileIds: ['prof_requester'] },
+    });
+    expect(res.status()).toBe(201);
+    const mine = (await (await request.get('/api/users', { headers: auth(otherToken) })).json()).data;
+    expect(mine.map(u => u.email)).toContain(user.email);
+    const theirs = (await (await request.get('/api/users?limit=500', { headers: auth(mainToken) })).json()).data;
+    expect(theirs.map(u => u.email)).not.toContain(user.email);
+
+    const login = await request.post('/api/auth/login', { data: { email: user.email, password: user.password } });
+    const token = (await login.json()).data.token;
+    // Sans entreprise, tenantContext répond 403 « Compte non rattaché à une entreprise »
+    expect((await request.get('/api/requisitions', { headers: auth(token) })).status()).toBe(200);
+  });
+
   test('Un admin d\'entreprise ne gère ni les entreprises, ni les rôles, ni le profil super admin', async ({ request }) => {
     test.skip(!otherId);
     expect((await request.put(`/api/enterprises/${otherId}`, { headers: auth(mainToken), multipart: { name: 'Pirate' } })).status()).toBe(403);

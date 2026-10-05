@@ -182,6 +182,7 @@ class UserModel {
       lastName: user.last_name,
       department: user.department,
       position: user.position,
+      enterpriseId: user.enterprise_id,
       isActive: user.is_active,
       lastLogin: user.last_login,
       createdAt: user.created_at,

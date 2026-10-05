@@ -55,10 +55,9 @@ class UserController {
         return res.status(400).json({ success: false, message: 'Username, email et password requis' });
       }
       
-      const connectedUser = await userModel.findById(req.user.id);
-
-      if (!connectedUser) {
-        return res.status(404).json({ success: false, message: 'Connected user not exist!!!' });
+      // Entreprise de l'administrateur connecté (fixée par tenantContext) : jamais d'utilisateur orphelin
+      if (!req.enterpriseId) {
+        return res.status(403).json({ success: false, message: 'Seul un administrateur d\'entreprise peut créer des utilisateurs' });
       }
       const result = await userModel.create({
         username,
@@ -69,7 +68,7 @@ class UserController {
         department,
         position,
         profileIds: profileIds || [],
-        enterpriseId: connectedUser.enterprise_id,
+        enterpriseId: req.enterpriseId,
       });
       
       res.status(201).json({ success: true, data: result });

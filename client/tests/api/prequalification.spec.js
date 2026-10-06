@@ -27,6 +27,36 @@ test.describe.serial('API › Préqualification des fournisseurs', () => {
     expect(ref.categories.map(c => c.name)).toEqual(expect.arrayContaining(['Carburant', 'Fournitures de bureau']));
   });
 
+  test('Référentiels : grandes villes de la RDC et catégories traduites (?lang= / Accept-Language)', async ({ request }) => {
+    expect(ref.locations.map(l => l.name)).toEqual(expect.arrayContaining(['Kinshasa', 'Lubumbashi', 'Mbuji-Mayi', 'Bukavu', 'Matadi']));
+    const fr = (await (await request.get('/api/public/market-categories')).json()).data;
+    const en = (await (await request.get('/api/public/market-categories?lang=en')).json()).data;
+    const enHeader = (await (await request.get('/api/public/market-categories', { headers: { 'Accept-Language': 'en-US,en;q=0.9' } })).json()).data;
+    const fuelId = fr.find(c => c.name === 'Carburant').id;
+    expect(en.find(c => c.id === fuelId).name).toBe('Fuel');
+    expect(enHeader.find(c => c.id === fuelId).name).toBe('Fuel');
+    expect(fr.map(c => c.name)).toEqual(expect.arrayContaining(['Consultance et études', 'Gardiennage et sécurité']));
+  });
+
+  test("Super admin : traduction d'une catégorie (création, fusion, repli sur le français)", async ({ request }) => {
+    test.skip(!superToken, 'Super admin indisponible');
+    const name = `Catégorie test ${stamp}`;
+    const created = await request.post('/api/market-categories', {
+      headers: auth(superToken), data: { name, translations: { en: { name: `Test category ${stamp}` }, xx: { name: 'ignorée' } } },
+    });
+    expect(created.status()).toBe(201);
+    const row = (await created.json()).data;
+    expect(row.translations).toEqual({ en: { name: `Test category ${stamp}` } });
+    const enName = async () => (await (await request.get('/api/public/market-categories?lang=en')).json()).data.find(c => c.id === row.id)?.name;
+    expect(await enName()).toBe(`Test category ${stamp}`);
+    // Mise à jour sans translations : traduction conservée ; traduction vide : repli sur le français
+    await request.put(`/api/market-categories/${row.id}`, { headers: auth(superToken), data: { description: 'd' } });
+    expect(await enName()).toBe(`Test category ${stamp}`);
+    await request.put(`/api/market-categories/${row.id}`, { headers: auth(superToken), data: { translations: { en: { name: '' } } } });
+    expect(await enName()).toBe(name);
+    expect((await request.delete(`/api/market-categories/${row.id}`, { headers: auth(superToken) })).status()).toBe(200);
+  });
+
   test('Super admin : gère les localisations ; un admin d\'entreprise ne peut pas', async ({ request }) => {
     test.skip(!superToken, 'Super admin indisponible');
     const name = `Localité test ${stamp}`;

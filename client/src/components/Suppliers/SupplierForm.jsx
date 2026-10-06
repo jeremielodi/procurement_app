@@ -32,7 +32,7 @@ import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
 import { validateEmail, validatePhone } from '../../utils/validators'
 import toast from 'react-hot-toast'
-import { t } from '../../i18n'
+import { t, useTranslation } from '../../i18n'
 
 export default function SupplierForm() {
   const { id } = useParams()
@@ -69,11 +69,12 @@ export default function SupplierForm() {
   const [locationIds, setLocationIds] = useState([])
   const [categoryIds, setCategoryIds] = useState([])
   const [refs, setRefs] = useState({ locations: [], categories: [] })
+  const { lang } = useTranslation()
   useEffect(() => {
     Promise.all([locationService.list(), categoryService.list()])
       .then(([l, c]) => setRefs({ locations: l.data || [], categories: c.data || [] }))
       .catch(() => {})
-  }, [])
+  }, [lang])
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 

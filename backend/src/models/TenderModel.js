@@ -1,6 +1,7 @@
 // backend/src/models/TenderModel.js
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
+const { localizedSql } = require('../utils/requestLang');
 
 // Statut calculé à partir des dates : OPEN en base devient UPCOMING / CLOSED selon NOW()
 const EFFECTIVE_STATUS_SQL = `
@@ -19,7 +20,7 @@ class TenderModel {
              r.requisition_number, r.title AS requisition_title, r.estimated_amount,
              c.format_key AS currency_code,
              s.name AS awarded_supplier_name,
-             mc.name AS category_name, loc.name AS location_name,
+             ${localizedSql('mc')} AS category_name, loc.name AS location_name,
              (SELECT COUNT(*) FROM tender_submissions ts WHERE ts.tender_id = t.id)::int AS submission_count
       FROM tenders t
       JOIN requisitions r ON r.id = t.requisition_id
@@ -53,7 +54,7 @@ class TenderModel {
               s.name AS awarded_supplier_name,
               u.first_name || ' ' || u.last_name AS created_by_name,
               e.name AS enterprise_name, e.logo_path AS enterprise_logo_path,
-              mc.name AS category_name, loc.name AS location_name
+              ${localizedSql('mc')} AS category_name, loc.name AS location_name
        FROM tenders t
        JOIN requisitions r ON r.id = t.requisition_id
        LEFT JOIN currency c ON c.id = r.currency_id
@@ -230,7 +231,7 @@ class TenderModel {
       `SELECT * FROM (
          SELECT t.id, t.tender_number, t.title, t.description, t.start_date, t.end_date,
                 t.max_delivery_days, ${EFFECTIVE_STATUS_SQL} AS effective_status,
-                t.audience, mc.name AS category_name, loc.name AS location_name,
+                t.audience, ${localizedSql('mc')} AS category_name, loc.name AS location_name,
                 (t.awarded_supplier_id = $1) AS is_awarded_to_me,
                 c.format_key AS currency_code,
                 e.id AS enterprise_id, e.name AS enterprise_name, e.logo_path AS enterprise_logo_path,

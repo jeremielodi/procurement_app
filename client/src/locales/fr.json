@@ -2046,7 +2046,10 @@
     "active": "Active",
     "inactive": "Inactive",
     "deleteHint": "Supprimer (uniquement si jamais utilisé)",
-    "none": "Aucun élément"
+    "none": "Aucun élément",
+    "nameIn": "Nom ({{lang}})",
+    "descriptionIn": "Description ({{lang}})",
+    "translationHint": "Le nom en français est la référence ; une traduction vide affiche le nom français."
   },
   "budget": {
     "deleted": "Budget supprimé",

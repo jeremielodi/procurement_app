@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
+import { onLangChange } from './i18n'
 import './styles/global.css'
 
 const queryClient = new QueryClient({
@@ -16,6 +17,9 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+// Certaines données sont traduites par le serveur (catégories de marché…) : on les recharge au changement de langue
+onLangChange(() => queryClient.invalidateQueries())
 
 const root = ReactDOM.createRoot(document.getElementById('root'))
 

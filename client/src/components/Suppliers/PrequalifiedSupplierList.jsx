@@ -7,7 +7,7 @@ import { BadgeCheck, Download, Search, RefreshCw, Building2, User } from 'lucide
 import { supplierService } from '../../services/supplierService';
 import { locationService, categoryService } from '../../services/referenceService';
 import { SUPPLIER_TYPE_LABELS, downloadBlob } from '../../utils/supplierDocs';
-import { t, getLocale } from '../../i18n';
+import { t, getLocale, useTranslation } from '../../i18n';
 
 const selectCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white';
 
@@ -17,11 +17,12 @@ export default function PrequalifiedSupplierList() {
   const [refs, setRefs] = useState({ locations: [], categories: [] });
   const [exporting, setExporting] = useState(false);
 
+  const { lang } = useTranslation();
   useEffect(() => {
     Promise.all([locationService.list(), categoryService.list()])
       .then(([l, c]) => setRefs({ locations: l.data || [], categories: c.data || [] }))
       .catch(() => {});
-  }, []);
+  }, [lang]);
   // Recherche appliquée après une courte pause de saisie
   useEffect(() => {
     const timer = setTimeout(() => setFilters(f => ({ ...f, search })), 300);

@@ -2,19 +2,28 @@
 // Référentiels de la PLATEFORME (gérés par le super admin, partagés par toutes les entreprises) :
 // localisations (bureaux / zones de livraison) et catégories de marché.
 const db = require('../config/database');
+const i18n = require('../i18n');
+const { localizedSql } = require('../utils/requestLang');
 
 // table → colonnes modifiables et table de liaison fournisseur (pour le contrôle avant suppression)
 const TABLES = {
   locations: { columns: ['name', 'province'], link: 'supplier_locations', linkColumn: 'location_id', tenderColumn: 'location_id' },
-  market_categories: { columns: ['name', 'description'], link: 'supplier_categories', linkColumn: 'category_id', tenderColumn: 'category_id' },
+  market_categories: { columns: ['name', 'description'], translatable: ['name', 'description'], link: 'supplier_categories', linkColumn: 'category_id', tenderColumn: 'category_id' },
 };
 
+const MAX_TRANSLATION = { name: 150, description: 1000 };
+
 class ReferenceModel {
+  /**
+   * activeOnly (listes de sélection) : champs traduits dans la langue de la requête (name, description) ;
+   * sinon (écran d'administration) : valeurs françaises brutes + `translations` à éditer.
+   */
   async list(table, { activeOnly = false } = {}) {
-    const { link, linkColumn } = TABLES[table];
+    const { link, linkColumn, translatable = [] } = TABLES[table];
+    const localized = activeOnly ? translatable.map(f => `, ${localizedSql('r', f)} AS ${f}`).join('') : '';
     return db.select(
-      `SELECT r.*, (SELECT COUNT(*) FROM ${link} l WHERE l.${linkColumn} = r.id)::int AS supplier_count
-       FROM ${table} r ${activeOnly ? 'WHERE r.is_active' : ''} ORDER BY r.name`,
+      `SELECT r.*${localized}, (SELECT COUNT(*) FROM ${link} l WHERE l.${linkColumn} = r.id)::int AS supplier_count
+       FROM ${table} r ${activeOnly ? 'WHERE r.is_active' : ''} ORDER BY ${activeOnly && translatable.includes('name') ? localizedSql('r') : 'r.name'}`,
       []
     );
   }
@@ -32,6 +41,8 @@ class ReferenceModel {
 
   async create(table, data) {
     const fields = this.pick(table, data);
+    const translations = this.cleanTranslations(table, data.translations);
+    if (translations) fields.translations = JSON.stringify(translations);
     const cols = Object.keys(fields);
     return db.one(
       `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *`,
@@ -41,6 +52,14 @@ class ReferenceModel {
 
   async update(table, id, data) {
     const fields = this.pick(table, data);
+    const translations = this.cleanTranslations(table, data.translations);
+    if (translations) {
+      // Fusion par langue : une langue absente de la requête garde sa traduction
+      const current = (await this.getById(table, id))?.translations || {};
+      const merged = { ...current };
+      for (const [lang, values] of Object.entries(translations)) merged[lang] = { ...(current[lang] || {}), ...values };
+      fields.translations = JSON.stringify(merged);
+    }
     if (data.isActive !== undefined) fields.is_active = data.isActive === true || data.isActive === 'true';
     await db.update(table, { ...fields, updated_at: new Date() }, 'id', id);
     return this.getById(table, id);
@@ -67,6 +86,25 @@ class ReferenceModel {
     if (!list.length) return [];
     const rows = await db.select(`SELECT id FROM ${table} WHERE is_active AND id = ANY($1::int[])`, [list]);
     return rows.map(r => r.id);
+  }
+
+  /**
+   * { en: { name, description } } → langues connues (hors français, langue des colonnes) et champs traduisibles ;
+   * valeur vide = traduction supprimée (repli sur le français). null si rien d'exploitable.
+   */
+  cleanTranslations(table, input) {
+    const fields = TABLES[table].translatable;
+    if (!fields || !input || typeof input !== 'object') return null;
+    const out = {};
+    for (const [lang, values] of Object.entries(input)) {
+      if (!i18n.LANGS.includes(lang) || lang === i18n.DEFAULT_LANG || !values || typeof values !== 'object') continue;
+      for (const f of fields) {
+        if (values[f] === undefined) continue;
+        const v = String(values[f] ?? '').trim().slice(0, MAX_TRANSLATION[f]);
+        (out[lang] = out[lang] || {})[f] = v;
+      }
+    }
+    return Object.keys(out).length ? out : null;
   }
 
   pick(table, data) {

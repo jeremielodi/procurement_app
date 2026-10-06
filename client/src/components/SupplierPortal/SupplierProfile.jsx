@@ -8,7 +8,7 @@ import { locationService, categoryService } from '../../services/referenceServic
 import { EXPECTED_DOCS, DOC_LABELS, SUPPLIER_TYPE_LABELS, openDocument } from '../../utils/supplierDocs';
 import MultiCheckList from '../Suppliers/prequal/MultiCheckList';
 import DocumentField from '../Suppliers/prequal/DocumentField';
-import { t } from '../../i18n';
+import { t, useTranslation } from '../../i18n';
 
 // [clé API, libellé (clé de traduction), colonne, types concernés]
 const FIELDS = [
@@ -61,12 +61,16 @@ export default function SupplierProfile() {
     setPreview(null);
   };
 
+  const { lang } = useTranslation();
   useEffect(() => {
     supplierPortalService.getMe().then(r => hydrate(r.data)).catch(() => {});
+  }, []);
+  // Catégories traduites par le serveur : rechargées au changement de langue (sans toucher au formulaire)
+  useEffect(() => {
     Promise.all([locationService.listPublic(), categoryService.listPublic()])
       .then(([l, c]) => setRefs({ locations: l.data || [], categories: c.data || [] }))
       .catch(() => {});
-  }, []);
+  }, [lang]);
   useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
 
   if (!supplier) return <div className="flex justify-center items-center h-64"><RefreshCw className="animate-spin text-blue-500" /></div>;

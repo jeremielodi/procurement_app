@@ -220,7 +220,7 @@ docker compose up -d --build
 Les scripts SQL de `database/` ne sont exécutés automatiquement **qu'à la création de la base**. Sur une base existante, appliquer les nouvelles migrations à la main (elles sont idempotentes, on peut les relancer) :
 
 ```bash
-for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language; do
+for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations; do
   docker exec -i wwf_postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < database/$f.sql
 done
 ```

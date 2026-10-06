@@ -3,7 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { MapPin, Tags, Plus, Pencil, Trash2, Check, X, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { locationService, categoryService } from '../../services/referenceService';
-import { t } from '../../i18n';
+import { t, LANGUAGES } from '../../i18n';
+
+// Langues traduites des référentiels (colonne translations) : toutes sauf le français (colonnes de base)
+const OTHER_LANGS = LANGUAGES.map(l => l.code).filter(code => code !== 'fr');
+const trName = (row, lang) => row.translations?.[lang]?.name || '';
 
 // label / intro / extra.label : clés de traduction
 const TABS = {
@@ -16,6 +20,7 @@ const TABS = {
     label: 'refs.categories', icon: Tags, service: categoryService,
     intro: 'refs.categoriesIntro',
     extra: { key: 'description', label: 'common.description' },
+    translated: true,
   },
 };
 
@@ -25,7 +30,7 @@ export default function ReferenceData() {
   const [tab, setTab] = useState('locations');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState({ name: '', extra: '' });
+  const [draft, setDraft] = useState({ name: '', extra: '', tr: {} });
   const [editing, setEditing] = useState(null); // { id, name, extra }
   const cfg = TABS[tab];
 
@@ -37,22 +42,27 @@ export default function ReferenceData() {
       setLoading(false);
     }
   };
-  useEffect(() => { setEditing(null); setDraft({ name: '', extra: '' }); load(); }, [tab]);
+  useEffect(() => { setEditing(null); setDraft({ name: '', extra: '', tr: {} }); load(); }, [tab]);
+
+  // { en: 'Office supplies' } → { en: { name: 'Office supplies' } }
+  const translationsPayload = (tr) => cfg.translated
+    ? { translations: Object.fromEntries(OTHER_LANGS.map(l => [l, { name: tr?.[l] || '' }])) }
+    : {};
 
   const add = async (e) => {
     e.preventDefault();
     if (!draft.name.trim()) return;
     try {
-      await cfg.service.create({ name: draft.name, [cfg.extra.key]: draft.extra });
+      await cfg.service.create({ name: draft.name, [cfg.extra.key]: draft.extra, ...translationsPayload(draft.tr) });
       toast.success(t('refs.added', { name: draft.name }));
-      setDraft({ name: '', extra: '' });
+      setDraft({ name: '', extra: '', tr: {} });
       load();
     } catch (_) { /* toast */ }
   };
 
   const saveEdit = async () => {
     try {
-      await cfg.service.update(editing.id, { name: editing.name, [cfg.extra.key]: editing.extra });
+      await cfg.service.update(editing.id, { name: editing.name, [cfg.extra.key]: editing.extra, ...translationsPayload(editing.tr) });
       setEditing(null);
       load();
     } catch (_) { /* toast */ }
@@ -89,11 +99,15 @@ export default function ReferenceData() {
           </button>
         ))}
       </div>
-      <p className="text-sm text-gray-600">{t(cfg.intro)}</p>
+      <p className="text-sm text-gray-600">{t(cfg.intro)}{cfg.translated && <span className="block text-gray-500">{t('refs.translationHint')}</span>}</p>
 
       <form onSubmit={add} className="flex flex-wrap gap-2 bg-white border border-gray-200 rounded-lg p-3">
         <input className={`${inputCls} flex-1 min-w-[200px]`} placeholder={t('refs.name')} value={draft.name}
           onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} data-testid="ref-name" />
+        {cfg.translated && OTHER_LANGS.map(l => (
+          <input key={l} className={`${inputCls} flex-1 min-w-[200px]`} placeholder={t('refs.nameIn', { lang: l.toUpperCase() })}
+            value={draft.tr[l] || ''} onChange={e => setDraft(d => ({ ...d, tr: { ...d.tr, [l]: e.target.value } }))} data-testid={`ref-name-${l}`} />
+        ))}
         <input className={`${inputCls} flex-1 min-w-[160px]`} placeholder={t(cfg.extra.label)} value={draft.extra}
           onChange={e => setDraft(d => ({ ...d, extra: e.target.value }))} />
         <button type="submit" disabled={!draft.name.trim()}
@@ -110,6 +124,7 @@ export default function ReferenceData() {
             <thead className="bg-gray-50 text-gray-600 text-left">
               <tr>
                 <th className="px-4 py-2">{t('refs.name')}</th>
+                {cfg.translated && OTHER_LANGS.map(l => <th key={l} className="px-4 py-2">{t('refs.nameIn', { lang: l.toUpperCase() })}</th>)}
                 <th className="px-4 py-2">{t(cfg.extra.label)}</th>
                 <th className="px-4 py-2 text-right">{t('refs.suppliers')}</th>
                 <th className="px-4 py-2">{t('common.status')}</th>
@@ -120,6 +135,9 @@ export default function ReferenceData() {
               {rows.map(row => editing?.id === row.id ? (
                 <tr key={row.id} className="bg-blue-50">
                   <td className="px-4 py-2"><input className={inputCls} value={editing.name} onChange={e => setEditing(x => ({ ...x, name: e.target.value }))} /></td>
+                  {cfg.translated && OTHER_LANGS.map(l => (
+                    <td key={l} className="px-4 py-2"><input className={inputCls} value={editing.tr[l] || ''} onChange={e => setEditing(x => ({ ...x, tr: { ...x.tr, [l]: e.target.value } }))} /></td>
+                  ))}
                   <td className="px-4 py-2"><input className={inputCls} value={editing.extra} onChange={e => setEditing(x => ({ ...x, extra: e.target.value }))} /></td>
                   <td className="px-4 py-2 text-right">{row.supplier_count}</td>
                   <td />
@@ -131,6 +149,7 @@ export default function ReferenceData() {
               ) : (
                 <tr key={row.id} className={row.is_active ? '' : 'text-gray-400'}>
                   <td className="px-4 py-2 font-medium">{row.name}</td>
+                  {cfg.translated && OTHER_LANGS.map(l => <td key={l} className="px-4 py-2">{trName(row, l) || <span className="text-amber-600 text-xs">—</span>}</td>)}
                   <td className="px-4 py-2">{row[cfg.extra.key] || '—'}</td>
                   <td className="px-4 py-2 text-right">{row.supplier_count}</td>
                   <td className="px-4 py-2">
@@ -141,14 +160,14 @@ export default function ReferenceData() {
                     </button>
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
-                    <button onClick={() => setEditing({ id: row.id, name: row.name, extra: row[cfg.extra.key] || '' })}
+                    <button onClick={() => setEditing({ id: row.id, name: row.name, extra: row[cfg.extra.key] || '', tr: Object.fromEntries(OTHER_LANGS.map(l => [l, trName(row, l)])) })}
                       className="p-1.5 text-gray-600 hover:bg-gray-100 rounded" title={t('common.edit')}><Pencil size={16} /></button>
                     <button onClick={() => remove(row)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"
                       title={t('refs.deleteHint')}><Trash2 size={16} /></button>
                   </td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">{t('refs.none')}</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={5 + (cfg.translated ? OTHER_LANGS.length : 0)} className="px-4 py-6 text-center text-gray-500">{t('refs.none')}</td></tr>}
             </tbody>
           </table>
         )}

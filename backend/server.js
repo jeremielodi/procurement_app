@@ -66,6 +66,8 @@ app.use(
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// Langue de la requête (?lang= / Accept-Language) lisible par les modèles (référentiels traduits)
+app.use(require('./src/utils/requestLang').requestLanguage);
 
 // Passer io aux routes
 app.use((req, res, next) => {

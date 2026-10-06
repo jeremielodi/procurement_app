@@ -10,7 +10,7 @@ import { locationService, categoryService } from '../../services/referenceServic
 import { EXPECTED_DOCS } from '../../utils/supplierDocs';
 import MultiCheckList from '../Suppliers/prequal/MultiCheckList';
 import DocumentField from '../Suppliers/prequal/DocumentField';
-import { t } from '../../i18n';
+import { t, useTranslation } from '../../i18n';
 import LanguageSwitcher from '../Common/LanguageSwitcher';
 
 // Champs par type ; req = obligatoire ; label / placeholder = clés de traduction (supplierFields.*)
@@ -69,11 +69,13 @@ export default function SupplierRegister() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Catégories traduites par le serveur : rechargées au changement de langue
+  const { lang } = useTranslation();
   useEffect(() => {
     Promise.all([locationService.listPublic(), categoryService.listPublic()])
       .then(([l, c]) => setRefs({ locations: l.data || [], categories: c.data || [] }))
       .catch(() => {});
-  }, []);
+  }, [lang]);
   useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
 
   const set = (name, value) => {

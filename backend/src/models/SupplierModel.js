@@ -3,6 +3,7 @@
 // Les évaluations, elles, sont propres à chaque entreprise (supplier_evaluations.enterprise_id).
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
+const { localizedSql } = require('../utils/requestLang');
 const { missingDocuments, EXPECTED_DOCS } = require('../utils/supplierDocuments');
 
 // Champs modifiables par un acheteur : clé API (camelCase ou snake_case) → colonne
@@ -109,8 +110,8 @@ class SupplierModel {
     const preqFilter = tenant.filter('sp.enterprise_id', params);
     return db.select(
       `SELECT s.*,
-              ARRAY(SELECT c.name FROM supplier_categories sc JOIN market_categories c ON c.id = sc.category_id
-                    WHERE sc.supplier_id = s.id ORDER BY c.name) AS category_names,
+              ARRAY(SELECT ${localizedSql('c')} FROM supplier_categories sc JOIN market_categories c ON c.id = sc.category_id
+                    WHERE sc.supplier_id = s.id ORDER BY 1) AS category_names,
               ARRAY(SELECT l.name FROM supplier_locations sl JOIN locations l ON l.id = sl.location_id
                     WHERE sl.supplier_id = s.id ORDER BY l.name) AS location_names,
               (SELECT COUNT(*) FROM supplier_prequalifications sp
@@ -150,8 +151,8 @@ class SupplierModel {
 
   async getCategories(supplierId) {
     return db.select(
-      `SELECT c.id, c.name, c.is_active FROM supplier_categories sc
-       JOIN market_categories c ON c.id = sc.category_id WHERE sc.supplier_id = $1 ORDER BY c.name`,
+      `SELECT c.id, ${localizedSql('c')} AS name, c.is_active FROM supplier_categories sc
+       JOIN market_categories c ON c.id = sc.category_id WHERE sc.supplier_id = $1 ORDER BY 2`,
       [supplierId]
     );
   }
@@ -272,7 +273,7 @@ class SupplierModel {
     const params = [supplierId];
     const preqFilter = tenant.filter('sp.enterprise_id', params);
     return db.select(
-      `SELECT c.id AS category_id, c.name AS category_name, c.is_active,
+      `SELECT c.id AS category_id, ${localizedSql('c')} AS category_name, c.is_active,
               sp.status, sp.comment, sp.decided_at,
               TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS decided_by_name
        FROM supplier_categories sc
@@ -313,7 +314,7 @@ class SupplierModel {
     let sql = `
       SELECT s.id, s.supplier_code, s.name, s.supplier_type, s.contact_name, s.email, s.phone, s.address,
              s.registration_number, s.tax_id, s.id_nat, s.bank_name, s.bank_account, s.status,
-             c.id AS category_id, c.name AS category_name, sp.decided_at, sp.comment,
+             c.id AS category_id, ${localizedSql('c')} AS category_name, sp.decided_at, sp.comment,
              ARRAY(SELECT l.name FROM supplier_locations sl JOIN locations l ON l.id = sl.location_id
                    WHERE sl.supplier_id = s.id ORDER BY l.name) AS location_names
       FROM supplier_prequalifications sp

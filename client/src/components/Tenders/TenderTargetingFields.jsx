@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { Globe, BadgeCheck, Users, Building2, User, Lock } from 'lucide-react';
 import { locationService, categoryService } from '../../services/referenceService';
 import { tenderService } from '../../services/tenderService';
-import { t, labelMap } from '../../i18n';
+import { t, labelMap, useTranslation } from '../../i18n';
 
 const selectCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -25,11 +25,12 @@ export default function TenderTargetingFields({ value, onChange, lockedIds = [] 
   const selected = new Set((value.supplierIds || []).map(Number));
   const locked = new Set(lockedIds.map(Number));
 
+  const { lang } = useTranslation();
   useEffect(() => {
     Promise.all([locationService.list(), categoryService.list()])
       .then(([l, c]) => setRefs({ locations: l.data || [], categories: c.data || [] }))
       .catch(() => {});
-  }, []);
+  }, [lang]);
 
   // Diffusion « tous » : nombre de fournisseurs notifiés
   useEffect(() => {

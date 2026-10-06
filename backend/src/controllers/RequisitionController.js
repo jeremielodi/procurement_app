@@ -499,25 +499,18 @@ async create(req, res) {
    */
   async list(req, res) {
     try {
-      const { status, progress, departmentId, fromDate, priority, toDate, page = 1, limit = 20 } = req.query;
+      const { status, progress, departmentId, fromDate, priority, toDate, search, page = 1, limit = 20 } = req.query;
       const offset = (page - 1) * limit;
+      const filters = { status, progress, departmentId, fromDate, toDate, priority, search };
 
       const requisitions = await requisitionModel.findAll({
-        status,
-        progress,
-        departmentId,
-        fromDate,
-        toDate,
-        priority,
+        ...filters,
         limit: parseInt(limit),
         offset: parseInt(offset)
       });
 
-      const countParams = [];
-      const totalResult = await db.one(
-        `SELECT COUNT(*) as total FROM requisitions WHERE 1=1${tenant.filter('enterprise_id', countParams)}`,
-        countParams
-      );
+      // Total = mêmes filtres que la liste (sinon la pagination compte toutes les réquisitions)
+      const totalResult = { total: await requisitionModel.countAll(filters) };
 
       return res.json({
         success: true,

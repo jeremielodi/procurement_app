@@ -342,20 +342,12 @@ class RequisitionModel {
   }
 
   /**
-   * Récupérer toutes les réquisitions avec filtres
+   * Filtres de la liste (entreprise, statut, département, priorité, processus, dates, avancement, recherche)
+   * — partagés par findAll et countAll pour que le total de la pagination corresponde aux filtres.
+   * Alias attendus : r (requisitions), d (departments), p (projects), u (users, demandeur).
    */
-  async findAll(filters = {}) {
-    let sql = `
-      SELECT r.*, u.first_name, u.last_name, 
-        d.code as department_code,
-        d.name as department_name,
-        ${PROGRESS_STATUS_SQL} AS progress_status
-      FROM requisitions r
-      LEFT JOIN departments d ON d.id = r.department_id
-      LEFT JOIN projects p ON p.id = r.project_id
-      LEFT JOIN users u ON r.requester_id = u.id
-      WHERE 1=1
-    `;
+  listFilters(filters = {}) {
+    let sql = '';
     const params = [];
     let paramCount = 1;
     // Multi-entreprise : uniquement les données de l'entreprise courante
@@ -405,12 +397,52 @@ class RequisitionModel {
       paramCount++;
     }
 
-    if (filters.search) {
-      sql += ` AND (r.requisition_number ILIKE $${paramCount} OR r.title ILIKE $${paramCount})`;
-      params.push(`%${filters.search}%`);
+    // Recherche : n°, titre, description, département, projet, demandeur (insensible à la casse, % et _ littéraux)
+    const search = String(filters.search || '').trim();
+    if (search) {
+      sql += ` AND (r.requisition_number ILIKE $${paramCount} OR r.title ILIKE $${paramCount} OR r.description ILIKE $${paramCount}
+               OR d.name ILIKE $${paramCount} OR d.code ILIKE $${paramCount} OR p.name ILIKE $${paramCount} OR p.code ILIKE $${paramCount}
+               OR (COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) ILIKE $${paramCount})`;
+      params.push(`%${search.replace(/[\\%_]/g, c => '\\' + c)}%`);
       paramCount++;
     }
     
+    return { where: sql, params };
+  }
+
+  /** Nombre de réquisitions correspondant aux filtres de la liste (sans pagination) */
+  async countAll(filters = {}) {
+    const { where, params } = this.listFilters(filters);
+    const row = await db.one(
+      `SELECT COUNT(*)::int AS total
+       FROM requisitions r
+       LEFT JOIN departments d ON d.id = r.department_id
+       LEFT JOIN projects p ON p.id = r.project_id
+       LEFT JOIN users u ON r.requester_id = u.id
+       WHERE 1=1${where}`,
+      params
+    );
+    return row.total;
+  }
+
+  /**
+   * Récupérer toutes les réquisitions avec filtres
+   */
+  async findAll(filters = {}) {
+    let sql = `
+      SELECT r.*, u.first_name, u.last_name, 
+        d.code as department_code,
+        d.name as department_name,
+        ${PROGRESS_STATUS_SQL} AS progress_status
+      FROM requisitions r
+      LEFT JOIN departments d ON d.id = r.department_id
+      LEFT JOIN projects p ON p.id = r.project_id
+      LEFT JOIN users u ON r.requester_id = u.id
+      WHERE 1=1
+    `;
+    const { where, params } = this.listFilters(filters);
+    sql += where;
+    let paramCount = params.length + 1;
     sql += ` ORDER BY r.created_at DESC`;
     
     if (filters.limit) {

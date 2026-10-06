@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { t, setLang, onLangChange } from '../i18n';
 import { connectRealtime, disconnectRealtime } from '../services/realtime';
 
 export const AuthContext = createContext(null);
@@ -33,6 +34,8 @@ export const AuthProvider = ({ children }) => {
       try {
         const response = await api.get('/auth/profile');
         const userData = response.data.data;
+        // Langue du compte (interface + emails)
+        if (userData.language) setLang(userData.language);
         setUser(userData);
         setIsAuthenticated(true);
         localStorage.setItem('user', JSON.stringify(userData));
@@ -55,6 +58,8 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/login', { email, password });
       const { token, user: userData } = response.data.data;
       
+      // Une fois connecté, l'interface passe dans la langue du compte
+      if (userData.language) setLang(userData.language);
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
       
@@ -66,7 +71,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return { 
         success: false, 
-        message: error.response?.data?.message || 'Erreur de connexion' 
+        message: error.response?.data?.message || t('services.loginError') 
       };
     }
   };
@@ -90,6 +95,17 @@ export const AuthProvider = ({ children }) => {
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
   }, []);
+
+  // Changement de langue (sélecteur) pendant la session : enregistré dans le compte,
+  // pour la prochaine connexion et pour les emails envoyés à l'utilisateur
+  useEffect(() => onLangChange(async (lang) => {
+    // language absent : backend sans la colonne users.language (migration 10 non appliquée)
+    if (!isAuthenticated || !user || user.language === undefined || user.language === lang) return;
+    try {
+      await api.put('/auth/language', { language: lang });
+      updateUser({ ...user, language: lang });
+    } catch (_) { /* toast via l'intercepteur ; la langue reste appliquée localement */ }
+  }), [isAuthenticated, user, updateUser]);
 
   const value = {
     user,

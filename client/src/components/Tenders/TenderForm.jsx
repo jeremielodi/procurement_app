@@ -9,6 +9,7 @@ import { tenderService } from '../../services/tenderService';
 import requisitionService from '../../services/requisitionService';
 import { toLocalInput, fmtMoney } from '../../utils/tenderStatus';
 import TenderTargetingFields from './TenderTargetingFields';
+import { t } from '../../i18n';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -48,7 +49,7 @@ export default function TenderForm() {
   useEffect(() => {
     tenderService.getAll()
       .then(res => setTenderByReq(Object.fromEntries(
-        (res.data || []).filter(t => t.effective_status !== 'CANCELLED').map(t => [t.requisition_id, t])
+        (res.data || []).filter(tn => tn.effective_status !== 'CANCELLED').map(tn => [tn.requisition_id, tn])
       )))
       .catch(() => {});
   }, []);
@@ -70,14 +71,14 @@ export default function TenderForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!requisitionId) return toast.error('Choisissez une réquisition');
-    if (!form.tenderNumber.trim()) return toast.error("Saisissez le numéro de l'appel d'offres");
-    if (new Date(form.endDate) <= new Date(form.startDate)) return toast.error('La date de fin doit être après la date de début');
+    if (!requisitionId) return toast.error(t('tenders.chooseRequisition'));
+    if (!form.tenderNumber.trim()) return toast.error(t('tenders.enterNumber'));
+    if (new Date(form.endDate) <= new Date(form.startDate)) return toast.error(t('tenders.endAfterStart'));
     if (targeting.audience === 'PREQUALIFIED' && !targeting.categoryId) {
-      return toast.error('Choisissez la catégorie de marché des fournisseurs préqualifiés');
+      return toast.error(t('tenders.chooseCategoryError'));
     }
     if (targeting.audience === 'PREQUALIFIED' && !targeting.supplierIds.length) {
-      return toast.error('Sélectionnez au moins un fournisseur à inviter');
+      return toast.error(t('tenders.selectInvitee'));
     }
     setSubmitting(true);
     try {
@@ -93,7 +94,7 @@ export default function TenderForm() {
         locationId: targeting.locationId || null,
         ...(targeting.audience === 'PREQUALIFIED' ? { supplierIds: targeting.supplierIds } : {}),
       });
-      toast.success(`Appel d'offres publié — ${res.notifiedSuppliers} fournisseur(s) notifié(s)`);
+      toast.success(t('tenders.published', { count: res.notifiedSuppliers }));
       navigate(`/tenders/${res.data.id}`);
     } catch (_) {
       // toast via intercepteur
@@ -109,21 +110,21 @@ export default function TenderForm() {
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Gavel size={22} /> Nouvel appel d'offres</h1>
-          <p className="text-gray-500 text-sm">Les fournisseurs inscrits seront notifiés dès la publication.</p>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Gavel size={22} /> {t('tenders.new')}</h1>
+          <p className="text-gray-500 text-sm">{t('tenders.newHint')}</p>
         </div>
       </div>
 
       {taskId && (
         <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800 flex gap-2">
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
-          Tâche « Appel d'offres (RFP) » : elle sera complétée lors de l'attribution du marché, après la clôture des soumissions.
+          {t('tenders.rfpTaskHint')}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-          <h2 className="font-semibold text-gray-800">Réquisition liée</h2>
+          <h2 className="font-semibold text-gray-800">{t('tenders.linkedRequisition')}</h2>
           {params.get('requisitionId') ? (
             <p className="text-sm">
               <span className="font-mono font-medium text-blue-700">{requisition?.requisition_number || '…'}</span>
@@ -132,46 +133,46 @@ export default function TenderForm() {
           ) : (
             <div className="flex gap-3 items-center">
               <select value={requisitionId} onChange={e => setRequisitionId(e.target.value)} className={inputCls} data-testid="requisition-select">
-                <option value="">— Choisir une réquisition —</option>
+                <option value="">{t('tenders.chooseRequisitionOption')}</option>
                 {choices.map(r => (
                   <option key={r.id} value={r.id}>
-                    {r.requisition_number} — {r.title}{tenderByReq[r.id] ? ` ⚠ AO existant : ${tenderByReq[r.id].tender_number}` : ''}
+                    {r.requisition_number} — {r.title}{tenderByReq[r.id] ? t('tenders.existingWarn', { number: tenderByReq[r.id].tender_number }) : ''}
                   </option>
                 ))}
               </select>
               <label className="text-sm text-gray-600 whitespace-nowrap flex items-center gap-1">
                 <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} />
-                Toutes les réquisitions
+                {t('tenders.allRequisitions')}
               </label>
             </div>
           )}
           {!params.get('requisitionId') && !showAll && choices.length === 0 && (
-            <p className="text-xs text-gray-500">Aucune réquisition classée « Appel d'offres ». Cochez « Toutes les réquisitions » pour élargir.</p>
+            <p className="text-xs text-gray-500">{t('tenders.noRfpRequisition')}</p>
           )}
 
           {existingTender && (
             <div className="p-3 rounded-lg bg-red-50 border border-red-300 text-sm text-red-800 flex items-start gap-2" data-testid="existing-tender-warning">
               <AlertCircle size={16} className="mt-0.5 shrink-0" />
               <div>
-                Un appel d'offres existe déjà pour cette réquisition :{' '}
+                {t('tenders.existingBefore')}{' '}
                 <Link to={`/tenders/${existingTender.id}`} className="font-semibold underline">{existingTender.tender_number}</Link>.
-                Il n'est pas possible d'en créer un second. Pour relancer, annulez d'abord l'appel d'offres existant.
+                {' '}{t('tenders.existingAfter')}
               </div>
             </div>
           )}
 
           {items.length > 0 && (
             <div>
-            <div className="text-xs text-gray-500 mb-1">{items.length} article(s) à chiffrer</div>
+            <div className="text-xs text-gray-500 mb-1">{t('tenders.itemsToPrice', { count: items.length })}</div>
             {/* Au-delà de ~10 articles, la liste défile (en-tête fixe) */}
             <div className="max-h-[440px] overflow-y-auto border border-gray-100 rounded" data-testid="tender-items-scroll">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
-                  <th className="text-left px-3 py-2 font-medium text-gray-600 w-10">N°</th>
-                  <th className="text-left px-3 py-2 font-medium text-gray-600">Item à chiffrer par les fournisseurs</th>
-                  <th className="text-right px-3 py-2 font-medium text-gray-600">Quantité</th>
-                  <th className="text-right px-3 py-2 font-medium text-gray-600">Estimation interne</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600 w-10">{t('tenders.no')}</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">{t('tenders.itemToPrice')}</th>
+                  <th className="text-right px-3 py-2 font-medium text-gray-600">{t('common.quantity')}</th>
+                  <th className="text-right px-3 py-2 font-medium text-gray-600">{t('tenders.internalEstimate')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -192,43 +193,43 @@ export default function TenderForm() {
 
         <div className="bg-white rounded-xl border border-gray-200 p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="tenderNumber">N° de l'appel d'offres *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="tenderNumber">{t('tenders.number')}</label>
             <input id="tenderNumber" className={inputCls} value={form.tenderNumber} maxLength={50}
-              placeholder="ex. AO/2026/012" onChange={e => set('tenderNumber', e.target.value)} />
+              placeholder={t('tenders.numberPlaceholder')} onChange={e => set('tenderNumber', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="maxDeliveryDays">Délai de livraison maximum (jours) *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="maxDeliveryDays">{t('tenders.maxDelivery')}</label>
             <input id="maxDeliveryDays" type="number" min="1" className={inputCls} value={form.maxDeliveryDays}
               onChange={e => set('maxDeliveryDays', e.target.value)} />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="title">Objet *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="title">{t('tenders.subject')}</label>
             <input id="title" className={inputCls} value={form.title} onChange={e => set('title', e.target.value)} />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="description">Description / conditions</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="description">{t('tenders.descriptionLabel')}</label>
             <textarea id="description" rows={3} className={inputCls} value={form.description} onChange={e => set('description', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="startDate">Ouverture des soumissions *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="startDate">{t('tenders.opening')}</label>
             <input id="startDate" type="datetime-local" className={inputCls} value={form.startDate} onChange={e => set('startDate', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="endDate">Date limite de soumission *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="endDate">{t('tenders.deadline')}</label>
             <input id="endDate" type="datetime-local" className={inputCls} value={form.endDate} onChange={e => set('endDate', e.target.value)} />
           </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-          <h2 className="font-semibold text-gray-800">Diffusion</h2>
+          <h2 className="font-semibold text-gray-800">{t('tenders.diffusion')}</h2>
           <TenderTargetingFields value={targeting} onChange={setTargeting} />
         </div>
 
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={() => navigate(-1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Annuler</button>
+          <button type="button" onClick={() => navigate(-1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">{t('common.cancel')}</button>
           <button type="submit" disabled={submitting || !requisitionId || !!existingTender}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
-            <Send size={16} /> {submitting ? 'Publication…' : 'Publier et notifier les fournisseurs'}
+            <Send size={16} /> {submitting ? t('tenders.publishing') : t('tenders.publish')}
           </button>
         </div>
       </form>

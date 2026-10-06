@@ -4,6 +4,7 @@ import { ArrowLeft, Save, PackageCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { grnService } from '../../services/grnService';
 import api from '../../services/api';
+import { t, getLocale } from '../../i18n';
 
 export default function GRNForm() {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export default function GRNForm() {
       })));
       setPOItems(items);
     } catch {
-      toast.error('Impossible de charger la commande');
+      toast.error(t('grn.loadPoError'));
     } finally {
       setLoadingPO(false);
     }
@@ -61,19 +62,19 @@ export default function GRNForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!poId) { toast.error('Aucune commande sélectionnée'); return; }
+    if (!poId) { toast.error(t('grn.noPo')); return; }
 
     setLoading(true);
     try {
       const res = await grnService.create({ poId, grnItems, observations, taskId: taskId || undefined });
       if (res.success) {
-        toast.success(`GRN ${res.data.grnNumber} créé — statut: ${res.data.status}`);
+        toast.success(t('grn.created', { number: res.data.grnNumber, status: t(`grnStatus.${res.data.status}`, { defaultValue: res.data.status }) }));
         navigate(`/goods-receipts/${res.data.id}`);
       } else {
-        toast.error(res.message || 'Erreur création GRN');
+        toast.error(res.message || t('grn.createError'));
       }
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Erreur lors de la création');
+      toast.error(e.response?.data?.message || t('po.createError'));
     } finally {
       setLoading(false);
     }
@@ -82,20 +83,20 @@ export default function GRNForm() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 text-sm">
-        <ArrowLeft size={16} /> Retour
+        <ArrowLeft size={16} /> {t('common.back')}
       </button>
 
       <div className="flex items-center gap-3 mb-6">
         <PackageCheck size={28} className="text-blue-600" />
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Nouveau Bon de Réception (GRN)</h1>
-          {po && <p className="text-gray-500 text-sm">Commande {po.po_number} — {po.supplier_name}</p>}
+          <h1 className="text-xl font-bold text-gray-900">{t('grn.newTitle')}</h1>
+          {po && <p className="text-gray-500 text-sm">{t('grn.poRef', { number: po.po_number, supplier: po.supplier_name })}</p>}
         </div>
       </div>
 
       {!poId && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-sm text-yellow-800">
-          Accédez à cette page depuis une commande approuvée pour pré-remplir les articles.
+          {t('grn.fromPoHint')}
         </div>
       )}
 
@@ -104,26 +105,26 @@ export default function GRNForm() {
         {po && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
             <div className="grid grid-cols-3 gap-4">
-              <div><span className="font-medium text-blue-700">Commande</span><br /><span>{po.po_number}</span></div>
-              <div><span className="font-medium text-blue-700">Fournisseur</span><br /><span>{po.supplier_name}</span></div>
-              <div><span className="font-medium text-blue-700">Montant PO</span><br /><span>{po.total_amount?.toLocaleString()} {po.currency}</span></div>
+              <div><span className="font-medium text-blue-700">{t('grn.order')}</span><br /><span>{po.po_number}</span></div>
+              <div><span className="font-medium text-blue-700">{t('common.supplier')}</span><br /><span>{po.supplier_name}</span></div>
+              <div><span className="font-medium text-blue-700">{t('grn.poAmount')}</span><br /><span>{po.total_amount?.toLocaleString(getLocale())} {po.currency}</span></div>
             </div>
           </div>
         )}
 
         {/* Articles */}
         {loadingPO ? (
-          <div className="text-center text-gray-500 py-8">Chargement des articles…</div>
+          <div className="text-center text-gray-500 py-8">{t('grn.loadingItems')}</div>
         ) : grnItems.length > 0 ? (
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-              <h2 className="font-medium text-gray-700">Articles à réceptionner</h2>
+              <h2 className="font-medium text-gray-700">{t('grn.itemsToReceive')}</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    {['Article', 'Qté commandée', 'Qté reçue', 'Qté acceptée', 'Qté rejetée', 'Motif rejet'].map(h => (
+                    {t('grn.formCols', { returnObjects: true }).map(h => (
                       <th key={h} className="text-left px-3 py-2 font-medium text-gray-600">{h}</th>
                     ))}
                   </tr>
@@ -166,7 +167,7 @@ export default function GRNForm() {
                       <td className="px-3 py-2">
                         <input
                           className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
-                          placeholder={item.quantity_rejected > 0 ? 'Motif obligatoire' : ''}
+                          placeholder={item.quantity_rejected > 0 ? t('grn.reasonRequired') : ''}
                           value={item.rejection_reason}
                           onChange={e => updateItem(i, 'rejection_reason', e.target.value)}
                         />
@@ -179,17 +180,17 @@ export default function GRNForm() {
           </div>
         ) : poId && !loadingPO ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-500 text-center">
-            Aucun article trouvé pour cette commande
+            {t('grn.noItems')}
           </div>
         ) : null}
 
         {/* Observations */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Observations</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('grn.observations')}</label>
           <textarea
             rows={3}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Notes sur la réception…"
+            placeholder={t('grn.observationsPlaceholder')}
             value={observations}
             onChange={e => setObservations(e.target.value)}
           />
@@ -198,14 +199,14 @@ export default function GRNForm() {
         <div className="flex gap-3">
           <button type="button" onClick={() => navigate(-1)}
             className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-            Annuler
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             disabled={loading || !poId}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
           >
-            {loading ? 'Enregistrement…' : <><Save size={16} /> Enregistrer le GRN</>}
+            {loading ? t('po.saving') : <><Save size={16} /> {t('grn.save')}</>}
           </button>
         </div>
       </form>

@@ -2,7 +2,8 @@
 const db = require('../config/database');
 // Multi-entreprise : toutes les requêtes du tableau de bord sont restreintes à l'entreprise courante
 const { scopedDb } = require('../utils/tenantSql');
-const { TASK_GROUPS, TASK_CANDIDATE_GROUPS, taskKey, taskLabel } = require('../utils/workflowLabels');
+const { TASK_GROUPS, TASK_CANDIDATE_GROUPS, taskKey, taskLabel, groupLabel } = require('../utils/workflowLabels');
+const i18n = require('../i18n');
 
 class DashboardModel {
   /**
@@ -838,7 +839,7 @@ class DashboardModel {
    * GoFlow est injoignable. Exclut les réquisitions terminées/annulées/rejetées et les processus
    * arrivés à un événement de fin. Restreint à l'entreprise courante (scopedDb).
    */
-  async getPendingTasksByProfile({ projectId } = {}) {
+  async getPendingTasksByProfile({ projectId, lang = i18n.DEFAULT_LANG } = {}) {
     const params = projectId ? [projectId] : [];
     const rows = await scopedDb.select(`
       WITH created AS (
@@ -900,7 +901,8 @@ class DashboardModel {
         groups.set(group, {
           group,
           profileId,
-          profileName: profileName.get(profileId) || TASK_GROUPS[key] || 'Autre',
+          // Nom du profil (donnée, en français) ; autre langue : libellé traduit du rôle
+          profileName: (lang !== i18n.DEFAULT_LANG && groupLabel(key, lang)) || profileName.get(profileId) || groupLabel(key, lang) || i18n.translator(lang)('workflow.roles.other'),
           users: profileId ? memberCount.get(profileId) || 0 : null,
           count: 0, claimed: 0,
           oldestSince: null,
@@ -919,7 +921,7 @@ class DashboardModel {
       if (!g.oldestSince || new Date(row.created_at) < new Date(g.oldestSince)) g.oldestSince = row.created_at;
       g.tasks.push({
         taskId: row.task_id,
-        label: taskLabel(key || row.task_name),
+        label: taskLabel(key || row.task_name, lang),
         requisitionId: row.requisition_id,
         requisitionNumber: row.requisition_number,
         requisitionTitle: row.requisition_title,

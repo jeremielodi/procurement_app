@@ -11,6 +11,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { useCurrency } from '../../contexts/EnterpriseContext';
+import { t } from '../../i18n';
 
 export default function StatsCards({ stats }) {
   const { formatAmount } = useCurrency();
@@ -18,53 +19,53 @@ export default function StatsCards({ stats }) {
 
   const cards = [
     {
-      title: 'Réquisitions',
+      title: t('dashboard.stats.requisitions'),
       value: stats.requisitions?.total || 0,
       icon: FileText,
       color: 'blue',
-      subtitle: `${stats.requisitions?.pendingApprovals || 0} en cours · ${stats.requisitions?.approvedThisMonth || 0} approuvées ce mois`,
+      subtitle: t('dashboard.stats.requisitionsSub', { pending: stats.requisitions?.pendingApprovals || 0, approved: stats.requisitions?.approvedThisMonth || 0 }),
     },
     {
-      title: 'En attente d\'approbation',
+      title: t('dashboard.stats.pendingApproval'),
       value: stats.requisitions?.pendingApprovals || 0,
       icon: Clock,
       color: 'yellow',
-      subtitle: 'À traiter',
+      subtitle: t('dashboard.stats.toProcess'),
     },
     {
-      title: 'Commandes (PO)',
+      title: t('dashboard.stats.orders'),
       value: stats.orders?.total || 0,
       icon: ShoppingCart,
       color: 'indigo',
-      subtitle: stats.amount?.ordersTotal ? `Total: ${formatAmount(stats.amount.ordersTotal)}` : 'Commandes passées',
+      subtitle: stats.amount?.ordersTotal ? t('dashboard.stats.ordersTotal', { amount: formatAmount(stats.amount.ordersTotal) }) : t('dashboard.stats.ordersPlaced'),
     },
     {
-      title: 'Bons de réception (GRN)',
+      title: t('dashboard.stats.grn'),
       value: stats.grn?.total || 0,
       icon: Package,
       color: 'green',
-      subtitle: `${stats.grn?.complete || 0} complets · ${stats.grn?.partial || 0} partiels`,
+      subtitle: t('dashboard.stats.grnSub', { complete: stats.grn?.complete || 0, partial: stats.grn?.partial || 0 }),
     },
     {
-      title: 'Factures',
+      title: t('dashboard.stats.invoices'),
       value: stats.invoices?.total || 0,
       icon: FileCheck,
       color: 'purple',
-      subtitle: `${stats.invoices?.matched || 0} rapprochées · ${stats.invoices?.mismatch || 0} écarts`,
+      subtitle: t('dashboard.stats.invoicesSub', { matched: stats.invoices?.matched || 0, mismatch: stats.invoices?.mismatch || 0 }),
     },
     {
-      title: 'Paiements',
+      title: t('dashboard.stats.payments'),
       value: stats.payments?.total || 0,
       icon: CreditCard,
       color: 'pink',
-      subtitle: `${stats.payments?.pending || 0} en attente · ${formatAmount(stats.payments?.paidAmount || 0)} payés`,
+      subtitle: t('dashboard.stats.paymentsSub', { pending: stats.payments?.pending || 0, amount: formatAmount(stats.payments?.paidAmount || 0) }),
     },
     {
-      title: 'Fournisseurs actifs',
+      title: t('dashboard.stats.activeSuppliers'),
       value: stats.suppliers?.active || 0,
       icon: Users,
       color: 'indigo',
-      subtitle: 'Partenaires enregistrés',
+      subtitle: t('dashboard.stats.activeSuppliersSub'),
     },
   ];
 

@@ -1,4 +1,5 @@
 import api from './api';
+import { t } from '../i18n';
 
 export const paymentService = {
   getAll: async (params = {}) => {
@@ -24,7 +25,7 @@ export const paymentService = {
   getPdfUrl: (id) => `${api.defaults.baseURL}/payments/${id}/pdf`,
   generatePDF: async (id) => {
     const response = await api.get(`/payments/${id}/pdf`, { responseType: 'blob' });
-    if (!response || !response.data) throw new Error('Réponse vide du serveur');
+    if (!response || !response.data) throw new Error(t('services.emptyResponse'));
     return response.data;
   },
 };

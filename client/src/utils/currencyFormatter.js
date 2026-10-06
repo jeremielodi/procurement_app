@@ -1,5 +1,6 @@
 // src/utils/currencyFormatter.js
 import { currencyService } from '../services/currencyService';
+import { getLocale } from '../i18n';
 
 // Cache des devises pour éviter des appels API répétés
 let currencyCache = null;
@@ -33,10 +34,10 @@ async function getCurrencies() {
  * Formater un montant selon la devise
  * @param {number} value - Le montant à formater
  * @param {number|string} currencyId - L'ID de la devise ou son format_key (USD, EUR, etc.)
- * @param {string} locale - La locale pour le formatage (par défaut 'fr-FR')
+ * @param {string} locale - La locale pour le formatage (par défaut : langue de l'interface)
  * @returns {string} Le montant formaté
  */
-export async function formatAmount(value, currencyId, locale = 'fr-FR') {
+export async function formatAmount(value, currencyId, locale = getLocale()) {
   // Si la valeur est null, undefined ou non numérique
   if (value === null || value === undefined || isNaN(value)) {
     return '-';
@@ -97,7 +98,7 @@ export async function formatAmount(value, currencyId, locale = 'fr-FR') {
  * @param {string} locale - La locale pour le formatage
  * @returns {string} Le montant formaté
  */
-export function formatAmountSync(value, currency, locale = 'fr-FR') {
+export function formatAmountSync(value, currency, locale = getLocale()) {
   if (value === null || value === undefined || isNaN(value)) {
     return '-';
   }
@@ -126,7 +127,7 @@ export function formatAmountSync(value, currency, locale = 'fr-FR') {
 /**
  * Formater un montant avec fallback (fonction qui gère les promesses)
  */
-export function formatAmountWithFallback(value, currencyId, locale = 'fr-FR') {
+export function formatAmountWithFallback(value, currencyId, locale = getLocale()) {
   return formatAmount(value, currencyId, locale).catch(() => {
     return `${value} ${currencyId || 'USD'}`;
   });
@@ -141,7 +142,7 @@ export function useCurrencyFormatter() {
     queryFn: () => currencyService.getAll()
   });
 
-  const format = (value, currencyId, locale = 'fr-FR') => {
+  const format = (value, currencyId, locale = getLocale()) => {
     if (value === null || value === undefined || isNaN(value)) {
       return '-';
     }

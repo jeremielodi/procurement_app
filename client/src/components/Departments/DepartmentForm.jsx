@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { departmentService } from '../../services/departmentService';
 import { AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { t } from '../../i18n';
 
 export default function DepartmentForm({ department, onClose }) {
   const [formData, setFormData] = useState({
@@ -37,15 +38,15 @@ export default function DepartmentForm({ department, onClose }) {
     const newErrors = {};
     
     if (!formData.code.trim()) {
-      newErrors.code = 'Le code est requis';
+      newErrors.code = t('departments.codeRequired');
     }
     
     if (!formData.name.trim()) {
-      newErrors.name = 'Le nom est requis';
+      newErrors.name = t('departments.nameRequired');
     }
     
     if (!formData.managerId) {
-      newErrors.managerId = 'Le manager est requis';
+      newErrors.managerId = t('departments.managerRequired');
     }
     
     setErrors(newErrors);
@@ -56,7 +57,7 @@ export default function DepartmentForm({ department, onClose }) {
     e.preventDefault();
     
     if (!validate()) {
-      toast.error('Veuillez corriger les erreurs');
+      toast.error(t('departments.fixErrors'));
       return;
     }
     
@@ -64,14 +65,14 @@ export default function DepartmentForm({ department, onClose }) {
     try {
       if (department) {
         await departmentService.update(department.id, formData);
-        toast.success('Département modifié avec succès');
+        toast.success(t('departments.updated'));
       } else {
         await departmentService.create(formData);
-        toast.success('Département créé avec succès');
+        toast.success(t('departments.created'));
       }
       onClose();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'enregistrement');
+      toast.error(error.response?.data?.message || t('budget.saveError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -90,7 +91,7 @@ export default function DepartmentForm({ department, onClose }) {
       {/* Code */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Code <span className="text-red-500">*</span>
+          {t('common.code')} <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
@@ -100,7 +101,7 @@ export default function DepartmentForm({ department, onClose }) {
             errors.code ? 'border-red-500' : 'border-gray-300'
           }`}
           required
-          placeholder="EX: IT"
+          placeholder={t('departments.codePlaceholder')}
         />
         {errors.code && (
           <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
@@ -113,7 +114,7 @@ export default function DepartmentForm({ department, onClose }) {
       {/* Nom */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nom <span className="text-red-500">*</span>
+          {t('common.name')} <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
@@ -123,7 +124,7 @@ export default function DepartmentForm({ department, onClose }) {
             errors.name ? 'border-red-500' : 'border-gray-300'
           }`}
           required
-          placeholder="Informatique"
+          placeholder={t('departments.namePlaceholder')}
         />
         {errors.name && (
           <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
@@ -136,21 +137,21 @@ export default function DepartmentForm({ department, onClose }) {
       {/* Description */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Description
+          {t('common.description')}
         </label>
         <textarea
           value={formData.description}
           onChange={(e) => handleChange('description', e.target.value)}
           rows="3"
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          placeholder="Description du département..."
+          placeholder={t('departments.descriptionPlaceholder')}
         />
       </div>
 
       {/* Manager (requis) */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Manager <span className="text-red-500">*</span>
+          {t('departments.manager')} <span className="text-red-500">*</span>
         </label>
         <select
           value={formData.managerId}
@@ -160,9 +161,9 @@ export default function DepartmentForm({ department, onClose }) {
           }`}
           required
         >
-          <option value="">Sélectionner un manager</option>
+          <option value="">{t('departments.selectManager')}</option>
           {usersLoading ? (
-            <option disabled>Chargement des utilisateurs...</option>
+            <option disabled>{t('departments.loadingUsers')}</option>
           ) : (
             users.map((user) => (
               <option key={user.id} value={user.id}>
@@ -179,7 +180,7 @@ export default function DepartmentForm({ department, onClose }) {
         )}
         {users.length === 0 && !usersLoading && (
           <p className="mt-1 text-sm text-amber-600">
-            ⚠️ Aucun utilisateur disponible. Veuillez d'abord créer des utilisateurs.
+            {t('departments.noUsers')}
           </p>
         )}
       </div>
@@ -190,7 +191,7 @@ export default function DepartmentForm({ department, onClose }) {
           onClick={onClose}
           className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
         >
-          Annuler
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
@@ -200,10 +201,10 @@ export default function DepartmentForm({ department, onClose }) {
           {isSubmitting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              Enregistrement...
+              {t('supplierForm.saving')}
             </>
           ) : (
-            department ? 'Mettre à jour' : 'Créer'
+            department ? t('supplierForm.update') : t('common.create')
           )}
         </button>
       </div>

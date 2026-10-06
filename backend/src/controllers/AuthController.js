@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const emailService = require('../services/EmailNotificationService');
 const { generatePassword } = require('../utils/passwordGenerator');
 const { appLink } = require('../utils/appUrl');
+const i18n = require('../i18n');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -39,15 +40,17 @@ async function sendNewPassword(email) {
 
   const password = generatePassword();
   const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email;
+  // Email dans la langue de l'utilisateur (email.password.* des locales)
+  const T = i18n.translator(user.language);
   const html = `
-    <p>Bonjour ${escapeHtml(name)},</p>
-    <p>Une réinitialisation de votre mot de passe procureApp a été demandée. Voici votre nouveau mot de passe :</p>
+    <p>${T('email.hello', { name: escapeHtml(name) })}</p>
+    <p>${T('email.password.intro')}</p>
     <p style="font-size: 18px; font-family: monospace; background: #f3f4f6; padding: 10px 14px; border-radius: 6px; display: inline-block; letter-spacing: 1px;">${escapeHtml(password)}</p>
-    <p><a href="${appLink('/login')}" style="background: #2563eb; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none;">Se connecter</a></p>
-    <p>Pour votre sécurité, changez-le dès votre connexion depuis <b>Mon profil</b>.</p>
-    <p style="color: #6b7280; font-size: 12px;">Si vous n'êtes pas à l'origine de cette demande, connectez-vous avec ce mot de passe et changez-le, puis prévenez votre administrateur.</p>`;
+    <p><a href="${appLink('/login')}" style="background: #2563eb; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none;">${T('email.password.login')}</a></p>
+    <p>${T('email.password.change')}</p>
+    <p style="color: #6b7280; font-size: 12px;">${T('email.password.warning')}</p>`;
 
-  const sent = await emailService.sendEmail(user.email, 'procureApp — Votre nouveau mot de passe', html);
+  const sent = await emailService.sendEmail(user.email, T('email.password.subject'), html);
   if (!sent.success) {
     console.error('Mot de passe oublié : email non envoyé à %s, mot de passe inchangé (%s)', user.email, sent.error);
     return;
@@ -141,6 +144,23 @@ class AuthController {
       res.json({ success: true, message: 'Mot de passe changé avec succès' });
     } catch (error) {
       console.error('Change password error:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * PUT /auth/language { language } — langue de l'utilisateur connecté (interface et emails)
+   */
+  async setLanguage(req, res) {
+    try {
+      const language = String(req.body?.language || '').toLowerCase();
+      if (!i18n.LANGS.includes(language)) {
+        return res.status(400).json({ success: false, message: `Langue inconnue (${i18n.LANGS.join(', ')})` });
+      }
+      await userModel.setLanguage(req.user.id, language);
+      res.json({ success: true, data: { language } });
+    } catch (error) {
+      console.error('Set language error:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }

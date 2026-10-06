@@ -4,6 +4,7 @@ import { ArrowLeft, Save, ClipboardCheck, CheckCircle, XCircle } from 'lucide-re
 import toast from 'react-hot-toast';
 import { sanService } from '../../services/sanService';
 import api from '../../services/api';
+import { t } from '../../i18n';
 
 export default function SANForm() {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function SANForm() {
       const res = await api.get(`/purchase-orders/${id}`);
       setPO(res.data?.data);
     } catch {
-      toast.error('Impossible de charger la commande');
+      toast.error(t('grn.loadPoError'));
     } finally {
       setLoadingPO(false);
     }
@@ -35,8 +36,8 @@ export default function SANForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!poId) { toast.error('Aucune commande sélectionnée'); return; }
-    if (serviceAccepted === null) { toast.error('Veuillez indiquer si le service est accepté ou rejeté'); return; }
+    if (!poId) { toast.error(t('grn.noPo')); return; }
+    if (serviceAccepted === null) { toast.error(t('san.chooseDecision')); return; }
 
     setLoading(true);
     try {
@@ -47,13 +48,13 @@ export default function SANForm() {
         taskId: taskId || undefined
       });
       if (res.success) {
-        toast.success(`SAN ${res.data.sanNumber} créé — ${res.data.serviceAccepted ? 'Accepté' : 'Rejeté'}`);
+        toast.success(t('san.created', { number: res.data.sanNumber, decision: t(res.data.serviceAccepted ? 'sanStatus.ACCEPTED' : 'sanStatus.REJECTED') }));
         navigate(`/service-acceptance-notes/${res.data.id}`);
       } else {
-        toast.error(res.message || 'Erreur création SAN');
+        toast.error(res.message || t('san.createError'));
       }
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Erreur lors de la création');
+      toast.error(e.response?.data?.message || t('po.createError'));
     } finally {
       setLoading(false);
     }
@@ -62,31 +63,31 @@ export default function SANForm() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 text-sm">
-        <ArrowLeft size={16} /> Retour
+        <ArrowLeft size={16} /> {t('common.back')}
       </button>
 
       <div className="flex items-center gap-3 mb-6">
         <ClipboardCheck size={28} className="text-purple-600" />
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Nouvelle Note d'Acceptation de Service (SAN)</h1>
-          {po && <p className="text-gray-500 text-sm">Commande {po.po_number} — {po.supplier_name}</p>}
+          <h1 className="text-xl font-bold text-gray-900">{t('san.newTitle')}</h1>
+          {po && <p className="text-gray-500 text-sm">{t('grn.poRef', { number: po.po_number, supplier: po.supplier_name })}</p>}
         </div>
       </div>
 
       {!poId && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-sm text-yellow-800">
-          Accédez à cette page depuis une commande avec GRN conforme pour pré-remplir les informations.
+          {t('san.fromPoHint')}
         </div>
       )}
 
-      {loadingPO && <div className="text-center text-gray-500 py-4">Chargement de la commande…</div>}
+      {loadingPO && <div className="text-center text-gray-500 py-4">{t('san.loadingPo')}</div>}
 
       {po && (
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6 text-sm">
           <div className="grid grid-cols-3 gap-4">
-            <div><span className="font-medium text-purple-700">Commande</span><br /><span>{po.po_number}</span></div>
-            <div><span className="font-medium text-purple-700">Fournisseur</span><br /><span>{po.supplier_name}</span></div>
-            <div><span className="font-medium text-purple-700">Objet</span><br /><span>{po.description || po.title || '—'}</span></div>
+            <div><span className="font-medium text-purple-700">{t('san.order')}</span><br /><span>{po.po_number}</span></div>
+            <div><span className="font-medium text-purple-700">{t('common.supplier')}</span><br /><span>{po.supplier_name}</span></div>
+            <div><span className="font-medium text-purple-700">{t('san.subject')}</span><br /><span>{po.description || po.title || '—'}</span></div>
           </div>
         </div>
       )}
@@ -95,7 +96,7 @@ export default function SANForm() {
         {/* Décision d'acceptation */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-3">
-            Décision d'acceptation du service *
+            {t('san.decision')}
           </label>
           <div className="grid grid-cols-2 gap-4">
             <button
@@ -109,8 +110,8 @@ export default function SANForm() {
             >
               <CheckCircle size={24} />
               <div className="text-left">
-                <div className="font-semibold">Accepter</div>
-                <div className="text-xs opacity-75">Le service est conforme</div>
+                <div className="font-semibold">{t('san.accept')}</div>
+                <div className="text-xs opacity-75">{t('san.acceptHint')}</div>
               </div>
             </button>
             <button
@@ -124,8 +125,8 @@ export default function SANForm() {
             >
               <XCircle size={24} />
               <div className="text-left">
-                <div className="font-semibold">Rejeter</div>
-                <div className="text-xs opacity-75">Non-conformité constatée</div>
+                <div className="font-semibold">{t('san.reject')}</div>
+                <div className="text-xs opacity-75">{t('san.rejectHint')}</div>
               </div>
             </button>
           </div>
@@ -134,16 +135,16 @@ export default function SANForm() {
         {/* Commentaires */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Commentaires / Observations
-            {serviceAccepted === false && <span className="text-red-500 ml-1">(motif de rejet requis)</span>}
+            {t('san.commentsLabel')}
+            {serviceAccepted === false && <span className="text-red-500 ml-1">{t('san.reasonRequired')}</span>}
           </label>
           <textarea
             rows={4}
             required={serviceAccepted === false}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
             placeholder={serviceAccepted === false
-              ? 'Décrivez les non-conformités constatées…'
-              : 'Observations sur la prestation reçue…'}
+              ? t('san.rejectPlaceholder')
+              : t('san.acceptPlaceholder')}
             value={comments}
             onChange={e => setComments(e.target.value)}
           />
@@ -152,14 +153,14 @@ export default function SANForm() {
         <div className="flex gap-3">
           <button type="button" onClick={() => navigate(-1)}
             className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-            Annuler
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             disabled={loading || !poId || serviceAccepted === null}
             className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-6 py-2 rounded-lg text-sm font-medium"
           >
-            {loading ? 'Enregistrement…' : <><Save size={16} /> Enregistrer le SAN</>}
+            {loading ? t('po.saving') : <><Save size={16} /> {t('san.save')}</>}
           </button>
         </div>
       </form>

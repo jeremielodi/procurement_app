@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { budgetService } from '../../services/budgetService';
 import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
+import { t } from '../../i18n';
 
 export default function BudgetForm({ budget, onClose }) {
   const [formData, setFormData] = useState({
@@ -59,11 +60,11 @@ export default function BudgetForm({ budget, onClose }) {
     
     // Validation
     if (!formData.entityCode) {
-      toast.error('Le code entité est requis');
+      toast.error(t('budget.entityRequired'));
       return;
     }
     if (!formData.allocatedAmount || parseFloat(formData.allocatedAmount) <= 0) {
-      toast.error('Le montant alloué doit être supérieur à 0');
+      toast.error(t('budget.amountPositive'));
       return;
     }
     
@@ -71,15 +72,15 @@ export default function BudgetForm({ budget, onClose }) {
     try {
       if (budget) {
         await budgetService.update(budget.id, formData);
-        toast.success('Budget modifié avec succès');
+        toast.success(t('budget.updated'));
       } else {
         await budgetService.create(formData);
-        toast.success('Budget créé avec succès');
+        toast.success(t('budget.created'));
       }
       onClose();
     } catch (error) {
       console.error('Error saving budget:', error);
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'enregistrement');
+      toast.error(error.response?.data?.message || t('budget.saveError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -90,7 +91,7 @@ export default function BudgetForm({ budget, onClose }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Code entité <span className="text-red-500">*</span>
+            {t('budget.entityCode')} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -98,19 +99,19 @@ export default function BudgetForm({ budget, onClose }) {
             onChange={(e) => setFormData({ ...formData, entityCode: e.target.value.toUpperCase() })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             required
-            placeholder="Ex: A"
+            placeholder={t('budget.entityPlaceholder')}
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Loc
+            {t('budget.loc')}
           </label>
           <input
             type="text"
             value={formData.loc}
             onChange={(e) => setFormData({ ...formData, loc: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Ex: 61001"
+            placeholder={t('budget.locPlaceholder')}
           />
         </div>
       </div>
@@ -118,18 +119,18 @@ export default function BudgetForm({ budget, onClose }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Source de financement
+            {t('budget.fundingSource')}
           </label>
           <select
             value={formData.fundingSource}
             onChange={(e) => setFormData({ ...formData, fundingSource: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">Sélectionner une source</option>
+            <option value="">{t('budget.selectSource')}</option>
             <option value="WWF">WWF</option>
-            <option value="UE">Union Européenne</option>
-            <option value="PNUD">PNUD</option>
-            <option value="Banque Mondiale">Banque Mondiale</option>
+            <option value="UE">{t('budget.euFull')}</option>
+            <option value="PNUD">{t('budget.undp')}</option>
+            <option value="Banque Mondiale">{t('budget.worldBank')}</option>
             <option value="USAID">USAID</option>
             <option value="GEF">GEF</option>
             <option value="FFEM">FFEM</option>
@@ -144,14 +145,14 @@ export default function BudgetForm({ budget, onClose }) {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Sous-projet
+            {t('budget.subProject')}
           </label>
           <input
             type="text"
             value={formData.subProject}
             onChange={(e) => setFormData({ ...formData, subProject: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Ex: CONS-001, EDU-001..."
+            placeholder={t('budget.subProjectPlaceholder')}
           />
         </div>
       </div>
@@ -159,19 +160,19 @@ export default function BudgetForm({ budget, onClose }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Code fonction
+            {t('budget.functionCode')}
           </label>
           <input
             type="text"
             value={formData.functionCode}
             onChange={(e) => setFormData({ ...formData, functionCode: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Ex: FUNC-01"
+            placeholder={t('budget.functionPlaceholder')}
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Projet associé
+            {t('budget.linkedProject')}
           </label>
           <select
             value={formData.projectId}
@@ -179,9 +180,9 @@ export default function BudgetForm({ budget, onClose }) {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             disabled={projectsLoading}
           >
-            <option value="">-- Aucun projet associé --</option>
+            <option value="">{t('budget.noProject')}</option>
             {projectsLoading ? (
-              <option disabled>Chargement des projets...</option>
+              <option disabled>{t('budget.loadingProjects')}</option>
             ) : (
               projects.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -192,7 +193,7 @@ export default function BudgetForm({ budget, onClose }) {
           </select>
           {!projectsLoading && projects.length === 0 && (
             <p className="text-xs text-amber-600 mt-1">
-              Aucun projet actif. <a href="/projects" className="text-blue-600 hover:underline">Créez un projet</a> d'abord.
+              {t('budget.noActiveProject')} <a href="/projects" className="text-blue-600 hover:underline">{t('budget.createProject')}</a> {t('budget.first')}
             </p>
           )}
         </div>
@@ -200,20 +201,20 @@ export default function BudgetForm({ budget, onClose }) {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Description
+          {t('common.description')}
         </label>
         <textarea
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           rows="3"
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Description détaillée du budget..."
+          placeholder={t('budget.descriptionPlaceholder')}
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Montant alloué <span className="text-red-500">*</span>
+          {t('budget.allocatedAmount')} <span className="text-red-500">*</span>
         </label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
@@ -236,7 +237,7 @@ export default function BudgetForm({ budget, onClose }) {
           onClick={onClose}
           className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
         >
-          Annuler
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
@@ -246,10 +247,10 @@ export default function BudgetForm({ budget, onClose }) {
           {isSubmitting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              Enregistrement...
+              {t('supplierForm.saving')}
             </>
           ) : (
-            budget ? 'Mettre à jour' : 'Créer'
+            budget ? t('supplierForm.update') : t('common.create')
           )}
         </button>
       </div>

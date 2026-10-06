@@ -1,19 +1,15 @@
 // Documents de préqualification des fournisseurs (mêmes règles que backend/src/utils/supplierDocuments.js)
 // Tous facultatifs : EXPECTED_DOCS = documents proposés selon le type de fournisseur
-export const DOC_LABELS = {
-  ID_CARD: "Pièce d'identité",
-  RCCM: 'RCCM',
-  TAX: 'Attestation fiscale (n° impôt)',
-  ID_NAT: 'Identification nationale (ID Nat)',
-  RIB: "RIB (relevé d'identité bancaire)",
-};
+import { t, labelMap, withLabel } from '../i18n';
+
+export const DOC_LABELS = labelMap('supplierDocs', ['ID_CARD', 'RCCM', 'TAX', 'ID_NAT', 'RIB']);
 
 export const EXPECTED_DOCS = {
   COMPANY: ['ID_CARD', 'RCCM', 'TAX', 'ID_NAT', 'RIB'],
   INDIVIDUAL: ['ID_CARD', 'RIB'],
 };
 
-export const SUPPLIER_TYPE_LABELS = { COMPANY: 'Entreprise', INDIVIDUAL: 'Personne physique' };
+export const SUPPLIER_TYPE_LABELS = labelMap('supplierType', ['COMPANY', 'INDIVIDUAL']);
 
 // PDF pour tous ; la pièce d'identité peut aussi être une photo
 export const docAccept = (type) => (type === 'ID_CARD' ? 'application/pdf,image/jpeg,image/png' : 'application/pdf');
@@ -22,16 +18,16 @@ export const MAX_DOC_SIZE = 5 * 1024 * 1024;
 /** Message d'erreur si le fichier ne convient pas, sinon null */
 export function checkDocFile(type, file) {
   const allowed = docAccept(type).split(',');
-  if (!allowed.includes(file.type)) return `${DOC_LABELS[type]} : ${type === 'ID_CARD' ? 'PDF, JPG ou PNG' : 'fichier PDF'} attendu`;
-  if (file.size > MAX_DOC_SIZE) return `${DOC_LABELS[type]} : 5 Mo maximum`;
+  if (!allowed.includes(file.type)) return t(type === 'ID_CARD' ? 'supplierDocs.expectedPdfOrImage' : 'supplierDocs.expectedPdf', { doc: DOC_LABELS[type] });
+  if (file.size > MAX_DOC_SIZE) return t('supplierDocs.maxSize', { doc: DOC_LABELS[type] });
   return null;
 }
 
-export const PREQ_STATUS = {
-  APPROVED: { label: 'Préqualifié', cls: 'bg-green-100 text-green-800' },
-  REJECTED: { label: 'Rejeté', cls: 'bg-red-100 text-red-800' },
-  PENDING: { label: 'En attente', cls: 'bg-yellow-100 text-yellow-800' },
-};
+export const PREQ_STATUS = withLabel('prequalStatus', {
+  APPROVED: { cls: 'bg-green-100 text-green-800' },
+  REJECTED: { cls: 'bg-red-100 text-red-800' },
+  PENDING: { cls: 'bg-yellow-100 text-yellow-800' },
+});
 
 /**
  * Ouvre un document authentifié dans un nouvel onglet (blob).

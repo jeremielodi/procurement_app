@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserPlus, UserMinus, Users, Calendar, Building2, User } from 'lucide-react';
 import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
+import { t, getLocale } from '../../i18n';
 
 export default function ProjectDetail({ project, onClose }) {
   const queryClient = useQueryClient();
@@ -26,7 +27,7 @@ export default function ProjectDetail({ project, onClose }) {
     mutationFn: ({ projectId, userId, role }) => projectService.addMember(projectId, userId, role),
     onSuccess: () => {
       queryClient.invalidateQueries(['project-members', project?.id]);
-      toast.success('Membre ajouté');
+      toast.success(t('projects.memberAdded'));
       setShowAddMember(false);
       setSelectedUser('');
     }
@@ -36,7 +37,7 @@ export default function ProjectDetail({ project, onClose }) {
     mutationFn: ({ projectId, userId }) => projectService.removeMember(projectId, userId),
     onSuccess: () => {
       queryClient.invalidateQueries(['project-members', project?.id]);
-      toast.success('Membre retiré');
+      toast.success(t('projects.memberRemoved'));
     }
   });
 
@@ -53,18 +54,18 @@ export default function ProjectDetail({ project, onClose }) {
         <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
           <div className="flex items-center gap-2 text-gray-500">
             <Building2 size={14} />
-            <span>Département: {project?.department_name}</span>
+            <span>{t('projects.department', { name: project?.department_name || '' })}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-500">
             <User size={14} />
-            <span>Chef de projet: {project?.manager_first_name} {project?.manager_last_name}</span>
+            <span>{t('projects.manager', { name: `${project?.manager_first_name || ''} ${project?.manager_last_name || ''}`.trim() })}</span>
           </div>
           {(project?.start_date || project?.end_date) && (
             <div className="flex items-center gap-2 text-gray-500 col-span-2">
               <Calendar size={14} />
               <span>
-                Période: {project?.start_date ? new Date(project.start_date).toLocaleDateString('fr-FR') : 'N/A'}
-                {project?.end_date && ` → ${new Date(project.end_date).toLocaleDateString('fr-FR')}`}
+                {t('projects.period', { start: project?.start_date ? new Date(project.start_date).toLocaleDateString(getLocale()) : t('common.na') })}
+                {project?.end_date && ` → ${new Date(project.end_date).toLocaleDateString(getLocale())}`}
               </span>
             </div>
           )}
@@ -76,14 +77,14 @@ export default function ProjectDetail({ project, onClose }) {
         <div className="flex justify-between items-center mb-4">
           <h4 className="font-semibold text-gray-800 flex items-center gap-2">
             <Users size={18} />
-            Membres du projet ({members.length})
+            {t('projects.members', { count: members.length })}
           </h4>
           <button
             onClick={() => setShowAddMember(!showAddMember)}
             className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
           >
             <UserPlus size={16} />
-            Ajouter
+            {t('common.add')}
           </button>
         </div>
 
@@ -94,7 +95,7 @@ export default function ProjectDetail({ project, onClose }) {
               onChange={(e) => setSelectedUser(e.target.value)}
               className="flex-1 px-3 py-2 border rounded-lg"
             >
-              <option value="">Sélectionner un utilisateur</option>
+              <option value="">{t('projects.selectUser')}</option>
               {availableUsers
                 .filter(u => !existingMemberIds.includes(u.id))
                 .map(user => (
@@ -108,16 +109,14 @@ export default function ProjectDetail({ project, onClose }) {
               onChange={(e) => setSelectedRole(e.target.value)}
               className="w-32 px-3 py-2 border rounded-lg"
             >
-              <option value="MEMBER">Membre</option>
-              <option value="CONTRIBUTOR">Contributeur</option>
-              <option value="OBSERVER">Observateur</option>
+              {['MEMBER', 'CONTRIBUTOR', 'OBSERVER'].map(r => <option key={r} value={r}>{t(`projects.roles.${r}`)}</option>)}
             </select>
             <button
               onClick={() => addMemberMutation.mutate({ projectId: project.id, userId: selectedUser, role: selectedRole })}
               disabled={!selectedUser || addMemberMutation.isPending}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
-              Ajouter
+              {t('common.add')}
             </button>
           </div>
         )}
@@ -128,11 +127,11 @@ export default function ProjectDetail({ project, onClose }) {
               <div>
                 <p className="font-medium">{member.first_name} {member.last_name}</p>
                 <p className="text-sm text-gray-500">{member.email}</p>
-                <span className="text-xs text-blue-600">{member.role}</span>
+                <span className="text-xs text-blue-600">{t(`projects.roles.${member.role}`, { defaultValue: member.role })}</span>
               </div>
               <button
                 onClick={() => {
-                  if (confirm(`Retirer ${member.first_name} ${member.last_name} du projet ?`)) {
+                  if (confirm(t('projects.confirmRemove', { name: `${member.first_name} ${member.last_name}` }))) {
                     removeMemberMutation.mutate({ projectId: project.id, userId: member.id });
                   }
                 }}
@@ -143,7 +142,7 @@ export default function ProjectDetail({ project, onClose }) {
             </div>
           ))}
           {members.length === 0 && (
-            <p className="text-center text-gray-500 py-4">Aucun membre dans ce projet</p>
+            <p className="text-center text-gray-500 py-4">{t('projects.noMembers')}</p>
           )}
         </div>
       </div>

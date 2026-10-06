@@ -11,52 +11,53 @@ import {
   Calendar,
   Award
 } from 'lucide-react';
+import { t } from '../../i18n';
 
 export default function KpiCards({ kpis }) {
   if (!kpis) return null;
 
   const items = [
     {
-      label: 'Taux d\'approbation',
+      label: t('dashboard.kpi.approvalRate'),
       value: `${kpis.approvalRate || 0}%`,
       icon: CheckCircle,
       color: 'green',
-      subtitle: `${kpis.approvalRate || 0}% des réquisitions approuvées`,
+      subtitle: t('dashboard.kpi.approvalRateSub', { rate: kpis.approvalRate || 0 }),
     },
     {
-      label: 'Taux de conversion',
+      label: t('dashboard.kpi.conversionRate'),
       value: `${kpis.conversionRate || 0}%`,
       icon: TrendingUp,
       color: 'blue',
-      subtitle: 'Réquisitions → Commandes',
+      subtitle: t('dashboard.kpi.conversionRateSub'),
     },
     {
-      label: 'Délai approbation',
-      value: `${kpis.avgApprovalDays || 0} jours`,
+      label: t('dashboard.kpi.approvalDelay'),
+      value: t('dashboard.kpi.days', { count: kpis.avgApprovalDays || 0 }),
       icon: Clock,
       color: 'yellow',
-      subtitle: 'Temps moyen d\'approbation',
+      subtitle: t('dashboard.kpi.approvalDelaySub'),
     },
     {
-      label: 'Satisfaction fournisseurs',
+      label: t('dashboard.kpi.supplierSatisfaction'),
       value: `${kpis.supplierSatisfaction || 0}/5`,
       icon: Users,
       color: 'purple',
-      subtitle: `${kpis.totalSupplierEvaluations || 0} évaluations`,
+      subtitle: t('dashboard.kpi.evaluations', { count: kpis.totalSupplierEvaluations || 0 }),
     },
     {
-      label: 'Livraison à temps',
+      label: t('dashboard.kpi.onTime'),
       value: `${kpis.onTimeDelivery || 0}%`,
       icon: Award,
       color: 'green',
-      subtitle: 'Commandes livrées dans les délais',
+      subtitle: t('dashboard.kpi.onTimeSub'),
     },
     {
-      label: 'Conformité budgétaire',
+      label: t('dashboard.kpi.budgetCompliance'),
       value: `${kpis.budgetCompliance || 0}%`,
       icon: DollarSign,
       color: 'indigo',
-      subtitle: 'Respect des budgets',
+      subtitle: t('dashboard.kpi.budgetComplianceSub'),
     },
   ];
 
@@ -64,11 +65,11 @@ export default function KpiCards({ kpis }) {
   if (kpis.yearOverYear) {
     const growth = kpis.yearOverYear.requisitions.growth;
     items.push({
-      label: 'Croissance annuelle',
+      label: t('dashboard.kpi.growth'),
       value: `${growth}%`,
       icon: growth > 0 ? TrendingUp : TrendingDown,
       color: growth > 0 ? 'green' : 'red',
-      subtitle: `${kpis.yearOverYear.requisitions.current} vs ${kpis.yearOverYear.requisitions.previous} réquisitions`,
+      subtitle: t('dashboard.kpi.growthSub', { current: kpis.yearOverYear.requisitions.current, previous: kpis.yearOverYear.requisitions.previous }),
     });
   }
 

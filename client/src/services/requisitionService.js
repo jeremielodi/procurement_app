@@ -1,5 +1,6 @@
 // src/services/requisitionService.js
 import api from './api'
+import { t, getLang } from '../i18n'
 
 class RequisitionService {
   // Récupérer toutes les réquisitions
@@ -18,8 +19,8 @@ class RequisitionService {
     return response.data
   }
 
-  // lang : 'fr' (défaut) ou 'en' — langue du document
-  async generatePDF(id, lang = 'fr') {
+  // lang : 'fr' ou 'en' — langue du document (défaut : langue de l'interface)
+  async generatePDF(id, lang = getLang()) {
     try {
       const response = await api.get(`requisitions/${id}/export/pdf`, {
         params: { lang },
@@ -28,7 +29,7 @@ class RequisitionService {
 
       // Vérification supplémentaire
       if (!response || !response.data) {
-        throw new Error('Réponse vide du serveur');
+        throw new Error(t('services.emptyResponse'));
       }
 
       // Si c'est déjà un blob, le retourner
@@ -38,9 +39,9 @@ class RequisitionService {
           const text = await response.data.text();
           try {
             const error = JSON.parse(text);
-            throw new Error(error.message || 'Erreur serveur');
+            throw new Error(error.message || t('services.serverError'));
           } catch (e) {
-            throw new Error('Erreur lors de la génération du PDF');
+            throw new Error(t('services.pdfError'));
           }
         }
         return response.data;
@@ -51,7 +52,7 @@ class RequisitionService {
         return new Blob([response.data], { type: 'application/pdf' });
       }
 
-      throw new Error('Format de réponse inattendu');
+      throw new Error(t('services.unexpectedFormat'));
 
     } catch (error) {
       console.error('PDF generation error:', error);
@@ -100,19 +101,10 @@ class RequisitionService {
 
   getStatusOptions() {
     return [
-      { value: 'all', label: 'Tous les statuts' },
-      { value: 'DRAFT', label: 'Brouillon' },
-      { value: 'PENDING', label: 'En attente' },
-      { value: 'BUDGET_CHECKED', label: 'Budget vérifié' },
-      { value: 'APPROVED', label: 'Approuvé' },
-      { value: 'REJECTED', label: 'Rejeté' },
-      { value: 'IN_PROGRESS', label: 'En cours' },
-      { value: 'COMPLETED', label: 'Terminé' },
-      { value: 'CANCELLED', label: 'Annulé' },
-      { value: 'CLASSIFIED_DIRECT_PURCHASE', label: 'Achat direct', },
-      { value: 'CLASSIFIED_MULTIPLE_QUOTATIONS', label: 'Multiples devis', },
-      { value: 'CLASSIFIED_RFP', label: "Appel d'offres", },
-      { value: 'CLASSIFIED_SOLE_SOURCE', label: 'Source unique', }
+      { value: 'all', label: t('requisitions.allStatuses') },
+      ...['DRAFT', 'PENDING', 'BUDGET_CHECKED', 'APPROVED', 'REJECTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED',
+        'CLASSIFIED_DIRECT_PURCHASE', 'CLASSIFIED_MULTIPLE_QUOTATIONS', 'CLASSIFIED_RFP', 'CLASSIFIED_SOLE_SOURCE']
+        .map(value => ({ value, label: t(`requisitionStatus.${value}`) }))
     ];
   }
 

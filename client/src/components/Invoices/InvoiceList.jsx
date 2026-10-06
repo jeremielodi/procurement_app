@@ -3,24 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { FileText, Plus, Search, RefreshCw, Eye, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { invoiceService } from '../../services/invoiceService';
+import { t, withLabel, getLocale } from '../../i18n';
 
-const STATUS_LABELS = {
-  DRAFT:          { label: 'Brouillon',   cls: 'bg-gray-100 text-gray-700' },
-  SUBMITTED:      { label: 'Soumise',     cls: 'bg-blue-100 text-blue-700' },
-  APPROVED:       { label: 'Approuvée',   cls: 'bg-green-100 text-green-700' },
-  REJECTED:       { label: 'Rejetée',     cls: 'bg-red-100 text-red-700' },
-  PAID:           { label: 'Payée',       cls: 'bg-purple-100 text-purple-700' },
-  PARTIALLY_PAID: { label: 'Paiement partiel', cls: 'bg-orange-100 text-orange-700' },
-};
+const STATUS_LABELS = withLabel('invoiceStatus', {
+  DRAFT:          { cls: 'bg-gray-100 text-gray-700' },
+  SUBMITTED:      { cls: 'bg-blue-100 text-blue-700' },
+  APPROVED:       { cls: 'bg-green-100 text-green-700' },
+  REJECTED:       { cls: 'bg-red-100 text-red-700' },
+  PAID:           { cls: 'bg-purple-100 text-purple-700' },
+  PARTIALLY_PAID: { cls: 'bg-orange-100 text-orange-700' },
+});
 
-const MATCH_LABELS = {
-  PENDING:        { label: 'En attente', icon: AlertTriangle, cls: 'text-yellow-600' },
-  MATCHED:        { label: 'Rapprochée', icon: CheckCircle,   cls: 'text-green-600' },
-  PRICE_MISMATCH: { label: 'Écart prix', icon: XCircle,       cls: 'text-red-600' },
-  NO_GRN:         { label: 'Sans GRN',   icon: XCircle,       cls: 'text-red-600' },
-  GRN_PARTIAL:    { label: 'GRN partiel',icon: AlertTriangle, cls: 'text-orange-600' },
-  MISMATCH:       { label: 'Non conforme',icon: XCircle,      cls: 'text-red-600' },
-};
+const MATCH_LABELS = withLabel('matchStatus', {
+  PENDING:        { icon: AlertTriangle, cls: 'text-yellow-600' },
+  MATCHED:        { icon: CheckCircle,   cls: 'text-green-600' },
+  PRICE_MISMATCH: { icon: XCircle,       cls: 'text-red-600' },
+  NO_GRN:         { icon: XCircle,       cls: 'text-red-600' },
+  GRN_PARTIAL:    { icon: AlertTriangle, cls: 'text-orange-600' },
+  MISMATCH:       { icon: XCircle,       cls: 'text-red-600' },
+});
 
 export default function InvoiceList() {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ export default function InvoiceList() {
       setInvoices(res.data || []);
       setPagination(res.pagination || {});
     } catch {
-      toast.error('Erreur lors du chargement des factures');
+      toast.error(t('invoice.loadError'));
     } finally {
       setLoading(false);
     }
@@ -62,14 +63,14 @@ export default function InvoiceList() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Factures Fournisseurs</h1>
-          <p className="text-gray-500 text-sm mt-1">Saisie et rapprochement 3 voies (PO + GRN + Facture)</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('invoice.title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('invoice.subtitle')}</p>
         </div>
         <button
           onClick={() => navigate('/invoices/new')}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
         >
-          <Plus size={16} /> Nouvelle facture
+          <Plus size={16} /> {t('invoice.new')}
         </button>
       </div>
 
@@ -78,19 +79,19 @@ export default function InvoiceList() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="N° facture, commande, fournisseur…"
+            placeholder={t('invoice.searchPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
-          <option value="">Tous statuts</option>
+          <option value="">{t('invoice.allStatuses')}</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
         <select value={matchFilter} onChange={e => { setMatchFilter(e.target.value); setPage(1); }}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
-          <option value="">Tous rapprochements</option>
+          <option value="">{t('invoice.allMatches')}</option>
           {Object.entries(MATCH_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
         <button onClick={load} className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -106,14 +107,14 @@ export default function InvoiceList() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-gray-400">
             <FileText size={40} className="mb-2 opacity-40" />
-            <p>Aucune facture trouvée</p>
+            <p>{t('invoice.none')}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['N° Facture', 'Commande', 'Fournisseur', 'Montant', 'Date', 'Rapprochement', 'Statut', ''].map(h => (
-                  <th key={h} className="text-left px-4 py-3 font-medium text-gray-600">{h}</th>
+                {t('invoice.cols', { returnObjects: true }).map((h, i) => (
+                  <th key={i} className="text-left px-4 py-3 font-medium text-gray-600">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -127,8 +128,8 @@ export default function InvoiceList() {
                     <td className="px-4 py-3 font-mono font-medium">{inv.invoice_number}</td>
                     <td className="px-4 py-3 text-blue-600">{inv.po_number || '—'}</td>
                     <td className="px-4 py-3 text-gray-700">{inv.supplier_name || '—'}</td>
-                    <td className="px-4 py-3 font-medium">{parseFloat(inv.total_amount || 0).toLocaleString()} {inv.currency}</td>
-                    <td className="px-4 py-3 text-gray-500">{inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('fr-FR') : '—'}</td>
+                    <td className="px-4 py-3 font-medium">{parseFloat(inv.total_amount || 0).toLocaleString(getLocale())} {inv.currency}</td>
+                    <td className="px-4 py-3 text-gray-500">{inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString(getLocale()) : '—'}</td>
                     <td className="px-4 py-3">
                       <span className={`flex items-center gap-1 text-xs font-medium ${m.cls}`}>
                         <MatchIcon size={14} /> {m.label}

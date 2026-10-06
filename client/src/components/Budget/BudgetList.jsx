@@ -9,6 +9,7 @@ import Modal from '../Common/Modal';
 import BudgetForm from './BudgetForm';
 import BudgetDetail from './BudgetDetail';
 import toast from 'react-hot-toast';
+import { t } from '../../i18n';
 
 export default function BudgetList() {
   const { formatAmount } = useCurrency();
@@ -34,7 +35,7 @@ export default function BudgetList() {
     onSuccess: () => {
       queryClient.invalidateQueries(['budgets']);
       queryClient.invalidateQueries(['budget-summary']);
-      toast.success('Budget supprimé');
+      toast.success(t('budget.deleted'));
     }
   });
 
@@ -53,8 +54,8 @@ export default function BudgetList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Gestion Budgétaire</h1>
-          <p className="text-gray-500 mt-1">Suivi des allocations et dépenses</p>
+          <h1 className="text-2xl font-bold text-gray-800">{t('budget.title')}</h1>
+          <p className="text-gray-500 mt-1">{t('budget.subtitle')}</p>
         </div>
         <button
           onClick={() => {
@@ -64,7 +65,7 @@ export default function BudgetList() {
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus size={18} />
-          Nouveau budget
+          {t('budget.new')}
         </button>
       </div>
 
@@ -74,7 +75,7 @@ export default function BudgetList() {
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total budgets</p>
+                <p className="text-sm text-gray-500">{t('budget.totalBudgets')}</p>
                 <p className="text-2xl font-bold text-gray-800">{summary.total_budgets}</p>
               </div>
               <DollarSign size={32} className="text-blue-500" />
@@ -83,7 +84,7 @@ export default function BudgetList() {
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Alloué total</p>
+                <p className="text-sm text-gray-500">{t('budget.totalAllocated')}</p>
                 <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.total_allocated)}</p>
               </div>
               <TrendingUp size={32} className="text-green-500" />
@@ -92,7 +93,7 @@ export default function BudgetList() {
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Utilisé total</p>
+                <p className="text-sm text-gray-500">{t('budget.totalUtilized')}</p>
                 <p className="text-2xl font-bold text-orange-600">{formatCurrency(summary.total_utilized)}</p>
               </div>
               <TrendingDown size={32} className="text-orange-500" />
@@ -101,7 +102,7 @@ export default function BudgetList() {
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Restant total</p>
+                <p className="text-sm text-gray-500">{t('budget.totalRemaining')}</p>
                 <p className="text-2xl font-bold text-purple-600">{formatCurrency(summary.total_remaining)}</p>
               </div>
               <DollarSign size={32} className="text-purple-500" />
@@ -118,7 +119,7 @@ export default function BudgetList() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
-                placeholder="Rechercher par code entité..."
+                placeholder={t('budget.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -130,11 +131,11 @@ export default function BudgetList() {
             onChange={(e) => setFundingSource(e.target.value)}
             className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">Toutes sources</option>
+            <option value="all">{t('budget.allSources')}</option>
             <option value="WWF">WWF</option>
-            <option value="UE">UE</option>
-            <option value="PNUD">PNUD</option>
-            <option value="Banque Mondiale">Banque Mondiale</option>
+            <option value="UE">{t('budget.eu')}</option>
+            <option value="PNUD">{t('budget.undp')}</option>
+            <option value="Banque Mondiale">{t('budget.worldBank')}</option>
           </select>
         </div>
       </div>
@@ -144,15 +145,15 @@ export default function BudgetList() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code entité</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loc</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Projet</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Alloué</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Utilisé</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Restant</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Utilisation</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budget.entityCode')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budget.loc')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budget.source')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budget.project')}</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('budget.allocated')}</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('budget.utilized')}</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('budget.remaining')}</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('budget.utilization')}</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -165,7 +166,7 @@ export default function BudgetList() {
             ) : budgets.length === 0 ? (
               <tr>
                 <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
-                  Aucun budget trouvé
+                  {t('budget.none')}
                 </td>
               </tr>
             ) : (
@@ -212,7 +213,7 @@ export default function BudgetList() {
                           setShowDetailModal(true);
                         }}
                         className="text-blue-600 hover:text-blue-800"
-                        title="Voir détails"
+                        title={t('budget.viewDetails')}
                       >
                         <Eye size={18} />
                       </button>
@@ -222,18 +223,18 @@ export default function BudgetList() {
                           setShowModal(true);
                         }}
                         className="text-green-600 hover:text-green-800"
-                        title="Modifier"
+                        title={t('common.edit')}
                       >
                         <Edit size={18} />
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm('Supprimer ce budget ?')) {
+                          if (confirm(t('budget.confirmDelete'))) {
                             deleteMutation.mutate(budget.id);
                           }
                         }}
                         className="text-red-600 hover:text-red-800"
-                        title="Supprimer"
+                        title={t('common.delete')}
                       >
                         <Trash2 size={18} />
                       </button>
@@ -250,7 +251,7 @@ export default function BudgetList() {
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={selectedBudget ? 'Modifier le budget' : 'Nouveau budget'}
+        title={selectedBudget ? t('budget.edit') : t('budget.new')}
         size="lg"
         showFooter={false}
       >
@@ -267,7 +268,7 @@ export default function BudgetList() {
       <Modal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
-        title={`Budget - ${selectedBudget?.entity_code}`}
+        title={t('budget.detailTitle', { code: selectedBudget?.entity_code })}
         size="xl"
         showFooter={false}
       >

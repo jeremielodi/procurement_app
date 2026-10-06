@@ -36,25 +36,27 @@ import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
 import { useCurrency } from '../../contexts/EnterpriseContext'
 import toast from 'react-hot-toast'
+import { t } from '../../i18n'
 
-const statusOptions = [
-  { value: 'all', label: 'Tous les statuts' },
-  { value: 'ACTIVE', label: 'Actif' },
-  { value: 'INACTIVE', label: 'Inactif' }
+// Options des filtres (fonctions : libellés traduits à l'affichage)
+const statusOptions = () => [
+  { value: 'all', label: t('suppliers.allStatuses') },
+  { value: 'ACTIVE', label: t('common.active') },
+  { value: 'INACTIVE', label: t('common.inactive') }
 ]
 
-const prequalificationOptions = [
-  { value: 'all', label: 'Tous' },
-  { value: 'true', label: 'Préqualifiés' },
-  { value: 'false', label: 'Non préqualifiés' }
+const prequalificationOptions = () => [
+  { value: 'all', label: t('suppliers.all') },
+  { value: 'true', label: t('suppliers.prequalified') },
+  { value: 'false', label: t('suppliers.notPrequalified') }
 ]
 
-const ratingOptions = [
-  { value: 'all', label: 'Toutes notes' },
-  { value: '4.5', label: '4.5+ (Excellent)' },
-  { value: '3.5', label: '3.5+ (Bon)' },
-  { value: '2.5', label: '2.5+ (Moyen)' },
-  { value: '0', label: '< 2.5 (À améliorer)' }
+const ratingOptions = () => [
+  { value: 'all', label: t('suppliers.allRatings') },
+  { value: '4.5', label: t('suppliers.excellent') },
+  { value: '3.5', label: t('suppliers.good') },
+  { value: '2.5', label: t('suppliers.average') },
+  { value: '0', label: t('suppliers.toImprove') }
 ]
 
 export default function SupplierList() {
@@ -100,12 +102,12 @@ export default function SupplierList() {
     mutationFn: (id) => supplierService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['suppliers'])
-      toast.success('Fournisseur supprimé avec succès')
+      toast.success(t('suppliers.deleted'))
       setShowDeleteModal(false)
       setSupplierToDelete(null)
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la suppression')
+      toast.error(error.message || t('requisitions.deleteError'))
     }
   })
 
@@ -114,12 +116,12 @@ export default function SupplierList() {
     mutationFn: (ids) => supplierService.bulkDelete(ids),
     onSuccess: () => {
       queryClient.invalidateQueries(['suppliers'])
-      toast.success(`${selectedSuppliers.length} fournisseur(s) supprimé(s)`)
+      toast.success(t('suppliers.bulkDeleted', { count: selectedSuppliers.length }))
       setShowBulkDeleteModal(false)
       setSelectedSuppliers([])
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la suppression')
+      toast.error(error.message || t('requisitions.deleteError'))
     }
   })
 
@@ -128,12 +130,12 @@ export default function SupplierList() {
     mutationFn: (id) => supplierService.prequalify(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['suppliers'])
-      toast.success('Fournisseur préqualifié avec succès')
+      toast.success(t('suppliers.prequalifiedOk'))
       setShowPrequalifyModal(false)
       setSupplierToPrequalify(null)
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la préqualification')
+      toast.error(error.message || t('suppliers.prequalifyError'))
     }
   })
 
@@ -183,7 +185,7 @@ export default function SupplierList() {
         document.body.appendChild(link)
         link.click()
         link.remove()
-        toast.success('Export Excel réussi')
+        toast.success(t('requisitions.exportExcelOk'))
       } else if (format === 'pdf') {
         const blob = await supplierService.exportToPDF(filters)
         const url = window.URL.createObjectURL(blob)
@@ -193,10 +195,10 @@ export default function SupplierList() {
         document.body.appendChild(link)
         link.click()
         link.remove()
-        toast.success('Export PDF réussi')
+        toast.success(t('requisitions.exportPdfOk'))
       }
     } catch (error) {
-      toast.error('Erreur lors de l\'export')
+      toast.error(t('requisitions.exportError'))
     }
   }
 
@@ -225,7 +227,7 @@ export default function SupplierList() {
   if (isLoading && !data) {
     return (
       <div className="flex justify-center items-center h-96">
-        <LoadingSpinner size="lg" text="Chargement des fournisseurs..." />
+        <LoadingSpinner size="lg" text={t('suppliers.loading')} />
       </div>
     )
   }
@@ -234,8 +236,8 @@ export default function SupplierList() {
     return (
       <div className="p-6">
         <ErrorAlert
-          title="Erreur de chargement"
-          message="Impossible de charger les fournisseurs"
+          title={t('requisitions.loadError')}
+          message={t('suppliers.loadErrorMsg')}
           details={error.message}
           onRetry={() => refetch()}
         />
@@ -248,9 +250,9 @@ export default function SupplierList() {
       {/* En-tête */}
       <div className="flex flex-wrap justify-between items-start gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Fournisseurs</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{t('suppliers.title')}</h1>
           <p className="text-gray-500 mt-1">
-            Gérez votre catalogue de fournisseurs
+            {t('suppliers.subtitle')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -259,7 +261,7 @@ export default function SupplierList() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus size={18} />
-            Nouveau fournisseur
+            {t('suppliers.new')}
           </Link>
         </div>
       </div>
@@ -272,7 +274,7 @@ export default function SupplierList() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
-                placeholder="Rechercher par nom, email, téléphone..."
+                placeholder={t('suppliers.searchPlaceholder')}
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -284,7 +286,7 @@ export default function SupplierList() {
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Filter size={18} />
-            Filtres
+            {t('common.filters')}
             {(filters.status !== 'all' || filters.prequalified !== 'all' || filters.minRating !== 'all') && (
               <span className="ml-1 w-2 h-2 bg-blue-600 rounded-full" />
             )}
@@ -294,12 +296,12 @@ export default function SupplierList() {
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <RefreshCw size={18} />
-            Rafraîchir
+            {t('common.refresh')}
           </button>
           <div className="relative group">
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
               <Download size={18} />
-              Exporter
+              {t('common.export')}
             </button>
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 hidden group-hover:block z-10">
               <button
@@ -321,7 +323,7 @@ export default function SupplierList() {
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg"
               >
                 <Printer size={16} className="inline mr-2" />
-                Imprimer
+                {t('common.print')}
               </button>
             </div>
           </div>
@@ -336,7 +338,7 @@ export default function SupplierList() {
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                {statusOptions.map(opt => (
+                {statusOptions().map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -345,7 +347,7 @@ export default function SupplierList() {
                 onChange={(e) => handleFilterChange('prequalified', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                {prequalificationOptions.map(opt => (
+                {prequalificationOptions().map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -354,7 +356,7 @@ export default function SupplierList() {
                 onChange={(e) => handleFilterChange('minRating', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                {ratingOptions.map(opt => (
+                {ratingOptions().map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -362,7 +364,7 @@ export default function SupplierList() {
                 onClick={handleResetFilters}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
               >
-                Réinitialiser
+                {t('common.reset')}
               </button>
             </div>
           </div>
@@ -373,7 +375,7 @@ export default function SupplierList() {
       {selectedSuppliers.length > 0 && (
         <div className="bg-blue-50 rounded-lg p-4 flex justify-between items-center">
           <span className="text-sm text-blue-700">
-            {selectedSuppliers.length} fournisseur(s) sélectionné(s)
+            {t('suppliers.selected', { count: selectedSuppliers.length })}
           </span>
           <div className="flex gap-2">
             <button
@@ -381,13 +383,13 @@ export default function SupplierList() {
               className="flex items-center gap-2 px-3 py-1 text-sm text-red-600 hover:bg-red-100 rounded-lg transition-colors"
             >
               <Trash2 size={16} />
-              Supprimer
+              {t('common.delete')}
             </button>
             <button
               onClick={() => setSelectedSuppliers([])}
               className="text-sm text-gray-500 hover:text-gray-700"
             >
-              Annuler
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -408,22 +410,22 @@ export default function SupplierList() {
                   />
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fournisseur
+                  {t('suppliers.supplier')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
+                  {t('suppliers.contact')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Statut
+                  {t('common.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Note
+                  {t('suppliers.rating')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Dépenses
+                  {t('suppliers.spend')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -432,13 +434,13 @@ export default function SupplierList() {
                 <tr>
                   <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                     <Building2 className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-                    <p>Aucun fournisseur trouvé</p>
+                    <p>{t('suppliers.none')}</p>
                     <Link
                       to="/suppliers/new"
                       className="mt-2 inline-flex items-center text-blue-600 hover:text-blue-800"
                     >
                       <Plus size={16} className="mr-1" />
-                      Ajouter un fournisseur
+                      {t('suppliers.add')}
                     </Link>
                    </td>
                  </tr>
@@ -468,7 +470,7 @@ export default function SupplierList() {
                             {supplier.name}
                           </Link>
                           <div className="text-xs text-gray-500">
-                            Code: {supplier.supplier_code}{supplier.supplier_type === 'INDIVIDUAL' ? ' · Personne physique' : ''}
+                            {t('suppliers.codeLine', { code: supplier.supplier_code })}{supplier.supplier_type === 'INDIVIDUAL' ? t('suppliers.individualSuffix') : ''}
                           </div>
                           {(supplier.category_names || []).length > 0 && (
                             <div className="text-xs text-gray-400 truncate max-w-[260px]" title={supplier.category_names.join(', ')}>
@@ -519,7 +521,7 @@ export default function SupplierList() {
                         {formatAmount(supplier.total_spent || 0)}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {supplier.order_count || 0} commandes
+                        {t('suppliers.orders', { count: supplier.order_count || 0 })}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -527,14 +529,14 @@ export default function SupplierList() {
                         <Link
                           to={`/suppliers/${supplier.id}`}
                           className="text-gray-400 hover:text-blue-600 transition-colors"
-                          title="Voir"
+                          title={t('common.view')}
                         >
                           <Eye size={18} />
                         </Link>
                         <Link
                           to={`/suppliers/${supplier.id}/edit`}
                           className="text-gray-400 hover:text-green-600 transition-colors"
-                          title="Modifier"
+                          title={t('common.edit')}
                         >
                           <Edit size={18} />
                         </Link>
@@ -542,7 +544,7 @@ export default function SupplierList() {
                           <Link
                             to={`/suppliers/${supplier.id}?tab=prequalification`}
                             className="text-gray-400 hover:text-purple-600 transition-colors"
-                            title="Préqualification & documents"
+                            title={t('suppliers.prequalAndDocs')}
                           >
                             <Shield size={18} />
                           </Link>
@@ -553,7 +555,7 @@ export default function SupplierList() {
                             setShowDeleteModal(true)
                           }}
                           className="text-gray-400 hover:text-red-600 transition-colors"
-                          title="Supprimer"
+                          title={t('common.delete')}
                         >
                           <Trash2 size={18} />
                         </button>
@@ -570,8 +572,7 @@ export default function SupplierList() {
         {totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
             <div className="text-sm text-gray-500">
-              Affichage de {(pagination.page - 1) * pagination.limit + 1} à{' '}
-              {Math.min(pagination.page * pagination.limit, totalItems)} sur {totalItems} fournisseurs
+              {t('suppliers.showing', { from: (pagination.page - 1) * pagination.limit + 1, to: Math.min(pagination.page * pagination.limit, totalItems), total: totalItems })}
             </div>
             <div className="flex gap-2">
               <button
@@ -627,30 +628,30 @@ export default function SupplierList() {
           setShowDeleteModal(false)
           setSupplierToDelete(null)
         }}
-        title="Supprimer le fournisseur"
+        title={t('suppliers.deleteTitle')}
         type="danger"
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={() => deleteMutation.mutate(supplierToDelete?.id)}
         isLoading={deleteMutation.isPending}
       >
-        <p>Êtes-vous sûr de vouloir supprimer le fournisseur <strong>{supplierToDelete?.name}</strong> ?</p>
-        <p className="text-sm text-gray-500 mt-2">Cette action est irréversible.</p>
+        <p>{t('suppliers.deleteConfirm')} <strong>{supplierToDelete?.name}</strong> ?</p>
+        <p className="text-sm text-gray-500 mt-2">{t('requisitions.irreversible')}</p>
       </Modal>
 
       {/* Modal de suppression groupée */}
       <Modal
         isOpen={showBulkDeleteModal}
         onClose={() => setShowBulkDeleteModal(false)}
-        title="Supprimer plusieurs fournisseurs"
+        title={t('suppliers.bulkDeleteTitle')}
         type="danger"
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={() => bulkDeleteMutation.mutate(selectedSuppliers)}
         isLoading={bulkDeleteMutation.isPending}
       >
-        <p>Êtes-vous sûr de vouloir supprimer <strong>{selectedSuppliers.length}</strong> fournisseur(s) ?</p>
-        <p className="text-sm text-gray-500 mt-2">Cette action est irréversible.</p>
+        <p>{t('suppliers.bulkDeleteConfirm', { count: selectedSuppliers.length })}</p>
+        <p className="text-sm text-gray-500 mt-2">{t('requisitions.irreversible')}</p>
       </Modal>
 
       {/* Modal de préqualification */}
@@ -660,15 +661,15 @@ export default function SupplierList() {
           setShowPrequalifyModal(false)
           setSupplierToPrequalify(null)
         }}
-        title="Préqualifier le fournisseur"
+        title={t('suppliers.prequalifyTitle')}
         type="success"
-        confirmText="Confirmer"
-        cancelText="Annuler"
+        confirmText={t('common.confirm')}
+        cancelText={t('common.cancel')}
         onConfirm={() => prequalifyMutation.mutate(supplierToPrequalify?.id)}
         isLoading={prequalifyMutation.isPending}
       >
-        <p>Êtes-vous sûr de vouloir préqualifier le fournisseur <strong>{supplierToPrequalify?.name}</strong> ?</p>
-        <p className="text-sm text-gray-500 mt-2">Le fournisseur sera ajouté à la liste des fournisseurs préqualifiés.</p>
+        <p>{t('suppliers.prequalifyConfirm')} <strong>{supplierToPrequalify?.name}</strong> ?</p>
+        <p className="text-sm text-gray-500 mt-2">{t('suppliers.prequalifyHint')}</p>
       </Modal>
     </div>
   )

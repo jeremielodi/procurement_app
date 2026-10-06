@@ -45,7 +45,7 @@ class UserController {
    */
   async create(req, res) {
     try {
-      const { username, email, password, firstName, lastName, department, position, profileIds } = req.body;
+      const { username, email, password, firstName, lastName, department, position, language, profileIds } = req.body;
       if (hasReservedProfile(profileIds)) {
         return res.status(403).json({ success: false, message: 'Profil réservé à la plateforme (super admin / fournisseur)' });
       }
@@ -67,6 +67,7 @@ class UserController {
         lastName,
         department,
         position,
+        language,
         profileIds: profileIds || [],
         enterpriseId: req.enterpriseId,
       });
@@ -103,7 +104,7 @@ class UserController {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const { firstName, lastName, department, position, profileIds } = req.body;
+      const { firstName, lastName, department, position, language, profileIds } = req.body;
       if (hasReservedProfile(profileIds)) {
         return res.status(403).json({ success: false, message: 'Profil réservé à la plateforme (super admin / fournisseur)' });
       }
@@ -118,6 +119,7 @@ class UserController {
         lastName,
         department,
         position,
+        language,
         profileIds: profileIds || []
       });
       

@@ -1,0 +1,275 @@
+{
+  "_meta": {
+    "name": "Français",
+    "locale": "fr-FR"
+  },
+  "status": {
+    "DRAFT": "Brouillon",
+    "PENDING": "En attente",
+    "PENDING_APPROVAL": "En attente d'approbation",
+    "BUDGET_CHECKED": "Budget vérifié",
+    "BUDGET_INSUFFICIENT": "Budget insuffisant",
+    "APPROVED": "Approuvée",
+    "REJECTED": "Rejetée",
+    "IN_PROGRESS": "En cours",
+    "COMPLETED": "Terminée",
+    "CANCELLED": "Annulée",
+    "CLASSIFIED_DIRECT_PURCHASE": "Achat direct",
+    "CLASSIFIED_MULTIPLE_QUOTATIONS": "Devis multiples",
+    "CLASSIFIED_RFP": "Appel d'offres",
+    "CLASSIFIED_SOLE_SOURCE": "Source unique"
+  },
+  "progress": {
+    "DRAFT": "Brouillon",
+    "IN_PROGRESS": "En cours",
+    "COMPLETED": "Terminé",
+    "REJECTED": "Rejeté",
+    "CANCELLED": "Annulé"
+  },
+  "priority": {
+    "LOW": "Basse",
+    "MEDIUM": "Moyenne",
+    "HIGH": "Haute",
+    "URGENT": "Urgente"
+  },
+  "requisition": {
+    "docTitle": "Réquisition",
+    "generatedOn": "Généré le {date} à {time}",
+    "title": "Titre",
+    "step": "Étape",
+    "progress": "Avancement",
+    "department": "Département",
+    "project": "Projet",
+    "estimatedAmount": "Montant estimé",
+    "priority": "Priorité",
+    "requester": "Demandeur",
+    "createdAt": "Date de création",
+    "description": "Description",
+    "justification": "Justification",
+    "items": "Articles",
+    "itemDescription": "Description",
+    "quantity": "Quantité",
+    "frequency": "Fréquence",
+    "unitPrice": "Prix unitaire",
+    "total": "Total",
+    "grandTotal": "Total général",
+    "budgetLine": "Ligne budgétaire",
+    "attachments": "Pièces jointes",
+    "bytes": "octets",
+    "footer": "{enterprise} — document généré automatiquement par {app}",
+    "taxId": "NIF",
+    "registration": "RCCM"
+  },
+  "workflow": {
+    "task": "Tâche",
+    "tasks": {
+      "Activity_ValidationN1_Manager": "Approbation hiérarchique N1 (Manager)",
+      "Activity_ValidationN2_Finance": "Approbation hiérarchique N2 (Finance)",
+      "Activity_ValidationN3_DG": "Approbation hiérarchique N3 (Direction Générale)",
+      "Activity_BudgetAdjustment": "Ajustement budgétaire",
+      "Activity_DetermineType": "Déterminer la méthode d'achat",
+      "Activity_DirectPurchase": "Achat direct",
+      "Activity_RequestQuotations": "Demande de devis multiples",
+      "Activity_RFPProcess": "Appel d'offres (RFP)",
+      "Activity_SoleSource": "Justification source unique",
+      "Activity_CreatePO": "Créer le bon de commande",
+      "Activity_POApproval": "Approbation du bon de commande",
+      "Activity_SupplierConfirmation": "Confirmation de commande fournisseur",
+      "Activity_GoodsReceipt": "Bon de réception (GRN)",
+      "Activity_ServiceAcceptance": "Acceptation de service (SAN)",
+      "Activity_EnterInvoice": "Saisie de la facture fournisseur",
+      "Activity_ProcessPayment": "Traitement du paiement"
+    },
+    "approvalPrefix": "Approbation hiérarchique ",
+    "roles": {
+      "manager": "Manager",
+      "finance": "Finance",
+      "dg": "Direction Générale",
+      "procurement": "Achats",
+      "management": "Direction",
+      "logistic": "Logistique",
+      "requester": "Demandeur",
+      "other": "Autre"
+    },
+    "methods": {
+      "DIRECT_PURCHASE": "Achat direct",
+      "MULTIPLE_QUOTATIONS": "Devis multiples",
+      "RFP": "Appel d'offres",
+      "SOLE_SOURCE": "Source unique"
+    },
+    "reasons": {
+      "Amount below direct purchase threshold": "montant inférieur au seuil d'achat direct",
+      "Amount requires multiple quotations": "le montant exige plusieurs devis",
+      "Amount requires formal tender process": "le montant exige un appel d'offres",
+      "Approved sole source justification": "justification de source unique approuvée"
+    },
+    "match": {
+      "MATCHED": "concordant",
+      "MISMATCH": "écart détecté",
+      "PARTIAL": "partiel",
+      "PENDING": "en attente"
+    }
+  },
+  "timeline": {
+    "lessThanMinute": "moins d'une minute",
+    "minutes": "{n} min",
+    "hours": "{h} h",
+    "hoursMinutes": "{h} h {m} min",
+    "days": "{d} j",
+    "daysHours": "{d} j {h} h",
+    "method": "Méthode retenue : {value}",
+    "po": "Bon de commande : {value}",
+    "grn": "Bon de réception : {value}",
+    "grnCompliant": "Réception conforme : {value}",
+    "yes": "oui",
+    "no": "non",
+    "san": "Acceptation de service : {value}",
+    "invoice": "Facture : {value}",
+    "invoiceAmount": "Montant facturé : {value}",
+    "payment": "Paiement : {value}",
+    "paymentAmount": "Montant payé : {value}",
+    "tender": "Appel d'offres : {value}",
+    "comment": "Commentaire : « {value} »",
+    "commentPrefix": "Commentaire",
+    "role": "Rôle : {role}",
+    "system": "Système",
+    "tookTime": "Traitée en {time}",
+    "approved": " — approuvée",
+    "rejected": " — rejetée",
+    "completed": " — terminée",
+    "approvedWord": "approuvée",
+    "rejectedWord": "rejetée",
+    "created": "Réquisition créée",
+    "processStarted": "Circuit de validation démarré",
+    "processStartFailed": "Échec du démarrage du circuit de validation",
+    "engineNoResponse": "Le moteur de workflow n'a pas répondu",
+    "budgetLine": "{line} : demandé {requested} / disponible {available}",
+    "insufficientSuffix": " — insuffisant",
+    "budgetOk": "Budget vérifié — disponible",
+    "budgetKo": "Budget vérifié — insuffisant",
+    "methodTitle": "Méthode d'achat : {method}",
+    "reason": "Motif : {reason}",
+    "offerAnalysis": "Analyse des offres terminée",
+    "poSent": "Bon de commande envoyé au fournisseur par email",
+    "matching": "Rapprochement commande / réception / facture : {status}",
+    "awarded": "Marché attribué",
+    "tenderPublished": "Appel d'offres publié",
+    "expectedRole": "Rôle attendu : {role}",
+    "claimedBy": "Prise en charge par {name}",
+    "waitingFor": "En attente depuis {time}",
+    "fewMoments": "quelques instants",
+    "pendingTitle": "En attente : {task}",
+    "cancelled": "Réquisition annulée",
+    "steps": {
+      "created": "Création",
+      "budget": "Vérification budgétaire",
+      "approval": "Approbation hiérarchique",
+      "method": "Méthode d'achat",
+      "sourcing": "Sélection du fournisseur",
+      "po": "Bon de commande",
+      "po_approval": "Approbation du bon de commande",
+      "supplier_confirmation": "Confirmation fournisseur",
+      "grn": "Réception (GRN)",
+      "san": "Acceptation de service (SAN)",
+      "invoice": "Facture & rapprochement",
+      "payment": "Paiement"
+    },
+    "approvedBy": "Approuvé par {name}",
+    "matchingInfo": "Rapprochement : {status}",
+    "paidAmount": "Montant payé : {amount}",
+    "claimedByLower": "pris en charge par {name}",
+    "roleLower": "rôle {role}",
+    "undefinedRole": "non défini",
+    "waitingInfo": "En attente{task} — {who}",
+    "approvalInfo": "{task} : {decision}"
+  },
+  "supplierProfile": {
+    "logo_path": "Logo",
+    "phone": "Téléphone",
+    "address": "Adresse",
+    "registration_number": "N° RCCM",
+    "tax_id": "N° impôt",
+    "id_nat": "N° ID Nat",
+    "bank_name": "Banque",
+    "bank_account": "N° de compte",
+    "categories": "Catégories de marché",
+    "locations": "Localisations",
+    "docs": {
+      "ID_CARD": "Pièce d'identité",
+      "RCCM": "RCCM",
+      "TAX": "Attestation fiscale (n° impôt)",
+      "ID_NAT": "Identification nationale (ID Nat)",
+      "RIB": "RIB (relevé d'identité bancaire)"
+    }
+  },
+  "email": {
+    "hello": "Bonjour {name},",
+    "footer": "Message automatique — procureApp",
+    "password": {
+      "subject": "procureApp — Votre nouveau mot de passe",
+      "intro": "Une réinitialisation de votre mot de passe procureApp a été demandée. Voici votre nouveau mot de passe :",
+      "login": "Se connecter",
+      "change": "Pour votre sécurité, changez-le dès votre connexion depuis <b>Mon profil</b>.",
+      "warning": "Si vous n'êtes pas à l'origine de cette demande, connectez-vous avec ce mot de passe et changez-le, puis prévenez votre administrateur."
+    },
+    "task": {
+      "subject": "[procureApp] Nouvelle tâche : {task} — {number}",
+      "title": "Nouvelle tâche à traiter",
+      "body": "La tâche <strong>{task}</strong> est disponible pour votre groupe.",
+      "requisition": "Réquisition",
+      "object": "Objet",
+      "project": "Projet",
+      "amount": "Montant",
+      "open": "Ouvrir la tâche"
+    },
+    "tender": {
+      "number": "N°",
+      "object": "Objet",
+      "opening": "Ouverture",
+      "closing": "Clôture",
+      "maxDelivery": "Délai de livraison max",
+      "days": "{n} jours",
+      "link": "Consulter l'appel d'offres et soumettre vos prix",
+      "published": {
+        "title": "Nouvel appel d'offres",
+        "intro": "Un nouvel appel d'offres est ouvert. Vous pouvez saisir vos prix sur le portail fournisseur."
+      },
+      "invitation": {
+        "title": "Invitation à soumettre une offre",
+        "intro": "Vous êtes invité à soumettre une offre pour cet appel d'offres réservé. Vous pouvez saisir vos prix sur le portail fournisseur."
+      },
+      "updated": {
+        "title": "Appel d'offres modifié",
+        "intro": "Les conditions de cet appel d'offres ont été modifiées. Merci de vérifier les nouvelles dates et le délai de livraison."
+      }
+    },
+    "po": {
+      "subject": "Bon de commande {number}",
+      "title": "Bon de commande {number}",
+      "intro": "Veuillez trouver ci-dessous le détail de votre bon de commande.",
+      "number": "N° de commande",
+      "orderDate": "Date de commande",
+      "deliveryDate": "Date de livraison",
+      "total": "Montant total",
+      "thanks": "Merci pour votre collaboration."
+    }
+  },
+  "notification": {
+    "task": {
+      "title": "Nouvelle tâche : {task}",
+      "message": "Une nouvelle tâche « {task} » est disponible pour le groupe {group}.",
+      "claimedTitle": "Tâche réclamée : {task}",
+      "claimedMessage": "Vous avez pris en charge la tâche « {task} »."
+    },
+    "tender": {
+      "wonTitle": "Offre retenue 🎉",
+      "lostTitle": "Résultat de l'appel d'offres",
+      "wonMessage": "Votre offre pour {number} a été retenue",
+      "lostMessage": "Votre offre pour {number} n'a pas été retenue",
+      "newSubmission": "Nouvelle soumission",
+      "updatedSubmission": "Soumission modifiée",
+      "submitted": "{supplier} a soumis son offre pour {number}",
+      "resubmitted": "{supplier} a modifié son offre pour {number}"
+    }
+  }
+}

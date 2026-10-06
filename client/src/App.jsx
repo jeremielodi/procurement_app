@@ -1,5 +1,5 @@
 // src/App.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { EnterpriseProvider } from './contexts/EnterpriseContext';
 import Login from './components/Auth/Login';
@@ -55,6 +55,7 @@ import EnterpriseDetail from './components/Enterprises/EnterpriseDetail';
 import EnterpriseSettings from './components/Enterprises/EnterpriseSettings';
 import LandingPage from './components/Landing/LandingPage';
 import LoadingSpinner from './components/Common/LoadingSpinner';
+import { useTranslation } from './i18n';
 
 // Accueil selon le compte : super admin → entreprises, fournisseur → portail, sinon → dashboard
 function HomeRedirect() {
@@ -70,6 +71,9 @@ function Home() {
 }
 import  './app.css'
 function App() {
+  // Abonnement à la langue : un changement ré-affiche toute l'application
+  const { t, lang } = useTranslation();
+  useEffect(() => { document.title = t('app.title'); }, [lang]);
   return (
     <>
       <EnterpriseProvider>

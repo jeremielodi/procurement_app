@@ -4,8 +4,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Menu, Search, User, LogOut, Settings, Bell, ChevronDown } from 'lucide-react'
 import NotificationBell from '../Notifications/NotificationBell'
 import { useAuth } from '../../hooks/useAuth'
+import { useTranslation } from '../../i18n'
+import LanguageSwitcher from '../Common/LanguageSwitcher'
 
 export default function Header({ toggleSidebar }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -42,7 +45,7 @@ export default function Header({ toggleSidebar }) {
           <button
             onClick={toggleSidebar}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            aria-label="Toggle sidebar"
+            aria-label={t('header.toggleSidebar')}
           >
             <Menu size={20} className="text-gray-600" />
           </button>
@@ -54,7 +57,7 @@ export default function Header({ toggleSidebar }) {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher une réquisition, commande, fournisseur..."
+                placeholder={t('header.searchPlaceholder')}
                 className="w-96 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
               <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -64,6 +67,8 @@ export default function Header({ toggleSidebar }) {
 
         {/* Right section - Notifications & User */}
         <div className="flex items-center gap-4">
+          <LanguageSwitcher />
+
           {/* Notifications */}
           <NotificationBell userId={user?.id || 1} />
 
@@ -80,7 +85,7 @@ export default function Header({ toggleSidebar }) {
                 <p className="text-sm font-medium text-gray-700">
                   {user?.firstName} {user?.lastName}
                 </p>
-                <p className="text-xs text-gray-500">{isSupplier ? 'Fournisseur' : (user?.role || 'Utilisateur')}</p>
+                <p className="text-xs text-gray-500">{isSupplier ? t('common.supplier') : (user?.role || t('common.user'))}</p>
               </div>
               <ChevronDown size={16} className="text-gray-500" />
             </button>
@@ -103,7 +108,7 @@ export default function Header({ toggleSidebar }) {
                       className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <User size={18} />
-                      <span>Mon profil</span>
+                      <span>{t('nav.myProfile')}</span>
                     </Link>
                     {!isSupplier && <Link
                       to="/settings"
@@ -111,7 +116,7 @@ export default function Header({ toggleSidebar }) {
                       className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Settings size={18} />
-                      <span>Paramètres</span>
+                      <span>{t('nav.settings')}</span>
                     </Link>}
                     <hr className="my-1" />
                     <button
@@ -119,7 +124,7 @@ export default function Header({ toggleSidebar }) {
                       className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
                     >
                       <LogOut size={18} />
-                      <span>Déconnexion</span>
+                      <span>{t('nav.logout')}</span>
                     </button>
                   </div>
                 </div>
@@ -137,7 +142,7 @@ export default function Header({ toggleSidebar }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher..."
+              placeholder={t('common.searchPlaceholder')}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
             <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />

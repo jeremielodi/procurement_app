@@ -10,7 +10,8 @@ const notificationService = require('../services/NotificationService');
 const EmailNotificationService = require('../services/EmailNotificationService');
 
 // Libellés français et rôles (candidateGroups) des tâches : module partagé
-const { TASK_LABELS, TASK_CANDIDATE_GROUPS } = require('../utils/workflowLabels');
+const { TASK_LABELS, TASK_CANDIDATE_GROUPS, taskLabel, groupLabel } = require('../utils/workflowLabels');
+const i18n = require('../i18n');
 
 // URL de l'application (servie par le backend) utilisée dans les liens des emails
 const { APP_URL } = require('../utils/appUrl');
@@ -145,10 +146,14 @@ async function notifyCandidateGroup(candidateGroup, taskId, taskName, processIns
   }
 
   const link = requisitionId ? `/requisitions/${requisitionId}/tasks` : `/tasks/${taskId}`;
-  const title = `Nouvelle tâche: ${taskName}`;
-  const message = `Une nouvelle tâche "${taskName}" est disponible pour le groupe ${candidateGroup}.`;
 
+  // Notification dans la langue de chaque utilisateur
   for (const user of users) {
+    const T = i18n.translator(user.language);
+    const task = taskDefinitionKey ? taskLabel(taskDefinitionKey, user.language) : taskName;
+    const group = (taskDefinitionKey && groupLabel(taskDefinitionKey, user.language)) || candidateGroup;
+    const title = T('notification.task.title', { task });
+    const message = T('notification.task.message', { task, group });
     await emitNotification(user.id, title, message, 'TASK_CREATED', link);
     await new Promise(resolve => setTimeout(resolve, 50));
   }
@@ -163,7 +168,7 @@ const escapeHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp
 /** Utilisateurs actifs ayant le profil du groupe, membres du projet de la réquisition, de la même entreprise */
 async function getTaskEmailRecipients(candidateGroup, requisitionId) {
   return db.select(
-    `SELECT DISTINCT u.email, u.first_name
+    `SELECT DISTINCT u.email, u.first_name, u.language
      FROM users u
      JOIN user_profiles up ON up.user_id = u.id
      JOIN project_members pm ON pm.user_id = u.id
@@ -198,25 +203,29 @@ async function emailCandidateGroup(candidateGroup, taskName, taskDefinitionKey, 
 
     const label = TASK_LABELS[taskDefinitionKey] || taskName;
     const link = `${APP_URL}/requisitions/${requisitionId}/tasks`;
-    const amount = Number(requisition.estimated_amount || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 });
-    const subject = `[procureApp] Nouvelle tâche : ${label} — ${requisition.requisition_number}`;
     let sent = 0;
     let failed = 0;
 
+    // Email dans la langue de chaque destinataire (email.task.* des locales)
     for (const recipient of recipients) {
+      const lang = recipient.language;
+      const T = i18n.translator(lang);
+      const task = taskDefinitionKey ? taskLabel(taskDefinitionKey, lang) : taskName;
+      const amount = Number(requisition.estimated_amount || 0).toLocaleString(i18n.locale(lang), { minimumFractionDigits: 2 });
+      const subject = T('email.task.subject', { task, number: requisition.requisition_number });
       const html = `
         <div style="font-family: Arial, sans-serif; color: #1f2937; max-width: 600px;">
-          <h2 style="color: #1d4ed8;">Nouvelle tâche à traiter</h2>
-          <p>Bonjour ${escapeHtml(recipient.first_name)},</p>
-          <p>La tâche <strong>${escapeHtml(label)}</strong> est disponible pour votre groupe.</p>
+          <h2 style="color: #1d4ed8;">${T('email.task.title')}</h2>
+          <p>${T('email.hello', { name: escapeHtml(recipient.first_name) })}</p>
+          <p>${T('email.task.body', { task: escapeHtml(task) })}</p>
           <table style="border-collapse: collapse; margin: 16px 0;">
-            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">Réquisition</td><td><strong>${escapeHtml(requisition.requisition_number)}</strong></td></tr>
-            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">Objet</td><td>${escapeHtml(requisition.title || '-')}</td></tr>
-            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">Projet</td><td>${escapeHtml(requisition.project_code)} ${escapeHtml(requisition.project_name)}</td></tr>
-            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">Montant</td><td>${amount} ${requisition.currency || ''}</td></tr>
+            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">${T('email.task.requisition')}</td><td><strong>${escapeHtml(requisition.requisition_number)}</strong></td></tr>
+            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">${T('email.task.object')}</td><td>${escapeHtml(requisition.title || '-')}</td></tr>
+            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">${T('email.task.project')}</td><td>${escapeHtml(requisition.project_code)} ${escapeHtml(requisition.project_name)}</td></tr>
+            <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">${T('email.task.amount')}</td><td>${amount} ${requisition.currency || ''}</td></tr>
           </table>
-          <p><a href="${link}" style="background: #2563eb; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none;">Ouvrir la tâche</a></p>
-          <p style="font-size: 12px; color: #9ca3af;">Message automatique — procureApp</p>
+          <p><a href="${link}" style="background: #2563eb; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none;">${T('email.task.open')}</a></p>
+          <p style="font-size: 12px; color: #9ca3af;">${T('email.footer')}</p>
         </div>`;
       const result = await EmailNotificationService.sendEmail(recipient.email, subject, html);
       if (result?.success) sent++; else failed++;
@@ -303,10 +312,15 @@ async function handleTaskClaimed(task) {
   if (!task.assignee) return;
 
   const requisitionId = await getRequisitionIdForProcess(task.processInstanceId);
+  // Dans la langue de l'utilisateur qui a pris la tâche
+  const assignee = task.assignee.includes('@') ? await UserModel.findByEmail(task.assignee) : null;
+  const T = i18n.translator(assignee?.language);
+  const key = task.taskDefinitionKey || task.TaskDefinitionKey;
+  const label = key ? taskLabel(key, assignee?.language) : task.taskName;
   await emitNotification(
     task.assignee,
-    `Tâche réclamée: ${task.taskName}`,
-    `Vous avez pris en charge la tâche "${task.taskName}".`,
+    T('notification.task.claimedTitle', { task: label }),
+    T('notification.task.claimedMessage', { task: label }),
     'INFO',
     requisitionId ? `/requisitions/${requisitionId}/tasks` : `/tasks/${task.taskId}`
   );

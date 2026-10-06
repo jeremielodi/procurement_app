@@ -8,6 +8,7 @@ import Modal from '../Common/Modal';
 import ProjectForm from './ProjectForm';
 import ProjectDetail from './ProjectDetail';
 import toast from 'react-hot-toast';
+import { t, getLocale } from '../../i18n';
 
 export default function ProjectList() {
   const queryClient = useQueryClient();
@@ -31,7 +32,7 @@ export default function ProjectList() {
     mutationFn: (id) => projectService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['projects']);
-      toast.success('Projet supprimé');
+      toast.success(t('projects.deleted'));
     }
   });
 
@@ -56,7 +57,7 @@ export default function ProjectList() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Projets</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t('projects.title')}</h1>
         <button
           onClick={() => {
             setSelectedProject(null);
@@ -65,7 +66,7 @@ export default function ProjectList() {
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus size={18} />
-          Nouveau projet
+          {t('projects.new')}
         </button>
       </div>
 
@@ -76,7 +77,7 @@ export default function ProjectList() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
-              placeholder="Rechercher un projet..."
+              placeholder={t('projects.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -88,11 +89,8 @@ export default function ProjectList() {
           onChange={(e) => setStatus(e.target.value)}
           className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
         >
-          <option value="all">Tous les statuts</option>
-          <option value="ACTIVE">Actif</option>
-          <option value="COMPLETED">Terminé</option>
-          <option value="ON_HOLD">En pause</option>
-          <option value="CANCELLED">Annulé</option>
+          <option value="all">{t('requisitions.allStatuses')}</option>
+          {['ACTIVE', 'COMPLETED', 'ON_HOLD', 'CANCELLED'].map(s => <option key={s} value={s}>{t(`projects.status.${s}`)}</option>)}
         </select>
       </div>
 
@@ -109,12 +107,12 @@ export default function ProjectList() {
         ) : projects.length === 0 ? (
           <div className="col-span-full text-center py-12 bg-white rounded-lg shadow">
             <FolderOpen size={48} className="mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-500">Aucun projet</p>
+            <p className="text-gray-500">{t('projects.none')}</p>
             <button
               onClick={() => setShowModal(true)}
               className="mt-2 text-blue-600 hover:text-blue-800"
             >
-              Créer le premier projet
+              {t('projects.createFirst')}
             </button>
           </div>
         ) : (
@@ -142,7 +140,7 @@ export default function ProjectList() {
                     </button>
                     <button
                       onClick={() => {
-                        if (confirm('Supprimer ce projet ?')) {
+                        if (confirm(t('projects.confirmDelete'))) {
                           deleteMutation.mutate(project.id);
                         }
                       }}
@@ -162,14 +160,14 @@ export default function ProjectList() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <User size={14} />
-                    <span>Chef: {project.manager_first_name ? `${project.manager_first_name} ${project.manager_last_name}` : 'Non assigné'}</span>
+                    <span>{t('projects.managerShort', { name: project.manager_first_name ? `${project.manager_first_name} ${project.manager_last_name}` : t('departments.unassigned') })}</span>
                   </div>
                   {(project.start_date || project.end_date) && (
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Calendar size={14} />
                       <span>
-                        {project.start_date && new Date(project.start_date).toLocaleDateString('fr-FR')}
-                        {project.end_date && ` → ${new Date(project.end_date).toLocaleDateString('fr-FR')}`}
+                        {project.start_date && new Date(project.start_date).toLocaleDateString(getLocale())}
+                        {project.end_date && ` → ${new Date(project.end_date).toLocaleDateString(getLocale())}`}
                       </span>
                     </div>
                   )}
@@ -177,14 +175,12 @@ export default function ProjectList() {
                 
                 <div className="mt-4 pt-4 border-t flex justify-between items-center">
                   <span className={`px-2 py-1 text-xs rounded-full ${statusColors[project.status] || 'bg-gray-100 text-gray-700'}`}>
-                    {project.status === 'ACTIVE' ? 'Actif' : 
-                     project.status === 'COMPLETED' ? 'Terminé' :
-                     project.status === 'ON_HOLD' ? 'En pause' : 'Annulé'}
+                    {t(`projects.status.${project.status}`, { defaultValue: t('projects.status.CANCELLED') })}
                   </span>
                   {project.member_count > 0 && (
                     <div className="flex items-center gap-1 text-sm text-gray-500">
                       <Users size={14} />
-                      <span>{project.member_count} membre(s)</span>
+                      <span>{t('projects.memberCount', { count: project.member_count })}</span>
                     </div>
                   )}
                 </div>
@@ -197,7 +193,7 @@ export default function ProjectList() {
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={selectedProject ? 'Modifier le projet' : 'Nouveau projet'}
+        title={selectedProject ? t('projects.edit') : t('projects.new')}
         size="lg"
         showFooter={false}
       >
@@ -213,7 +209,7 @@ export default function ProjectList() {
       <Modal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
-        title="Détails du projet"
+        title={t('projects.details')}
         size="xl"
         showFooter={false}
       >

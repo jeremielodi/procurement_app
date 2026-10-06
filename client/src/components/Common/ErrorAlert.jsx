@@ -1,6 +1,7 @@
 // src/components/Common/ErrorAlert.jsx
 import React from 'react'
 import { AlertCircle, X, AlertTriangle, Info, CheckCircle, RefreshCw } from 'lucide-react'
+import { t } from '../../i18n'
 
 const errorTypes = {
   error: {
@@ -55,7 +56,7 @@ export default function ErrorAlert({
   showIcon = true,
   className = '',
   dismissible = true,
-  retryText = 'Réessayer'
+  retryText = t('common.retry')
 }) {
   const [showDetails, setShowDetails] = React.useState(false)
   const styles = errorTypes[type] || errorTypes.error
@@ -72,13 +73,13 @@ export default function ErrorAlert({
         <div className={`flex-1 ${showIcon ? 'ml-3' : ''}`}>
           <div className="flex items-center justify-between">
             <h3 className={`text-sm font-medium ${styles.titleColor}`}>
-              {title || (type === 'error' ? 'Erreur' : type === 'warning' ? 'Attention' : type === 'success' ? 'Succès' : 'Information')}
+              {title || (type === 'error' ? t('common.error') : type === 'warning' ? t('alert.warning') : type === 'success' ? t('modal.success') : t('alert.info'))}
             </h3>
             {dismissible && onClose && (
               <button
                 onClick={onClose}
                 className={`ml-4 flex-shrink-0 ${styles.textColor} hover:opacity-75 transition-opacity`}
-                aria-label="Fermer"
+                aria-label={t('common.close')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -93,7 +94,7 @@ export default function ErrorAlert({
                 onClick={() => setShowDetails(!showDetails)}
                 className={`text-xs font-medium ${styles.textColor} underline hover:no-underline`}
               >
-                {showDetails ? 'Masquer les détails' : 'Voir les détails'}
+                {showDetails ? t('alert.hideDetails') : t('alert.showDetails')}
               </button>
               {showDetails && (
                 <pre className={`mt-2 text-xs ${styles.messageColor} bg-white bg-opacity-50 p-2 rounded overflow-x-auto`}>
@@ -126,8 +127,8 @@ export const FormError = ({ errors, onClose }) => {
   return (
     <ErrorAlert
       type="error"
-      title="Erreur de validation"
-      message="Veuillez corriger les erreurs suivantes :"
+      title={t('alert.validationError')}
+      message={t('alert.fixErrors')}
       details={Object.values(errors).join('\n')}
       onClose={onClose}
     />
@@ -138,30 +139,30 @@ export const FormError = ({ errors, onClose }) => {
 export const ApiError = ({ error, onRetry, onClose }) => {
   const statusCode = error?.response?.status
   const statusText = error?.response?.statusText
-  const message = error?.response?.data?.message || error?.message || 'Une erreur est survenue'
+  const message = error?.response?.data?.message || error?.message || t('common.errorOccurred')
 
-  let title = 'Erreur'
+  let title = t('common.error')
   let errorMessage = message
 
   switch (statusCode) {
     case 400:
-      title = 'Requête invalide'
+      title = t('alert.badRequest')
       break
     case 401:
-      title = 'Non autorisé'
-      errorMessage = 'Veuillez vous connecter pour accéder à cette ressource'
+      title = t('alert.unauthorized')
+      errorMessage = t('alert.unauthorizedMsg')
       break
     case 403:
-      title = 'Accès interdit'
-      errorMessage = 'Vous n\'avez pas les droits nécessaires pour effectuer cette action'
+      title = t('alert.forbidden')
+      errorMessage = t('alert.forbiddenMsg')
       break
     case 404:
-      title = 'Ressource non trouvée'
-      errorMessage = 'La ressource demandée n\'existe pas'
+      title = t('alert.notFound')
+      errorMessage = t('alert.notFoundMsg')
       break
     case 500:
-      title = 'Erreur serveur'
-      errorMessage = 'Une erreur interne est survenue. Veuillez réessayer plus tard'
+      title = t('alert.serverError')
+      errorMessage = t('alert.serverErrorMsg')
       break
     default:
       break
@@ -184,11 +185,11 @@ export const ConnectionError = ({ onRetry, onClose }) => {
   return (
     <ErrorAlert
       type="warning"
-      title="Problème de connexion"
-      message="Impossible de se connecter au serveur. Veuillez vérifier votre connexion Internet."
-      details="Vérifiez que le serveur est en cours d'exécution et que votre connexion réseau est active."
+      title={t('alert.connectionTitle')}
+      message={t('alert.connectionMsg')}
+      details={t('alert.connectionDetails')}
       onRetry={onRetry}
-      retryText="Reconnecter"
+      retryText={t('alert.reconnect')}
       onClose={onClose}
     />
   )
@@ -201,8 +202,8 @@ export const ValidationError = ({ errors, onClose }) => {
   return (
     <ErrorAlert
       type="error"
-      title="Erreur de validation"
-      message="Les données fournies ne sont pas valides"
+      title={t('alert.validationError')}
+      message={t('alert.invalidData')}
       details={errorList.join('\n')}
       onClose={onClose}
     />
@@ -214,23 +215,23 @@ export const PermissionError = ({ onClose }) => {
   return (
     <ErrorAlert
       type="warning"
-      title="Permission refusée"
-      message="Vous n'avez pas l'autorisation d'accéder à cette page ou d'effectuer cette action."
-      details="Contactez votre administrateur si vous pensez qu'il s'agit d'une erreur."
+      title={t('alert.permissionTitle')}
+      message={t('alert.permissionMsg')}
+      details={t('alert.permissionDetails')}
       onClose={onClose}
     />
   )
 }
 
 // Variante pour les erreurs de chargement
-export const LoadingError = ({ resourceName = 'données', onRetry, onClose }) => {
+export const LoadingError = ({ resourceName = t('alert.data'), onRetry, onClose }) => {
   return (
     <ErrorAlert
       type="error"
-      title={`Impossible de charger les ${resourceName}`}
-      message={`Une erreur est survenue lors du chargement des ${resourceName}. Veuillez réessayer.`}
+      title={t('alert.loadTitle', { resource: resourceName })}
+      message={t('alert.loadMsg', { resource: resourceName })}
       onRetry={onRetry}
-      retryText={`Recharger les ${resourceName}`}
+      retryText={t('alert.reload', { resource: resourceName })}
       onClose={onClose}
     />
   )
@@ -241,11 +242,11 @@ export const SubmitError = ({ error, onRetry, onClose }) => {
   return (
     <ErrorAlert
       type="error"
-      title="Erreur d'envoi"
-      message="Le formulaire n'a pas pu être soumis. Veuillez vérifier les informations et réessayer."
+      title={t('alert.submitTitle')}
+      message={t('alert.submitMsg')}
       details={error?.message}
       onRetry={onRetry}
-      retryText="Réessayer l'envoi"
+      retryText={t('alert.retrySubmit')}
       onClose={onClose}
     />
   )
@@ -263,7 +264,7 @@ export const SuccessAlert = ({ title, message, onClose, duration = 5000 }) => {
   return (
     <ErrorAlert
       type="success"
-      title={title || 'Succès'}
+      title={title || t('modal.success')}
       message={message}
       onClose={onClose}
       dismissible={true}
@@ -276,7 +277,7 @@ export const InfoAlert = ({ title, message, onClose }) => {
   return (
     <ErrorAlert
       type="info"
-      title={title || 'Information'}
+      title={title || t('alert.info')}
       message={message}
       onClose={onClose}
       dismissible={true}

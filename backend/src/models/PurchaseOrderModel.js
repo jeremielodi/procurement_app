@@ -97,12 +97,14 @@ class PurchaseOrderModel {
         s.email as supplier_email,
         s.phone as supplier_phone,
         s.address as supplier_address,
+        su.language as supplier_language,
         u.first_name as created_by_name,
         u.email as created_by_email,
         c.format_key as currency
       FROM purchase_orders po
       LEFT JOIN requisitions r ON po.requisition_id = r.id
       LEFT JOIN suppliers s ON po.supplier_id = s.id
+      LEFT JOIN users su ON su.id = s.user_id -- compte portail du fournisseur : langue des emails
       LEFT JOIN users u ON po.created_by = u.id
       LEFT JOIN currency c ON po.currency_id = c.id
       WHERE po.id = $1

@@ -1,180 +1,52 @@
 // src/components/Landing/LandingPage.jsx
-// Page vitrine publique (FR / EN) — affichée sur « / » pour un visiteur non connecté
+// Page vitrine publique — affichée sur « / » pour un visiteur non connecté (textes : landing.* des locales)
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ShoppingCart, CheckCircle2, Building2, ShieldCheck, Truck, Receipt, CreditCard,
   Workflow, BarChart3, Bell, Lock, FileSpreadsheet, Gavel, ArrowRight, Menu, X,
-  ClipboardCheck, PackageCheck, LogIn, Store, FileText, Globe, Mail, Phone,
+  ClipboardCheck, PackageCheck, LogIn, Store, FileText, Mail, Phone,
 } from 'lucide-react';
+import { t as tr, useTranslation } from '../../i18n';
+import LanguageSwitcher from '../Common/LanguageSwitcher';
 
 const OWNER = 'Digitales Solutions';
 const CONTACT_EMAIL = 'jeremielodi@gmail.com';
 const CONTACT_PHONE = '+243812537702';
 const CONTACT_PHONE_DISPLAY = '+243 812 537 702';
-const LANG_KEY = 'landing_lang';
 
-const TEXT = {
-  fr: {
-    nav: { features: 'Fonctionnalités', cycle: 'Cycle d\'achat', suppliers: 'Fournisseurs', security: 'Sécurité', contact: 'Contact', login: 'Se connecter' },
-    hero: {
-      badge: 'Plateforme e-procurement multi-entreprise',
-      title: 'Vos achats, de la réquisition au paiement.',
-      subtitle: 'procureApp digitalise tout le cycle procure-to-pay : demandes, approbations, appels d\'offres, bons de commande, réceptions, factures et paiements — dans un seul outil traçable.',
-      cta: 'Accéder à mon espace',
-      ctaSupplier: 'Inscription fournisseur',
-      stats: [['13', 'étapes automatisées'], ['3', 'niveaux d\'approbation'], ['100 %', 'traçabilité']],
-    },
-    features: {
-      title: 'Tout ce qu\'il faut pour piloter vos achats',
-      subtitle: 'Des outils pensés pour les équipes achats, finance, logistique et direction.',
-      items: [
-        [ShoppingCart, 'Réquisitions', 'Création des demandes avec articles, lignes budgétaires et import Excel/CSV.'],
-        [Workflow, 'Circuits d\'approbation', 'Validation multi-niveaux selon le montant : manager, finance, direction générale.'],
-        [Gavel, 'Appels d\'offres', 'Publication, offres scellées jusqu\'à la clôture, comparatif et attribution.'],
-        [FileText, 'Bons de commande', 'PO générés, approuvés et envoyés automatiquement au fournisseur en PDF.'],
-        [Receipt, 'Rapprochement 3 voies', 'Contrôle automatique bon de commande + réception + facture avant paiement.'],
-        [BarChart3, 'Tableaux de bord', 'Suivi budgétaire, avancement des demandes et tâches en attente par profil.'],
-        [Bell, 'Notifications temps réel', 'Alertes dans l\'application et par email à chaque étape du workflow.'],
-        [FileSpreadsheet, 'Exports PDF & Excel', 'Documents officiels à vos couleurs, en français ou en anglais.'],
-      ],
-    },
-    cycle: {
-      title: 'Un cycle procure-to-pay complet',
-      subtitle: 'Chaque étape est orchestrée par un moteur de workflow : impossible de payer une facture avant la réception.',
-      steps: [
-        [ClipboardCheck, 'Réquisition'], [CheckCircle2, 'Approbation'], [Gavel, 'Sélection fournisseur'],
-        [FileText, 'Bon de commande'], [PackageCheck, 'Réception'], [Receipt, 'Facture'], [CreditCard, 'Paiement'],
-      ],
-    },
-    suppliers: {
-      title: 'Un portail dédié aux fournisseurs',
-      subtitle: 'Les fournisseurs s\'inscrivent en ligne, déposent leurs documents et répondent aux appels d\'offres de toutes les entreprises de la plateforme.',
-      points: [
-        'Inscription libre et profil complet (localisations, catégories, documents)',
-        'Préqualification par entreprise et par catégorie de marché',
-        'Consultation des appels d\'offres ouverts et soumission en ligne',
-        'Suivi des offres et des marchés remportés',
-      ],
-      cta: 'Devenir fournisseur',
-    },
-    security: {
-      title: 'Multi-entreprise et sécurisé',
-      items: [
-        [Building2, 'Données cloisonnées', 'Chaque entreprise dispose de son espace, ses utilisateurs, ses projets et son budget.'],
-        [Lock, 'Contrôle des accès', 'Profils et permissions par rôle ; chaque action est historisée.'],
-        [ShieldCheck, 'Fichiers protégés', 'Documents stockés de façon privée et versionnée, jamais exposés publiquement.'],
-      ],
-    },
-    cta: { title: 'Prêt à moderniser vos achats ?', subtitle: 'Connectez-vous à votre espace ou inscrivez-vous comme fournisseur.', login: 'Se connecter' },
-    contact: {
-      title: 'Contactez-nous',
-      subtitle: 'Une démonstration, un déploiement pour votre entreprise ou une question ? L\'équipe Digitales Solutions vous répond.',
-      email: 'Email', phone: 'Téléphone / WhatsApp', mailSubject: 'Demande d\'information procureApp',
-    },
-    footer: { by: 'Une solution éditée par', rights: 'Tous droits réservés.' },
-  },
-  en: {
-    nav: { features: 'Features', cycle: 'Procurement cycle', suppliers: 'Suppliers', security: 'Security', contact: 'Contact', login: 'Sign in' },
-    hero: {
-      badge: 'Multi-company e-procurement platform',
-      title: 'Your purchasing, from requisition to payment.',
-      subtitle: 'procureApp digitizes the entire procure-to-pay cycle: requests, approvals, tenders, purchase orders, receipts, invoices and payments — in one fully traceable tool.',
-      cta: 'Go to my workspace',
-      ctaSupplier: 'Supplier registration',
-      stats: [['13', 'automated steps'], ['3', 'approval levels'], ['100%', 'traceability']],
-    },
-    features: {
-      title: 'Everything you need to run procurement',
-      subtitle: 'Built for procurement, finance, logistics and management teams.',
-      items: [
-        [ShoppingCart, 'Requisitions', 'Create requests with items, budget lines and Excel/CSV import.'],
-        [Workflow, 'Approval workflows', 'Multi-level approval based on amount: manager, finance, general management.'],
-        [Gavel, 'Tenders', 'Publishing, sealed bids until closing, comparison and award.'],
-        [FileText, 'Purchase orders', 'POs generated, approved and automatically sent to suppliers as PDF.'],
-        [Receipt, '3-way matching', 'Automatic check of purchase order + goods receipt + invoice before payment.'],
-        [BarChart3, 'Dashboards', 'Budget tracking, request progress and pending tasks by role.'],
-        [Bell, 'Real-time notifications', 'In-app and email alerts at every workflow step.'],
-        [FileSpreadsheet, 'PDF & Excel exports', 'Official documents with your branding, in French or English.'],
-      ],
-    },
-    cycle: {
-      title: 'A complete procure-to-pay cycle',
-      subtitle: 'Every step is orchestrated by a workflow engine: an invoice cannot be paid before goods are received.',
-      steps: [
-        [ClipboardCheck, 'Requisition'], [CheckCircle2, 'Approval'], [Gavel, 'Supplier selection'],
-        [FileText, 'Purchase order'], [PackageCheck, 'Goods receipt'], [Receipt, 'Invoice'], [CreditCard, 'Payment'],
-      ],
-    },
-    suppliers: {
-      title: 'A dedicated supplier portal',
-      subtitle: 'Suppliers register online, upload their documents and respond to tenders from every company on the platform.',
-      points: [
-        'Open registration and complete profile (locations, categories, documents)',
-        'Prequalification per company and per market category',
-        'Browse open tenders and submit bids online',
-        'Track bids and awarded contracts',
-      ],
-      cta: 'Become a supplier',
-    },
-    security: {
-      title: 'Multi-company and secure',
-      items: [
-        [Building2, 'Isolated data', 'Each company has its own workspace, users, projects and budget.'],
-        [Lock, 'Access control', 'Role-based profiles and permissions; every action is logged.'],
-        [ShieldCheck, 'Protected files', 'Documents stored privately with versioning, never publicly exposed.'],
-      ],
-    },
-    cta: { title: 'Ready to modernize your procurement?', subtitle: 'Sign in to your workspace or register as a supplier.', login: 'Sign in' },
-    contact: {
-      title: 'Contact us',
-      subtitle: 'A demo, a deployment for your company or a question? The Digitales Solutions team is here to help.',
-      email: 'Email', phone: 'Phone / WhatsApp', mailSubject: 'procureApp information request',
-    },
-    footer: { by: 'A solution by', rights: 'All rights reserved.' },
-  },
-};
+// Icônes des listes (dans l'ordre des tableaux de landing.* dans src/locales/*.json)
+const FEATURE_ICONS = [ShoppingCart, Workflow, Gavel, FileText, Receipt, BarChart3, Bell, FileSpreadsheet];
+const STEP_ICONS = [ClipboardCheck, CheckCircle2, Gavel, FileText, PackageCheck, Receipt, CreditCard];
+const SECURITY_ICONS = [Building2, Lock, ShieldCheck];
 
-function initialLang() {
-  try {
-    const saved = localStorage.getItem(LANG_KEY);
-    if (saved === 'fr' || saved === 'en') return saved;
-  } catch { /* stockage indisponible */ }
-  return (navigator.language || 'fr').toLowerCase().startsWith('en') ? 'en' : 'fr';
-}
-
-function LangSwitch({ lang, setLang, className = '' }) {
-  return (
-    <div className={`inline-flex items-center rounded-full border border-white/20 p-0.5 text-xs font-semibold ${className}`}>
-      <Globe className="w-3.5 h-3.5 mx-1.5 text-blue-200" aria-hidden="true" />
-      {['fr', 'en'].map(l => (
-        <button
-          key={l}
-          type="button"
-          onClick={() => setLang(l)}
-          aria-pressed={lang === l}
-          className={`px-2.5 py-1 rounded-full uppercase transition ${lang === l ? 'bg-white text-slate-900' : 'text-blue-100 hover:text-white'}`}
-        >
-          {l}
-        </button>
-      ))}
-    </div>
-  );
+// Textes de la page (landing.*) mis en forme pour le rendu
+function landingText() {
+  const get = (k) => tr(`landing.${k}`, { returnObjects: true });
+  const hero = get('hero');
+  const features = get('features');
+  const cycle = get('cycle');
+  const security = get('security');
+  return {
+    nav: get('nav'),
+    hero: { ...hero, stats: hero.stats.map(s => [s.value, s.label]) },
+    features: { ...features, items: features.items.map((it, i) => [FEATURE_ICONS[i], it.title, it.desc]) },
+    cycle: { ...cycle, steps: cycle.steps.map((label, i) => [STEP_ICONS[i], label]) },
+    suppliers: get('suppliers'),
+    security: { ...security, items: security.items.map((it, i) => [SECURITY_ICONS[i], it.title, it.desc]) },
+    contact: get('contact'),
+    cta: get('cta'),
+    footer: get('footer'),
+  };
 }
 
 export default function LandingPage() {
-  const [lang, setLangState] = useState(initialLang);
+  const { lang } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const t = TEXT[lang];
-
-  const setLang = (l) => {
-    setLangState(l);
-    try { localStorage.setItem(LANG_KEY, l); } catch { /* ignore */ }
-  };
+  const t = landingText();
 
   useEffect(() => {
-    document.documentElement.lang = lang;
-    document.title = lang === 'en' ? 'procureApp — Procurement management' : 'procureApp — Gestion des achats';
+    document.title = tr('landing.pageTitle');
   }, [lang]);
 
   const navLinks = [
@@ -202,7 +74,7 @@ export default function LandingPage() {
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-            <LangSwitch lang={lang} setLang={setLang} />
+            <LanguageSwitcher dark />
             <Link to="/login" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
               <LogIn className="w-4 h-4" /> {t.nav.login}
             </Link>
@@ -212,7 +84,7 @@ export default function LandingPage() {
             type="button"
             className="md:hidden text-white p-2"
             onClick={() => setMenuOpen(o => !o)}
-            aria-label="Menu"
+            aria-label={t.nav.menu}
             aria-expanded={menuOpen}
           >
             {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -225,7 +97,7 @@ export default function LandingPage() {
               <a key={href} href={href} onClick={() => setMenuOpen(false)} className="block text-blue-100 hover:text-white">{label}</a>
             ))}
             <div className="flex items-center justify-between pt-2">
-              <LangSwitch lang={lang} setLang={setLang} />
+              <LanguageSwitcher dark />
               <Link to="/login" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white">
                 <LogIn className="w-4 h-4" /> {t.nav.login}
               </Link>
@@ -427,7 +299,7 @@ export default function LandingPage() {
             <span>— {t.footer.by} <strong className="text-white">{OWNER}</strong></span>
           </div>
           <div className="flex items-center gap-4">
-            <LangSwitch lang={lang} setLang={setLang} />
+            <LanguageSwitcher dark />
             <span>© {new Date().getFullYear()} {OWNER}. {t.footer.rights}</span>
           </div>
         </div>

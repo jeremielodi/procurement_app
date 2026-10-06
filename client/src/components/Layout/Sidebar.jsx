@@ -34,36 +34,37 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
 import api from '../../services/api'
+import { useTranslation } from '../../i18n'
 import { useEnterprise, enterpriseLogoUrl } from '../../contexts/EnterpriseContext'
 
-// Définition des groupes de menu
+// Définition des groupes de menu (label = clé de traduction)
 const menuGroups = [
   {
     id: 'platform',
-    label: 'Plateforme procureApp',
+    label: 'nav.groups.platform',
     icon: Briefcase,
     superAdminOnly: true,
     items: [
-      { path: '/admin/enterprises', icon: Building2, label: 'Entreprises', permission: null },
-      { path: '/admin/references', icon: MapPin, label: 'Localisations et catégories', permission: null },
-      { path: '/admin/profiles', icon: Shield, label: 'Rôles et permissions', permission: null }
+      { path: '/admin/enterprises', icon: Building2, label: 'nav.enterprises', permission: null },
+      { path: '/admin/references', icon: MapPin, label: 'nav.references', permission: null },
+      { path: '/admin/profiles', icon: Shield, label: 'nav.rolesPermissions', permission: null }
     ]
   },
   {
     id: 'main',
-    label: 'Principal',
+    label: 'nav.groups.main',
     icon: BarChart,
     items: [
       { 
         path: '/dashboard', 
         icon: LayoutDashboard, 
-        label: 'Dashboard',
+        label: 'nav.dashboard',
         permission: 'VIEW_DASHBOARD'
       },
        { 
         path: '/tasks', 
         icon: CheckSquare, 
-        label: 'Mes tâches',
+        label: 'nav.myTasks',
         permission: null,
         hideForSupplier: true
       }
@@ -71,165 +72,165 @@ const menuGroups = [
   },
   {
     id: 'procurement',
-    label: 'Achats',
+    label: 'nav.groups.procurement',
     icon: ShoppingCart,
     items: [
       { 
         path: '/requisitions', 
         icon: ShoppingCart, 
-        label: 'Réquisitions',
+        label: 'nav.requisitions',
         permission: 'VIEW_REQUISITIONS'
       },
       { 
         path: '/purchase-orders', 
         icon: Package, 
-        label: 'Commandes',
+        label: 'nav.purchaseOrders',
         permission: 'VIEW_PURCHASE_ORDERS'
       },
       {
         path: '/suppliers',
         icon: Truck,
-        label: 'Fournisseurs',
+        label: 'nav.suppliers',
         permission: 'VIEW_SUPPLIERS'
       },
       {
         path: '/suppliers/prequalified',
         icon: BadgeCheck,
-        label: 'Fournisseurs préqualifiés',
+        label: 'nav.prequalifiedSuppliers',
         permission: 'VIEW_SUPPLIERS'
       },
       {
         path: '/tenders',
         icon: Gavel,
-        label: "Appels d'offres",
+        label: 'nav.tenders',
         permission: 'MANAGE_TENDERS'
       },
       {
         path: '/goods-receipts',
         icon: PackageCheck,
-        label: 'Réceptions GRN',
+        label: 'nav.goodsReceipts',
         permission: 'VIEW_PURCHASE_ORDERS'
       },
       {
         path: '/service-acceptance-notes',
         icon: ClipboardCheck,
-        label: 'Acceptation Service (SAN)',
+        label: 'nav.serviceAcceptance',
         permission: 'VIEW_PURCHASE_ORDERS'
       }
     ]
   },
   {
     id: 'supplier-portal',
-    label: 'Portail fournisseur',
+    label: 'nav.groups.supplierPortal',
     icon: Gavel,
     supplierOnly: true,
     items: [
       {
         path: '/supplier/dashboard',
         icon: LayoutDashboard,
-        label: 'Tableau de bord',
+        label: 'nav.supplierDashboard',
         permission: 'SUPPLIER_PORTAL'
       },
       {
         path: '/supplier/tenders',
         icon: Gavel,
-        label: "Appels d'offres",
+        label: 'nav.tenders',
         permission: 'SUPPLIER_PORTAL'
       },
       {
         path: '/supplier/profile',
         icon: Building2,
-        label: 'Mon entreprise',
+        label: 'nav.myCompany',
         permission: 'SUPPLIER_PORTAL'
       }
     ]
   },
   {
     id: 'finance',
-    label: 'Finance',
+    label: 'nav.groups.finance',
     icon: DollarSign,
     items: [
       {
         path: '/invoices',
         icon: FileText,
-        label: 'Factures',
+        label: 'nav.invoices',
         permission: 'VIEW_PURCHASE_ORDERS'
       },
       {
         path: '/payments',
         icon: CreditCard,
-        label: 'Paiements',
+        label: 'nav.payments',
         permission: 'VIEW_PURCHASE_ORDERS'
       }
     ]
   },
   {
     id: 'organization',
-    label: 'Organisation',
+    label: 'nav.groups.organization',
     icon: Building2,
     items: [
       { 
         path: '/departments', 
         icon: Building2, 
-        label: 'Départements',
+        label: 'nav.departments',
         permission: 'VIEW_DEPARTMENTS'
       },
       { 
         path: '/projects', 
         icon: FolderOpen, 
-        label: 'Projets',
+        label: 'nav.projects',
         permission: 'VIEW_PROJECTS'
       }
     ]
   },
   {
     id: 'administration',
-    label: 'Administration',
+    label: 'nav.groups.administration',
     icon: Shield,
     adminOnly: true,
     items: [
       { 
         path: '/users', 
         icon: Users, 
-        label: 'Utilisateurs',
+        label: 'nav.users',
         permission: 'MANAGE_USERS'
       },
       { 
         path: '/admin/profiles', 
         icon: Shield, 
-        label: 'Profils BPMN',
+        label: 'nav.bpmnProfiles',
         permission: 'MANAGE_USERS'
       },
       {
         path: '/settings/enterprise',
         icon: Building2,
-        label: 'Mon entreprise',
+        label: 'nav.myCompany',
         permission: 'MANAGE_USERS'
       }
     ]
   },
   {
     id: 'system',
-    label: 'Système',
+    label: 'nav.groups.system',
     icon: Database,
     items: [
       { 
         path: '/notifications', 
         icon: Bell, 
-        label: 'Notifications',
+        label: 'nav.notifications',
         permission: null
       }
     ]
   },
   {
   id: 'budget',
-  label: 'Budget',
+  label: 'nav.groups.budget',
   icon: DollarSign,
   items: [
     { 
       path: '/budget', 
       icon: DollarSign, 
-      label: 'Gestion budgétaire',
+      label: 'nav.budgetManagement',
       permission: 'MANAGE_BUDGET'
     }
   ]
@@ -237,6 +238,7 @@ const menuGroups = [
 ]
 
 export default function Sidebar({ isOpen, setIsOpen }) {
+  const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
@@ -342,16 +344,16 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     if (user?.firstName && user?.lastName) {
       return `${user.firstName} ${user.lastName}`
     }
-    return user?.username || 'Utilisateur'
+    return user?.username || t('common.user')
   }
 
   // Obtenir le rôle principal
   const getMainRole = () => {
-    if (isAdmin()) return 'Administrateur'
+    if (isAdmin()) return t('common.administrator')
     if (userProfiles.length > 0) {
       return userProfiles[0].name
     }
-    return 'Utilisateur'
+    return t('common.user')
   }
 
   const handleLogout = () => {
@@ -412,7 +414,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               >
                 <div className="flex items-center gap-2">
                   <GroupIcon size={16} />
-                  {isOpen && <span>{group.label}</span>}
+                  {isOpen && <span>{t(group.label)}</span>}
                 </div>
                 {isOpen && (
                   <button className="p-1">
@@ -436,10 +438,10 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                             ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' 
                             : 'text-gray-600 hover:bg-gray-50'
                           }`}
-                        title={!isOpen ? item.label : ''}
+                        title={!isOpen ? t(item.label) : ''}
                       >
                         <Icon size={20} />
-                        {isOpen && <span className="ml-3 text-sm">{item.label}</span>}
+                        {isOpen && <span className="ml-3 text-sm">{t(item.label)}</span>}
                       </Link>
                     )
                   })}
@@ -453,7 +455,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         {userProfiles.length > 0 && isOpen && !isSupplier && !isSuperAdmin && (
           <div className="mt-6 px-4">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              Mes profils BPMN
+              {t('nav.myBpmnProfiles')}
             </p>
             <div className="space-y-1">
               {userProfiles.map((profile) => (
@@ -476,7 +478,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           <User size={20} />
           {isOpen && (
             <div className="flex-1 text-left">
-              <span className="text-sm">Mon compte</span>
+              <span className="text-sm">{t('nav.myAccount')}</span>
             </div>
           )}
           {isOpen && (showProfileMenu ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
@@ -489,14 +491,14 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               className="flex items-center gap-3 px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg"
             >
               <User size={16} />
-              <span>Mon profil</span>
+              <span>{t('nav.myProfile')}</span>
             </Link>
             {!isSupplier && <Link
               to="/settings"
               className="flex items-center gap-3 px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg"
             >
               <Settings size={16} />
-              <span>Paramètres</span>
+              <span>{t('nav.settings')}</span>
             </Link>}
             <hr className="my-1" />
             <button
@@ -504,7 +506,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               className="w-full flex items-center gap-3 px-2 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
             >
               <LogOut size={16} />
-              <span>Déconnexion</span>
+              <span>{t('nav.logout')}</span>
             </button>
           </div>
         )}

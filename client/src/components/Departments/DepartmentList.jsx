@@ -6,6 +6,7 @@ import { departmentService } from '../../services/departmentService';
 import Modal from '../Common/Modal';
 import DepartmentForm from './DepartmentForm';
 import toast from 'react-hot-toast';
+import { t } from '../../i18n';
 
 export default function DepartmentList() {
   const queryClient = useQueryClient();
@@ -22,7 +23,7 @@ export default function DepartmentList() {
     mutationFn: (id) => departmentService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['departments']);
-      toast.success('Département supprimé');
+      toast.success(t('departments.deleted'));
     }
   });
 
@@ -31,7 +32,7 @@ export default function DepartmentList() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Départements</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t('departments.title')}</h1>
         <button
           onClick={() => {
             setSelectedDepartment(null);
@@ -40,7 +41,7 @@ export default function DepartmentList() {
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus size={18} />
-          Nouveau département
+          {t('departments.new')}
         </button>
       </div>
 
@@ -49,7 +50,7 @@ export default function DepartmentList() {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
         <input
           type="text"
-          placeholder="Rechercher un département..."
+          placeholder={t('departments.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -69,12 +70,12 @@ export default function DepartmentList() {
         ) : departments.length === 0 ? (
           <div className="col-span-full text-center py-12 bg-white rounded-lg shadow">
             <Building2 size={48} className="mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-500">Aucun département</p>
+            <p className="text-gray-500">{t('departments.none')}</p>
             <button
               onClick={() => setShowModal(true)}
               className="mt-2 text-blue-600 hover:text-blue-800"
             >
-              Créer le premier département
+              {t('departments.createFirst')}
             </button>
           </div>
         ) : (
@@ -93,18 +94,18 @@ export default function DepartmentList() {
                         setShowModal(true);
                       }}
                       className="text-blue-600 hover:text-blue-800"
-                      title="Modifier"
+                      title={t('common.edit')}
                     >
                       <Edit size={18} />
                     </button>
                     <button
                       onClick={() => {
-                        if (confirm('Supprimer ce département ?')) {
+                        if (confirm(t('departments.confirmDelete'))) {
                           deleteMutation.mutate(dept.id);
                         }
                       }}
                       className="text-red-600 hover:text-red-800"
-                      title="Supprimer"
+                      title={t('common.delete')}
                     >
                       <Trash2 size={18} />
                     </button>
@@ -115,7 +116,7 @@ export default function DepartmentList() {
                 )}
                 <div className="mt-4 pt-4 border-t flex items-center gap-2 text-sm text-gray-500">
                   <User size={14} />
-                  <span>Manager: {dept.manager_first_name ? `${dept.manager_first_name} ${dept.manager_last_name}` : 'Non assigné'}</span>
+                  <span>{t('departments.managerLine', { name: dept.manager_first_name ? `${dept.manager_first_name} ${dept.manager_last_name}` : t('departments.unassigned') })}</span>
                 </div>
               </div>
             </div>
@@ -126,7 +127,7 @@ export default function DepartmentList() {
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={selectedDepartment ? 'Modifier le département' : 'Nouveau département'}
+        title={selectedDepartment ? t('departments.edit') : t('departments.new')}
         size="lg"
         showFooter={false}
       >

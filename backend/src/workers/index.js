@@ -14,6 +14,7 @@ const logSocket = debug('worker:socket');
 
 const requisitionModel = require('../models/RequisitionModel');
 const purchaseOrderModel = require('../models/PurchaseOrderModel');
+const i18n = require('../i18n');
 const notificationService = require('../services/NotificationService');
 const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
@@ -451,19 +452,25 @@ async function processSendPONotification(task) {
     }
 
     if (po.supplier_email) {
+      // Langue du compte portail du fournisseur (sinon langue par défaut)
+      const lang = po.supplier_language;
+      const T = i18n.translator(lang);
+      const fmtDay = (d) => (d ? new Date(d).toLocaleDateString(i18n.locale(lang)) : '—');
+      const total = Number(po.total_amount || 0).toLocaleString(i18n.locale(lang), { minimumFractionDigits: 2 });
+      const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
       const emailResult = await EmailNotificationService.sendEmail(
         po.supplier_email,
-        `Purchase Order ${po.po_number}`,
-        `<h1>Purchase Order ${po.po_number}</h1>
-       <p>Dear ${po.supplier_name},</p>
-       <p>Please find below your purchase order details.</p>
+        T('email.po.subject', { number: po.po_number }),
+        `<h1>${T('email.po.title', { number: esc(po.po_number) })}</h1>
+       <p>${T('email.hello', { name: esc(po.supplier_name) })}</p>
+       <p>${T('email.po.intro')}</p>
        <ul>
-         <li>PO Number: ${po.po_number}</li>
-         <li>Order Date: ${po.order_date}</li>
-         <li>Delivery Date: ${po.delivery_date}</li>
-         <li>Total Amount: ${po.total_amount} ${po.currency}</li>
+         <li>${T('email.po.number')} : ${esc(po.po_number)}</li>
+         <li>${T('email.po.orderDate')} : ${fmtDay(po.order_date)}</li>
+         <li>${T('email.po.deliveryDate')} : ${fmtDay(po.delivery_date)}</li>
+         <li>${T('email.po.total')} : ${total} ${esc(po.currency)}</li>
        </ul>
-       <p>Thank you for your business.</p>`
+       <p>${T('email.po.thanks')}</p>`
       );
       if (emailResult.success) logSuccess('Email sent to supplier %s', po.supplier_email);
       else logWarn('Email to supplier %s failed: %s', po.supplier_email, emailResult.error);

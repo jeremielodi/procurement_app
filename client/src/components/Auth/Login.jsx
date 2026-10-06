@@ -5,6 +5,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { homePathFor } from '../../utils/accountType';
+import { t } from '../../i18n';
+import LanguageSwitcher from '../Common/LanguageSwitcher';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -27,12 +29,12 @@ export default function Login() {
   const validate = () => {
     const newErrors = {};
     if (!formData.email) {
-      newErrors.email = 'Email requis';
+      newErrors.email = t('auth.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email invalide';
+      newErrors.email = t('auth.emailInvalid');
     }
     if (!formData.password) {
-      newErrors.password = 'Mot de passe requis';
+      newErrors.password = t('auth.passwordRequired');
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -44,10 +46,10 @@ export default function Login() {
 
     const result = await login(formData.email, formData.password);
     if (result.success) {
-      toast.success('Connexion réussie');
+      toast.success(t('auth.loginSuccess'));
       navigate(homePathFor(result.user));
     } else {
-      toast.error(result.message || 'Email ou mot de passe incorrect');
+      toast.error(result.message || t('auth.loginFailed'));
     }
   };
 
@@ -58,10 +60,11 @@ export default function Login() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl overflow-hidden">
         {/* Header */}
         <div className="p-6 text-center login-card-header-bg">
+          <div className="flex justify-end -mt-2 -mr-2 mb-1"><LanguageSwitcher dark /></div>
           <center><img src='/images/procureapp-logo.svg' alt='procureApp' style={{ height: 52 }} /></center>
           <h1 className="text-2xl font-bold text-white">
             procureApp</h1>
-          <p className="text-blue-100 mt-2">Gestion des achats, de la réquisition au paiement</p>
+          <p className="text-blue-100 mt-2">{t('auth.tagline')}</p>
         </div>
 
         {/* Form */}
@@ -77,7 +80,7 @@ export default function Login() {
               onChange={handleChange}
               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.email ? 'border-red-500' : 'border-gray-300'
                 }`}
-              placeholder="nom@entreprise.com"
+              placeholder={t('auth.emailPlaceholder')}
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
@@ -89,7 +92,7 @@ export default function Login() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mot de passe
+              {t('auth.password')}
             </label>
             <div className="relative">
               <input
@@ -120,10 +123,10 @@ export default function Login() {
           <div className="flex items-center justify-between">
             <label className="flex items-center">
               <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-              <span className="ml-2 text-sm text-gray-600">Se souvenir de moi</span>
+              <span className="ml-2 text-sm text-gray-600">{t('auth.rememberMe')}</span>
             </label>
             <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800">
-              Mot de passe oublié ?
+              {t('auth.forgotPassword')}
             </Link>
           </div>
 
@@ -137,24 +140,24 @@ export default function Login() {
             ) : (
               <LogIn size={18} />
             )}
-            {isLoading ? 'Connexion...' : 'Se connecter'}
+            {isLoading ? t('auth.loggingIn') : t('auth.login')}
           </button>
         </form>
 
         <div className="px-6 pb-6 text-center text-sm text-gray-600">
-          Vous êtes fournisseur ?{' '}
+          {t('auth.areYouSupplier')}{' '}
           <Link to="/supplier-register" className="text-blue-600 hover:text-blue-800 font-medium">
-            Créer un compte fournisseur
+            {t('auth.createSupplierAccount')}
           </Link>
         </div>
 
         {/* Footer */}
         <div className="p-4 bg-gray-50 text-center">
           <p className="text-xs text-gray-500">
-            procureApp — plateforme de gestion des achats
+            {t('auth.footer')}
           </p>
           <Link to="/" className="mt-1 inline-block text-xs text-blue-600 hover:text-blue-800">
-            ← Retour au site
+            {t('auth.backToSite')}
           </Link>
         </div>
       </div>

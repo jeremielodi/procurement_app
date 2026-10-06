@@ -3,6 +3,10 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { motion } from 'framer-motion';
 import * as echarts from 'echarts';
+import { t, hasKey, useTranslation } from '../../i18n';
+
+// Libellé traduit depuis le code envoyé par le backend (rawStatus / rawMethod), sinon libellé reçu
+const codeLabel = (prefix, code, fallback) => (code && hasKey(`${prefix}.${code}`) ? t(`${prefix}.${code}`) : fallback);
 import {
     BarChart3,
     PieChart,
@@ -14,6 +18,8 @@ import {
 
 export default function ChartsSection({ chartData, period }) {
     const { formatAmount } = useCurrency();
+    // Langue : dépendance des options mémorisées → graphiques redessinés au changement de langue
+    const { lang } = useTranslation();
     const [activeTab, setActiveTab] = useState('trend');
 
     // Refs pour les conteneurs de graphiques
@@ -32,14 +38,14 @@ export default function ChartsSection({ chartData, period }) {
 
     // Tabs configuration
     const tabs = useMemo(() => [
-        { id: 'department', label: 'Départements', icon: BarChart3, description: 'Montant par département' },
-        { id: 'trend', label: 'Tendance', icon: LineChart, description: 'Évolution des réquisitions' },
-        { id: 'status', label: 'Statuts', icon: PieChart, description: 'Distribution des statuts' },
-        { id: 'methods', label: 'Méthodes', icon: PieChart, description: 'Méthodes d\'achat' },
-        { id: 'supplier', label: 'Fournisseurs', icon: BarChart3, description: 'Top fournisseurs' },
+        { id: 'department', label: t('charts.tabs.department'), icon: BarChart3, description: t('charts.tabs.departmentDesc') },
+        { id: 'trend', label: t('charts.tabs.trend'), icon: LineChart, description: t('charts.tabs.trendDesc') },
+        { id: 'status', label: t('charts.tabs.status'), icon: PieChart, description: t('charts.tabs.statusDesc') },
+        { id: 'methods', label: t('charts.tabs.methods'), icon: PieChart, description: t('charts.tabs.methodsDesc') },
+        { id: 'supplier', label: t('charts.tabs.supplier'), icon: BarChart3, description: t('charts.tabs.supplierDesc') },
         // Onglet budget seulement si le backend l'a fourni (profil Finance)
-        ...(chartData?.budgetSummary ? [{ id: 'budget', label: 'Budget', icon: BarChart3, description: 'Allocation budgétaire' }] : [])
-    ], [chartData?.budgetSummary]);
+        ...(chartData?.budgetSummary ? [{ id: 'budget', label: t('charts.tabs.budget'), icon: BarChart3, description: t('charts.tabs.budgetDesc') }] : [])
+    ], [chartData?.budgetSummary, lang]);
 
     // Couleurs ECharts
     const colors = useMemo(() => ({
@@ -67,7 +73,7 @@ export default function ChartsSection({ chartData, period }) {
         if (data.length === 0) {
             return {
                 title: {
-                    text: 'Aucune donnée disponible',
+                    text: t('charts.noData'),
                     left: 'center',
                     top: 'center',
                     textStyle: { color: '#9CA3AF', fontSize: 14 }
@@ -96,7 +102,7 @@ export default function ChartsSection({ chartData, period }) {
                 }
             },
             legend: {
-                data: ['Réquisitions', 'Approuvées', 'Rejetées', 'En attente'],
+                data: [t('charts.requisitions'), t('charts.approved'), t('charts.rejected'), t('charts.pending')],
                 bottom: 0,
                 icon: 'roundRect',
                 itemWidth: 12,
@@ -123,7 +129,7 @@ export default function ChartsSection({ chartData, period }) {
             },
             series: [
                 {
-                    name: 'Réquisitions',
+                    name: t('charts.requisitions'),
                     type: 'line',
                     smooth: true,
                     symbol: 'circle',
@@ -139,7 +145,7 @@ export default function ChartsSection({ chartData, period }) {
                     emphasis: { focus: 'series', lineStyle: { width: 4 } }
                 },
                 {
-                    name: 'Approuvées',
+                    name: t('charts.approved'),
                     type: 'line',
                     smooth: true,
                     symbol: 'diamond',
@@ -149,7 +155,7 @@ export default function ChartsSection({ chartData, period }) {
                     emphasis: { focus: 'series' }
                 },
                 {
-                    name: 'Rejetées',
+                    name: t('charts.rejected'),
                     type: 'line',
                     smooth: true,
                     symbol: 'triangle',
@@ -159,7 +165,7 @@ export default function ChartsSection({ chartData, period }) {
                     emphasis: { focus: 'series' }
                 },
                 {
-                    name: 'En attente',
+                    name: t('charts.pending'),
                     type: 'line',
                     smooth: true,
                     symbol: 'rect',
@@ -176,11 +182,11 @@ export default function ChartsSection({ chartData, period }) {
 
     // 2. Graphique de distribution des statuts (Donut)
     const getStatusOption = useCallback(() => {
-        const data = chartData?.statusDistribution || [];
+        const data = (chartData?.statusDistribution || []).map(d => ({ ...d, name: codeLabel('requisitionStatus', d.rawStatus, d.name) }));
         if (data.length === 0) {
             return {
                 title: {
-                    text: 'Aucune donnée disponible',
+                    text: t('charts.noData'),
                     left: 'center',
                     top: 'center',
                     textStyle: { color: '#9CA3AF', fontSize: 14 }
@@ -193,8 +199,8 @@ export default function ChartsSection({ chartData, period }) {
                 trigger: 'item',
                 formatter: function (params) {
                     return `<div style="font-weight: bold; margin-bottom: 4px;">${params.name}</div>
-            <div>Nombre: <strong>${params.value}</strong></div>
-            <div>Pourcentage: <strong>${params.percent}%</strong></div>`;
+            <div>${t('charts.count')} : <strong>${params.value}</strong></div>
+            <div>${t('charts.percent')} : <strong>${params.percent}%</strong></div>`;
                 }
             },
             legend: {
@@ -248,11 +254,11 @@ export default function ChartsSection({ chartData, period }) {
 
     // 3. Graphique des méthodes d'achat (Pie)
     const getMethodsOption = useCallback(() => {
-        const data = chartData?.procurementMethods || [];
+        const data = (chartData?.procurementMethods || []).map(d => ({ ...d, name: codeLabel('procurementMethod', d.rawMethod, d.name) }));
         if (data.length === 0) {
             return {
                 title: {
-                    text: 'Aucune donnée disponible',
+                    text: t('charts.noData'),
                     left: 'center',
                     top: 'center',
                     textStyle: { color: '#9CA3AF', fontSize: 14 }
@@ -265,9 +271,9 @@ export default function ChartsSection({ chartData, period }) {
                 trigger: 'item',
                 formatter: function (params) {
                     return `<div style="font-weight: bold; margin-bottom: 4px;">${params.name}</div>
-            <div>Nombre: <strong>${params.value}</strong></div>
-            <div>Montant: <strong>${formatCurrency(params.data.amount)}</strong></div>
-            <div>Pourcentage: <strong>${params.percent}%</strong></div>`;
+            <div>${t('charts.count')} : <strong>${params.value}</strong></div>
+            <div>${t('charts.amount')} : <strong>${formatCurrency(params.data.amount)}</strong></div>
+            <div>${t('charts.percent')} : <strong>${params.percent}%</strong></div>`;
                 }
             },
             legend: {
@@ -314,7 +320,7 @@ export default function ChartsSection({ chartData, period }) {
         if (data.length === 0) {
             return {
                 title: {
-                    text: 'Aucune donnée disponible',
+                    text: t('charts.noData'),
                     left: 'center',
                     top: 'center',
                     textStyle: { color: '#9CA3AF', fontSize: 14 }
@@ -330,9 +336,9 @@ export default function ChartsSection({ chartData, period }) {
                     const p = params[0];
                     const item = data.find(d => d.department_name === p.name);
                     return `<div style="font-weight: bold; margin-bottom: 4px;">${p.name}</div>
-            <div>Montant: <strong>${formatCurrency(p.value)}</strong></div>
-            <div>Réquisitions: <strong>${item?.count || 0}</strong></div>
-            <div>Approuvées: <strong>${item?.approved_count || 0}</strong></div>`;
+            <div>${t('charts.amount')} : <strong>${formatCurrency(p.value)}</strong></div>
+            <div>${t('charts.requisitions')} : <strong>${item?.count || 0}</strong></div>
+            <div>${t('charts.approved')} : <strong>${item?.approved_count || 0}</strong></div>`;
                 }
             },
             grid: { left: 60, right: 30, top: 20, bottom: 50 },
@@ -403,7 +409,7 @@ export default function ChartsSection({ chartData, period }) {
         if (data.length === 0) {
             return {
                 title: {
-                    text: 'Aucune donnée disponible',
+                    text: t('charts.noData'),
                     left: 'center',
                     top: 'center',
                     textStyle: { color: '#9CA3AF', fontSize: 14 }
@@ -419,9 +425,9 @@ export default function ChartsSection({ chartData, period }) {
                     const p = params[0];
                     const item = data.find(d => d.name === p.name);
                     return `<div style="font-weight: bold; margin-bottom: 4px;">${p.name}</div>
-            <div>Montant: <strong>${formatCurrency(p.value)}</strong></div>
-            <div>Commandes: <strong>${item?.orders || 0}</strong></div>
-            <div>Note: <strong>${Number(item?.rating) ? Number(item.rating).toFixed(1) : 'N/A'}/5</strong></div>`;
+            <div>${t('charts.amount')} : <strong>${formatCurrency(p.value)}</strong></div>
+            <div>${t('charts.orders')} : <strong>${item?.orders || 0}</strong></div>
+            <div>${t('charts.rating')} : <strong>${Number(item?.rating) ? Number(item.rating).toFixed(1) : t('common.na')}/5</strong></div>`;
                 }
             },
             grid: { left: 120, right: 60, top: 20, bottom: 20 },
@@ -489,7 +495,7 @@ export default function ChartsSection({ chartData, period }) {
         if (data.length === 0) {
             return {
                 title: {
-                    text: 'Aucune donnée disponible',
+                    text: t('charts.noData'),
                     left: 'center',
                     top: 'center',
                     textStyle: { color: '#9CA3AF', fontSize: 14 }
@@ -505,13 +511,13 @@ export default function ChartsSection({ chartData, period }) {
                     const p = params[0];
                     const item = data.find(d => d.funding_source === p.name);
                     return `<div style="font-weight: bold; margin-bottom: 4px;">${p.name}</div>
-            <div>Alloué: <strong>${formatCurrency(item?.allocated || 0)}</strong></div>
-            <div>Utilisé: <strong>${formatCurrency(item?.utilized || 0)}</strong></div>
-            <div>Restant: <strong>${formatCurrency(item?.remaining || 0)}</strong></div>`;
+            <div>${t('charts.allocated')} : <strong>${formatCurrency(item?.allocated || 0)}</strong></div>
+            <div>${t('charts.utilized')} : <strong>${formatCurrency(item?.utilized || 0)}</strong></div>
+            <div>${t('charts.remaining')} : <strong>${formatCurrency(item?.remaining || 0)}</strong></div>`;
                 }
             },
             legend: {
-                data: ['Alloué', 'Utilisé', 'Restant'],
+                data: [t('charts.allocated'), t('charts.utilized'), t('charts.remaining')],
                 bottom: 0,
                 icon: 'roundRect',
                 itemWidth: 12,
@@ -545,7 +551,7 @@ export default function ChartsSection({ chartData, period }) {
             },
             series: [
                 {
-                    name: 'Alloué',
+                    name: t('charts.allocated'),
                     type: 'bar',
                     stack: 'total',
                     barWidth: '40%',
@@ -553,7 +559,7 @@ export default function ChartsSection({ chartData, period }) {
                     data: data.map(item => item.allocated)
                 },
                 {
-                    name: 'Utilisé',
+                    name: t('charts.utilized'),
                     type: 'bar',
                     stack: 'total',
                     barWidth: '40%',
@@ -561,7 +567,7 @@ export default function ChartsSection({ chartData, period }) {
                     data: data.map(item => item.utilized)
                 },
                 {
-                    name: 'Restant',
+                    name: t('charts.remaining'),
                     type: 'bar',
                     stack: 'total',
                     barWidth: '40%',
@@ -591,7 +597,8 @@ export default function ChartsSection({ chartData, period }) {
         getStatusOption,
         getMethodsOption,
         getSupplierOption,
-        getBudgetOption
+        getBudgetOption,
+        lang
     ]);
 
     // Mettre à jour un graphique spécifique
@@ -702,7 +709,7 @@ export default function ChartsSection({ chartData, period }) {
         const data = chartData?.monthlyTrend || [];
         if (data.length === 0) return;
 
-        const headers = ['Période', 'Réquisitions', 'Approuvées', 'Rejetées', 'En attente', 'Montant'];
+        const headers = ['period', 'requisitions', 'approved', 'rejected', 'pending', 'amount'].map(k => t(`charts.${k}`));
         const rows = data.map(item => [
             item.period,
             item.requisitions,
@@ -732,7 +739,7 @@ export default function ChartsSection({ chartData, period }) {
             <div className="flex items-center justify-center h-64 bg-white rounded-xl shadow-sm border border-gray-200">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-500">Chargement des données...</p>
+                    <p className="mt-4 text-gray-500">{t('loading.data')}</p>
                 </div>
             </div>
         );
@@ -748,30 +755,30 @@ export default function ChartsSection({ chartData, period }) {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex items-center space-x-4">
                     <BarChart3 className="w-5 h-5 text-indigo-500" />
-                    <h3 className="text-lg font-semibold text-gray-800">Analyse des données</h3>
+                    <h3 className="text-lg font-semibold text-gray-800">{t('charts.title')}</h3>
                     <span className="text-sm text-gray-500">
-                        {period === 'week' ? 'Semaine' : period === 'month' ? 'Mois' : 'Année'} en cours
+                        {period === 'week' ? t('charts.currentWeek') : period === 'month' ? t('charts.currentMonth') : t('charts.currentYear')}
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={handleRefresh}
                         className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="Actualiser"
+                        title={t('common.refresh')}
                     >
                         <RefreshCw className="w-4 h-4" />
                     </button>
                     <button
                         onClick={handleExport}
                         className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="Exporter le graphique en PNG"
+                        title={t('charts.exportPng')}
                     >
                         <Download className="w-4 h-4" />
                     </button>
                     <button
                         onClick={handleDownloadData}
                         className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="Télécharger les données (CSV)"
+                        title={t('charts.downloadCsv')}
                     >
                         <FileDown className="w-4 h-4" />
                     </button>
@@ -822,12 +829,12 @@ export default function ChartsSection({ chartData, period }) {
                             </h4>
                         </div>
                         <span className="text-xs text-gray-400">
-                            {activeTab === 'department' && `${chartData.departmentData?.length || 0} départements`}
-                            {activeTab === 'trend' && (period === 'week' ? '7 jours' : period === 'month' ? '30 jours' : '12 mois')}
-                            {activeTab === 'status' && `${chartData.statusDistribution?.length || 0} statuts`}
-                            {activeTab === 'methods' && `${chartData.procurementMethods?.length || 0} méthodes`}
-                            {activeTab === 'supplier' && `${chartData.topSuppliers?.length || 0} fournisseurs`}
-                            {activeTab === 'budget' && `${chartData.budgetSummary?.byFundingSource?.length || 0} sources`}
+                            {activeTab === 'department' && t('charts.nDepartments', { count: chartData.departmentData?.length || 0 })}
+                            {activeTab === 'trend' && (period === 'week' ? t('charts.days7') : period === 'month' ? t('charts.days30') : t('charts.months12'))}
+                            {activeTab === 'status' && t('charts.nStatuses', { count: chartData.statusDistribution?.length || 0 })}
+                            {activeTab === 'methods' && t('charts.nMethods', { count: chartData.procurementMethods?.length || 0 })}
+                            {activeTab === 'supplier' && t('charts.nSuppliers', { count: chartData.topSuppliers?.length || 0 })}
+                            {activeTab === 'budget' && t('charts.nSources', { count: chartData.budgetSummary?.byFundingSource?.length || 0 })}
                         </span>
                     </div>
 
@@ -857,23 +864,23 @@ export default function ChartsSection({ chartData, period }) {
             {chartData.performanceMetrics && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                        <p className="text-xs text-gray-500">Délai moyen</p>
+                        <p className="text-xs text-gray-500">{t('charts.avgDelay')}</p>
                         <p className="text-lg font-bold text-gray-900">{chartData.performanceMetrics.averageProcessingTime || 0}h</p>
                     </div>
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                        <p className="text-xs text-gray-500">Livraison à temps</p>
+                        <p className="text-xs text-gray-500">{t('charts.onTime')}</p>
                         <p className="text-lg font-bold text-green-600">{chartData.performanceMetrics.onTimeDelivery || 0}%</p>
                     </div>
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                        <p className="text-xs text-gray-500">Conformité budgétaire</p>
+                        <p className="text-xs text-gray-500">{t('charts.budgetCompliance')}</p>
                         <p className="text-lg font-bold text-blue-600">{chartData.performanceMetrics.budgetCompliance || 0}%</p>
                     </div>
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                        <p className="text-xs text-gray-500">Satisfaction fournisseurs</p>
+                        <p className="text-xs text-gray-500">{t('charts.supplierSatisfaction')}</p>
                         <p className="text-lg font-bold text-purple-600">{chartData.performanceMetrics.supplierSatisfaction || 0}/5</p>
                     </div>
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                        <p className="text-xs text-gray-500">Taux de réapprobation</p>
+                        <p className="text-xs text-gray-500">{t('charts.reapprovalRate')}</p>
                         <p className="text-lg font-bold text-orange-600">{chartData.performanceMetrics.reapprovalRate || 0}%</p>
                     </div>
                 </div>
@@ -882,22 +889,22 @@ export default function ChartsSection({ chartData, period }) {
             {/* Résumé budgétaire */}
             {chartData.budgetSummary?.summary && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Résumé budgétaire</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('charts.budgetSummary')}</h4>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div>
-                            <p className="text-xs text-gray-500">Total alloué</p>
+                            <p className="text-xs text-gray-500">{t('charts.totalAllocated')}</p>
                             <p className="text-lg font-bold text-gray-900">{formatCurrency(chartData.budgetSummary.summary.totalAllocated)}</p>
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500">Total utilisé</p>
+                            <p className="text-xs text-gray-500">{t('charts.totalUtilized')}</p>
                             <p className="text-lg font-bold text-blue-600">{formatCurrency(chartData.budgetSummary.summary.totalUtilized)}</p>
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500">Total restant</p>
+                            <p className="text-xs text-gray-500">{t('charts.totalRemaining')}</p>
                             <p className="text-lg font-bold text-green-600">{formatCurrency(chartData.budgetSummary.summary.totalRemaining)}</p>
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500">Taux d'utilisation</p>
+                            <p className="text-xs text-gray-500">{t('charts.utilizationRate')}</p>
                             <p className="text-lg font-bold text-purple-600">{chartData.budgetSummary.summary.utilizationRate?.toFixed(1) || 0}%</p>
                         </div>
                     </div>

@@ -7,6 +7,7 @@ import { BadgeCheck, Download, Search, RefreshCw, Building2, User } from 'lucide
 import { supplierService } from '../../services/supplierService';
 import { locationService, categoryService } from '../../services/referenceService';
 import { SUPPLIER_TYPE_LABELS, downloadBlob } from '../../utils/supplierDocs';
+import { t, getLocale } from '../../i18n';
 
 const selectCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white';
 
@@ -23,8 +24,8 @@ export default function PrequalifiedSupplierList() {
   }, []);
   // Recherche appliquée après une courte pause de saisie
   useEffect(() => {
-    const t = setTimeout(() => setFilters(f => ({ ...f, search })), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setFilters(f => ({ ...f, search })), 300);
+    return () => clearTimeout(timer);
   }, [search]);
 
   const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
@@ -38,7 +39,7 @@ export default function PrequalifiedSupplierList() {
   const exportExcel = async () => {
     setExporting(true);
     try {
-      downloadBlob(await supplierService.exportPrequalified(params), `fournisseurs_prequalifies_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      downloadBlob(await supplierService.exportPrequalified(params), `${t('prequal.exportFile')}_${new Date().toISOString().slice(0, 10)}.xlsx`);
     } catch (_) { /* toast */ } finally {
       setExporting(false);
     }
@@ -50,39 +51,39 @@ export default function PrequalifiedSupplierList() {
     <div className="p-6 space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><BadgeCheck className="text-green-600" /> Fournisseurs préqualifiés</h1>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><BadgeCheck className="text-green-600" /> {t('prequal.listTitle')}</h1>
           <p className="text-sm text-gray-500">
-            Préqualifiés par votre entreprise, par catégorie de marché. La préqualification se fait depuis la fiche du fournisseur.
+            {t('prequal.listHint')}
           </p>
         </div>
         <button onClick={exportExcel} disabled={exporting || rows.length === 0}
           className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50">
-          <Download size={16} /> {exporting ? 'Export…' : 'Exporter en Excel'}
+          <Download size={16} /> {exporting ? t('prequal.exporting') : t('prequal.exportExcel')}
         </button>
       </div>
 
       <div className="flex flex-wrap gap-2 bg-white border border-gray-200 rounded-lg p-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nom, code ou email"
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('prequal.searchPlaceholder')}
             className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm" />
         </div>
-        <select className={selectCls} value={filters.categoryId} onChange={set('categoryId')} aria-label="Catégorie">
-          <option value="">Toutes les catégories</option>
+        <select className={selectCls} value={filters.categoryId} onChange={set('categoryId')} aria-label={t('prequal.category')}>
+          <option value="">{t('prequal.allCategories')}</option>
           {refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <select className={selectCls} value={filters.locationId} onChange={set('locationId')} aria-label="Localisation">
-          <option value="">Toutes les localisations</option>
+        <select className={selectCls} value={filters.locationId} onChange={set('locationId')} aria-label={t('prequal.location')}>
+          <option value="">{t('prequal.allLocations')}</option>
           {refs.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
         </select>
-        <select className={selectCls} value={filters.supplierType} onChange={set('supplierType')} aria-label="Type">
-          <option value="">Entreprises et personnes physiques</option>
-          <option value="COMPANY">Entreprises</option>
-          <option value="INDIVIDUAL">Personnes physiques</option>
+        <select className={selectCls} value={filters.supplierType} onChange={set('supplierType')} aria-label={t('prequal.type_')}>
+          <option value="">{t('prequal.allTypes')}</option>
+          <option value="COMPANY">{t('prequal.companies')}</option>
+          <option value="INDIVIDUAL">{t('prequal.individuals')}</option>
         </select>
       </div>
 
-      <p className="text-sm text-gray-600">{supplierCount} fournisseur(s) · {rows.length} préqualification(s)</p>
+      <p className="text-sm text-gray-600">{t('prequal.counts', { suppliers: supplierCount, rows: rows.length })}</p>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
         {isLoading ? (
@@ -91,12 +92,7 @@ export default function PrequalifiedSupplierList() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-600 text-left">
               <tr>
-                <th className="px-4 py-2">Catégorie</th>
-                <th className="px-4 py-2">Code</th>
-                <th className="px-4 py-2">Fournisseur</th>
-                <th className="px-4 py-2">Localisations</th>
-                <th className="px-4 py-2">Contact</th>
-                <th className="px-4 py-2">Préqualifié le</th>
+                {t('prequal.cols', { returnObjects: true }).map(h => <th key={h} className="px-4 py-2">{h}</th>)}
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -116,11 +112,11 @@ export default function PrequalifiedSupplierList() {
                     <div>{r.contact_name || '—'}</div>
                     <div className="text-xs">{[r.phone, r.email].filter(Boolean).join(' · ')}</div>
                   </td>
-                  <td className="px-4 py-2 text-gray-600">{r.decided_at ? new Date(r.decided_at).toLocaleDateString('fr-FR') : ''}</td>
+                  <td className="px-4 py-2 text-gray-600">{r.decided_at ? new Date(r.decided_at).toLocaleDateString(getLocale()) : ''}</td>
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Aucun fournisseur préqualifié pour ces critères</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">{t('prequal.none')}</td></tr>
               )}
             </tbody>
           </table>

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
+import { t } from '../../i18n';
 
 export default function ProjectForm({ project, onClose }) {
   const [formData, setFormData] = useState({
@@ -45,14 +46,14 @@ export default function ProjectForm({ project, onClose }) {
     try {
       if (project) {
         await projectService.update(project.id, formData);
-        toast.success('Projet modifié');
+        toast.success(t('projects.updated'));
       } else {
         await projectService.create(formData);
-        toast.success('Projet créé');
+        toast.success(t('projects.created'));
       }
       onClose();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Erreur');
+      toast.error(error.response?.data?.message || t('common.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -62,18 +63,18 @@ export default function ProjectForm({ project, onClose }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Code *</label>
+          <label className="block text-sm font-medium mb-1">{t('projects.codeRequired')}</label>
           <input
             type="text"
             value={formData.code}
             onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
             required
-            placeholder="EX: PROJ-001"
+            placeholder={t('projects.codePlaceholder')}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Nom *</label>
+          <label className="block text-sm font-medium mb-1">{t('projects.nameRequired')}</label>
           <input
             type="text"
             value={formData.name}
@@ -85,7 +86,7 @@ export default function ProjectForm({ project, onClose }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Description</label>
+        <label className="block text-sm font-medium mb-1">{t('common.description')}</label>
         <textarea
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -97,13 +98,13 @@ export default function ProjectForm({ project, onClose }) {
       <div className="grid grid-cols-2 gap-4">
         
         <div>
-          <label className="block text-sm font-medium mb-1">Chef de projet</label>
+          <label className="block text-sm font-medium mb-1">{t('projects.projectManager')}</label>
           <select
             value={formData.projectManagerId}
             onChange={(e) => setFormData({ ...formData, projectManagerId: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Sélectionner</option>
+            <option value="">{t('projects.select')}</option>
             {users.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.first_name} {user.last_name}
@@ -115,7 +116,7 @@ export default function ProjectForm({ project, onClose }) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Date début</label>
+          <label className="block text-sm font-medium mb-1">{t('projects.startDate')}</label>
           <input
             type="date"
             value={formData.startDate}
@@ -124,7 +125,7 @@ export default function ProjectForm({ project, onClose }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Date fin</label>
+          <label className="block text-sm font-medium mb-1">{t('projects.endDate')}</label>
           <input
             type="date"
             value={formData.endDate}
@@ -135,16 +136,13 @@ export default function ProjectForm({ project, onClose }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Statut</label>
+        <label className="block text-sm font-medium mb-1">{t('common.status')}</label>
         <select
           value={formData.status}
           onChange={(e) => setFormData({ ...formData, status: e.target.value })}
           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
         >
-          <option value="ACTIVE">Actif</option>
-          <option value="COMPLETED">Terminé</option>
-          <option value="ON_HOLD">En pause</option>
-          <option value="CANCELLED">Annulé</option>
+          {['ACTIVE', 'COMPLETED', 'ON_HOLD', 'CANCELLED'].map(s => <option key={s} value={s}>{t(`projects.status.${s}`)}</option>)}
         </select>
       </div>
 
@@ -154,14 +152,14 @@ export default function ProjectForm({ project, onClose }) {
           onClick={onClose}
           className="px-4 py-2 border rounded-lg hover:bg-gray-50"
         >
-          Annuler
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
         >
-          {isSubmitting ? 'Enregistrement...' : (project ? 'Mettre à jour' : 'Créer')}
+          {isSubmitting ? t('supplierForm.saving') : (project ? t('supplierForm.update') : t('common.create'))}
         </button>
       </div>
     </form>

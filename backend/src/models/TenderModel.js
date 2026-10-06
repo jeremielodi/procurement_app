@@ -264,7 +264,7 @@ class TenderModel {
 
   async getRegisteredSupplierRecipients(tenderId = null) {
     return db.select(
-      `SELECT s.id, s.name, s.email AS supplier_email, u.id AS user_id, u.email AS user_email
+      `SELECT s.id, s.name, s.email AS supplier_email, u.id AS user_id, u.email AS user_email, u.language
        FROM suppliers s JOIN users u ON u.id = s.user_id
        WHERE u.is_active = true AND s.status = 'ACTIVE'
          AND ($1::int IS NULL OR supplier_eligible_for_tender(s.id, $1))`,

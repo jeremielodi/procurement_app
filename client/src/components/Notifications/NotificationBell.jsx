@@ -4,7 +4,8 @@ import { Bell, Check, X, Clock, ShoppingCart, FileText, CheckCircle, XCircle, Al
 import { notificationService } from '../../services/notificationService'
 import { useAuth } from '../../hooks/useAuth'
 import { formatDistanceToNow, isValid } from 'date-fns'
-import { fr } from 'date-fns/locale'
+import { t } from '../../i18n'
+import { getDateFnsLocale } from '../../i18n/dateFns'
 import toast from 'react-hot-toast'
 import { useWebSocket } from '../../hooks/useWebSocket'
 
@@ -58,16 +59,16 @@ const getNotificationColor = (type) => {
 
 // Fonction pour formater la date de manière sécurisée
 const formatDateSafe = (dateString) => {
-  if (!dateString) return 'Date inconnue'
+  if (!dateString) return t('notifications.unknownDate')
   
   const date = new Date(dateString)
-  if (!isValid(date)) return 'Date invalide'
+  if (!isValid(date)) return t('notifications.invalidDate')
   
   try {
-    return formatDistanceToNow(date, { addSuffix: true, locale: fr })
+    return formatDistanceToNow(date, { addSuffix: true, locale: getDateFnsLocale() })
   } catch (error) {
     console.error('Error formatting date:', error)
-    return 'Date inconnue'
+    return t('notifications.unknownDate')
   }
 }
 
@@ -97,7 +98,7 @@ export default function NotificationBell() {
         setUnreadCount(prev => prev + 1)
         
         // Afficher un toast
-        toast.custom((t) => (
+        toast.custom((toastItem) => (
           <div className="max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5">
             <div className="flex-1 w-0 p-4">
               <div className="flex items-start">
@@ -113,12 +114,12 @@ export default function NotificationBell() {
             <div className="flex border-l border-gray-200">
               <button
                 onClick={() => {
-                  toast.dismiss(t.id)
+                  toast.dismiss(toastItem.id)
                   if (data.link) window.location.href = data.link
                 }}
                 className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500"
               >
-                Voir
+                {t('common.view')}
               </button>
             </div>
           </div>
@@ -226,7 +227,7 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       {/* Indicateur de connexion WebSocket */}
       {!isConnected && (
-        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" title="WebSocket déconnecté" />
+        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" title={t('notifications.wsDisconnected')} />
       )}
       
       {/* Bouton de notification */}
@@ -251,10 +252,10 @@ export default function NotificationBell() {
             <div>
               <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
               <p className="text-xs text-gray-500 mt-1">
-                {unreadCount} non lue{unreadCount > 1 ? 's' : ''}
+                {t('notifications.unread', { count: unreadCount })}
               </p>
               {!isConnected && (
-                <p className="text-xs text-red-500 mt-1">⚠️ Connexion temps réel instable</p>
+                <p className="text-xs text-red-500 mt-1">{t('notifications.unstable')}</p>
               )}
             </div>
             {unreadCount > 0 && (
@@ -262,7 +263,7 @@ export default function NotificationBell() {
                 onClick={handleMarkAllAsRead}
                 className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
               >
-                Tout marquer comme lu
+                {t('notifications.markAllRead')}
               </button>
             )}
           </div>
@@ -276,8 +277,8 @@ export default function NotificationBell() {
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Bell size={48} className="text-gray-300 mb-3" />
-                <p className="text-gray-500 font-medium">Aucune notification</p>
-                <p className="text-sm text-gray-400 mt-1">Vous serez notifié des activités importantes</p>
+                <p className="text-gray-500 font-medium">{t('notifications.none')}</p>
+                <p className="text-sm text-gray-400 mt-1">{t('notifications.noneHint')}</p>
               </div>
             ) : (
               notifications.map((notification) => (
@@ -336,7 +337,7 @@ export default function NotificationBell() {
                 }}
                 className="text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
-                Voir toutes les notifications
+                {t('notifications.viewAll')}
               </button>
             </div>
           )}

@@ -6,13 +6,11 @@ import { useEffect, useState } from 'react';
 import { Globe, BadgeCheck, Users, Building2, User, Lock } from 'lucide-react';
 import { locationService, categoryService } from '../../services/referenceService';
 import { tenderService } from '../../services/tenderService';
+import { t, labelMap } from '../../i18n';
 
 const selectCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500';
 
-export const AUDIENCE_LABELS = {
-  ALL: 'Ouvert à tous les fournisseurs',
-  PREQUALIFIED: 'Réservé aux fournisseurs invités',
-};
+export const AUDIENCE_LABELS = labelMap('tenders.audience', ['ALL', 'PREQUALIFIED']);
 
 /**
  * value = { audience, categoryId, locationId, supplierIds }
@@ -67,9 +65,9 @@ export default function TenderTargetingFields({ value, onChange, lockedIds = [] 
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3" role="radiogroup" aria-label="Diffusion">
-        {[['ALL', Globe, 'Toutes les entreprises intéressées peuvent consulter et soumettre'],
-          ['PREQUALIFIED', BadgeCheck, 'Vous choisissez les fournisseurs invités parmi les préqualifiés : eux seuls sont notifiés et voient l\'appel d\'offres']].map(([v, Icon, hint]) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3" role="radiogroup" aria-label={t('tenders.diffusion')}>
+        {[['ALL', Globe, t('tenders.audienceHint.ALL')],
+          ['PREQUALIFIED', BadgeCheck, t('tenders.audienceHint.PREQUALIFIED')]].map(([v, Icon, hint]) => (
           <button key={v} type="button" role="radio" aria-checked={value.audience === v} onClick={() => set({ audience: v })}
             className={`flex items-start gap-3 p-3 border-2 rounded-lg text-left ${value.audience === v ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
             <Icon size={20} className={`mt-0.5 ${value.audience === v ? 'text-blue-600' : 'text-gray-400'}`} />
@@ -81,17 +79,17 @@ export default function TenderTargetingFields({ value, onChange, lockedIds = [] 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="categoryId">
-            Catégorie de marché {reserved && '*'}
+            {t('tenders.category')} {reserved && '*'}
           </label>
           <select id="categoryId" className={selectCls} value={value.categoryId || ''} onChange={e => set({ categoryId: e.target.value })}>
-            <option value="">— Aucune —</option>
+            <option value="">{t('tenders.none_option')}</option>
             {refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="locationId">Localisation (livraison)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="locationId">{t('tenders.location')}</label>
           <select id="locationId" className={selectCls} value={value.locationId || ''} onChange={e => set({ locationId: e.target.value })}>
-            <option value="">— Toutes —</option>
+            <option value="">{t('tenders.all_option')}</option>
             {refs.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         </div>
@@ -99,30 +97,30 @@ export default function TenderTargetingFields({ value, onChange, lockedIds = [] 
 
       {!reserved && count !== null && (
         <p className="text-sm flex items-center gap-1 text-gray-600">
-          <Users size={14} /> {count} fournisseur(s) inscrit(s) seront notifiés.
+          <Users size={14} /> {t('tenders.willNotify', { count })}
         </p>
       )}
 
       {reserved && !value.categoryId && (
-        <p className="text-sm text-gray-500">Choisissez la catégorie pour afficher les fournisseurs préqualifiés à inviter.</p>
+        <p className="text-sm text-gray-500">{t('tenders.chooseCategory')}</p>
       )}
 
       {reserved && candidates && (
         <div data-testid="tender-candidates">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-gray-700">
-              Fournisseurs invités * <span className="font-normal text-gray-500">— {selected.size} sélectionné(s) sur {candidates.length} préqualifié(s)</span>
+              {t('tenders.invited')} <span className="font-normal text-gray-500">{t('tenders.selectedOf', { selected: selected.size, total: candidates.length })}</span>
             </p>
             {selectable.length > 1 && (
               <button type="button" onClick={toggleAll} className="text-sm text-blue-600 hover:underline">
-                {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+                {allSelected ? t('tenders.unselectAll') : t('tenders.selectAll')}
               </button>
             )}
           </div>
           {candidates.length === 0 ? (
             <p className="text-sm text-orange-600 border border-orange-200 bg-orange-50 rounded-lg p-3">
-              Aucun fournisseur préqualifié dans cette catégorie{value.locationId ? ' pour cette localisation' : ''}.
-              Préqualifiez des fournisseurs depuis leur fiche, ou choisissez la diffusion « ouvert à tous ».
+              {t(value.locationId ? 'tenders.noCandidatesLoc' : 'tenders.noCandidates')}{' '}
+              {t('tenders.noCandidatesHint')}
             </p>
           ) : (
             <div className="border border-gray-200 rounded-lg divide-y max-h-72 overflow-y-auto">
@@ -139,8 +137,8 @@ export default function TenderTargetingFields({ value, onChange, lockedIds = [] 
                       <span className="text-gray-400 font-mono text-xs ml-2">{c.supplier_code}</span>
                       <span className="block text-xs text-gray-500 truncate">{(c.location_names || []).join(', ')}</span>
                     </span>
-                    {isLocked && <span className="text-xs text-green-700 flex items-center gap-1"><Lock size={12} /> a soumis</span>}
-                    {!c.has_account && <span className="text-xs text-gray-500">sans compte portail</span>}
+                    {isLocked && <span className="text-xs text-green-700 flex items-center gap-1"><Lock size={12} /> {t('tenders.submitted')}</span>}
+                    {!c.has_account && <span className="text-xs text-gray-500">{t('tenders.noAccount')}</span>}
                   </label>
                 );
               })}

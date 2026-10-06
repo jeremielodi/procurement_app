@@ -35,6 +35,7 @@ const requisitionImport = require('../controllers/requisition/importItems');
 const referenceController = require('../controllers/ReferenceController');
 const { singleDocumentMiddleware } = require('../utils/supplierDocuments');
 const requisitionTimeline = require('../services/RequisitionTimelineService');
+const i18n = require('../i18n');
 const { authenticate, hasPermission, hasAnyPermission } = require('../middleware/auth');
 const { tenantContext, tenantGuard } = require('../middleware/tenant');
 const { logoMiddleware } = require('../utils/logoUpload');
@@ -56,6 +57,7 @@ router.get('/auth/profile', authenticate, authController.getProfile);
 router.post('/auth/forgot-password', authController.forgotPassword);
 // Avant tenantContext : accessible à tous les types de compte (fournisseur, super admin)
 router.post('/auth/change-password', authenticate, authController.changePassword);
+router.put('/auth/language', authenticate, authController.setLanguage.bind(authController));
 
 // Inscription fournisseur + logo (publics)
 router.post('/auth/register-supplier',
@@ -131,12 +133,12 @@ router.post('/requisitions/import-items',
   requisitionImport.importItems
 );
 
-// Suivi lisible du workflow (étapes + historique en français)
+// Suivi lisible du workflow (étapes + historique dans la langue de la requête : Accept-Language / ?lang=)
 router.get('/requisitions/:id/timeline',
   hasPermission('VIEW_REQUISITIONS'),
   async (req, res) => {
     try {
-      const data = await requisitionTimeline.build(req.params.id);
+      const data = await requisitionTimeline.build(req.params.id, i18n.fromRequest(req));
       if (!data) return res.status(404).json({ success: false, message: 'Réquisition introuvable' });
       res.json({ success: true, data });
     } catch (error) {

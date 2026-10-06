@@ -39,6 +39,7 @@ import Modal from '../Common/Modal'
 import toast from 'react-hot-toast'
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters'
 import PurchaseOrderViewer from './PurchaseOrderViewer'
+import { t } from '../../i18n'
 
 export default function PODetail() {
   const { id } = useParams()
@@ -99,12 +100,12 @@ export default function PODetail() {
     mutationFn: (data) => purchaseOrderService.approve(po.id, { taskId, comments: data.comments }),
     onSuccess: () => {
       queryClient.invalidateQueries(['purchase-order', id])
-      toast.success('Commande approuvée avec succès')
+      toast.success(t('po.approved'))
       setShowApproveModal(false)
       setPoApprovalComment('')
     },
     onError: (error) => {
-      toast.error(error.message || "Erreur lors de l'approbation")
+      toast.error(error.message || t('po.approveError'))
     }
   })
 
@@ -113,12 +114,12 @@ export default function PODetail() {
     mutationFn: (data) => purchaseOrderService.reject(po.id, { reason: data.reason, taskId }),
     onSuccess: () => {
       queryClient.invalidateQueries(['purchase-order', id])
-      toast.success('Commande rejetée')
+      toast.success(t('po.rejected'))
       setShowRejectModal(false)
       setRejectionReason('')
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors du rejet')
+      toast.error(error.message || t('po.rejectError'))
     }
   })
 
@@ -127,10 +128,10 @@ export default function PODetail() {
     mutationFn: () => purchaseOrderService.send(po.id),
     onSuccess: () => {
       queryClient.invalidateQueries(['purchase-order', id])
-      toast.success('Commande envoyée au fournisseur')
+      toast.success(t('po.sendOk'))
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de l\'envoi')
+      toast.error(error.message || t('po.sendError'))
     }
   })
 
@@ -138,11 +139,11 @@ export default function PODetail() {
   const deleteMutation = useMutation({
     mutationFn: () => purchaseOrderService.delete(id),
     onSuccess: () => {
-      toast.success('Commande supprimée avec succès')
+      toast.success(t('po.deleted'))
       navigate('/purchase-orders')
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la suppression')
+      toast.error(error.message || t('requisitions.deleteError'))
     }
   })
 
@@ -156,7 +157,7 @@ export default function PODetail() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-96">
-        <LoadingSpinner size="lg" text="Chargement de la commande..." />
+        <LoadingSpinner size="lg" text={t('po.loading')} />
       </div>
     )
   }
@@ -165,8 +166,8 @@ export default function PODetail() {
     return (
       <div className="p-6">
         <ErrorAlert
-          title="Erreur de chargement"
-          message="Impossible de charger les détails de la commande"
+          title={t('requisitions.loadError')}
+          message={t('po.loadErrorMsg')}
           details={error.message}
           onRetry={() => window.location.reload()}
         />
@@ -178,14 +179,14 @@ export default function PODetail() {
     return (
       <div className="p-6 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900">Commande non trouvée</h3>
-        <p className="mt-1 text-gray-500">La commande que vous recherchez n'existe pas.</p>
+        <h3 className="text-lg font-medium text-gray-900">{t('po.notFound')}</h3>
+        <p className="mt-1 text-gray-500">{t('po.notFoundMsg')}</p>
         <button
           onClick={() => navigate('/purchase-orders')}
           className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <ArrowLeft size={18} className="mr-2" />
-          Retour à la liste
+          {t('reqDetail.backToList')}
         </button>
       </div>
     )
@@ -206,12 +207,12 @@ export default function PODetail() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-gray-800">
-                Commande {po.po_number}
+                {t('po.heading', { number: po.po_number })}
               </h1>
               <StatusBadge status={po.status} size="lg" />
             </div>
             <p className="text-gray-500 mt-1">
-              Créée le {formatDateTime(po.created_at)}
+              {t('po.createdOn', { date: formatDateTime(po.created_at) })}
             </p>
           </div>
         </div>
@@ -231,14 +232,14 @@ export default function PODetail() {
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Edit size={18} />
-                Modifier
+                {t('common.edit')}
               </Link>
               <button
                 onClick={() => setShowDeleteModal(true)}
                 className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
               >
                 <Trash2 size={18} />
-                Supprimer
+                {t('common.delete')}
               </button>
             </>
           )}
@@ -250,14 +251,14 @@ export default function PODetail() {
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 <CheckCircle size={18} />
-                Approuver
+                {t('common.approve')}
               </button>
               <button
                 onClick={() => setShowRejectModal(true)}
                 className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
               >
                 <XCircle size={18} />
-                Rejeter
+                {t('common.reject')}
               </button>
             </>
           )}
@@ -272,17 +273,17 @@ export default function PODetail() {
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <Package size={20} />
-                Articles commandés
+                {t('po.orderedItems')}
               </h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Quantité</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Prix unitaire</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('common.description')}</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('common.quantity')}</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('common.unitPrice')}</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('common.total')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -309,7 +310,7 @@ export default function PODetail() {
                 <tfoot className="bg-gray-50">
                   <tr>
                     <td colSpan="3" className="px-6 py-4 text-right font-semibold text-gray-800">
-                      Total
+                      {t('common.total')}
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-lg text-blue-600">
                       {formatCurrency(po.total_amount, po.currency)}
@@ -326,7 +327,7 @@ export default function PODetail() {
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                   <Truck size={20} />
-                  Historique des livraisons
+                  {t('po.deliveryHistory')}
                 </h2>
               </div>
               <div className="divide-y divide-gray-200">
@@ -335,14 +336,14 @@ export default function PODetail() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium text-gray-800">
-                          Livraison du {formatDate(delivery.date)}
+                          {t('po.deliveryOf', { date: formatDate(delivery.date) })}
                         </p>
                         <p className="text-sm text-gray-500 mt-1">
-                          {delivery.quantity} articles livrés
+                          {t('po.itemsDelivered', { count: delivery.quantity })}
                         </p>
                         {delivery.tracking_number && (
                           <p className="text-sm text-gray-500">
-                            N° suivi: {delivery.tracking_number}
+                            {t('po.tracking', { number: delivery.tracking_number })}
                           </p>
                         )}
                       </div>
@@ -363,7 +364,7 @@ export default function PODetail() {
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                   <Building2 size={20} />
-                  Fournisseur
+                  {t('common.supplier')}
                 </h2>
               </div>
               <div className="p-6 space-y-3">
@@ -395,23 +396,23 @@ export default function PODetail() {
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <Truck size={20} />
-                Livraison
+                {t('po.deliverySection')}
               </h2>
             </div>
             <div className="p-6 space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Date commande:</span>
+                <span className="text-sm text-gray-500">{t('po.orderDateLabel')}</span>
                 <span className="text-sm font-medium">{formatDate(po.order_date)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Date livraison prévue:</span>
+                <span className="text-sm text-gray-500">{t('po.expectedDeliveryLabel')}</span>
                 <span className="text-sm font-medium">
-                  {po.delivery_date ? formatDate(po.delivery_date) : 'Non définie'}
+                  {po.delivery_date ? formatDate(po.delivery_date) : t('po.notDefined')}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Adresse de livraison:</span>
-                <span className="text-sm font-medium">{po.shipping_address || 'Non spécifiée'}</span>
+                <span className="text-sm text-gray-500">{t('po.shippingAddressLabel')}</span>
+                <span className="text-sm font-medium">{po.shipping_address || t('po.notSpecified')}</span>
               </div>
             </div>
           </div>
@@ -422,7 +423,7 @@ export default function PODetail() {
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                   <FileText size={20} />
-                  Réquisition associée
+                  {t('po.linkedRequisition')}
                 </h2>
               </div>
               <div className="p-6">
@@ -446,7 +447,7 @@ export default function PODetail() {
               <div className="p-4 border-b border-gray-200">
                 <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                   <Truck size={16} />
-                  Flux P2P
+                  {t('po.p2pFlow')}
                 </h2>
               </div>
               <div className="p-4 space-y-3">
@@ -454,7 +455,7 @@ export default function PODetail() {
                 <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg p-2.5">
                   <Info size={13} className="text-blue-500 mt-0.5 shrink-0" />
                   <p className="text-xs text-blue-700">
-                    Les actions (GRN, SAN, Facture, Paiement) sont déclenchées par GoFlow et apparaissent dans votre <strong>liste des tâches</strong>.
+                    {t('po.p2pNoteBefore')} <strong>{t('po.taskList')}</strong>.
                   </p>
                 </div>
 
@@ -462,7 +463,7 @@ export default function PODetail() {
                 {grns.length > 0 && (
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase mb-1.5 flex items-center gap-1">
-                      <Package size={12} /> Bons de réception (GRN)
+                      <Package size={12} /> {t('po.grns')}
                     </p>
                     <div className="space-y-1">
                       {grns.map(g => (
@@ -476,7 +477,7 @@ export default function PODetail() {
                             g.status === 'COMPLETE' ? 'bg-green-100 text-green-700' :
                             g.status === 'PARTIAL'  ? 'bg-yellow-100 text-yellow-700' :
                             'bg-gray-100 text-gray-600'
-                          }`}>{g.status}</span>
+                          }`}>{t(`grnStatus.${g.status}`, { defaultValue: g.status })}</span>
                         </Link>
                       ))}
                     </div>
@@ -487,7 +488,7 @@ export default function PODetail() {
                 {sans.length > 0 && (
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase mb-1.5 flex items-center gap-1">
-                      <FileCheck size={12} /> Acceptations service (SAN)
+                      <FileCheck size={12} /> {t('po.sans')}
                     </p>
                     <div className="space-y-1">
                       {sans.map(s => (
@@ -501,7 +502,7 @@ export default function PODetail() {
                             s.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
                             s.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
                             'bg-gray-100 text-gray-600'
-                          }`}>{s.status}</span>
+                          }`}>{t(`sanStatus.${s.status}`, { defaultValue: s.status })}</span>
                         </Link>
                       ))}
                     </div>
@@ -511,7 +512,7 @@ export default function PODetail() {
                 {/* Aucun document encore */}
                 {grns.length === 0 && sans.length === 0 && (
                   <p className="text-xs text-gray-400 text-center py-2">
-                    Aucun document P2P enregistré pour cette commande.
+                    {t('po.noP2p')}
                   </p>
                 )}
               </div>
@@ -524,7 +525,7 @@ export default function PODetail() {
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                   <CheckCircle size={20} />
-                  Approbations
+                  {t('po.approvals')}
                 </h2>
               </div>
               <div className="divide-y divide-gray-200">
@@ -566,38 +567,38 @@ export default function PODetail() {
       <Modal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        title="Supprimer la commande"
+        title={t('po.deleteTitle')}
         type="danger"
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={() => deleteMutation.mutate()}
         isLoading={deleteMutation.isPending}
       >
-        <p>Êtes-vous sûr de vouloir supprimer la commande <strong>{po.po_number}</strong> ?</p>
-        <p className="text-sm text-gray-500 mt-2">Cette action est irréversible.</p>
+        <p>{t('po.deleteConfirm')} <strong>{po.po_number}</strong> ?</p>
+        <p className="text-sm text-gray-500 mt-2">{t('requisitions.irreversible')}</p>
       </Modal>
 
       {/* Modal d'approbation */}
       <Modal
         isOpen={showApproveModal}
         onClose={() => setShowApproveModal(false)}
-        title="Approuver la commande"
+        title={t('po.approveTitle')}
         type="success"
-        confirmText="Approuver"
-        cancelText="Annuler"
+        confirmText={t('common.approve')}
+        cancelText={t('common.cancel')}
         onConfirm={() => approveMutation.mutate({ comments: poApprovalComment })}
         isLoading={approveMutation.isPending}
       >
         <div className="space-y-4">
-          <p>Êtes-vous sûr de vouloir approuver la commande <strong>{po.po_number}</strong> ?</p>
+          <p>{t('po.approveConfirmNumber')} <strong>{po.po_number}</strong> ?</p>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Commentaire <span className="text-gray-400 font-normal">(optionnel)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.comment')} <span className="text-gray-400 font-normal">{t('po.optional')}</span></label>
             <textarea
               value={poApprovalComment}
               onChange={(e) => setPoApprovalComment(e.target.value)}
               rows="2"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="Note pour le demandeur…"
+              placeholder={t('po.notePlaceholder')}
             />
           </div>
         </div>
@@ -607,19 +608,19 @@ export default function PODetail() {
       <Modal
         isOpen={showRejectModal}
         onClose={() => setShowRejectModal(false)}
-        title="Rejeter la commande"
+        title={t('po.rejectTitle')}
         type="danger"
-        confirmText="Rejeter"
-        cancelText="Annuler"
+        confirmText={t('common.reject')}
+        cancelText={t('common.cancel')}
         onConfirm={() => rejectMutation.mutate({ reason: rejectionReason, taskId })}
         isLoading={rejectMutation.isPending}
         confirmDisabled={!canReject}
       >
         <div className="space-y-4">
-          <p>Êtes-vous sûr de vouloir rejeter la commande <strong>{po.po_number}</strong> ?</p>
+          <p>{t('po.rejectConfirm')} <strong>{po.po_number}</strong> ?</p>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Motif du rejet <span className="text-red-500">*</span>
+              {t('po.rejectReason')} <span className="text-red-500">*</span>
             </label>
             <textarea
               value={rejectionReason}
@@ -628,7 +629,7 @@ export default function PODetail() {
               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                 rejectionReason.trim() ? 'border-gray-300' : 'border-red-300 bg-red-50'
               }`}
-              placeholder="Veuillez indiquer la raison du rejet…"
+              placeholder={t('po.rejectPlaceholder')}
             />
           </div>
         </div>

@@ -1,6 +1,7 @@
 // src/services/api.js
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { t, getLang } from '../i18n'
 
 const api = axios.create({
   baseURL: '/api',
@@ -16,6 +17,8 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    // Langue de l'interface (messages / documents du backend)
+    config.headers['Accept-Language'] = getLang()
     return config
   },
   (error) => {
@@ -42,11 +45,11 @@ api.interceptors.response.use(
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
-      toast.error('Session expirée, veuillez vous reconnecter')
+      toast.error(t('services.sessionExpired'))
       return Promise.reject(error)
     }
     
-    const message = error.response?.data?.message || 'Une erreur est survenue'
+    const message = error.response?.data?.message || t('common.errorOccurred')
     toast.error(message)
     return Promise.reject(error)
   }

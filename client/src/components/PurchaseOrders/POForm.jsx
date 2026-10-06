@@ -6,6 +6,7 @@ import { purchaseOrderService } from '../../services/purchaseOrderService';
 import requisitionService from '../../services/requisitionService';
 import { supplierService } from '../../services/supplierService';
 import { useCurrency } from '../../contexts/EnterpriseContext';
+import { t, getLocale } from '../../i18n';
 
 export default function POForm() {
   const { requisitionId, taskId } = useParams();
@@ -28,7 +29,7 @@ export default function POForm() {
     // Bons de commande : fournisseurs préqualifiés uniquement (comportement inchangé)
     supplierService.getAll({ prequalifiedOnly: true })
       .then(r => setSuppliers(r.data || r || []))
-      .catch(() => toast.error('Impossible de charger les fournisseurs'));
+      .catch(() => toast.error(t('po.loadSuppliersError')));
   }, []);
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export default function POForm() {
         }));
         setItems(reqItems.length ? reqItems : [emptyItem()]);
       })
-      .catch(() => toast.error('Impossible de charger la réquisition'))
+      .catch(() => toast.error(t('po.loadRequisitionError')))
       .finally(() => setLoadingReq(false));
   }, [requisitionId]);
 
@@ -71,8 +72,8 @@ export default function POForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!supplierId) { toast.error('Sélectionnez un fournisseur'); return; }
-    if (items.length === 0) { toast.error('Ajoutez au moins un article'); return; }
+    if (!supplierId) { toast.error(t('po.selectSupplier')); return; }
+    if (items.length === 0) { toast.error(t('po.addItemRequired')); return; }
 
     setLoading(true);
     try {
@@ -90,13 +91,13 @@ export default function POForm() {
       });
 
       if (res.success) {
-        toast.success(`Bon de commande ${res.data.poNumber} créé`);
+        toast.success(t('po.created', { number: res.data.poNumber }));
         navigate(`/purchase-orders/${res.data.id}`);
       } else {
-        toast.error(res.message || 'Erreur lors de la création');
+        toast.error(res.message || t('po.createError'));
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Erreur lors de la création');
+      toast.error(err.response?.data?.message || t('po.createError'));
     } finally {
       setLoading(false);
     }
@@ -113,16 +114,16 @@ export default function POForm() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 text-sm">
-        <ArrowLeft size={16} /> Retour
+        <ArrowLeft size={16} /> {t('common.back')}
       </button>
 
       <div className="flex items-center gap-3 mb-6">
         <ShoppingCart size={28} className="text-green-600" />
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Nouveau bon de commande</h1>
+          <h1 className="text-xl font-bold text-gray-900">{t('po.newTitle')}</h1>
           {requisition && (
             <p className="text-gray-500 text-sm">
-              Réquisition {requisition.requisition_number} — {requisition.title}
+              {t('po.requisitionRef', { number: requisition.requisition_number, title: requisition.title })}
             </p>
           )}
         </div>
@@ -133,20 +134,20 @@ export default function POForm() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm mb-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
-              <span className="font-medium text-blue-700">Réquisition</span>
+              <span className="font-medium text-blue-700">{t('common.requisition')}</span>
               <p>{requisition.requisition_number}</p>
             </div>
             <div>
-              <span className="font-medium text-blue-700">Demandeur</span>
+              <span className="font-medium text-blue-700">{t('po.requester')}</span>
               <p>{requisition.requester_username || requisition.requester_name || '—'}</p>
             </div>
             <div>
-              <span className="font-medium text-blue-700">Département</span>
+              <span className="font-medium text-blue-700">{t('po.department')}</span>
               <p>{requisition.department_name || requisition.department_code || '—'}</p>
             </div>
             <div>
-              <span className="font-medium text-blue-700">Montant estimé</span>
-              <p>{Number(requisition.estimated_amount || 0).toLocaleString()} {currency.code}</p>
+              <span className="font-medium text-blue-700">{t('po.estimatedAmount')}</span>
+              <p>{Number(requisition.estimated_amount || 0).toLocaleString(getLocale())} {currency.code}</p>
             </div>
           </div>
         </div>
@@ -155,11 +156,11 @@ export default function POForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* En-tête PO */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
-          <h2 className="font-semibold text-gray-800">Informations générales</h2>
+          <h2 className="font-semibold text-gray-800">{t('po.generalInfo')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fournisseur <span className="text-red-500">*</span>
+                {t('common.supplier')} <span className="text-red-500">*</span>
               </label>
               <select
                 required
@@ -167,14 +168,14 @@ export default function POForm() {
                 onChange={e => setSupplierId(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Sélectionner un fournisseur…</option>
+                <option value="">{t('po.selectSupplierPlaceholder')}</option>
                 {suppliers.map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date de commande</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('po.orderDate')}</label>
               <input
                 type="date"
                 value={orderDate}
@@ -183,7 +184,7 @@ export default function POForm() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date de livraison prévue</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('po.expectedDelivery')}</label>
               <input
                 type="date"
                 value={deliveryDate}
@@ -192,23 +193,23 @@ export default function POForm() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Adresse de livraison</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('po.shippingAddress')}</label>
               <input
                 type="text"
                 value={shippingAddress}
                 onChange={e => setShippingAddress(e.target.value)}
-                placeholder="Adresse de livraison…"
+                placeholder={t('po.shippingPlaceholder')}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.notes')}</label>
             <textarea
               rows={2}
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Instructions ou notes pour le fournisseur…"
+              placeholder={t('po.notesPlaceholder')}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -217,13 +218,13 @@ export default function POForm() {
         {/* Articles */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-800">Articles</h2>
+            <h2 className="font-semibold text-gray-800">{t('po.items')}</h2>
             <button
               type="button"
               onClick={() => setItems(prev => [...prev, emptyItem()])}
               className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
             >
-              <Plus size={14} /> Ajouter
+              <Plus size={14} /> {t('common.add')}
             </button>
           </div>
 
@@ -231,8 +232,8 @@ export default function POForm() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {['Description', 'Qté', 'Prix unitaire', 'Total', ''].map(h => (
-                    <th key={h} className="text-left px-3 py-2 font-medium text-gray-600">{h}</th>
+                  {[t('common.description'), t('po.qty'), t('common.unitPrice'), t('common.total'), ''].map((h, i) => (
+                    <th key={i} className="text-left px-3 py-2 font-medium text-gray-600">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -243,7 +244,7 @@ export default function POForm() {
                       <input
                         required
                         className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
-                        placeholder="Description de l'article"
+                        placeholder={t('po.itemDescription')}
                         value={item.description}
                         onChange={e => updateItem(i, 'description', e.target.value)}
                       />
@@ -265,7 +266,7 @@ export default function POForm() {
                       />
                     </td>
                     <td className="px-3 py-2 font-medium text-right text-gray-700 whitespace-nowrap">
-                      {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toLocaleString()} {currency.code}
+                      {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toLocaleString(getLocale())} {currency.code}
                     </td>
                     <td className="px-3 py-2">
                       {items.length > 1 && (
@@ -279,9 +280,9 @@ export default function POForm() {
               </tbody>
               <tfoot className="bg-gray-50 border-t border-gray-200">
                 <tr>
-                  <td colSpan={3} className="px-3 py-2 text-right font-semibold text-gray-700">Total</td>
+                  <td colSpan={3} className="px-3 py-2 text-right font-semibold text-gray-700">{t('common.total')}</td>
                   <td className="px-3 py-2 font-bold text-gray-900 text-right whitespace-nowrap">
-                    {totalAmount.toLocaleString()} {currency.code}
+                    {totalAmount.toLocaleString(getLocale())} {currency.code}
                   </td>
                   <td />
                 </tr>
@@ -297,7 +298,7 @@ export default function POForm() {
             onClick={() => navigate(-1)}
             className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
           >
-            Annuler
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -305,7 +306,7 @@ export default function POForm() {
             className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
           >
             <Save size={16} />
-            {loading ? 'Enregistrement…' : 'Créer le bon de commande'}
+            {loading ? t('po.saving') : t('po.create')}
           </button>
         </div>
       </form>

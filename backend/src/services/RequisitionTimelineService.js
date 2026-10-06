@@ -1,10 +1,12 @@
 // backend/src/services/RequisitionTimelineService.js
 // Suivi lisible d'une réquisition :
 //  - steps  : le workflow complet procure-to-pay, étape par étape (fait / en cours / à venir / échec)
-//  - events : ce qui s'est réellement passé, en français, une ligne par action
+//  - events : ce qui s'est réellement passé, une ligne par action
+// Textes dans la langue demandée (src/i18n/locales : workflow.*, timeline.*)
 const db = require('../config/database');
+const i18n = require('../i18n');
 const {
-  TASK_GROUPS, METHOD_LABELS, REASON_LABELS, MATCH_LABELS, taskKey, taskLabel,
+  TASK_CANDIDATE_GROUPS, taskKey, taskLabel: rawTaskLabel, groupLabel, methodLabel, reasonLabel, matchLabel,
 } = require('../utils/workflowLabels');
 
 const APPROVAL_KEYS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
@@ -21,53 +23,56 @@ const TASK_STEP = {
   Activity_GoodsReceipt: 'grn', Activity_ServiceAcceptance: 'san', Activity_EnterInvoice: 'invoice', Activity_ProcessPayment: 'payment',
 };
 
-const fmtNum = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(parseFloat(n) || 0);
+const fmtNum = (n, lang) => new Intl.NumberFormat(i18n.locale(lang), { maximumFractionDigits: 2 }).format(parseFloat(n) || 0);
 
 function parseJson(s) {
   if (!s || typeof s !== 'string' || !s.trim().startsWith('{')) return null;
   try { return JSON.parse(s); } catch (_) { return null; }
 }
 
-function duration(from, to) {
+function duration(from, to, T) {
   const ms = new Date(to) - new Date(from);
   if (!(ms > 0)) return null;
   const min = Math.round(ms / 60000);
-  if (min < 1) return 'moins d\'une minute';
-  if (min < 60) return `${min} min`;
+  if (min < 1) return T('timeline.lessThanMinute');
+  if (min < 60) return T('timeline.minutes', { n: min });
   const h = Math.floor(min / 60);
-  if (h < 24) return `${h} h ${min % 60 ? `${min % 60} min` : ''}`.trim();
+  if (h < 24) return min % 60 ? T('timeline.hoursMinutes', { h, m: min % 60 }) : T('timeline.hours', { h });
   const d = Math.floor(h / 24);
-  return `${d} j ${h % 24 ? `${h % 24} h` : ''}`.trim();
+  return h % 24 ? T('timeline.daysHours', { d, h: h % 24 }) : T('timeline.days', { d });
 }
 
 /** Détails lisibles à partir des variables saisies à la complétion d'une tâche */
-function describeVars(vars = {}, links) {
+function describeVars(vars = {}, links, T, lang) {
   const details = [];
   let decision = null;
   const approved = vars.approved ?? vars.poApproved;
   if (approved === true || approved === 'true') decision = 'APPROVED';
   if (approved === false || approved === 'false') decision = 'REJECTED';
-  if (vars.procurementMethod) details.push(`Méthode retenue : ${METHOD_LABELS[vars.procurementMethod] || vars.procurementMethod}`);
+  if (vars.procurementMethod) details.push(T('timeline.method', { value: methodLabel(vars.procurementMethod, lang) }));
   if (vars.poNumber) {
-    details.push(`Bon de commande : ${vars.poNumber}`);
+    details.push(T('timeline.po', { value: vars.poNumber }));
     if (vars.poId) links.push({ label: vars.poNumber, to: `/purchase-orders/${vars.poId}` });
   }
-  if (vars.grnNumber) details.push(`Bon de réception : ${vars.grnNumber}`);
-  if (vars.grnCompliant !== undefined) details.push(`Réception conforme : ${vars.grnCompliant === true || vars.grnCompliant === 'true' ? 'oui' : 'non'}`);
-  if (vars.sanNumber) details.push(`Acceptation de service : ${vars.sanNumber}`);
-  if (vars.invoiceNumber) details.push(`Facture : ${vars.invoiceNumber}`);
-  if (vars.invoiceAmount) details.push(`Montant facturé : ${fmtNum(vars.invoiceAmount)}`);
-  if (vars.paymentNumber) details.push(`Paiement : ${vars.paymentNumber}`);
-  if (vars.paymentAmount) details.push(`Montant payé : ${fmtNum(vars.paymentAmount)}`);
-  if (vars.tenderNumber) details.push(`Appel d'offres : ${vars.tenderNumber}`);
+  if (vars.grnNumber) details.push(T('timeline.grn', { value: vars.grnNumber }));
+  if (vars.grnCompliant !== undefined) details.push(T('timeline.grnCompliant', { value: T(vars.grnCompliant === true || vars.grnCompliant === 'true' ? 'timeline.yes' : 'timeline.no') }));
+  if (vars.sanNumber) details.push(T('timeline.san', { value: vars.sanNumber }));
+  if (vars.invoiceNumber) details.push(T('timeline.invoice', { value: vars.invoiceNumber }));
+  if (vars.invoiceAmount) details.push(T('timeline.invoiceAmount', { value: fmtNum(vars.invoiceAmount, lang) }));
+  if (vars.paymentNumber) details.push(T('timeline.payment', { value: vars.paymentNumber }));
+  if (vars.paymentAmount) details.push(T('timeline.paymentAmount', { value: fmtNum(vars.paymentAmount, lang) }));
+  if (vars.tenderNumber) details.push(T('timeline.tender', { value: vars.tenderNumber }));
   const comment = vars.comment || vars.comments || vars.rejectionReason;
-  if (comment) details.push(`Commentaire : « ${comment} »`);
+  if (comment) details.push(T('timeline.comment', { value: comment }));
   return { details, decision };
 }
 
 class RequisitionTimelineService {
 
-  async build(requisitionId) {
+  async build(requisitionId, lang = i18n.DEFAULT_LANG) {
+    const T = i18n.translator(lang);
+    const taskLabel = (k) => rawTaskLabel(k, lang);
+    const role = (k) => groupLabel(k, lang);
     const req = await db.one(
       `SELECT r.id, r.requisition_number, r.title, r.status, r.estimated_amount, r.created_at,
               r.process_instance_id, r.rejected_reason,
@@ -138,20 +143,20 @@ class RequisitionTimelineService {
         const t = tasks.get(row.task_id) || { key, label: taskLabel(key || row.task_name), createdAt: null };
         t.completedAt = row.performed_at;
         const links = [];
-        const { details, decision } = describeVars(json?.user_vars || {}, links);
+        const { details, decision } = describeVars(json?.user_vars || {}, links, T, lang);
         // Tâches complétées via leur formulaire : l'auteur est sur le document
         const docActor = key === 'Activity_POApproval' ? nameById.get(pos.find(p => p.approved_by)?.approved_by)
           : key === 'Activity_ProcessPayment' ? nameById.get(payments[0]?.created_by || payments[0]?.approved_by)
           : null;
         // Auteur inconnu (données antérieures) : on indique le rôle attendu plutôt que « Système »
-        const actor = who(row) || t.claimedBy || docActor || (TASK_GROUPS[key] ? `Rôle : ${TASK_GROUPS[key]}` : 'Système');
-        const took = t.createdAt ? duration(t.createdAt, row.performed_at) : null;
-        if (took) details.push(`Traitée en ${took}`);
+        const actor = who(row) || t.claimedBy || docActor || (role(key) ? T('timeline.role', { role: role(key) }) : T('timeline.system'));
+        const took = t.createdAt ? duration(t.createdAt, row.performed_at, T) : null;
+        if (took) details.push(T('timeline.tookTime', { time: took }));
         t.decision = decision;
         t.event = {
           date: row.performed_at,
           kind: decision === 'REJECTED' ? 'danger' : 'success',
-          title: `${t.label}${decision === 'APPROVED' ? ' — approuvée' : decision === 'REJECTED' ? ' — rejetée' : ' — terminée'}`,
+          title: `${t.label}${T(decision === 'APPROVED' ? 'timeline.approved' : decision === 'REJECTED' ? 'timeline.rejected' : 'timeline.completed')}`,
           actor,
           details,
           links,
@@ -161,17 +166,17 @@ class RequisitionTimelineService {
         continue;
       }
       // Décision enregistrée par TaskController (doublon de TASK_COMPLETED : on complète l'événement)
-      if ((action === 'APPROVED' || action === 'REJECTED') && TASK_GROUPS[row.task_name]) {
+      if ((action === 'APPROVED' || action === 'REJECTED') && TASK_CANDIDATE_GROUPS[row.task_name]) {
         const t = tasks.get(row.task_id);
         if (t?.event) {
-          if (row.comments && !t.event.details.some(d => d.startsWith('Commentaire'))) {
-            t.event.details.unshift(`Commentaire : « ${row.comments} »`);
+          if (row.comments && !t.event.details.some(d => d.startsWith(T('timeline.commentPrefix')))) {
+            t.event.details.unshift(T('timeline.comment', { value: row.comments }));
           }
         } else {
           events.push({
             date: row.performed_at, kind: action === 'REJECTED' ? 'danger' : 'success',
-            title: `${taskLabel(row.task_name)} — ${action === 'REJECTED' ? 'rejetée' : 'approuvée'}`,
-            actor: who(row) || 'Système', details: row.comments ? [`Commentaire : « ${row.comments} »`] : [], links: [],
+            title: `${taskLabel(row.task_name)} — ${T(action === 'REJECTED' ? 'timeline.rejectedWord' : 'timeline.approvedWord')}`,
+            actor: who(row) || T('timeline.system'), details: row.comments ? [T('timeline.comment', { value: row.comments })] : [], links: [],
           });
         }
         continue;
@@ -181,44 +186,44 @@ class RequisitionTimelineService {
       if (action === 'NOTIFICATION_SENT' || action.startsWith('CLASSIFIED_')) continue; // bruit / doublon
 
       if (action === 'CREATED') {
-        events.push({ date: row.performed_at, kind: 'info', title: 'Réquisition créée', actor: who(row) || req.requester_name, details: [], links: [] });
+        events.push({ date: row.performed_at, kind: 'info', title: T('timeline.created'), actor: who(row) || req.requester_name, details: [], links: [] });
       } else if (action === 'PROCESS_STARTED') {
-        events.push({ date: row.performed_at, kind: 'info', title: 'Circuit de validation démarré', actor: 'Système', details: [], links: [] });
+        events.push({ date: row.performed_at, kind: 'info', title: T('timeline.processStarted'), actor: T('timeline.system'), details: [], links: [] });
       } else if (action === 'PROCESS_START_FAILED') {
         const reason = (row.comments || '').split(':').slice(1).join(':').trim();
-        events.push({ date: row.performed_at, kind: 'danger', title: 'Échec du démarrage du circuit de validation', actor: 'Système', details: reason ? [reason] : ['Le moteur de workflow n\'a pas répondu'], links: [] });
+        events.push({ date: row.performed_at, kind: 'danger', title: T('timeline.processStartFailed'), actor: T('timeline.system'), details: reason ? [reason] : [T('timeline.engineNoResponse')], links: [] });
       } else if (name.startsWith('Budget Check - ')) {
         const m = /Available:\s*([\d.]+).*Requested:\s*([\d.]+)/i.exec(row.comments || '');
-        budgetLines.push(`${name.replace('Budget Check - ', '')} : demandé ${m ? fmtNum(m[2]) : '?'} / disponible ${m ? fmtNum(m[1]) : '?'}${action === 'Budget Available' ? '' : ' — insuffisant'}`);
+        budgetLines.push(T('timeline.budgetLine', { line: name.replace('Budget Check - ', ''), requested: m ? fmtNum(m[2], lang) : '?', available: m ? fmtNum(m[1], lang) : '?' }) + (action === 'Budget Available' ? '' : T('timeline.insufficientSuffix')));
       } else if (name === 'Budget Check Summary') {
         const ok = action === 'All Budgets Available';
         budget = { ok, date: row.performed_at };
-        events.push({ date: row.performed_at, kind: ok ? 'success' : 'danger', title: ok ? 'Budget vérifié — disponible' : 'Budget vérifié — insuffisant', actor: 'Système', details: [...budgetLines], links: [] });
+        events.push({ date: row.performed_at, kind: ok ? 'success' : 'danger', title: ok ? T('timeline.budgetOk') : T('timeline.budgetKo'), actor: T('timeline.system'), details: [...budgetLines], links: [] });
       } else if (name === 'Procurement Classification') {
         classification = { method: action, date: row.performed_at };
         events.push({
-          date: row.performed_at, kind: 'info', title: `Méthode d'achat : ${METHOD_LABELS[action] || action}`, actor: 'Système',
-          details: row.comments ? [`Motif : ${REASON_LABELS[row.comments] || row.comments}`] : [], links: [],
+          date: row.performed_at, kind: 'info', title: T('timeline.methodTitle', { method: methodLabel(action, lang) }), actor: T('timeline.system'),
+          details: row.comments ? [T('timeline.reason', { reason: reasonLabel(row.comments, lang) })] : [], links: [],
         });
       } else if (name === 'Offer Analysis') {
-        events.push({ date: row.performed_at, kind: 'info', title: 'Analyse des offres terminée', actor: 'Système', details: [], links: [] });
+        events.push({ date: row.performed_at, kind: 'info', title: T('timeline.offerAnalysis'), actor: T('timeline.system'), details: [], links: [] });
       } else if (name === 'Send PO Notification') {
-        events.push({ date: row.performed_at, kind: 'info', title: 'Bon de commande envoyé au fournisseur par email', actor: 'Système', details: [], links: [] });
+        events.push({ date: row.performed_at, kind: 'info', title: T('timeline.poSent'), actor: T('timeline.system'), details: [], links: [] });
       } else if (name === 'Invoice 3-Way Match') {
         events.push({
           date: row.performed_at, kind: action === 'MATCHED' ? 'success' : 'warning',
-          title: `Rapprochement commande / réception / facture : ${MATCH_LABELS[action] || action}`, actor: 'Système',
+          title: T('timeline.matching', { status: matchLabel(action, lang) }), actor: T('timeline.system'),
           details: row.comments ? [row.comments] : [], links: [],
         });
       } else if (action === 'TENDER_PUBLISHED' || action === 'TENDER_AWARDED') {
         events.push({
           date: row.performed_at, kind: action === 'TENDER_AWARDED' ? 'success' : 'info',
-          title: action === 'TENDER_AWARDED' ? 'Marché attribué' : 'Appel d\'offres publié', actor: who(row) || 'Système',
+          title: action === 'TENDER_AWARDED' ? T('timeline.awarded') : T('timeline.tenderPublished'), actor: who(row) || T('timeline.system'),
           details: row.comments ? [row.comments] : [], links: tender ? [{ label: tender.tender_number, to: `/tenders/${tender.id}` }] : [],
         });
       } else {
         events.push({
-          date: row.performed_at, kind: 'info', title: taskLabel(key || name) || action, actor: who(row) || 'Système',
+          date: row.performed_at, kind: 'info', title: taskLabel(key || name) || action, actor: who(row) || T('timeline.system'),
           details: [action, json ? null : row.comments].filter(Boolean), links: [],
         });
       }
@@ -227,10 +232,10 @@ class RequisitionTimelineService {
     // Tâches en attente
     const pending = [...tasks.values()].filter(t => !t.completedAt);
     for (const t of pending) {
-      const details = [`Rôle attendu : ${TASK_GROUPS[t.key] || '—'}`];
-      if (t.claimedBy) details.push(`Prise en charge par ${t.claimedBy}`);
-      if (t.createdAt) details.push(`En attente depuis ${duration(t.createdAt, new Date()) || 'quelques instants'}`);
-      events.push({ date: t.createdAt, kind: 'warning', title: `En attente : ${t.label}`, actor: null, details, links: [], pending: true });
+      const details = [T('timeline.expectedRole', { role: role(t.key) || '—' })];
+      if (t.claimedBy) details.push(T('timeline.claimedBy', { name: t.claimedBy }));
+      if (t.createdAt) details.push(T('timeline.waitingFor', { time: duration(t.createdAt, new Date(), T) || T('timeline.fewMoments') }));
+      events.push({ date: t.createdAt, kind: 'warning', title: T('timeline.pendingTitle', { task: t.label }), actor: null, details, links: [], pending: true });
     }
     events.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -248,38 +253,38 @@ class RequisitionTimelineService {
     const links = (list, numberKey, base) => list.map(d => ({ label: d[numberKey], to: `${base}/${d.id}` }));
 
     const steps = [
-      { key: 'created', label: 'Création', status: 'done', date: req.created_at, info: req.requester_name },
-      { key: 'budget', label: 'Vérification budgétaire', status: budget ? (budget.ok ? 'done' : 'failed') : 'pending', date: budget?.date },
+      { key: 'created', label: T('timeline.steps.created'), status: 'done', date: req.created_at, info: req.requester_name },
+      { key: 'budget', label: T('timeline.steps.budget'), status: budget ? (budget.ok ? 'done' : 'failed') : 'pending', date: budget?.date },
       {
-        key: 'approval', label: 'Approbation hiérarchique',
+        key: 'approval', label: T('timeline.steps.approval'),
         status: approvalRejected ? 'failed' : approvals.length ? 'done' : 'pending',
         date: approvals.at(-1)?.completedAt,
-        info: approvals.map(t => `${t.label.replace('Approbation hiérarchique ', '')} : ${t.decision === 'REJECTED' ? 'rejetée' : 'approuvée'}`).join(' · ') || null,
+        info: approvals.map(t => T('timeline.approvalInfo', { task: T('workflow.approvalPrefix') ? t.label.replace(T('workflow.approvalPrefix'), '') : t.label, decision: T(t.decision === 'REJECTED' ? 'timeline.rejectedWord' : 'timeline.approvedWord') })).join(' · ') || null,
       },
-      { key: 'method', label: 'Méthode d\'achat', status: classification ? 'done' : 'pending', date: classification?.date, info: classification ? METHOD_LABELS[classification.method] || classification.method : null },
+      { key: 'method', label: T('timeline.steps.method'), status: classification ? 'done' : 'pending', date: classification?.date, info: classification ? methodLabel(classification.method, lang) : null },
       {
-        key: 'sourcing', label: 'Sélection du fournisseur', status: sourcingDone || activePos.length ? 'done' : 'pending',
+        key: 'sourcing', label: T('timeline.steps.sourcing'), status: sourcingDone || activePos.length ? 'done' : 'pending',
         date: sourcingDone?.completedAt, info: sourcingDone?.label || null,
         links: tender ? [{ label: tender.tender_number, to: `/tenders/${tender.id}` }] : [],
       },
-      { key: 'po', label: 'Bon de commande', status: activePos.length ? 'done' : pos.length ? 'failed' : 'pending', date: activePos[0]?.created_at, links: links(pos, 'po_number', '/purchase-orders') },
+      { key: 'po', label: T('timeline.steps.po'), status: activePos.length ? 'done' : pos.length ? 'failed' : 'pending', date: activePos[0]?.created_at, links: links(pos, 'po_number', '/purchase-orders') },
       {
-        key: 'po_approval', label: 'Approbation du bon de commande',
+        key: 'po_approval', label: T('timeline.steps.po_approval'),
         status: activePos.some(p => PO_APPROVED.includes(p.status)) ? 'done' : pos.some(p => PO_REJECTED.includes(p.status)) && !activePos.length ? 'failed' : 'pending',
         date: activePos.find(p => p.approved_at)?.approved_at,
-        info: nameById.get(activePos.find(p => p.approved_by)?.approved_by) ? `Approuvé par ${nameById.get(activePos.find(p => p.approved_by).approved_by)}` : null,
+        info: nameById.get(activePos.find(p => p.approved_by)?.approved_by) ? T('timeline.approvedBy', { name: nameById.get(activePos.find(p => p.approved_by).approved_by) }) : null,
       },
-      { key: 'supplier_confirmation', label: 'Confirmation fournisseur', status: done('Activity_SupplierConfirmation') || grns.length ? 'done' : 'pending', date: done('Activity_SupplierConfirmation')?.completedAt },
-      { key: 'grn', label: 'Réception (GRN)', status: grns.length ? 'done' : 'pending', date: grns[0]?.receipt_date || grns[0]?.created_at, links: links(grns, 'grn_number', '/goods-receipts') },
-      { key: 'san', label: 'Acceptation de service (SAN)', status: sans.length ? 'done' : 'pending', date: sans[0]?.acceptance_date || sans[0]?.created_at, links: links(sans, 'san_number', '/service-acceptance-notes') },
+      { key: 'supplier_confirmation', label: T('timeline.steps.supplier_confirmation'), status: done('Activity_SupplierConfirmation') || grns.length ? 'done' : 'pending', date: done('Activity_SupplierConfirmation')?.completedAt },
+      { key: 'grn', label: T('timeline.steps.grn'), status: grns.length ? 'done' : 'pending', date: grns[0]?.receipt_date || grns[0]?.created_at, links: links(grns, 'grn_number', '/goods-receipts') },
+      { key: 'san', label: T('timeline.steps.san'), status: sans.length ? 'done' : 'pending', date: sans[0]?.acceptance_date || sans[0]?.created_at, links: links(sans, 'san_number', '/service-acceptance-notes') },
       {
-        key: 'invoice', label: 'Facture & rapprochement', status: invoices.length ? 'done' : 'pending', date: invoices[0]?.created_at,
-        info: invoices[0]?.match_status ? `Rapprochement : ${MATCH_LABELS[invoices[0].match_status] || invoices[0].match_status}` : null,
+        key: 'invoice', label: T('timeline.steps.invoice'), status: invoices.length ? 'done' : 'pending', date: invoices[0]?.created_at,
+        info: invoices[0]?.match_status ? T('timeline.matchingInfo', { status: matchLabel(invoices[0].match_status, lang) }) : null,
         links: links(invoices, 'invoice_number', '/invoices'),
       },
       {
-        key: 'payment', label: 'Paiement', status: paid ? 'done' : 'pending', date: payments[0]?.created_at,
-        info: payments.length ? `Montant payé : ${fmtNum(payments.reduce((s, p) => s + parseFloat(p.amount || 0), 0))}` : null,
+        key: 'payment', label: T('timeline.steps.payment'), status: paid ? 'done' : 'pending', date: payments[0]?.created_at,
+        info: payments.length ? T('timeline.paidAmount', { amount: fmtNum(payments.reduce((s, p) => s + parseFloat(p.amount || 0), 0), lang) }) : null,
         links: links(payments, 'payment_number', '/payments'),
       },
     ];
@@ -293,10 +298,10 @@ class RequisitionTimelineService {
         current.status = 'current';
         const t = pending.find(p => TASK_STEP[p.key] === current.key);
         if (t) {
-          const who = t.claimedBy ? `pris en charge par ${t.claimedBy}` : `rôle ${TASK_GROUPS[t.key] || 'non défini'}`;
+          const who = t.claimedBy ? T('timeline.claimedByLower', { name: t.claimedBy }) : T('timeline.roleLower', { role: role(t.key) || T('timeline.undefinedRole') });
           // Libellé de tâche répété seulement s'il diffère de l'étape (ex. « Achat direct » dans « Sélection du fournisseur »)
           const task = t.label === current.label ? '' : ` : ${t.label}`;
-          current.info = [current.info, `En attente${task} — ${who}`].filter(Boolean).join(' · ');
+          current.info = [current.info, T('timeline.waitingInfo', { task, who })].filter(Boolean).join(' · ');
         }
       }
     }
@@ -304,7 +309,7 @@ class RequisitionTimelineService {
       const failedIdx = steps.findIndex(s => s.status === 'failed');
       steps.forEach((s, i) => { if (s.status === 'pending' && (failedIdx < 0 || i > failedIdx)) s.status = 'skipped'; });
       if (req.status === 'CANCELLED') {
-        events.push({ date: null, kind: 'danger', title: 'Réquisition annulée', actor: null, details: req.rejected_reason ? [req.rejected_reason] : [], links: [] });
+        events.push({ date: null, kind: 'danger', title: T('timeline.cancelled'), actor: null, details: req.rejected_reason ? [req.rejected_reason] : [], links: [] });
       }
     }
 

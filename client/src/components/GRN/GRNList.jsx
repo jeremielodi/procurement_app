@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Package, Plus, Search, RefreshCw, Eye, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { grnService } from '../../services/grnService';
+import { t, withLabel, getLocale } from '../../i18n';
 
-const STATUS_LABELS = {
-  DRAFT: { label: 'Brouillon', cls: 'bg-gray-100 text-gray-700' },
-  PENDING: { label: 'En attente', cls: 'bg-yellow-100 text-yellow-700' },
-  PARTIAL: { label: 'Partielle', cls: 'bg-orange-100 text-orange-700' },
-  COMPLETE: { label: 'Complète', cls: 'bg-green-100 text-green-700' },
-};
+const STATUS_LABELS = withLabel('grnStatus', {
+  DRAFT: { cls: 'bg-gray-100 text-gray-700' },
+  PENDING: { cls: 'bg-yellow-100 text-yellow-700' },
+  PARTIAL: { cls: 'bg-orange-100 text-orange-700' },
+  COMPLETE: { cls: 'bg-green-100 text-green-700' },
+});
 
 export default function GRNList() {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function GRNList() {
       setGrns(res.data || []);
       setPagination(res.pagination || {});
     } catch (e) {
-      toast.error('Erreur lors du chargement des GRN');
+      toast.error(t('grn.loadError'));
     } finally {
       setLoading(false);
     }
@@ -46,14 +47,14 @@ export default function GRNList() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bons de Réception (GRN)</h1>
-          <p className="text-gray-500 text-sm mt-1">Gestion des réceptions de marchandises</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('grn.title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('grn.subtitle')}</p>
         </div>
         <button
           onClick={() => navigate('/goods-receipts/new')}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
         >
-          <Plus size={16} /> Nouveau GRN
+          <Plus size={16} /> {t('grn.new')}
         </button>
       </div>
 
@@ -63,7 +64,7 @@ export default function GRNList() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Rechercher GRN, commande…"
+            placeholder={t('grn.searchPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -73,7 +74,7 @@ export default function GRNList() {
           onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Tous les statuts</option>
+          <option value="">{t('requisitions.allStatuses')}</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => (
             <option key={k} value={k}>{v.label}</option>
           ))}
@@ -92,13 +93,13 @@ export default function GRNList() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-gray-400">
             <Package size={40} className="mb-2 opacity-40" />
-            <p>Aucun bon de réception trouvé</p>
+            <p>{t('grn.none')}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['N° GRN', 'Commande', 'Fournisseur', 'Date réception', 'Réceptionné par', 'Statut', 'Actions'].map(h => (
+                {t('grn.cols', { returnObjects: true }).map(h => (
                   <th key={h} className="text-left px-4 py-3 font-medium text-gray-600">{h}</th>
                 ))}
               </tr>
@@ -112,7 +113,7 @@ export default function GRNList() {
                     <td className="px-4 py-3 text-blue-600">{grn.po_number || '—'}</td>
                     <td className="px-4 py-3 text-gray-700">{grn.supplier_name || '—'}</td>
                     <td className="px-4 py-3 text-gray-600">
-                      {grn.receipt_date ? new Date(grn.receipt_date).toLocaleDateString('fr-FR') : '—'}
+                      {grn.receipt_date ? new Date(grn.receipt_date).toLocaleDateString(getLocale()) : '—'}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{grn.received_by_name || '—'}</td>
                     <td className="px-4 py-3">
@@ -122,14 +123,14 @@ export default function GRNList() {
                       <button
                         onClick={() => navigate(`/goods-receipts/${grn.id}`)}
                         className="p-1.5 hover:bg-blue-50 rounded text-blue-600"
-                        title="Voir"
+                        title={t('common.view')}
                       >
                         <Eye size={16} />
                       </button>
                       <button
                         onClick={() => grnService.downloadPDF(grn.id, grn.grn_number).catch(() => {})}
                         className="p-1.5 hover:bg-green-50 rounded text-green-600"
-                        title="Télécharger le PDF"
+                        title={t('grn.downloadPdf')}
                       >
                         <Download size={16} />
                       </button>

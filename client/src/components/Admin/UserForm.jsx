@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { t, LANGUAGES } from '../../i18n';
 
 export default function UserForm({ user, onClose }) {
   const queryClient = useQueryClient();
@@ -14,6 +15,7 @@ export default function UserForm({ user, onClose }) {
     lastName: '',
     department: '',
     position: '',
+    language: LANGUAGES[0].code,
     profileIds: []
   });
 
@@ -37,6 +39,7 @@ export default function UserForm({ user, onClose }) {
         lastName: user.last_name || '',
         department: user.department || '',
         position: user.position || '',
+        language: user.language || LANGUAGES[0].code,
         profileIds: user.profile_ids?.filter(id => id) || []
       });
     }
@@ -46,7 +49,7 @@ export default function UserForm({ user, onClose }) {
     mutationFn: (data) => api.post('/users', data),
     onSuccess: () => {
       queryClient.invalidateQueries(['users']);
-      toast.success('Utilisateur créé');
+      toast.success(t('users.created'));
       onClose();
     }
   });
@@ -55,7 +58,7 @@ export default function UserForm({ user, onClose }) {
     mutationFn: ({ id, data }) => api.put(`/users/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['users']);
-      toast.success('Utilisateur modifié');
+      toast.success(t('users.updated'));
       onClose();
     }
   });
@@ -82,7 +85,7 @@ export default function UserForm({ user, onClose }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Nom d'utilisateur *</label>
+          <label className="block text-sm font-medium mb-1">{t('users.username')}</label>
           <input
             type="text"
             value={formData.username}
@@ -93,7 +96,7 @@ export default function UserForm({ user, onClose }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Email *</label>
+          <label className="block text-sm font-medium mb-1">{t('users.emailRequired')}</label>
           <input
             type="email"
             value={formData.email}
@@ -105,7 +108,7 @@ export default function UserForm({ user, onClose }) {
         </div>
         {!user && (
           <div>
-            <label className="block text-sm font-medium mb-1">Mot de passe *</label>
+            <label className="block text-sm font-medium mb-1">{t('users.passwordRequired')}</label>
             <input
               type="password"
               value={formData.password}
@@ -117,7 +120,7 @@ export default function UserForm({ user, onClose }) {
           </div>
         )}
         <div>
-          <label className="block text-sm font-medium mb-1">Prénom</label>
+          <label className="block text-sm font-medium mb-1">{t('profile.firstName')}</label>
           <input
             type="text"
             value={formData.firstName}
@@ -126,7 +129,7 @@ export default function UserForm({ user, onClose }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Nom</label>
+          <label className="block text-sm font-medium mb-1">{t('profile.lastName')}</label>
           <input
             type="text"
             value={formData.lastName}
@@ -135,7 +138,7 @@ export default function UserForm({ user, onClose }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Département</label>
+          <label className="block text-sm font-medium mb-1">{t('common.department')}</label>
           <input
             type="text"
             value={formData.department}
@@ -144,7 +147,7 @@ export default function UserForm({ user, onClose }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Poste</label>
+          <label className="block text-sm font-medium mb-1">{t('profile.position')}</label>
           <input
             type="text"
             value={formData.position}
@@ -152,10 +155,16 @@ export default function UserForm({ user, onClose }) {
             className="w-full px-3 py-2 border rounded-lg"
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">{t('users.language')}</label>
+          <select value={formData.language} onChange={(e) => setFormData({ ...formData, language: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
+            {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+          </select>
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Profils BPMN</label>
+        <label className="block text-sm font-medium mb-2">{t('users.bpmnProfiles')}</label>
         <div className="flex flex-wrap gap-2">
           {profiles.map((profile) => (
             <button
@@ -176,10 +185,10 @@ export default function UserForm({ user, onClose }) {
 
       <div className="flex justify-end gap-3 pt-4">
         <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
-          Annuler
+          {t('common.cancel')}
         </button>
         <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          {user ? 'Mettre à jour' : 'Créer'}
+          {user ? t('supplierForm.update') : t('common.create')}
         </button>
       </div>
     </form>

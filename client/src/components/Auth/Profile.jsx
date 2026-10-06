@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { User, Mail, Building2, Briefcase, Key, Save, Eye, EyeOff, AlertCircle, Calendar, Shield, CheckCircle, XCircle, Users, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { t, getLocale } from '../../i18n';
+import LanguageSwitcher from '../Common/LanguageSwitcher';
 
 export default function Profile() {
   const { user, updateUser } = useAuth();
@@ -59,15 +61,15 @@ export default function Profile() {
   const validatePassword = () => {
     const newErrors = {};
     if (!passwordData.currentPassword) {
-      newErrors.currentPassword = 'Mot de passe actuel requis';
+      newErrors.currentPassword = t('profile.currentRequired');
     }
     if (!passwordData.newPassword) {
-      newErrors.newPassword = 'Nouveau mot de passe requis';
+      newErrors.newPassword = t('profile.newRequired');
     } else if (passwordData.newPassword.length < 6) {
-      newErrors.newPassword = 'Le mot de passe doit contenir au moins 6 caractères';
+      newErrors.newPassword = t('profile.minLength');
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
+      newErrors.confirmPassword = t('profile.mismatch');
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -79,12 +81,12 @@ export default function Profile() {
       const response = await api.put('/auth/profile', profileData);
       if (response.data.success) {
         updateUser({ ...user, ...profileData });
-        toast.success('Profil mis à jour avec succès');
+        toast.success(t('profile.updated'));
         setIsEditing(false);
         loadUserDetails();
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour');
+      toast.error(error.response?.data?.message || t('profile.updateError'));
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +103,7 @@ export default function Profile() {
       });
       
       if (response.data.success) {
-        toast.success('Mot de passe changé avec succès');
+        toast.success(t('profile.passwordChanged'));
         setPasswordData({
           currentPassword: '',
           newPassword: '',
@@ -109,7 +111,7 @@ export default function Profile() {
         });
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Erreur lors du changement de mot de passe');
+      toast.error(error.response?.data?.message || t('profile.passwordError'));
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +119,7 @@ export default function Profile() {
 
   const formatDate = (date) => {
     if (!date) return '-';
-    return new Date(date).toLocaleDateString('fr-FR', {
+    return new Date(date).toLocaleDateString(getLocale(), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -130,7 +132,7 @@ export default function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Mon profil</h1>
+      <h1 className="text-2xl font-bold text-gray-800">{t('nav.myProfile')}</h1>
       
       {/* Cartes de statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -140,7 +142,7 @@ export default function Profile() {
               <Shield size={20} className="text-blue-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-500">Profils BPMN</p>
+              <p className="text-xs text-gray-500">{t('profile.bpmnProfiles')}</p>
               <p className="text-lg font-bold text-gray-800">
                 {details?.profiles?.length || 0}
               </p>
@@ -153,9 +155,9 @@ export default function Profile() {
               <CheckCircle size={20} className="text-green-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-500">Statut</p>
+              <p className="text-xs text-gray-500">{t('common.status')}</p>
               <p className={`text-lg font-bold ${details?.isActive ? 'text-green-600' : 'text-red-600'}`}>
-                {details?.isActive ? 'Actif' : 'Inactif'}
+                {details?.isActive ? t('common.active') : t('common.inactive')}
               </p>
             </div>
           </div>
@@ -166,7 +168,7 @@ export default function Profile() {
               <Clock size={20} className="text-purple-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-500">Dernière connexion</p>
+              <p className="text-xs text-gray-500">{t('profile.lastLogin')}</p>
               <p className="text-sm font-medium text-gray-800">
                 {formatDate(details?.lastLogin)}
               </p>
@@ -180,7 +182,7 @@ export default function Profile() {
         <div className="p-6 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
             <User size={20} />
-            Informations personnelles
+            {t('profile.personalInfo')}
           </h2>
           {!isEditing ? (
             <button
@@ -188,7 +190,7 @@ export default function Profile() {
               className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
             >
               <Save size={14} />
-              Modifier
+              {t('common.edit')}
             </button>
           ) : (
             <div className="flex gap-2">
@@ -196,7 +198,7 @@ export default function Profile() {
                 onClick={() => setIsEditing(false)}
                 className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
               >
-                Annuler
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleUpdateProfile}
@@ -204,7 +206,7 @@ export default function Profile() {
                 className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-1"
               >
                 <Save size={14} />
-                Enregistrer
+                {t('common.save')}
               </button>
             </div>
           )}
@@ -213,7 +215,7 @@ export default function Profile() {
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.firstName')}</label>
               {isEditing ? (
                 <input
                   type="text"
@@ -228,7 +230,7 @@ export default function Profile() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.lastName')}</label>
               {isEditing ? (
                 <input
                   type="text"
@@ -245,7 +247,7 @@ export default function Profile() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Mail size={14} className="inline mr-1" />
-                Email
+                {t('common.email')}
               </label>
               <p className="text-gray-900">{details?.email}</p>
             </div>
@@ -253,7 +255,7 @@ export default function Profile() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Users size={14} className="inline mr-1" />
-                Nom d'utilisateur
+                {t('profile.username')}
               </label>
               <p className="text-gray-900">@{details?.username}</p>
             </div>
@@ -261,7 +263,7 @@ export default function Profile() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Building2 size={14} className="inline mr-1" />
-                Département
+                {t('common.department')}
               </label>
               {isEditing ? (
                 <input
@@ -279,7 +281,7 @@ export default function Profile() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Briefcase size={14} className="inline mr-1" />
-                Poste
+                {t('profile.position')}
               </label>
               {isEditing ? (
                 <input
@@ -297,7 +299,7 @@ export default function Profile() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Calendar size={14} className="inline mr-1" />
-                Date d'inscription
+                {t('profile.registeredAt')}
               </label>
               <p className="text-gray-900">{formatDate(details?.createdAt)}</p>
             </div>
@@ -310,7 +312,7 @@ export default function Profile() {
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
             <Shield size={20} />
-            Profils BPMN assignés
+            {t('profile.assignedProfiles')}
           </h2>
         </div>
         <div className="p-6">
@@ -329,7 +331,7 @@ export default function Profile() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">Aucun profil BPMN assigné</p>
+            <p className="text-gray-500 text-center py-4">{t('profile.noProfile')}</p>
           )}
         </div>
       </div>
@@ -340,7 +342,7 @@ export default function Profile() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Key size={20} />
-              Permissions
+              {t('profile.permissions')}
             </h2>
           </div>
           <div className="p-6">
@@ -358,12 +360,21 @@ export default function Profile() {
         </div>
       )}
       
+      {/* Langue de l'interface */}
+      <div className="bg-white rounded-lg shadow p-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800">{t('profile.language')}</h2>
+          <p className="text-sm text-gray-500">{t('profile.languageHint')}</p>
+        </div>
+        <LanguageSwitcher variant="select" />
+      </div>
+
       {/* Changement de mot de passe */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
             <Key size={20} />
-            Changer le mot de passe
+            {t('profile.changePassword')}
           </h2>
         </div>
         
@@ -371,7 +382,7 @@ export default function Profile() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mot de passe actuel
+                {t('profile.currentPassword')}
               </label>
               <div className="relative">
                 <input
@@ -404,7 +415,7 @@ export default function Profile() {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nouveau mot de passe
+                {t('profile.newPassword')}
               </label>
               <div className="relative">
                 <input
@@ -435,7 +446,7 @@ export default function Profile() {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Confirmer le nouveau mot de passe
+                {t('profile.confirmNewPassword')}
               </label>
               <div className="relative">
                 <input
@@ -476,7 +487,7 @@ export default function Profile() {
               ) : (
                 <Key size={16} />
               )}
-              Changer le mot de passe
+              {t('profile.changePassword')}
             </button>
           </div>
         </div>

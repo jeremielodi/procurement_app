@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { supplierPortalService } from '../../services/supplierPortalService';
 import { fmtDateTime, fmtMoney, timeLeft } from '../../utils/tenderStatus';
 import { enterpriseLogoUrl } from '../../contexts/EnterpriseContext';
+import { t } from '../../i18n';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50';
 
@@ -21,9 +22,9 @@ export default function SupplierTenderDetail() {
   const [pdfUrl, setPdfUrl] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
 
-  const hydrate = (t) => {
-    setTender(t);
-    const sub = t.mySubmission;
+  const hydrate = (tn) => {
+    setTender(tn);
+    const sub = tn.mySubmission;
     const map = {};
     (sub?.items || []).forEach(l => {
       map[l.requisition_item_id] = { unitPrice: String(parseFloat(l.unit_price)), comment: l.comment || '' };
@@ -57,11 +58,11 @@ export default function SupplierTenderDetail() {
   const submit = async (e) => {
     e.preventDefault();
     const days = parseInt(deliveryDays);
-    if (!days || days <= 0) return toast.error('Indiquez votre délai de livraison');
-    if (days > tender.max_delivery_days) return toast.error(`Délai maximum : ${tender.max_delivery_days} jours`);
-    if (pricedCount === 0) return toast.error("Saisissez le prix d'au moins un item");
+    if (!days || days <= 0) return toast.error(t('portal.enterDelivery'));
+    if (days > tender.max_delivery_days) return toast.error(t('portal.maxDays', { days: tender.max_delivery_days }));
+    if (pricedCount === 0) return toast.error(t('portal.priceOne'));
     const bad = tender.items.find(i => prices[i.id]?.unitPrice && (isNaN(parseFloat(prices[i.id].unitPrice)) || parseFloat(prices[i.id].unitPrice) < 0));
-    if (bad) return toast.error(`Prix invalide pour « ${bad.item_description} »`);
+    if (bad) return toast.error(t('portal.invalidPrice', { item: bad.item_description }));
 
     setSaving(true);
     try {
@@ -100,13 +101,13 @@ export default function SupplierTenderDetail() {
             {tender.enterprise_name && (
           <div className="flex items-center gap-2 mt-1 text-sm text-gray-700" data-testid="buyer">
             {tender.enterprise_logo_path && <img src={enterpriseLogoUrl({ id: tender.enterprise_id, logo_path: tender.enterprise_logo_path })} alt="" className="h-5 w-5 object-contain" />}
-            <span>Acheteur : <b>{tender.enterprise_name}</b></span>
+            <span>{t('portal.buyerLabel')} <b>{tender.enterprise_name}</b></span>
           </div>
         )}
             {(tender.category_name || tender.location_name) && (
               <p className="text-sm text-gray-500 mt-1">
-                {[tender.category_name, tender.location_name && `Livraison : ${tender.location_name}`].filter(Boolean).join(' · ')}
-                {tender.audience === 'PREQUALIFIED' && <span className="ml-2 text-green-700">· réservé aux fournisseurs préqualifiés</span>}
+                {[tender.category_name, tender.location_name && t('portal.deliveryAt', { location: tender.location_name })].filter(Boolean).join(' · ')}
+                {tender.audience === 'PREQUALIFIED' && <span className="ml-2 text-green-700">{t('portal.reservedShort')}</span>}
               </p>
             )}
           </div>
@@ -114,26 +115,26 @@ export default function SupplierTenderDetail() {
         {tender.mySubmission && (
           <button onClick={openPdf} disabled={pdfLoading}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50">
-            <FileDown size={16} /> {pdfLoading ? 'Génération…' : 'Télécharger mon offre (PDF)'}
+            <FileDown size={16} /> {pdfLoading ? t('portal.generating') : t('portal.downloadOffer')}
           </button>
         )}
       </div>
 
       {tender.is_awarded_to_me && (
         <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-green-800 flex items-center gap-2">
-          <Award size={18} /> Félicitations, votre offre a été retenue. Vous recevrez le bon de commande par email.
+          <Award size={18} /> {t('portal.congrats')}
         </div>
       )}
       {editable ? (
         <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800 flex items-center gap-2">
-          <Clock size={16} /> Soumissions ouvertes jusqu'au <b>{fmtDateTime(tender.end_date)}</b>{left && <> (reste {left})</>}. Vous pouvez modifier votre offre jusque-là.
+          <Clock size={16} /> {t('portal.openUntil')} <b>{fmtDateTime(tender.end_date)}</b>{left && <> {t('portal.remaining', { time: left })}</>}. {t('portal.canEditUntil')}
         </div>
       ) : (
         <div className="p-3 rounded-lg bg-gray-100 border border-gray-200 text-sm text-gray-700 flex items-center gap-2">
           <Lock size={16} />
           {tender.effective_status === 'UPCOMING'
-            ? <>Les soumissions ouvriront le <b>{fmtDateTime(tender.start_date)}</b>.</>
-            : <>Soumissions clôturées le {fmtDateTime(tender.end_date)}.</>}
+            ? <>{t('portal.willOpen')} <b>{fmtDateTime(tender.start_date)}</b>.</>
+            : <>{t('portal.closedOn', { date: fmtDateTime(tender.end_date) })}</>}
         </div>
       )}
 
@@ -144,11 +145,11 @@ export default function SupplierTenderDetail() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="text-left px-3 py-2 font-medium text-gray-600">Désignation</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-600">Quantité</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-600 w-40">Prix unitaire ({cur})</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-600">Total ({cur})</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-600 w-56">Commentaire (marque, modèle…)</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-600">{t('portal.designation')}</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-600">{t('common.quantity')}</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-600 w-40">{t('portal.unitPrice', { currency: cur })}</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-600">{t('portal.total', { currency: cur })}</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-600 w-56">{t('portal.comment')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -163,7 +164,7 @@ export default function SupplierTenderDetail() {
                     </td>
                     <td className="px-3 py-2 text-right">{qty}</td>
                     <td className="px-3 py-2">
-                      <input type="number" min="0" step="0.01" disabled={!editable} aria-label={`Prix ${i.item_description}`}
+                      <input type="number" min="0" step="0.01" disabled={!editable} aria-label={t('portal.priceOf', { item: i.item_description })}
                         className={`${inputCls} text-right`} value={prices[i.id]?.unitPrice ?? ''}
                         onChange={e => setPrice(i.id, 'unitPrice', e.target.value)} />
                     </td>
@@ -178,7 +179,7 @@ export default function SupplierTenderDetail() {
             </tbody>
             <tfoot className="bg-blue-50">
               <tr>
-                <td colSpan={3} className="px-3 py-2 text-right font-semibold">Total de l'offre ({pricedCount}/{tender.items.length} items chiffrés)</td>
+                <td colSpan={3} className="px-3 py-2 text-right font-semibold">{t('portal.offerTotal', { done: pricedCount, total: tender.items.length })}</td>
                 <td className="px-3 py-2 text-right font-bold" data-testid="offer-total">{fmtMoney(total, cur)}</td>
                 <td />
               </tr>
@@ -189,25 +190,25 @@ export default function SupplierTenderDetail() {
         <div className="bg-white rounded-xl border border-gray-200 p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="deliveryDays">
-              Délai de livraison (jours) * <span className="text-gray-500 font-normal">max {tender.max_delivery_days}</span>
+              {t('portal.deliveryDays')} <span className="text-gray-500 font-normal">{t('portal.max', { days: tender.max_delivery_days })}</span>
             </label>
             <input id="deliveryDays" type="number" min="1" max={tender.max_delivery_days} disabled={!editable}
               className={inputCls} value={deliveryDays} onChange={e => setDeliveryDays(e.target.value)} />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="notes">Remarques (validité de l'offre, conditions…)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="notes">{t('portal.remarks')}</label>
             <textarea id="notes" rows={2} disabled={!editable} className={inputCls} value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
         </div>
 
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-500">
-            {tender.mySubmission ? <>Dernière soumission : {fmtDateTime(tender.mySubmission.updated_at)}</> : 'Aucune soumission enregistrée'}
+            {tender.mySubmission ? t('portal.lastSubmission', { date: fmtDateTime(tender.mySubmission.updated_at) }) : t('portal.noSubmission')}
           </span>
           {editable && (
             <button type="submit" disabled={saving}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
-              <Send size={16} /> {saving ? 'Envoi…' : tender.mySubmission ? 'Mettre à jour mon offre' : 'Soumettre mon offre'}
+              <Send size={16} /> {saving ? t('portal.sending') : tender.mySubmission ? t('portal.update') : t('portal.submit')}
             </button>
           )}
         </div>
@@ -217,14 +218,14 @@ export default function SupplierTenderDetail() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
           <div className="bg-white rounded-xl w-full max-w-5xl h-[90vh] flex flex-col">
             <div className="flex justify-between items-center px-4 py-3 border-b">
-              <span className="font-semibold">Mon offre — à imprimer, cacheter, signer et renvoyer</span>
+              <span className="font-semibold">{t('portal.pdfModal')}</span>
               <div className="flex gap-2">
-                <a href={pdfUrl} download={`offre_${tender.tender_number.replace(/[^\w.-]+/g, '_')}.pdf`}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm"><FileDown size={14} /> Télécharger</a>
+                <a href={pdfUrl} download={`${t('portal.offerFile')}_${tender.tender_number.replace(/[^\w.-]+/g, '_')}.pdf`}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm"><FileDown size={14} /> {t('common.download')}</a>
                 <button onClick={() => { URL.revokeObjectURL(pdfUrl); setPdfUrl(null); }} className="p-1.5 hover:bg-gray-100 rounded"><X size={18} /></button>
               </div>
             </div>
-            <iframe key={pdfUrl} src={pdfUrl} title="Mon offre PDF" className="flex-1 w-full" />
+            <iframe key={pdfUrl} src={pdfUrl} title={t('portal.pdfTitle')} className="flex-1 w-full" />
           </div>
         </div>
       )}

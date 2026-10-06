@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download, Printer, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { t } from '../../i18n';
 import { uploadService } from '../../services/uploadService';
 
 const PdfViewer = ({ attachmentId, fileName, onClose }) => {
@@ -18,8 +19,8 @@ const PdfViewer = ({ attachmentId, fileName, onClose }) => {
         setPdfUrl(url);
       } catch (err) {
         console.error('Error loading PDF:', err);
-        setError('Impossible de charger le PDF');
-        toast.error('Erreur de chargement du PDF');
+        setError(t('pdf.loadError'));
+        toast.error(t('pdf.loadErrorToast'));
       } finally {
         setLoading(false);
       }
@@ -53,9 +54,9 @@ const PdfViewer = ({ attachmentId, fileName, onClose }) => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Téléchargement démarré');
+      toast.success(t('pdf.downloadStarted'));
     } catch (error) {
-      toast.error('Erreur lors du téléchargement');
+      toast.error(t('pdf.downloadError'));
     }
   };
 
@@ -64,7 +65,7 @@ const PdfViewer = ({ attachmentId, fileName, onClose }) => {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 flex flex-col items-center min-w-[280px]">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-          <p className="mt-3 text-gray-600">Chargement...</p>
+          <p className="mt-3 text-gray-600">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -76,14 +77,14 @@ const PdfViewer = ({ attachmentId, fileName, onClose }) => {
         <div className="bg-white rounded-lg p-6 max-w-md">
           <div className="flex items-center gap-2 text-red-600 mb-3">
             <AlertCircle size={20} />
-            <h3 className="font-semibold">Erreur</h3>
+            <h3 className="font-semibold">{t('common.error')}</h3>
           </div>
           <p className="text-gray-600 text-sm">{error}</p>
           <button
             onClick={onClose}
             className="mt-4 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm w-full"
           >
-            Fermer
+            {t('common.close')}
           </button>
         </div>
       </div>
@@ -99,7 +100,7 @@ const PdfViewer = ({ attachmentId, fileName, onClose }) => {
             <button
               onClick={onClose}
               className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
-              title="Fermer"
+              title={t('common.close')}
             >
               <X size={18} />
             </button>
@@ -108,7 +109,7 @@ const PdfViewer = ({ attachmentId, fileName, onClose }) => {
           </div>
           
           <div className="text-sm text-gray-500 truncate max-w-md">
-            {fileName || 'Document PDF'}
+            {fileName || t('pdf.document')}
           </div>
           
           {/* Espace vide pour équilibrer */}

@@ -9,7 +9,7 @@ const submissionPdfService = require('../services/TenderSubmissionPdfService');
 const { getSupplierByUser, parseIdList } = require('./SupplierPortalController');
 const referenceModel = require('../models/ReferenceModel');
 const supplierModel = require('../models/SupplierModel');
-const { DOC_LABELS } = require('../utils/supplierDocuments');
+const i18n = require('../i18n');
 
 const { appLink } = require('../utils/appUrl');
 
@@ -22,8 +22,8 @@ function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function fmtDate(d) {
-  return new Date(d).toLocaleString('fr-FR', {
+function fmtDate(d, lang) {
+  return new Date(d).toLocaleString(i18n.locale(lang), {
     dateStyle: 'long', timeStyle: 'short', timeZone: process.env.APP_TIMEZONE || 'Africa/Kinshasa'
   });
 }
@@ -85,25 +85,30 @@ async function notifyUser(io, userId, title, message, type, link) {
   io?.to(`user-${userId}`).emit('notification', { title, message, type, link, timestamp: new Date().toISOString() });
 }
 
-/** Notifie (in-app + email) tous les fournisseurs inscrits. Ne lève pas d'erreur. */
-async function notifySuppliers(io, tender, { title, intro }, { only, exclude } = {}) {
+/**
+ * Notifie (in-app + email) tous les fournisseurs inscrits, chacun dans sa langue. Ne lève pas d'erreur.
+ * kind : 'published' | 'invitation' | 'updated' (textes email.tender.<kind>.title / intro)
+ */
+async function notifySuppliers(io, tender, kind, { only, exclude } = {}) {
   try {
     const recipients = (await tenderModel.getRegisteredSupplierRecipients(tender.id))
       .filter(r => (!only || only.has(r.id)) && (!exclude || !exclude.has(r.id)));
     const link = `/supplier/tenders/${tender.id}`;
     for (const r of recipients) {
+      const T = i18n.translator(r.language);
+      const title = T(`email.tender.${kind}.title`);
       await notifyUser(io, r.user_id, title, `${tender.tender_number} — ${tender.title}`, 'INFO', link);
       const html = `
-        <p>Bonjour ${escapeHtml(r.name)},</p>
-        <p>${escapeHtml(intro)}</p>
+        <p>${T('email.hello', { name: escapeHtml(r.name) })}</p>
+        <p>${T(`email.tender.${kind}.intro`)}</p>
         <table cellpadding="4">
-          <tr><td><b>N°</b></td><td>${escapeHtml(tender.tender_number)}</td></tr>
-          <tr><td><b>Objet</b></td><td>${escapeHtml(tender.title)}</td></tr>
-          <tr><td><b>Ouverture</b></td><td>${fmtDate(tender.start_date)}</td></tr>
-          <tr><td><b>Clôture</b></td><td>${fmtDate(tender.end_date)}</td></tr>
-          <tr><td><b>Délai de livraison max</b></td><td>${tender.max_delivery_days} jours</td></tr>
+          <tr><td><b>${T('email.tender.number')}</b></td><td>${escapeHtml(tender.tender_number)}</td></tr>
+          <tr><td><b>${T('email.tender.object')}</b></td><td>${escapeHtml(tender.title)}</td></tr>
+          <tr><td><b>${T('email.tender.opening')}</b></td><td>${fmtDate(tender.start_date, r.language)}</td></tr>
+          <tr><td><b>${T('email.tender.closing')}</b></td><td>${fmtDate(tender.end_date, r.language)}</td></tr>
+          <tr><td><b>${T('email.tender.maxDelivery')}</b></td><td>${T('email.tender.days', { n: tender.max_delivery_days })}</td></tr>
         </table>
-        <p><a href="${appLink(link)}">Consulter l'appel d'offres et soumettre vos prix</a></p>`;
+        <p><a href="${appLink(link)}">${T('email.tender.link')}</a></p>`;
       // Pas d'await : l'envoi SMTP ne doit pas bloquer la réponse
       emailService.sendEmail(r.user_email || r.supplier_email, `${title} — ${tender.tender_number}`, html);
     }
@@ -246,9 +251,7 @@ class TenderController {
       });
       if (invited.length) await tenderModel.setInvitations(tender.id, invited, req.user.id);
 
-      const notified = await notifySuppliers(req.io, tender, invited.length
-        ? { title: 'Invitation à soumettre une offre', intro: 'Vous êtes invité à soumettre une offre pour cet appel d\'offres réservé. Vous pouvez saisir vos prix sur le portail fournisseur.' }
-        : { title: 'Nouvel appel d\'offres', intro: 'Un nouvel appel d\'offres est ouvert. Vous pouvez saisir vos prix sur le portail fournisseur.' });
+      const notified = await notifySuppliers(req.io, tender, invited.length ? 'invitation' : 'published');
 
       res.status(201).json({ success: true, data: tender, notifiedSuppliers: notified, message: 'Appel d\'offres publié' });
     } catch (error) {
@@ -297,15 +300,9 @@ class TenderController {
       const updated = await tenderModel.getById(tender.id);
       const newlyInvited = new Set(invitedChange?.added || []);
       if (newlyInvited.size) {
-        await notifySuppliers(req.io, updated, {
-          title: 'Invitation à soumettre une offre',
-          intro: 'Vous êtes invité à soumettre une offre pour cet appel d\'offres réservé. Vous pouvez saisir vos prix sur le portail fournisseur.'
-        }, { only: newlyInvited });
+        await notifySuppliers(req.io, updated, 'invitation', { only: newlyInvited });
       }
-      await notifySuppliers(req.io, updated, {
-        title: 'Appel d\'offres modifié',
-        intro: 'Les conditions de cet appel d\'offres ont été modifiées. Merci de vérifier les nouvelles dates et le délai de livraison.'
-      }, { exclude: newlyInvited });
+      await notifySuppliers(req.io, updated, 'updated', { exclude: newlyInvited });
       res.json({ success: true, data: updated, invitations: invitedChange });
     } catch (error) {
       res.status(error.status || 500).json({ success: false, message: error.message });
@@ -436,17 +433,18 @@ class TenderController {
 
       // Informer les soumissionnaires
       const owners = await db.select(
-        `SELECT s.id, s.user_id FROM suppliers s
+        `SELECT s.id, s.user_id, u.language FROM suppliers s
          JOIN tender_submissions ts ON ts.supplier_id = s.id
-         WHERE ts.tender_id = $1 AND s.user_id IS NOT NULL`,
+         JOIN users u ON u.id = s.user_id
+         WHERE ts.tender_id = $1`,
         [tender.id]
       );
       for (const o of owners) {
         const won = String(o.id) === String(winner.supplier_id);
+        const T = i18n.translator(o.language);
         await notifyUser(req.io, o.user_id,
-          won ? 'Offre retenue 🎉' : 'Résultat de l\'appel d\'offres',
-          won ? `Votre offre pour ${tender.tender_number} a été retenue`
-              : `Votre offre pour ${tender.tender_number} n'a pas été retenue`,
+          T(won ? 'notification.tender.wonTitle' : 'notification.tender.lostTitle'),
+          T(won ? 'notification.tender.wonMessage' : 'notification.tender.lostMessage', { number: tender.tender_number }),
           won ? 'SUCCESS' : 'INFO',
           `/supplier/tenders/${tender.id}`);
       }
@@ -504,15 +502,16 @@ class TenderController {
 
       // Dossier de préqualification : champs, documents, catégories et localisations manquants
       const full = await supplierModel.getFullProfile(supplier.id);
+      // Libellés dans la langue de la requête (supplierProfile.* des locales)
+      const T = i18n.translator(i18n.fromRequest(req));
       const profileFields = full.supplier_type === 'INDIVIDUAL'
-        ? [['address', 'Adresse'], ['bank_name', 'Banque'], ['bank_account', 'N° de compte']]
-        : [['logo_path', 'Logo'], ['phone', 'Téléphone'], ['address', 'Adresse'], ['registration_number', 'N° RCCM'],
-          ['tax_id', 'N° impôt'], ['id_nat', 'N° ID Nat'], ['bank_name', 'Banque'], ['bank_account', 'N° de compte']];
+        ? ['address', 'bank_name', 'bank_account']
+        : ['logo_path', 'phone', 'address', 'registration_number', 'tax_id', 'id_nat', 'bank_name', 'bank_account'];
       const missingProfile = [
-        ...profileFields.filter(([col]) => !full[col]).map(([, label]) => label),
-        ...full.missing_documents.map(t => DOC_LABELS[t]),
-        ...(full.categories.length ? [] : ['Catégories de marché']),
-        ...(full.locations.length ? [] : ['Localisations']),
+        ...profileFields.filter(col => !full[col]).map(col => T(`supplierProfile.${col}`)),
+        ...full.missing_documents.map(doc => T(`supplierProfile.docs.${doc}`)),
+        ...(full.categories.length ? [] : [T('supplierProfile.categories')]),
+        ...(full.locations.length ? [] : [T('supplierProfile.locations')]),
       ];
 
       res.json({
@@ -647,9 +646,11 @@ class TenderController {
 
       // Informer le créateur de l'appel d'offres
       if (tender.created_by) {
+        const creator = await db.one('SELECT language FROM users WHERE id = $1', [tender.created_by]);
+        const T = i18n.translator(creator?.language);
         await notifyUser(req.io, tender.created_by,
-          result.updated ? 'Soumission modifiée' : 'Nouvelle soumission',
-          `${supplier.name} a ${result.updated ? 'modifié' : 'soumis'} son offre pour ${tender.tender_number}`,
+          T(result.updated ? 'notification.tender.updatedSubmission' : 'notification.tender.newSubmission'),
+          T(result.updated ? 'notification.tender.resubmitted' : 'notification.tender.submitted', { supplier: supplier.name, number: tender.tender_number }),
           'INFO', `/tenders/${tender.id}`);
       }
 

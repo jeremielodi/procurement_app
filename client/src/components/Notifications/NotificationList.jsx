@@ -18,7 +18,8 @@ import {
 import { notificationService } from '../../services/notificationService';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDistanceToNow, format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { t } from '../../i18n';
+import { getDateFnsLocale } from '../../i18n/dateFns';
 import toast from 'react-hot-toast';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
@@ -104,7 +105,7 @@ export default function NotificationList() {
     mutationFn: () => notificationService.markAllAsRead(user?.id),
     onSuccess: () => {
       queryClient.invalidateQueries(['notifications', user?.id]);
-      toast.success('Toutes les notifications ont été marquées comme lues');
+      toast.success(t('notifications.allMarkedRead'));
     }
   });
 
@@ -112,7 +113,7 @@ export default function NotificationList() {
     mutationFn: (id) => notificationService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['notifications', user?.id]);
-      toast.success('Notification supprimée');
+      toast.success(t('notifications.deleted'));
     }
   });
 
@@ -120,7 +121,7 @@ export default function NotificationList() {
     mutationFn: () => notificationService.deleteAll(user?.id),
     onSuccess: () => {
       queryClient.invalidateQueries(['notifications', user?.id]);
-      toast.success('Toutes les notifications ont été supprimées');
+      toast.success(t('notifications.allDeleted'));
     }
   });
 
@@ -139,7 +140,7 @@ export default function NotificationList() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm('Supprimer cette notification ?')) {
+    if (confirm(t('notifications.confirmDelete'))) {
       await deleteMutation.mutateAsync(id);
     }
   };
@@ -168,10 +169,10 @@ export default function NotificationList() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Bell size={24} />
-            Notifications
+            {t('nav.notifications')}
           </h1>
           <p className="text-gray-500 mt-1">
-            {unreadCount} notification{unreadCount > 1 ? 's' : ''} non lue{unreadCount > 1 ? 's' : ''}
+            {t('notifications.unreadCount', { count: unreadCount })}
           </p>
         </div>
         <div className="flex gap-2">
@@ -181,7 +182,7 @@ export default function NotificationList() {
               className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
             >
               <CheckCheck size={16} />
-              Tout marquer comme lu
+              {t('notifications.markAllRead')}
             </button>
           )}
           <button
@@ -189,14 +190,14 @@ export default function NotificationList() {
             className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 border border-red-600 rounded-lg hover:bg-red-50"
           >
             <Trash2 size={16} />
-            Tout supprimer
+            {t('notifications.deleteAll')}
           </button>
           <button
             onClick={() => refetch()}
             className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             <RefreshCw size={16} />
-            Rafraîchir
+            {t('common.refresh')}
           </button>
         </div>
       </div>
@@ -206,7 +207,7 @@ export default function NotificationList() {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
           <p className="text-sm text-yellow-700 flex items-center justify-center gap-2">
             <AlertCircle size={16} />
-            Connexion temps réel instable. Les notifications peuvent être retardées.
+            {t('notifications.unstableLong')}
           </p>
         </div>
       )}
@@ -223,7 +224,7 @@ export default function NotificationList() {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              Toutes
+              {t('notifications.all')}
             </button>
             <button
               onClick={() => setFilter('unread')}
@@ -233,7 +234,7 @@ export default function NotificationList() {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              Non lues {unreadCount > 0 && `(${unreadCount})`}
+              {t('notifications.unreadTab')} {unreadCount > 0 && `(${unreadCount})`}
             </button>
           </div>
           
@@ -244,7 +245,7 @@ export default function NotificationList() {
               onChange={(e) => setTypeFilter(e.target.value)}
               className="px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">Tous les types</option>
+              <option value="all">{t('notifications.allTypes')}</option>
               {notificationTypes.map(type => (
                 <option key={type} value={type}>{type}</option>
               ))}
@@ -258,9 +259,9 @@ export default function NotificationList() {
         {filteredNotifications.length === 0 ? (
           <div className="text-center py-12">
             <Bell size={48} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">Aucune notification</p>
+            <p className="text-gray-500">{t('notifications.none')}</p>
             <p className="text-sm text-gray-400 mt-1">
-              Vous serez notifié des activités importantes
+              {t('notifications.noneHint')}
             </p>
           </div>
         ) : (
@@ -285,7 +286,7 @@ export default function NotificationList() {
                         </h3>
                         {!notification.read && (
                           <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
-                            Nouveau
+                            {t('notifications.new')}
                           </span>
                         )}
                       </div>
@@ -297,11 +298,11 @@ export default function NotificationList() {
                           <Clock size={12} />
                           {formatDistanceToNow(new Date(notification.created_at), {
                             addSuffix: true,
-                            locale: fr
+                            locale: getDateFnsLocale()
                           })}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {format(new Date(notification.created_at), 'dd/MM/yyyy HH:mm')}
+                          {format(new Date(notification.created_at), t('notifications.dateFormat'))}
                         </div>
                       </div>
                     </div>
@@ -314,7 +315,7 @@ export default function NotificationList() {
                           handleMarkAsRead(notification.id);
                         }}
                         className="p-1 text-green-600 hover:bg-green-50 rounded"
-                        title="Marquer comme lu"
+                        title={t('notifications.markRead')}
                       >
                         <Check size={16} />
                       </button>
@@ -325,7 +326,7 @@ export default function NotificationList() {
                         handleDelete(notification.id);
                       }}
                       className="p-1 text-red-600 hover:bg-red-50 rounded"
-                      title="Supprimer"
+                      title={t('common.delete')}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -343,15 +344,15 @@ export default function NotificationList() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
               <p className="text-2xl font-bold text-gray-800">{notifications.length}</p>
-              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-xs text-gray-500">{t('common.total')}</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-green-600">{notifications.filter(n => n.read).length}</p>
-              <p className="text-xs text-gray-500">Lues</p>
+              <p className="text-xs text-gray-500">{t('notifications.read')}</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-yellow-600">{unreadCount}</p>
-              <p className="text-xs text-gray-500">Non lues</p>
+              <p className="text-xs text-gray-500">{t('notifications.unreadTab')}</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-blue-600">
@@ -361,7 +362,7 @@ export default function NotificationList() {
                   return new Date(n.created_at) >= dts;
                 }).length}
               </p>
-              <p className="text-xs text-gray-500">7 derniers jours</p>
+              <p className="text-xs text-gray-500">{t('notifications.last7days')}</p>
             </div>
           </div>
         </div>

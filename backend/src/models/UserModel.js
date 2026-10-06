@@ -3,13 +3,14 @@ const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
+const i18n = require('../i18n');
 
 class UserModel {
   /**
    * Créer un nouvel utilisateur
    */
   async create(userData) {
-    const { username, email, password, firstName, lastName, department, position, enterpriseId, profileIds = [] } = userData;
+    const { username, email, password, firstName, lastName, department, position, enterpriseId, language, profileIds = [] } = userData;
     
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
@@ -27,6 +28,8 @@ class UserModel {
         last_name: lastName,
         department,
         position,
+        // Langue de l'interface et des emails (code d'un fichier de langue, 'fr' par défaut)
+        language: i18n.normalizeLang(language),
         is_active: true,
         enterprise_id: enterpriseId,
         created_at: new Date(),
@@ -66,7 +69,7 @@ class UserModel {
   async findAll(filters = {}) {
     let sql = `
       SELECT u.id, u.username, u.email, u.first_name, u.last_name, 
-             u.department, u.position, u.is_active,
+             u.department, u.position, u.is_active, u.language,
              u.enterprise_id,
              u.last_login, u.created_at,
              array_agg(DISTINCT p.id) as profile_ids,
@@ -157,6 +160,7 @@ class UserModel {
           u.department, 
           u.position, 
           u.enterprise_id,
+          u.language,
           u.is_active, 
           u.last_login,
           u.created_at
@@ -198,7 +202,7 @@ class UserModel {
       `SELECT u.id, u.username, u.email,
           u.first_name, u.last_name, 
           u.department, u.position,
-          u.enterprise_id,
+          u.enterprise_id, u.language,
           u.is_active, u.last_login,
           u.created_at
        FROM users u
@@ -234,7 +238,7 @@ class UserModel {
    * Mettre à jour un utilisateur
    */
   async update(id, userData) {
-    const { firstName, lastName, department, position, profileIds = [] } = userData;
+    const { firstName, lastName, department, position, language, profileIds = [] } = userData;
     
     const transaction = db.transaction();
     
@@ -243,6 +247,7 @@ class UserModel {
       last_name: lastName,
       department,
       position,
+      ...(language ? { language: i18n.normalizeLang(language) } : {}),
       updated_at: new Date()
     }, 'id', id);
     
@@ -285,6 +290,13 @@ class UserModel {
   }
 
   /**
+   * Langue préférée (interface + emails)
+   */
+  async setLanguage(id, language) {
+    return await db.update('users', { language: i18n.normalizeLang(language), updated_at: new Date() }, 'id', id);
+  }
+
+  /**
    * Mettre à jour la dernière connexion
    */
   async updateLastLogin(id) {
@@ -295,54 +307,11 @@ class UserModel {
   }
 
   /**
-   * Authentifier un utilisateur
-   */
-  async authenticate(email, password) {
-    const user = await db.one(
-      `SELECT id, username, email, password_hash, first_name, last_name, 
-              department, position, is_active 
-       FROM users WHERE email = $1 AND is_active = true`,
-      [email]
-    );
-    
-    if (!user) {
-      return { success: false, message: 'Utilisateur non trouvé' };
-    }
-    
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    
-    if (!isValidPassword) {
-      return { success: false, message: 'Mot de passe incorrect' };
-    }
-    
-    await this.updateLastLogin(user.id);
-    
-    const profiles = await this.getUserProfiles(user.id);
-    const permissions = await this.getUserPermissions(user.id);
-    
-    return {
-      success: true,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        department: user.department,
-        position: user.position,
-        isActive: user.is_active,
-        profiles,
-        permissions
-      }
-    };
-  }
-
-  /**
    * Utilisateur actif par email (insensible à la casse) — mot de passe oublié
    */
   async findActiveByEmail(email) {
     return await db.one(
-      `SELECT id, email, first_name, last_name FROM users
+      `SELECT id, email, first_name, last_name, language FROM users
        WHERE LOWER(email) = LOWER($1) AND is_active = true`,
       [email]
     );
@@ -513,11 +482,13 @@ class UserModel {
 
 
 
-  // backend/src/models/UserModel.js (extrait authenticate)
+  /**
+   * Authentifier un utilisateur
+   */
 async authenticate(email, password) {
   const user = await db.one(
     `SELECT id, username, email, password_hash, first_name, last_name, 
-            department, position, is_active, enterprise_id
+            department, position, is_active, enterprise_id, language
      FROM users WHERE email = $1 AND is_active = true`,
     [email]
   );
@@ -548,6 +519,7 @@ async authenticate(email, password) {
       lastName: user.last_name,
       department: user.department,
       position: user.position,
+      language: user.language,
       isActive: user.is_active,
       profiles,
       permissions

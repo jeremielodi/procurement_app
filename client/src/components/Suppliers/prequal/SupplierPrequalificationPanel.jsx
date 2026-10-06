@@ -6,12 +6,13 @@ import toast from 'react-hot-toast';
 import { CheckCircle, XCircle, RotateCcw, MapPin, FileText, Tags, AlertTriangle, Contact, ShieldCheck, Eye, Upload } from 'lucide-react';
 import { supplierService } from '../../../services/supplierService';
 import { EXPECTED_DOCS, DOC_LABELS, SUPPLIER_TYPE_LABELS, PREQ_STATUS, docAccept, checkDocFile, openDocument } from '../../../utils/supplierDocs';
+import { t, withLabel, getLocale } from '../../../i18n';
 
-const REVIEW = {
-  VERIFIED: { label: 'Vérifié', cls: 'bg-green-100 text-green-800' },
-  REJECTED: { label: 'Refusé', cls: 'bg-red-100 text-red-800' },
-  PENDING: { label: 'À vérifier', cls: 'bg-yellow-100 text-yellow-800' },
-};
+const REVIEW = withLabel('docReview', {
+  VERIFIED: { cls: 'bg-green-100 text-green-800' },
+  REJECTED: { cls: 'bg-red-100 text-red-800' },
+  PENDING: { cls: 'bg-yellow-100 text-yellow-800' },
+});
 
 const Card = ({ icon: Icon, title, children, right }) => (
   <div className="bg-white rounded-lg shadow">
@@ -38,8 +39,8 @@ function ReasonInput({ placeholder, onConfirm, onCancel }) {
       <input autoFocus value={text} onChange={e => setText(e.target.value)} placeholder={placeholder}
         className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />
       <button type="button" disabled={!text.trim()} onClick={() => onConfirm(text.trim())}
-        className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm disabled:opacity-50">Confirmer</button>
-      <button type="button" onClick={onCancel} className="px-3 py-1.5 rounded-lg border text-sm">Annuler</button>
+        className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm disabled:opacity-50">{t('prequal.confirm')}</button>
+      <button type="button" onClick={onCancel} className="px-3 py-1.5 rounded-lg border text-sm">{t('common.cancel')}</button>
     </div>
   );
 }
@@ -83,9 +84,9 @@ export default function SupplierPrequalificationPanel({ supplier, canReview, can
   };
 
   const dossierMessage = [
-    dossier.missing.length && `non déposés : ${dossier.missing.map(t => DOC_LABELS[t]).join(', ')}`,
-    dossier.rejected.length && `refusés : ${dossier.rejected.map(t => DOC_LABELS[t]).join(', ')}`,
-    dossier.toVerify.length && `à vérifier : ${dossier.toVerify.map(t => DOC_LABELS[t]).join(', ')}`,
+    dossier.missing.length && t('prequal.notUploaded', { list: dossier.missing.map(dt => DOC_LABELS[dt]).join(', ') }),
+    dossier.rejected.length && t('prequal.refused', { list: dossier.rejected.map(dt => DOC_LABELS[dt]).join(', ') }),
+    dossier.toVerify.length && t('prequal.toVerify', { list: dossier.toVerify.map(dt => DOC_LABELS[dt]).join(', ') }),
   ].filter(Boolean).join(' · ');
 
   return (
@@ -93,94 +94,94 @@ export default function SupplierPrequalificationPanel({ supplier, canReview, can
       {dossier.complete ? (
         <div className="flex gap-3 p-4 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">
           <ShieldCheck size={18} className="shrink-0 mt-0.5" />
-          <p>Dossier complet : tous les documents ont été vérifiés. Le fournisseur peut être préqualifié dans ses catégories.</p>
+          <p>{t('prequal.complete')}</p>
         </div>
       ) : (
         <div className="flex gap-3 p-4 rounded-lg bg-orange-50 border border-orange-200 text-orange-800 text-sm">
           <AlertTriangle size={18} className="shrink-0 mt-0.5" />
-          <p>Préqualification impossible tant que tous les documents ne sont pas déposés et vérifiés — {dossierMessage}.
-            {dossier.missing.length > 0 && supplier.self_registered ? ' Le fournisseur doit les déposer depuis son portail.' : ''}</p>
+          <p>{t('prequal.impossible', { details: dossierMessage })}
+            {dossier.missing.length > 0 && supplier.self_registered ? t('prequal.mustUpload') : ''}</p>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card icon={Contact} title="Identification">
+        <Card icon={Contact} title={t('prequal.identification')}>
           <div className="grid grid-cols-2 gap-4">
-            <Info label="Type" value={SUPPLIER_TYPE_LABELS[type]} />
-            <Info label="Code fournisseur" value={supplier.supplier_code} />
+            <Info label={t('prequal.type')} value={SUPPLIER_TYPE_LABELS[type]} />
+            <Info label={t('prequal.supplierCode')} value={supplier.supplier_code} />
             {type === 'COMPANY' && <>
-              <Info label="N° RCCM" value={supplier.registration_number} />
-              <Info label="N° d'impôt (NIF)" value={supplier.tax_id} />
-              <Info label="N° ID Nat" value={supplier.id_nat} />
+              <Info label={t('supplierFields.registrationNumber')} value={supplier.registration_number} />
+              <Info label={t('supplierFields.taxId')} value={supplier.tax_id} />
+              <Info label={t('supplierFields.idNat')} value={supplier.id_nat} />
             </>}
-            <Info label="N° pièce d'identité" value={supplier.id_document_number} />
-            <Info label="Banque" value={supplier.bank_name} />
-            <Info label="N° de compte" value={supplier.bank_account} />
+            <Info label={t('supplierFields.idDocumentNumber')} value={supplier.id_document_number} />
+            <Info label={t('supplierFields.bankName')} value={supplier.bank_name} />
+            <Info label={t('supplierFields.bankAccount')} value={supplier.bank_account} />
           </div>
         </Card>
 
-        <Card icon={MapPin} title="Localisations desservies">
+        <Card icon={MapPin} title={t('prequal.locations')}>
           {(supplier.locations || []).length ? (
             <div className="flex flex-wrap gap-2">
               {supplier.locations.map(l => (
                 <span key={l.id} className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 text-sm">{l.name}</span>
               ))}
             </div>
-          ) : <p className="text-sm text-gray-500">Aucune localisation déclarée</p>}
+          ) : <p className="text-sm text-gray-500">{t('prequal.noLocation')}</p>}
         </Card>
       </div>
 
-      <Card icon={FileText} title="Documents"
-        right={<span className="text-xs text-gray-500">Comparez chaque document aux informations saisies avant de le vérifier</span>}>
+      <Card icon={FileText} title={t('prequal.documents')}
+        right={<span className="text-xs text-gray-500">{t('prequal.compareHint')}</span>}>
         <div className="divide-y">
-          {EXPECTED_DOCS[type].map(t => {
-            const doc = docsByType[t];
+          {EXPECTED_DOCS[type].map(dt => {
+            const doc = docsByType[dt];
             const st = doc ? REVIEW[doc.review_status || 'PENDING'] : null;
             return (
-              <div key={t} className="py-3 flex flex-wrap items-center justify-between gap-3" data-testid={`review-${t}`}>
+              <div key={dt} className="py-3 flex flex-wrap items-center justify-between gap-3" data-testid={`review-${dt}`}>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800">{DOC_LABELS[t]}</p>
+                  <p className="text-sm font-medium text-gray-800">{DOC_LABELS[dt]}</p>
                   {doc ? (
                     <p className="text-xs text-gray-500">
                       <span className={`px-2 py-0.5 rounded-full mr-1 ${st.cls}`}>{st.label}</span>
-                      {doc.file_name} · déposé le {new Date(doc.uploaded_at).toLocaleDateString('fr-FR')}
-                      {doc.reviewed_at && <> · {doc.review_status === 'VERIFIED' ? 'vérifié' : 'refusé'} le {new Date(doc.reviewed_at).toLocaleDateString('fr-FR')}{doc.reviewed_by_name ? ` par ${doc.reviewed_by_name}` : ''}</>}
+                      {t('prequal.uploadedOn', { file: doc.file_name, date: new Date(doc.uploaded_at).toLocaleDateString(getLocale()) })}
+                      {doc.reviewed_at && <> · {t(doc.review_status === 'VERIFIED' ? 'prequal.verifiedOn' : 'prequal.refusedOn', { date: new Date(doc.reviewed_at).toLocaleDateString(getLocale()) })}{doc.reviewed_by_name ? t('prequal.byName', { name: doc.reviewed_by_name }) : ''}</>}
                       {doc.review_comment && <> · « {doc.review_comment} »</>}
                     </p>
-                  ) : <p className="text-xs text-orange-600">Non déposé</p>}
+                  ) : <p className="text-xs text-orange-600">{t('prequal.notUploadedOne')}</p>}
                 </div>
                 <div className="flex items-center gap-2">
                   {doc && (
                     <button type="button" onClick={() => openDocument(() => supplierService.getDocumentBlob(supplier.id, doc.id))}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm hover:bg-gray-50">
-                      <Eye size={14} /> Consulter
+                      <Eye size={14} /> {t('prequal.consult')}
                     </button>
                   )}
                   {doc && canReview && doc.review_status !== 'VERIFIED' && (
                     <button type="button" disabled={busy === `doc-${doc.id}`} onClick={() => review(doc, 'VERIFIED')}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm hover:bg-green-700 disabled:opacity-50">
-                      <CheckCircle size={14} /> Vérifié
+                      <CheckCircle size={14} /> {t('prequal.verify')}
                     </button>
                   )}
                   {doc && canReview && doc.review_status !== 'REJECTED' && (
                     <button type="button" onClick={() => setRejectingDoc(doc.id)}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-300 text-red-600 text-sm hover:bg-red-50">
-                      <XCircle size={14} /> Refuser
+                      <XCircle size={14} /> {t('prequal.refuse')}
                     </button>
                   )}
                   {doc?.review_status && canReview && (
-                    <button type="button" onClick={() => review(doc, null)} title="Annuler la vérification"
+                    <button type="button" onClick={() => review(doc, null)} title={t('prequal.undoReview')}
                       className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"><RotateCcw size={16} /></button>
                   )}
                   {uploadAllowed && (
                     <label className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm cursor-pointer hover:bg-gray-50">
-                      <Upload size={14} /> {doc ? 'Remplacer' : 'Déposer'}
-                      <input type="file" accept={docAccept(t)} className="hidden" onChange={(e) => upload(t, e)} />
+                      <Upload size={14} /> {doc ? t('prequal.replace') : t('prequal.upload')}
+                      <input type="file" accept={docAccept(dt)} className="hidden" onChange={(e) => upload(dt, e)} />
                     </label>
                   )}
                 </div>
                 {doc && rejectingDoc === doc.id && (
-                  <ReasonInput placeholder="Motif du refus (communiqué au fournisseur)"
+                  <ReasonInput placeholder={t('prequal.refuseReason')}
                     onConfirm={(c) => review(doc, 'REJECTED', c)} onCancel={() => setRejectingDoc(null)} />
                 )}
               </div>
@@ -189,9 +190,9 @@ export default function SupplierPrequalificationPanel({ supplier, canReview, can
         </div>
       </Card>
 
-      <Card icon={Tags} title="Préqualification par catégorie (mon entreprise)">
+      <Card icon={Tags} title={t('prequal.byCategory')}>
         {(supplier.prequalification || []).length === 0 ? (
-          <p className="text-sm text-gray-500">Le fournisseur n'a déclaré aucune catégorie de marché.</p>
+          <p className="text-sm text-gray-500">{t('prequal.noCategory')}</p>
         ) : (
           <div className="divide-y">
             {supplier.prequalification.map(p => {
@@ -202,7 +203,7 @@ export default function SupplierPrequalificationPanel({ supplier, canReview, can
                     <p className="font-medium text-gray-800">{p.category_name}</p>
                     <p className="text-xs text-gray-500">
                       <span className={`px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
-                      {p.decided_at && <> · {new Date(p.decided_at).toLocaleDateString('fr-FR')}{p.decided_by_name ? ` par ${p.decided_by_name}` : ''}</>}
+                      {p.decided_at && <> · {new Date(p.decided_at).toLocaleDateString(getLocale())}{p.decided_by_name ? t('prequal.byName', { name: p.decided_by_name }) : ''}</>}
                       {p.comment && <> · « {p.comment} »</>}
                     </p>
                   </div>
@@ -210,25 +211,25 @@ export default function SupplierPrequalificationPanel({ supplier, canReview, can
                     <div className="flex items-center gap-2">
                       {p.status !== 'APPROVED' && (
                         <button type="button" disabled={busy === `cat-${p.category_id}` || !dossier.complete} onClick={() => decide(p.category_id, 'APPROVED')}
-                          title={dossier.complete ? 'Déclarer préqualifié dans cette catégorie' : 'Tous les documents doivent être déposés et vérifiés'}
+                          title={dossier.complete ? t('prequal.declare') : t('prequal.allDocsRequired')}
                           className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                          <CheckCircle size={14} /> Préqualifier
+                          <CheckCircle size={14} /> {t('prequal.prequalify')}
                         </button>
                       )}
                       {p.status !== 'REJECTED' && (
                         <button type="button" disabled={busy === `cat-${p.category_id}`} onClick={() => setRejectingCat(p.category_id)}
                           className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-300 text-red-600 text-sm hover:bg-red-50">
-                          <XCircle size={14} /> Rejeter
+                          <XCircle size={14} /> {t('common.reject')}
                         </button>
                       )}
                       {p.status && (
-                        <button type="button" disabled={busy === `cat-${p.category_id}`} onClick={() => decide(p.category_id, null)} title="Remettre en attente"
+                        <button type="button" disabled={busy === `cat-${p.category_id}`} onClick={() => decide(p.category_id, null)} title={t('prequal.reset')}
                           className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"><RotateCcw size={16} /></button>
                       )}
                     </div>
                   )}
                   {rejectingCat === p.category_id && (
-                    <ReasonInput placeholder="Motif du rejet (obligatoire)"
+                    <ReasonInput placeholder={t('prequal.rejectReason')}
                       onConfirm={(c) => decide(p.category_id, 'REJECTED', c)} onCancel={() => setRejectingCat(null)} />
                   )}
                 </div>
@@ -237,7 +238,7 @@ export default function SupplierPrequalificationPanel({ supplier, canReview, can
           </div>
         )}
         {!canReview && (
-          <p className="text-xs text-gray-500 mt-3">La vérification des documents et la préqualification sont réservées à l'administrateur de l'entreprise.</p>
+          <p className="text-xs text-gray-500 mt-3">{t('prequal.adminOnly')}</p>
         )}
       </Card>
     </div>

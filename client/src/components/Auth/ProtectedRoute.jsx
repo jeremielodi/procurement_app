@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import { isSupplierUser, isSuperAdminUser } from '../../utils/accountType';
+import { t } from '../../i18n';
 
 // Pages accessibles à un compte fournisseur / au super admin de la plateforme
 const SUPPLIER_PATHS = ['/supplier/', '/notifications'];
@@ -21,7 +22,7 @@ export default function ProtectedRoute({
   
   // Afficher un spinner pendant le chargement
   if (isLoading) {
-    return <LoadingSpinner fullScreen text="Vérification de l'authentification..." />;
+    return <LoadingSpinner fullScreen text={t('auth.checkingAuth')} />;
   }
   
   // Si non authentifié, rediriger vers login

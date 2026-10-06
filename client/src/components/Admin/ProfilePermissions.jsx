@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, X, Search, Shield, Lock, Unlock } from 'lucide-react';
 import { profileService } from '../../services/profileService';
 import toast from 'react-hot-toast';
+import { t } from '../../i18n';
 
 export default function ProfilePermissions({ profile, onClose, readOnly = false }) {
   const queryClient = useQueryClient();
@@ -26,7 +27,7 @@ export default function ProfilePermissions({ profile, onClose, readOnly = false 
     onSuccess: () => {
       queryClient.invalidateQueries(['profile-permissions', profile.id]);
       queryClient.invalidateQueries(['profiles']);
-      toast.success('Permission ajoutée');
+      toast.success(t('profiles.added'));
     }
   });
 
@@ -35,7 +36,7 @@ export default function ProfilePermissions({ profile, onClose, readOnly = false 
     onSuccess: () => {
       queryClient.invalidateQueries(['profile-permissions', profile.id]);
       queryClient.invalidateQueries(['profiles']);
-      toast.success('Permission retirée');
+      toast.success(t('profiles.removed'));
     }
   });
 
@@ -45,7 +46,7 @@ export default function ProfilePermissions({ profile, onClose, readOnly = false 
 
   // Grouper les permissions par resource
   const permissionsByResource = allPermissions.reduce((acc, perm) => {
-    const resource = perm.resource || 'Autres';
+    const resource = perm.resource || t('profiles.others');
     if (!acc[resource]) acc[resource] = [];
     acc[resource].push(perm);
     return acc;
@@ -72,13 +73,13 @@ export default function ProfilePermissions({ profile, onClose, readOnly = false 
     return (
       <div className="text-center py-8">
         <Shield size={48} className="mx-auto text-gray-400 mb-3" />
-        <p className="text-gray-500">Le profil Administrateur a automatiquement toutes les permissions.</p>
-        <p className="text-sm text-gray-400 mt-1">Il n'est pas possible de modifier ses permissions.</p>
+        <p className="text-gray-500">{t('profiles.adminAll')}</p>
+        <p className="text-sm text-gray-400 mt-1">{t('profiles.adminLocked')}</p>
         <button
           onClick={onClose}
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
-          Fermer
+          {t('common.close')}
         </button>
       </div>
     );
@@ -93,7 +94,7 @@ export default function ProfilePermissions({ profile, onClose, readOnly = false 
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
-              placeholder="Rechercher une permission..."
+              placeholder={t('profiles.searchPermission')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -105,7 +106,7 @@ export default function ProfilePermissions({ profile, onClose, readOnly = false 
           onChange={(e) => setSelectedResource(e.target.value)}
           className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
         >
-          <option value="all">Toutes les ressources</option>
+          <option value="all">{t('profiles.allResources')}</option>
           {resources.map(resource => (
             <option key={resource} value={resource}>{resource}</option>
           ))}
@@ -115,12 +116,12 @@ export default function ProfilePermissions({ profile, onClose, readOnly = false 
       {/* Résumé */}
       <div className="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
         <div>
-          <span className="text-sm text-gray-600">Permissions assignées: </span>
+          <span className="text-sm text-gray-600">{t('profiles.assigned')} </span>
           <span className="font-semibold text-blue-600">{profilePermissionIds.size}</span>
           <span className="text-sm text-gray-600"> / {allPermissions.length}</span>
         </div>
         <div className="text-xs text-gray-400">
-          Cliquez sur une permission pour l'activer/désactiver
+          {t('profiles.clickHint')}
         </div>
       </div>
 
@@ -128,7 +129,7 @@ export default function ProfilePermissions({ profile, onClose, readOnly = false 
       <div className="max-h-96 overflow-y-auto border rounded-lg">
         {filteredPermissions.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            Aucune permission trouvée
+            {t('profiles.noPermission')}
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
@@ -176,7 +177,7 @@ export default function ProfilePermissions({ profile, onClose, readOnly = false 
           onClick={onClose}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
-          Fermer
+          {t('common.close')}
         </button>
       </div>
     </div>
@@ -199,14 +200,14 @@ function PermissionItem({ permission, isAssigned, onToggle, isLoading }) {
           </span>
           {isAssigned && (
             <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
-              Activée
+              {t('profiles.enabled')}
             </span>
           )}
         </div>
         <p className="text-xs text-gray-500 mt-0.5">{permission.description}</p>
         {permission.resource && (
           <p className="text-xs text-gray-400 mt-0.5">
-            Resource: {permission.resource} / Action: {permission.action}
+            {t('profiles.resourceAction', { resource: permission.resource, action: permission.action })}
           </p>
         )}
       </div>

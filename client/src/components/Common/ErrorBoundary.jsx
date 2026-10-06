@@ -1,6 +1,7 @@
 // src/components/common/ErrorBoundary.jsx
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home, Mail, FileText } from 'lucide-react';
+import { t, getLocale } from '../../i18n';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -56,7 +57,7 @@ class ErrorBoundary extends React.Component {
   // Gérer le signalement d'erreur
   handleReportError = () => {
     const errorReport = {
-      message: this.state.error?.message || 'Erreur inconnue',
+      message: this.state.error?.message || t('errorBoundary.unknown'),
       stack: this.state.error?.stack || 'Stack non disponible',
       componentStack: this.state.errorInfo?.componentStack || 'Component stack non disponible',
       userAgent: navigator.userAgent,
@@ -68,25 +69,19 @@ class ErrorBoundary extends React.Component {
     const reportText = JSON.stringify(errorReport, null, 2);
     navigator.clipboard?.writeText(reportText);
 
-    alert('Le rapport d\'erreur a été copié dans votre presse-papier. Veuillez le coller dans un email de support.');
+    alert(t('errorBoundary.reportCopied'));
   };
 
   // Obtenir un message d'erreur convivial
   getFriendlyErrorMessage() {
     const { error } = this.state;
     
-    if (!error) return 'Une erreur inattendue est survenue.';
+    if (!error) return t('errorBoundary.unexpected');
     
-    const errorMessages = {
-      'NetworkError': 'Problème de connexion réseau. Veuillez vérifier votre connexion internet.',
-      'TypeError': 'Une erreur de type a été détectée. Veuillez réessayer.',
-      'SyntaxError': 'Erreur de syntaxe. Veuillez contacter le support technique.',
-      'ReferenceError': 'Référence non trouvée. Veuillez recharger la page.',
-      'RangeError': 'Valeur hors plage. Veuillez vérifier vos données.',
-      'URIError': 'Erreur d\'URL. Veuillez vérifier le lien.',
-      'EvalError': 'Erreur d\'évaluation. Veuillez contacter le support.',
-      'Error': 'Une erreur est survenue. Veuillez réessayer ou contacter le support.',
-    };
+    const errorMessages = Object.fromEntries(
+      ['NetworkError', 'TypeError', 'SyntaxError', 'ReferenceError', 'RangeError', 'URIError', 'EvalError', 'Error']
+        .map(k => [k, t(`errorBoundary.${k}`)])
+    );
 
     // Vérifier si le message contient un mot-clé
     const message = error.message || '';
@@ -97,27 +92,27 @@ class ErrorBoundary extends React.Component {
     }
 
     // Message personnalisé basé sur le type d'erreur
-    if (message.includes('401')) return 'Vous n\'êtes pas autorisé à accéder à cette page. Veuillez vous connecter.';
-    if (message.includes('403')) return 'Vous n\'avez pas les permissions nécessaires pour accéder à cette ressource.';
-    if (message.includes('404')) return 'La page ou la ressource demandée est introuvable.';
-    if (message.includes('500')) return 'Erreur interne du serveur. Veuillez réessayer plus tard.';
-    if (message.includes('timeout')) return 'La requête a expiré. Veuillez réessayer.';
-    if (message.includes('permission')) return 'Vous n\'avez pas les permissions nécessaires.';
-    if (message.includes('not found')) return 'La ressource demandée est introuvable.';
-    if (message.includes('already exists')) return 'Cette ressource existe déjà.';
-    if (message.includes('validation')) return 'Erreur de validation. Veuillez vérifier vos données.';
+    if (message.includes('401')) return t('errorBoundary.e401');
+    if (message.includes('403')) return t('errorBoundary.e403');
+    if (message.includes('404')) return t('errorBoundary.e404');
+    if (message.includes('500')) return t('errorBoundary.e500');
+    if (message.includes('timeout')) return t('errorBoundary.timeout');
+    if (message.includes('permission')) return t('errorBoundary.permission');
+    if (message.includes('not found')) return t('errorBoundary.notFound');
+    if (message.includes('already exists')) return t('errorBoundary.exists');
+    if (message.includes('validation')) return t('errorBoundary.validation');
 
     // Si l'erreur est liée à l'authentification
     if (message.includes('auth') || message.includes('login') || message.includes('token')) {
-      return 'Problème d\'authentification. Veuillez vous reconnecter.';
+      return t('errorBoundary.auth');
     }
 
     // Erreur de chargement de module
     if (message.includes('ChunkLoadError') || message.includes('Loading chunk')) {
-      return 'Erreur de chargement du module. Veuillez actualiser la page (F5) ou vider votre cache.';
+      return t('errorBoundary.chunk');
     }
 
-    return 'Une erreur inattendue est survenue. Veuillez réessayer ou contacter le support technique.';
+    return t('errorBoundary.fallback');
   }
 
   render() {
@@ -150,7 +145,7 @@ class ErrorBoundary extends React.Component {
                 </div>
               </div>
               <h2 className="text-2xl font-bold text-gray-900 text-center">
-                Oups ! Quelque chose s'est mal passé
+                {t('errorBoundary.title')}
               </h2>
               <p className="text-gray-600 text-center mt-2">
                 {this.getFriendlyErrorMessage()}
@@ -164,12 +159,12 @@ class ErrorBoundary extends React.Component {
                 <div className="mb-6">
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <p className="text-xs font-mono text-gray-600 break-all">
-                      <span className="font-semibold text-red-600">Erreur:</span> {error.message || 'Erreur inconnue'}
+                      <span className="font-semibold text-red-600">{t('errorBoundary.errorLabel')}</span> {error.message || t('errorBoundary.unknown')}
                     </p>
                     {this.state.errorInfo && (
                       <details className="mt-2">
                         <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
-                          Voir la stack trace
+                          {t('errorBoundary.stackTrace')}
                         </summary>
                         <pre className="mt-2 text-xs font-mono text-gray-600 whitespace-pre-wrap bg-gray-100 p-2 rounded">
                           {this.state.errorInfo.componentStack}
@@ -185,7 +180,7 @@ class ErrorBoundary extends React.Component {
                 <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-700">
                     <AlertTriangle className="w-4 h-4 inline mr-1" />
-                    Cette erreur s'est produite {this.state.errorCount} fois. Vérifiez votre connexion ou contactez le support.
+                    {t('errorBoundary.occurred', { count: this.state.errorCount })}
                   </p>
                 </div>
               )}
@@ -197,7 +192,7 @@ class ErrorBoundary extends React.Component {
                   className="flex items-center justify-center px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
-                  Actualiser
+                  {t('common.refresh')}
                 </button>
 
                 <button
@@ -205,7 +200,7 @@ class ErrorBoundary extends React.Component {
                   className="flex items-center justify-center px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors duration-200"
                 >
                   <Home className="w-4 h-4 mr-2" />
-                  Accueil
+                  {t('errorBoundary.home')}
                 </button>
 
                 <button
@@ -213,30 +208,27 @@ class ErrorBoundary extends React.Component {
                   className="flex items-center justify-center px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 font-medium rounded-lg transition-colors duration-200 border border-red-200"
                 >
                   <Mail className="w-4 h-4 mr-2" />
-                  Signaler
+                  {t('errorBoundary.report')}
                 </button>
               </div>
 
               {/* Conseils */}
               <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <h4 className="text-sm font-semibold text-blue-800 mb-2">
-                  💡 Conseils pour résoudre le problème :
+                  {t('errorBoundary.tipsTitle')}
                 </h4>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Actualisez la page (F5) ou videz votre cache (Ctrl+Shift+R)</li>
-                  <li>• Vérifiez votre connexion internet</li>
-                  <li>• Essayez de vous déconnecter/reconnecter</li>
-                  <li>• Si le problème persiste, cliquez sur "Signaler" pour contacter le support</li>
+                  {t('errorBoundary.tips', { returnObjects: true }).map(tip => <li key={tip}>• {tip}</li>)}
                 </ul>
               </div>
 
               {/* ID de session / référence */}
               <div className="mt-4 text-center">
                 <p className="text-xs text-gray-400">
-                  ID de session: {this.generateSessionId()}
+                  {t('errorBoundary.sessionId', { id: this.generateSessionId() })}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Date: {new Date().toLocaleString('fr-FR')}
+                  {t('errorBoundary.dateLabel', { date: new Date().toLocaleString(getLocale()) })}
                 </p>
               </div>
             </div>
@@ -270,14 +262,14 @@ export function MinimalErrorFallback({ error, resetErrorBoundary }) {
       <div className="flex items-center">
         <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
         <p className="text-sm text-red-700">
-          {error?.message || 'Une erreur est survenue'}
+          {error?.message || t('common.errorOccurred')}
         </p>
       </div>
       <button
         onClick={resetErrorBoundary}
         className="mt-2 px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
       >
-        Réessayer
+        {t('common.retry')}
       </button>
     </div>
   );
@@ -292,23 +284,23 @@ export function SectionErrorFallback({ error, resetErrorBoundary }) {
           <AlertTriangle className="w-8 h-8 text-red-600" />
         </div>
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Impossible de charger cette section
+          {t('errorBoundary.sectionTitle')}
         </h3>
         <p className="text-sm text-gray-500 text-center max-w-md mb-4">
-          {error?.message || 'Une erreur est survenue lors du chargement de cette section.'}
+          {error?.message || t('errorBoundary.sectionMsg')}
         </p>
         <div className="flex space-x-3">
           <button
             onClick={resetErrorBoundary}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
           >
-            Réessayer
+            {t('common.retry')}
           </button>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
           >
-            Actualiser la page
+            {t('errorBoundary.reloadPage')}
           </button>
         </div>
       </div>

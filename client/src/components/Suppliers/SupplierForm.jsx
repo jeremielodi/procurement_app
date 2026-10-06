@@ -32,6 +32,7 @@ import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
 import { validateEmail, validatePhone } from '../../utils/validators'
 import toast from 'react-hot-toast'
+import { t } from '../../i18n'
 
 export default function SupplierForm() {
   const { id } = useParams()
@@ -90,11 +91,11 @@ export default function SupplierForm() {
     mutationFn: (data) => supplierService.create(data),
     onSuccess: (response) => {
       queryClient.invalidateQueries(['suppliers'])
-      toast.success('Fournisseur créé avec succès')
+      toast.success(t('supplierForm.created'))
       navigate(`/suppliers/${response.data.id}`)
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la création')
+      toast.error(error.message || t('po.createError'))
       setIsSubmitting(false)
     }
   })
@@ -105,11 +106,11 @@ export default function SupplierForm() {
     onSuccess: () => {
       queryClient.invalidateQueries(['suppliers'])
       queryClient.invalidateQueries(['supplier', id])
-      toast.success('Fournisseur mis à jour avec succès')
+      toast.success(t('supplierForm.updated'))
       navigate(`/suppliers/${id}`)
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la mise à jour')
+      toast.error(error.message || t('profile.updateError'))
       setIsSubmitting(false)
     }
   })
@@ -119,10 +120,10 @@ export default function SupplierForm() {
     mutationFn: (files) => supplierService.uploadDocuments(id, files),
     onSuccess: () => {
       queryClient.invalidateQueries(['supplier', id])
-      toast.success('Documents uploadés avec succès')
+      toast.success(t('supplierForm.docsUploaded'))
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de l\'upload')
+      toast.error(error.message || t('upload.uploadError'))
     }
   })
 
@@ -162,19 +163,19 @@ export default function SupplierForm() {
     const newErrors = {}
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Le nom du fournisseur est requis'
+      newErrors.name = t('supplierForm.nameRequired')
     }
 
     if (formData.email && !validateEmail(formData.email)) {
-      newErrors.email = 'Email invalide'
+      newErrors.email = t('auth.emailInvalid')
     }
 
     if (formData.phone && !validatePhone(formData.phone)) {
-      newErrors.phone = 'Numéro de téléphone invalide'
+      newErrors.phone = t('supplierForm.phoneInvalid')
     }
 
     if (formData.website && !formData.website.match(/^https?:\/\/.+/)) {
-      newErrors.website = 'URL invalide (doit commencer par http:// ou https://)'
+      newErrors.website = t('supplierForm.urlInvalid')
     }
 
     setErrors(newErrors)
@@ -213,7 +214,7 @@ export default function SupplierForm() {
         type: f.type,
         temporary: true
       }))])
-      toast.success(`${files.length} fichier(s) ajouté(s) (seront uploadés à la création)`)
+      toast.success(t('supplierForm.filesAdded', { count: files.length }))
     }
   }
 
@@ -262,7 +263,7 @@ export default function SupplierForm() {
   if (isEditMode && isLoading) {
     return (
       <div className="flex justify-center items-center h-96">
-        <LoadingSpinner size="lg" text="Chargement du fournisseur..." />
+        <LoadingSpinner size="lg" text={t('supplierDetail.loading')} />
       </div>
     )
   }
@@ -271,8 +272,8 @@ export default function SupplierForm() {
     return (
       <div className="p-6">
         <ErrorAlert
-          title="Erreur de chargement"
-          message="Impossible de charger les données du fournisseur"
+          title={t('requisitions.loadError')}
+          message={t('supplierForm.loadErrorMsg')}
           details={error.message}
           onRetry={() => window.location.reload()}
         />
@@ -293,10 +294,10 @@ export default function SupplierForm() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              {isEditMode ? 'Modifier le fournisseur' : 'Nouveau fournisseur'}
+              {isEditMode ? t('supplierForm.editTitle') : t('supplierForm.newTitle')}
             </h1>
             <p className="text-gray-500 mt-1">
-              {isEditMode ? 'Modifiez les informations du fournisseur' : 'Ajoutez un nouveau fournisseur à votre catalogue'}
+              {isEditMode ? t('supplierForm.editSubtitle') : t('supplierForm.newSubtitle')}
             </p>
           </div>
         </div>
@@ -308,14 +309,13 @@ export default function SupplierForm() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Building2 size={20} />
-              Informations générales
+              {t('supplierForm.generalInfo')}
             </h2>
           </div>
           <div className="p-6">
             {isSelfRegistered && (
               <p className="mb-4 text-sm text-blue-800 bg-blue-50 rounded-lg p-3">
-                Fournisseur inscrit sur le portail : son identité, ses documents, catégories et localisations sont gérés par lui-même.
-                Vous pouvez modifier ici le statut, les conditions et les notes.
+                {t('supplierForm.selfRegistered')}
               </p>
             )}
             <div className="flex gap-2 mb-6">
@@ -329,7 +329,7 @@ export default function SupplierForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {formData.supplier_type === 'INDIVIDUAL' ? 'Nom complet *' : 'Raison sociale *'}
+                  {formData.supplier_type === 'INDIVIDUAL' ? t('supplierForm.fullNameRequired') : t('supplierForm.companyNameRequired')}
                 </label>
                 <input
                   type="text"
@@ -340,7 +340,7 @@ export default function SupplierForm() {
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     touched.name && errors.name ? 'border-red-500' : 'border-gray-300'
                   }`}
-                  placeholder="Ex: Entreprise SARL"
+                  placeholder={t('supplierForm.namePlaceholder')}
                 />
                 {touched.name && errors.name && (
                   <p className="mt-1 text-sm text-red-500">{errors.name}</p>
@@ -349,7 +349,7 @@ export default function SupplierForm() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  N° RCCM
+                  {t('supplierFields.registrationNumber')}
                 </label>
                 <input
                   type="text"
@@ -357,25 +357,25 @@ export default function SupplierForm() {
                   value={formData.registration_number}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Ex: CD/GOM/RCCM/24-B-0001"
+                  placeholder={t('supplierForm.rccmPlaceholder')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">N° ID Nat</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('supplierFields.idNat')}</label>
                 <input type="text" name="id_nat" value={formData.id_nat} onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">N° pièce d'identité</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('supplierFields.idDocumentNumber')}</label>
                 <input type="text" name="id_document_number" value={formData.id_document_number} onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  N° d'impôt (NIF)
+                  {t('supplierFields.taxId')}
                 </label>
                 <input
                   type="text"
@@ -383,13 +383,13 @@ export default function SupplierForm() {
                   value={formData.tax_id}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Ex: A1234567X"
+                  placeholder={t('supplierForm.taxPlaceholder')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Site web
+                  {t('supplierFields.website')}
                 </label>
                 <input
                   type="url"
@@ -400,7 +400,7 @@ export default function SupplierForm() {
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     touched.website && errors.website ? 'border-red-500' : 'border-gray-300'
                   }`}
-                  placeholder="https://www.exemple.com"
+                  placeholder={t('supplierForm.websitePlaceholder')}
                 />
                 {touched.website && errors.website && (
                   <p className="mt-1 text-sm text-red-500">{errors.website}</p>
@@ -415,14 +415,14 @@ export default function SupplierForm() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Mail size={20} />
-              Contact
+              {t('supplierForm.contact')}
             </h2>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
+                  {t('common.email')}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -435,7 +435,7 @@ export default function SupplierForm() {
                     className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                       touched.email && errors.email ? 'border-red-500' : 'border-gray-300'
                     }`}
-                    placeholder="contact@entreprise.com"
+                    placeholder={t('supplierForm.emailPlaceholder')}
                   />
                 </div>
                 {touched.email && errors.email && (
@@ -445,7 +445,7 @@ export default function SupplierForm() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Téléphone
+                  {t('common.phone')}
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -468,7 +468,7 @@ export default function SupplierForm() {
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Adresse
+                  {t('common.address')}
                 </label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-3 text-gray-400" size={18} />
@@ -478,7 +478,7 @@ export default function SupplierForm() {
                     onChange={handleChange}
                     rows="3"
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Adresse complète"
+                    placeholder={t('supplierForm.addressPlaceholder')}
                   />
                 </div>
               </div>
@@ -491,14 +491,14 @@ export default function SupplierForm() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Briefcase size={20} />
-              Informations bancaires
+              {t('supplierForm.bankInfo')}
             </h2>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom de la banque
+                  {t('supplierForm.bankName')}
                 </label>
                 <input
                   type="text"
@@ -506,13 +506,13 @@ export default function SupplierForm() {
                   value={formData.bank_name}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Nom de la banque"
+                  placeholder={t('supplierForm.bankName')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  N° de compte
+                  {t('supplierFields.bankAccount')}
                 </label>
                 <input
                   type="text"
@@ -520,7 +520,7 @@ export default function SupplierForm() {
                   value={formData.bank_account}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="N° de compte bancaire"
+                  placeholder={t('supplierForm.accountPlaceholder')}
                 />
               </div>
 
@@ -540,7 +540,7 @@ export default function SupplierForm() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Code SWIFT/BIC
+                  {t('supplierForm.swift')}
                 </label>
                 <input
                   type="text"
@@ -560,14 +560,14 @@ export default function SupplierForm() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <FileText size={20} />
-              Conditions commerciales
+              {t('supplierForm.commercialTerms')}
             </h2>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Conditions de paiement
+                  {t('supplierForm.paymentTerms')}
                 </label>
                 <select
                   name="payment_terms"
@@ -575,19 +575,14 @@ export default function SupplierForm() {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Sélectionner...</option>
-                  <option value="NET_15">Net 15 jours</option>
-                  <option value="NET_30">Net 30 jours</option>
-                  <option value="NET_45">Net 45 jours</option>
-                  <option value="NET_60">Net 60 jours</option>
-                  <option value="COD">Contre remboursement</option>
-                  <option value="PREPAID">Prépaiement</option>
+                  <option value="">{t('common.select')}</option>
+                  {['NET_15', 'NET_30', 'NET_45', 'NET_60', 'COD', 'PREPAID'].map(v => <option key={v} value={v}>{t(`supplierForm.terms.${v}`)}</option>)}
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Conditions de livraison
+                  {t('supplierForm.deliveryTerms')}
                 </label>
                 <select
                   name="delivery_terms"
@@ -595,11 +590,8 @@ export default function SupplierForm() {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Sélectionner...</option>
-                  <option value="EXW">EXW (Départ usine)</option>
-                  <option value="FOB">FOB (Port d'embarquement)</option>
-                  <option value="CIF">CIF (Assurance incluse)</option>
-                  <option value="DDP">DDP (Rendu dédouané)</option>
+                  <option value="">{t('common.select')}</option>
+                  {['EXW', 'FOB', 'CIF', 'DDP'].map(v => <option key={v} value={v}>{t(`supplierForm.incoterms.${v}`)}</option>)}
                 </select>
               </div>
             </div>
@@ -611,14 +603,14 @@ export default function SupplierForm() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Shield size={20} />
-              Statut
+              {t('common.status')}
             </h2>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Statut
+                  {t('common.status')}
                 </label>
                 <select
                   name="status"
@@ -626,13 +618,13 @@ export default function SupplierForm() {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="ACTIVE">Actif</option>
-                  <option value="INACTIVE">Inactif</option>
+                  <option value="ACTIVE">{t('common.active')}</option>
+                  <option value="INACTIVE">{t('common.inactive')}</option>
                 </select>
               </div>
 
               <p className="text-sm text-gray-500 self-center">
-                La préqualification se fait par catégorie de marché, depuis l'onglet « Préqualification & documents » de la fiche.
+                {t('supplierForm.prequalHint')}
               </p>
             </div>
           </div>
@@ -643,7 +635,7 @@ export default function SupplierForm() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <FileText size={20} />
-              Notes internes
+              {t('supplierForm.internalNotes')}
             </h2>
           </div>
           <div className="p-6">
@@ -653,7 +645,7 @@ export default function SupplierForm() {
               onChange={handleChange}
               rows="4"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Notes internes sur ce fournisseur..."
+              placeholder={t('supplierForm.notesPlaceholder')}
             />
           </div>
         </div>
@@ -664,21 +656,20 @@ export default function SupplierForm() {
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <MapPin size={20} />
-                Localisations et catégories de marché
+                {t('supplierForm.locationsCategories')}
               </h2>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Localisations desservies</p>
+                <p className="text-sm font-medium text-gray-700 mb-2">{t('supplierForm.locationsServed')}</p>
                 <MultiCheckList options={refs.locations} value={locationIds} onChange={setLocationIds} columns={1} />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Catégories fournies</p>
+                <p className="text-sm font-medium text-gray-700 mb-2">{t('supplierForm.categoriesSupplied')}</p>
                 <MultiCheckList options={refs.categories} value={categoryIds} onChange={setCategoryIds} columns={1} />
               </div>
               <p className="md:col-span-2 text-xs text-gray-500">
-                Les documents (pièce d'identité, RCCM, attestation fiscale, ID Nat, RIB) se déposent après l'enregistrement,
-                dans l'onglet « Préqualification & documents » de la fiche.
+                {t('supplierForm.docsHint')}
               </p>
             </div>
           </div>
@@ -692,7 +683,7 @@ export default function SupplierForm() {
             className="flex items-center gap-2 px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <X size={18} />
-            Annuler
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -700,7 +691,7 @@ export default function SupplierForm() {
             className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             <Save size={18} />
-            {isSubmitting ? 'Enregistrement...' : (isEditMode ? 'Mettre à jour' : 'Créer')}
+            {isSubmitting ? t('supplierForm.saving') : (isEditMode ? t('supplierForm.update') : t('common.create'))}
           </button>
         </div>
       </form>
@@ -709,14 +700,14 @@ export default function SupplierForm() {
       <Modal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
-        title="Quitter sans enregistrer"
+        title={t('supplierForm.leaveTitle')}
         type="warning"
-        confirmText="Quitter"
-        cancelText="Continuer l'édition"
+        confirmText={t('supplierForm.leave')}
+        cancelText={t('supplierForm.keepEditing')}
         onConfirm={() => navigate('/suppliers')}
       >
-        <p>Vous avez des modifications non enregistrées.</p>
-        <p className="text-sm text-gray-500 mt-2">Êtes-vous sûr de vouloir quitter ?</p>
+        <p>{t('supplierForm.unsaved')}</p>
+        <p className="text-sm text-gray-500 mt-2">{t('supplierForm.confirmLeave')}</p>
       </Modal>
     </div>
   )

@@ -6,6 +6,7 @@ import api from '../../services/api';
 import Modal from '../Common/Modal';
 import UserForm from './UserForm';
 import toast from 'react-hot-toast';
+import { t } from '../../i18n';
 
 export default function UserList() {
   const queryClient = useQueryClient();
@@ -24,7 +25,7 @@ export default function UserList() {
     mutationFn: ({ id, isActive }) => api.patch(`/users/${id}/toggle-active`, { isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries(['users']);
-      toast.success('Statut modifié');
+      toast.success(t('users.statusChanged'));
     }
   });
 
@@ -32,14 +33,14 @@ export default function UserList() {
     mutationFn: (id) => api.delete(`/users/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries(['users']);
-      toast.success('Utilisateur supprimé');
+      toast.success(t('users.deleted'));
     }
   });
 
   const resetPasswordMutation = useMutation({
     mutationFn: ({ id, password }) => api.post(`/users/${id}/reset-password`, { newPassword: password }),
     onSuccess: () => {
-      toast.success('Mot de passe réinitialisé');
+      toast.success(t('users.passwordReset'));
       setShowResetModal(false);
       setNewPassword('');
     }
@@ -53,7 +54,7 @@ export default function UserList() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Gestion des utilisateurs</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t('users.title')}</h1>
         <button
           onClick={() => {
             setSelectedUser(null);
@@ -62,7 +63,7 @@ export default function UserList() {
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus size={18} />
-          Nouvel utilisateur
+          {t('users.new')}
         </button>
       </div>
 
@@ -74,7 +75,7 @@ export default function UserList() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
-                placeholder="Rechercher..."
+                placeholder={t('common.searchPlaceholder')}
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
                 className="w-full pl-10 pr-4 py-2 border rounded-lg"
@@ -86,9 +87,9 @@ export default function UserList() {
             onChange={(e) => setFilters({ ...filters, is_active: e.target.value, page: 1 })}
             className="px-3 py-2 border rounded-lg"
           >
-            <option value="all">Tous</option>
-            <option value="true">Actifs</option>
-            <option value="false">Bloqués</option>
+            <option value="all">{t('users.all')}</option>
+            <option value="true">{t('users.active')}</option>
+            <option value="false">{t('users.blocked')}</option>
           </select>
         </div>
       </div>
@@ -98,12 +99,12 @@ export default function UserList() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Utilisateur</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Département</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Profils</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Statut</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">{t('users.user')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">{t('common.email')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">{t('common.department')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">{t('users.profiles')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">{t('common.status')}</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -126,7 +127,7 @@ export default function UserList() {
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {user.is_active ? 'Actif' : 'Bloqué'}
+                    {user.is_active ? t('users.activeOne') : t('users.blockedOne')}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right space-x-2">
@@ -136,7 +137,7 @@ export default function UserList() {
                       setShowModal(true);
                     }}
                     className="text-blue-600 hover:text-blue-800"
-                    title="Modifier"
+                    title={t('common.edit')}
                   >
                     <Edit size={18} />
                   </button>
@@ -146,25 +147,25 @@ export default function UserList() {
                       setShowResetModal(true);
                     }}
                     className="text-yellow-600 hover:text-yellow-800"
-                    title="Réinitialiser mot de passe"
+                    title={t('users.resetPassword')}
                   >
                     <Key size={18} />
                   </button>
                   <button
                     onClick={() => toggleActiveMutation.mutate({ id: user.id, isActive: !user.is_active })}
                     className={user.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}
-                    title={user.is_active ? 'Bloquer' : 'Débloquer'}
+                    title={user.is_active ? t('users.block') : t('users.unblock')}
                   >
                     {user.is_active ? <Ban size={18} /> : <CheckCircle size={18} />}
                   </button>
                   <button
                     onClick={() => {
-                      if (confirm('Supprimer cet utilisateur ?')) {
+                      if (confirm(t('users.confirmDelete'))) {
                         deleteMutation.mutate(user.id);
                       }
                     }}
                     className="text-red-600 hover:text-red-800"
-                    title="Supprimer"
+                    title={t('common.delete')}
                   >
                     <Trash2 size={18} />
                   </button>
@@ -194,7 +195,7 @@ export default function UserList() {
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={selectedUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'}
+        title={selectedUser ? t('users.edit') : t('users.new')}
         size="lg"
         showFooter={false}
       >
@@ -205,19 +206,19 @@ export default function UserList() {
       <Modal
         isOpen={showResetModal}
         onClose={() => setShowResetModal(false)}
-        title="Réinitialiser le mot de passe"
-        confirmText="Réinitialiser"
+        title={t('users.resetTitle')}
+        confirmText={t('users.reset')}
         onConfirm={() => resetPasswordMutation.mutate({ id: selectedUser?.id, password: newPassword })}
         isLoading={resetPasswordMutation.isPending}
       >
         <div>
-          <label className="block text-sm font-medium mb-1">Nouveau mot de passe</label>
+          <label className="block text-sm font-medium mb-1">{t('users.newPassword')}</label>
           <input
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             className="w-full px-3 py-2 border rounded-lg"
-            placeholder="Au moins 6 caractères"
+            placeholder={t('users.min6')}
           />
         </div>
       </Modal>

@@ -8,22 +8,23 @@ import { locationService, categoryService } from '../../services/referenceServic
 import { EXPECTED_DOCS, DOC_LABELS, SUPPLIER_TYPE_LABELS, openDocument } from '../../utils/supplierDocs';
 import MultiCheckList from '../Suppliers/prequal/MultiCheckList';
 import DocumentField from '../Suppliers/prequal/DocumentField';
+import { t } from '../../i18n';
 
-// [clé API, libellé, colonne, types concernés]
+// [clé API, libellé (clé de traduction), colonne, types concernés]
 const FIELDS = [
-  ['name', 'Raison sociale / nom complet', 'name', ['COMPANY', 'INDIVIDUAL']],
-  ['contactName', 'Nom du contact (représentant)', 'contact_name', ['COMPANY']],
-  ['phone', 'Téléphone', 'phone', ['COMPANY', 'INDIVIDUAL']],
-  ['website', 'Site web', 'website', ['COMPANY']],
-  ['registrationNumber', 'N° RCCM', 'registration_number', ['COMPANY']],
-  ['taxId', "N° d'impôt (NIF)", 'tax_id', ['COMPANY']],
-  ['idNat', 'N° ID Nat', 'id_nat', ['COMPANY']],
-  ['idDocumentNumber', "N° pièce d'identité", 'id_document_number', ['COMPANY', 'INDIVIDUAL']],
-  ['address', 'Adresse', 'address', ['COMPANY', 'INDIVIDUAL']],
-  ['bankName', 'Banque', 'bank_name', ['COMPANY', 'INDIVIDUAL']],
-  ['bankAccount', 'N° de compte', 'bank_account', ['COMPANY', 'INDIVIDUAL']],
-  ['bankIban', 'IBAN', 'bank_iban', ['COMPANY', 'INDIVIDUAL']],
-  ['bankSwift', 'SWIFT', 'bank_swift', ['COMPANY', 'INDIVIDUAL']],
+  ['name', 'supplierFields.nameOrFull', 'name', ['COMPANY', 'INDIVIDUAL']],
+  ['contactName', 'supplierFields.contactName', 'contact_name', ['COMPANY']],
+  ['phone', 'supplierFields.phone', 'phone', ['COMPANY', 'INDIVIDUAL']],
+  ['website', 'supplierFields.website', 'website', ['COMPANY']],
+  ['registrationNumber', 'supplierFields.registrationNumber', 'registration_number', ['COMPANY']],
+  ['taxId', 'supplierFields.taxId', 'tax_id', ['COMPANY']],
+  ['idNat', 'supplierFields.idNat', 'id_nat', ['COMPANY']],
+  ['idDocumentNumber', 'supplierFields.idDocumentNumber', 'id_document_number', ['COMPANY', 'INDIVIDUAL']],
+  ['address', 'supplierFields.address', 'address', ['COMPANY', 'INDIVIDUAL']],
+  ['bankName', 'supplierFields.bankName', 'bank_name', ['COMPANY', 'INDIVIDUAL']],
+  ['bankAccount', 'supplierFields.bankAccount', 'bank_account', ['COMPANY', 'INDIVIDUAL']],
+  ['bankIban', 'supplierFields.bankIban', 'bank_iban', ['COMPANY', 'INDIVIDUAL']],
+  ['bankSwift', 'supplierFields.swift', 'bank_swift', ['COMPANY', 'INDIVIDUAL']],
 ];
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -73,17 +74,17 @@ export default function SupplierProfile() {
   const onLogo = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return toast.error('PNG, JPG ou WEBP uniquement');
-    if (file.size > 2 * 1024 * 1024) return toast.error('Logo trop volumineux (2 Mo maximum)');
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return toast.error(t('portal.logoFormat'));
+    if (file.size > 2 * 1024 * 1024) return toast.error(t('auth.register.logoSize'));
     setLogo(file);
     setPreview(URL.createObjectURL(file));
   };
 
   const save = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return toast.error('Nom requis');
-    if (!locationIds.length) return toast.error('Sélectionnez au moins une localisation');
-    if (!categoryIds.length) return toast.error('Sélectionnez au moins une catégorie de marché');
+    if (!form.name.trim()) return toast.error(t('portal.nameRequired'));
+    if (!locationIds.length) return toast.error(t('auth.register.selectLocation'));
+    if (!categoryIds.length) return toast.error(t('portal.selectCategory'));
     setSaving(true);
     try {
       const fd = new FormData();
@@ -91,11 +92,11 @@ export default function SupplierProfile() {
       FIELDS.filter(([, , , types]) => types.includes(type)).forEach(([k]) => fd.append(k, form[k] ?? ''));
       fd.append('locationIds', JSON.stringify(locationIds));
       fd.append('categoryIds', JSON.stringify(categoryIds));
-      Object.entries(newDocs).forEach(([t, f]) => fd.append(`doc_${t}`, f));
+      Object.entries(newDocs).forEach(([dt, f]) => fd.append(`doc_${dt}`, f));
       if (logo) fd.append('logo', logo);
       const res = await supplierPortalService.updateMe(fd);
       hydrate(res.data);
-      toast.success('Profil mis à jour');
+      toast.success(t('portal.updated'));
     } catch (_) { /* toast */ } finally {
       setSaving(false);
     }
@@ -103,24 +104,24 @@ export default function SupplierProfile() {
 
   const logoSrc = preview || supplierLogoUrl(supplier);
   const docsByType = Object.fromEntries((supplier.documents || []).map(d => [d.doc_type, d]));
-  const stillMissing = EXPECTED_DOCS[type].filter(t => !docsByType[t] && !newDocs[t]);
+  const stillMissing = EXPECTED_DOCS[type].filter(dt => !docsByType[dt] && !newDocs[dt]);
 
   return (
     <form onSubmit={save} className="p-6 max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Mon profil fournisseur</h1>
-        <p className="text-gray-500 text-sm">Code fournisseur : <span className="font-mono">{supplier.supplier_code}</span> · {supplier.email}</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('portal.profileTitle')}</h1>
+        <p className="text-gray-500 text-sm">{t('portal.codeLine')} <span className="font-mono">{supplier.supplier_code}</span> · {supplier.email}</p>
       </div>
 
       {stillMissing.length > 0 && (
         <div className="flex gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-sm">
           <AlertTriangle size={18} className="shrink-0 mt-0.5" />
-          <p>Documents non fournis — tous les documents sont requis, puis vérifiés par chaque entreprise, pour être préqualifié :{' '}
-            <b>{stillMissing.map(t => DOC_LABELS[t]).join(', ')}</b>.</p>
+          <p>{t('portal.docsMissing')}{' '}
+            <b>{stillMissing.map(dt => DOC_LABELS[dt]).join(', ')}</b>.</p>
         </div>
       )}
 
-      <Card icon={type === 'COMPANY' ? Building2 : User} title="Identité">
+      <Card icon={type === 'COMPANY' ? Building2 : User} title={t('portal.identity')}>
         <div className="flex gap-2">
           {['COMPANY', 'INDIVIDUAL'].map(v => (
             <button key={v} type="button" onClick={() => setType(v)}
@@ -136,35 +137,35 @@ export default function SupplierProfile() {
             </div>
             <div>
               <label className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm cursor-pointer hover:bg-gray-50">
-                <Upload size={16} /> Changer le logo
+                <Upload size={16} /> {t('portal.changeLogo')}
                 <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onLogo} />
               </label>
-              <p className="text-xs text-gray-500 mt-1">Affiché sur vos offres PDF. PNG, JPG ou WEBP — 2 Mo max.</p>
+              <p className="text-xs text-gray-500 mt-1">{t('portal.logoHint')}</p>
             </div>
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {FIELDS.filter(([, , , types]) => types.includes(type)).map(([k, label]) => (
             <div key={k} className={k === 'address' ? 'md:col-span-2' : ''}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t(label)}</label>
               <input className={inputCls} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} />
             </div>
           ))}
         </div>
       </Card>
 
-      <Card icon={MapPin} title="Localisations" hint="Où vous pouvez livrer ou avez des bureaux">
+      <Card icon={MapPin} title={t('auth.register.locations')} hint={t('auth.register.locationsHint')}>
         <MultiCheckList options={refs.locations} value={locationIds} onChange={setLocationIds} />
       </Card>
 
-      <Card icon={Tags} title="Catégories de marché" hint="Chaque entreprise vous préqualifie catégorie par catégorie">
+      <Card icon={Tags} title={t('auth.register.categories')} hint={t('portal.categoriesHint')}>
         <MultiCheckList options={refs.categories} value={categoryIds} onChange={setCategoryIds} />
       </Card>
 
-      <Card icon={FileText} title="Documents de préqualification" hint="Un nouveau fichier remplace le précédent à l'enregistrement — 5 Mo max.">
+      <Card icon={FileText} title={t('auth.register.documents')} hint={t('portal.docsHint')}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {EXPECTED_DOCS[type].map(t => (
-            <DocumentField key={t} type={t} file={newDocs[t]} existing={docsByType[t]}
+          {EXPECTED_DOCS[type].map(dt => (
+            <DocumentField key={dt} type={dt} file={newDocs[dt]} existing={docsByType[dt]}
               onFile={(dt, f) => setNewDocs(d => ({ ...d, [dt]: f }))}
               onView={(doc) => openDocument(() => supplierPortalService.getMyDocumentBlob(doc.id))} />
           ))}
@@ -174,7 +175,7 @@ export default function SupplierProfile() {
       <div className="flex justify-end">
         <button type="submit" disabled={saving}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
-          <Save size={16} /> {saving ? 'Enregistrement…' : 'Enregistrer'}
+          <Save size={16} /> {saving ? t('po.saving') : t('common.save')}
         </button>
       </div>
     </form>

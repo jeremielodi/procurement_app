@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download, Printer, AlertCircle, FileText, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { t } from '../../i18n';
 
 export default function BlobPdfViewer({ title, fetchPdf, fileName, infoBar, onClose }) {
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -15,10 +16,10 @@ export default function BlobPdfViewer({ title, fetchPdf, fileName, infoBar, onCl
     setError(null);
     try {
       const blob = await fetchPdf();
-      if (!blob || blob.size === 0) throw new Error('Le PDF généré est vide');
+      if (!blob || blob.size === 0) throw new Error(t('pdf.empty'));
       setPdfUrl(URL.createObjectURL(blob));
     } catch (err) {
-      setError(err.message || 'Impossible de charger le PDF');
+      setError(err.message || t('pdf.loadError'));
     } finally {
       setLoading(false);
     }
@@ -32,13 +33,13 @@ export default function BlobPdfViewer({ title, fetchPdf, fileName, infoBar, onCl
     a.href = pdfUrl;
     a.download = fileName;
     a.click();
-    toast.success('PDF téléchargé');
+    toast.success(t('pdf.downloaded'));
   };
 
   const print = () => {
     const win = window.open(pdfUrl, '_blank');
     if (win) win.onload = () => setTimeout(() => win.print(), 800);
-    else toast.error("Impossible d'ouvrir la fenêtre d'impression");
+    else toast.error(t('pdf.printError'));
   };
 
   return (
@@ -46,7 +47,7 @@ export default function BlobPdfViewer({ title, fetchPdf, fileName, infoBar, onCl
       <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl h-[90vh] flex flex-col">
         <div className="bg-gray-100 rounded-t-lg px-4 py-3 flex items-center justify-between border-b flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <button onClick={onClose} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg" aria-label="Fermer">
+            <button onClick={onClose} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg" aria-label={t('common.close')}>
               <X size={20} />
             </button>
             <div className="h-6 w-px bg-gray-300" />
@@ -56,10 +57,10 @@ export default function BlobPdfViewer({ title, fetchPdf, fileName, infoBar, onCl
           {pdfUrl && (
             <div className="flex items-center gap-2">
               <button onClick={download} className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
-                <Download size={16} /> Télécharger
+                <Download size={16} /> {t('common.download')}
               </button>
               <button onClick={print} className="flex items-center gap-2 px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm">
-                <Printer size={16} /> Imprimer
+                <Printer size={16} /> {t('common.print')}
               </button>
             </div>
           )}
@@ -71,14 +72,14 @@ export default function BlobPdfViewer({ title, fetchPdf, fileName, infoBar, onCl
           {loading ? (
             <div className="m-auto flex flex-col items-center text-gray-500">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600" />
-              <p className="mt-3">Génération du PDF…</p>
+              <p className="mt-3">{t('pdf.generating')}</p>
             </div>
           ) : error ? (
             <div className="m-auto text-center">
               <AlertCircle size={32} className="text-red-500 mx-auto" />
               <p className="mt-2 text-gray-600">{error}</p>
               <button onClick={load} className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg">
-                <RefreshCw size={16} /> Réessayer
+                <RefreshCw size={16} /> {t('common.retry')}
               </button>
             </div>
           ) : (

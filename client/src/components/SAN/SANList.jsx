@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Plus, Search, RefreshCw, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { sanService } from '../../services/sanService';
+import { t, withLabel, getLocale } from '../../i18n';
 
-const STATUS_LABELS = {
-  DRAFT:    { label: 'Brouillon',  cls: 'bg-gray-100 text-gray-700' },
-  ACCEPTED: { label: 'Accepté',   cls: 'bg-green-100 text-green-700' },
-  REJECTED: { label: 'Rejeté',    cls: 'bg-red-100 text-red-700' },
-};
+const STATUS_LABELS = withLabel('sanStatus', {
+  DRAFT:    { cls: 'bg-gray-100 text-gray-700' },
+  ACCEPTED: { cls: 'bg-green-100 text-green-700' },
+  REJECTED: { cls: 'bg-red-100 text-red-700' },
+});
 
 export default function SANList() {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export default function SANList() {
       setSans(res.data || []);
       setPagination(res.pagination || {});
     } catch {
-      toast.error('Erreur lors du chargement des SAN');
+      toast.error(t('san.loadError'));
     } finally {
       setLoading(false);
     }
@@ -45,14 +46,14 @@ export default function SANList() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Notes d'Acceptation de Service (SAN)</h1>
-          <p className="text-gray-500 text-sm mt-1">Validation des services et prestations reçus</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('san.title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('san.subtitle')}</p>
         </div>
         <button
           onClick={() => navigate('/service-acceptance-notes/new')}
           className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
         >
-          <Plus size={16} /> Nouvelle SAN
+          <Plus size={16} /> {t('san.new')}
         </button>
       </div>
 
@@ -61,7 +62,7 @@ export default function SANList() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-purple-500"
-            placeholder="Rechercher SAN, commande…"
+            placeholder={t('san.searchPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -71,7 +72,7 @@ export default function SANList() {
           onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
         >
-          <option value="">Tous les statuts</option>
+          <option value="">{t('requisitions.allStatuses')}</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => (
             <option key={k} value={k}>{v.label}</option>
           ))}
@@ -89,14 +90,14 @@ export default function SANList() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-gray-400">
             <ClipboardCheck size={40} className="mb-2 opacity-40" />
-            <p>Aucune note d'acceptation trouvée</p>
+            <p>{t('san.none')}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['N° SAN', 'Commande', 'Fournisseur', 'Date acceptation', 'Validé par', 'Statut', ''].map(h => (
-                  <th key={h} className="text-left px-4 py-3 font-medium text-gray-600">{h}</th>
+                {t('san.cols', { returnObjects: true }).map((h, i) => (
+                  <th key={i} className="text-left px-4 py-3 font-medium text-gray-600">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -109,7 +110,7 @@ export default function SANList() {
                     <td className="px-4 py-3 text-blue-600">{san.po_number || '—'}</td>
                     <td className="px-4 py-3 text-gray-700">{san.supplier_name || '—'}</td>
                     <td className="px-4 py-3 text-gray-600">
-                      {san.acceptance_date ? new Date(san.acceptance_date).toLocaleDateString('fr-FR') : '—'}
+                      {san.acceptance_date ? new Date(san.acceptance_date).toLocaleDateString(getLocale()) : '—'}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{san.accepted_by_name || '—'}</td>
                     <td className="px-4 py-3">
@@ -119,7 +120,7 @@ export default function SANList() {
                       <button
                         onClick={() => navigate(`/service-acceptance-notes/${san.id}`)}
                         className="p-1.5 hover:bg-purple-50 rounded text-purple-600"
-                        title="Voir"
+                        title={t('common.view')}
                       >
                         <Eye size={16} />
                       </button>

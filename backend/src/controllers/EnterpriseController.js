@@ -6,6 +6,7 @@
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
+const i18n = require('../i18n');
 const enterpriseModel = require('../models/EnterpriseModel');
 const { saveLogo, removeLogo, sendLogo } = require('../utils/logoUpload');
 
@@ -48,6 +49,7 @@ async function createAdmin(enterpriseId, a, createdBy) {
     id, username: `${email.split('@')[0].slice(0, 40)}_${id.slice(0, 6)}`, email,
     password_hash: await bcrypt.hash(a.password, 10),
     first_name: a.firstName || null, last_name: a.lastName || null, position: 'Administrateur',
+    language: i18n.normalizeLang(a.language),
     is_active: true, enterprise_id: enterpriseId, created_at: new Date(), updated_at: new Date(),
   });
   t.addInsertQuery('user_profiles', { user_id: id, profile_id: 'prof_admin', assigned_at: new Date(), assigned_by: createdBy });
@@ -115,7 +117,7 @@ class EnterpriseController {
       let admin = null;
       if (b.adminEmail) {
         admin = await createAdmin(enterprise.id, {
-          email: b.adminEmail, password: b.adminPassword, firstName: b.adminFirstName, lastName: b.adminLastName,
+          email: b.adminEmail, password: b.adminPassword, firstName: b.adminFirstName, lastName: b.adminLastName, language: b.adminLanguage,
         }, req.user.id);
       }
       res.status(201).json({ success: true, data: { ...enterprise, admin }, message: 'Entreprise créée' });

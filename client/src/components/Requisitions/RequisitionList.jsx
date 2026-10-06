@@ -37,26 +37,24 @@ import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import toast from 'react-hot-toast'
+import { t, withLabel } from '../../i18n'
 
 
 
 
-const priorityOptions = [
-  { value: 'all', label: 'Toutes priorités' },
-  { value: 'LOW', label: 'Basse' },
-  { value: 'MEDIUM', label: 'Moyenne' },
-  { value: 'HIGH', label: 'Haute' },
-  { value: 'URGENT', label: 'Urgent' }
+const priorityOptions = () => [
+  { value: 'all', label: t('requisitions.allPriorities') },
+  ...['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map(value => ({ value, label: t(`priority.${value}`) }))
 ]
 
 // Avancement global du cycle (calculé côté backend : progress_status)
-const PROGRESS = {
-  DRAFT:       { label: 'Brouillon', cls: 'bg-gray-100 text-gray-700' },
-  IN_PROGRESS: { label: 'En cours',  cls: 'bg-blue-100 text-blue-700' },
-  COMPLETED:   { label: 'Terminé',   cls: 'bg-green-100 text-green-700' },
-  REJECTED:    { label: 'Rejeté',    cls: 'bg-red-100 text-red-700' },
-  CANCELLED:   { label: 'Annulé',    cls: 'bg-gray-200 text-gray-600' },
-}
+const PROGRESS = withLabel('progress', {
+  DRAFT:       { cls: 'bg-gray-100 text-gray-700' },
+  IN_PROGRESS: { cls: 'bg-blue-100 text-blue-700' },
+  COMPLETED:   { cls: 'bg-green-100 text-green-700' },
+  REJECTED:    { cls: 'bg-red-100 text-red-700' },
+  CANCELLED:   { cls: 'bg-gray-200 text-gray-600' },
+})
 
 export default function RequisitionList() {
   const navigate = useNavigate()
@@ -93,7 +91,7 @@ export default function RequisitionList() {
 
   // Créer les options de département pour le filtre
   const departmentOptions = [
-    { value: 'all', label: 'Tous départements' },
+    { value: 'all', label: t('requisitions.allDepartments') },
     ...departments.map(dept => ({
       value: dept.id,
       label: `${dept.code} - ${dept.name}`
@@ -121,12 +119,12 @@ export default function RequisitionList() {
     mutationFn: (id) => requisitionService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['requisitions'])
-      toast.success('Réquisition supprimée avec succès')
+      toast.success(t('requisitions.deleted'))
       setShowDeleteModal(false)
       setRequisitionToDelete(null)
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la suppression')
+      toast.error(error.message || t('requisitions.deleteError'))
     }
   })
 
@@ -135,12 +133,12 @@ export default function RequisitionList() {
     mutationFn: (ids) => requisitionService.bulkDelete(ids),
     onSuccess: () => {
       queryClient.invalidateQueries(['requisitions'])
-      toast.success(`${selectedRequisitions.length} réquisition(s) supprimée(s)`)
+      toast.success(t('requisitions.bulkDeleted', { count: selectedRequisitions.length }))
       setShowBulkDeleteModal(false)
       setSelectedRequisitions([])
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la suppression')
+      toast.error(error.message || t('requisitions.deleteError'))
     }
   })
 
@@ -149,10 +147,10 @@ export default function RequisitionList() {
     mutationFn: (id) => requisitionService.submit(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['requisitions'])
-      toast.success('Réquisition soumise avec succès')
+      toast.success(t('requisitions.submitted'))
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la soumission')
+      toast.error(error.message || t('requisitions.submitError'))
     }
   })
 
@@ -205,7 +203,7 @@ export default function RequisitionList() {
         document.body.appendChild(link)
         link.click()
         link.remove()
-        toast.success('Export Excel réussi')
+        toast.success(t('requisitions.exportExcelOk'))
       } else if (format === 'pdf') {
         const blob = await requisitionService.exportToPDF(filters)
         const url = window.URL.createObjectURL(blob)
@@ -215,10 +213,10 @@ export default function RequisitionList() {
         document.body.appendChild(link)
         link.click()
         link.remove()
-        toast.success('Export PDF réussi')
+        toast.success(t('requisitions.exportPdfOk'))
       }
     } catch (error) {
-      toast.error('Erreur lors de l\'export')
+      toast.error(t('requisitions.exportError'))
     }
   }
 
@@ -248,7 +246,7 @@ export default function RequisitionList() {
   if (isLoading && !data) {
     return (
       <div className="flex justify-center items-center h-96">
-        <LoadingSpinner size="lg" text="Chargement des réquisitions..." />
+        <LoadingSpinner size="lg" text={t('requisitions.loading')} />
       </div>
     )
   }
@@ -257,8 +255,8 @@ export default function RequisitionList() {
     return (
       <div className="p-6">
         <ErrorAlert
-          title="Erreur de chargement"
-          message="Impossible de charger les réquisitions"
+          title={t('requisitions.loadError')}
+          message={t('requisitions.loadErrorMsg')}
           details={error.message}
           onRetry={() => refetch()}
         />
@@ -271,9 +269,9 @@ export default function RequisitionList() {
       {/* En-tête */}
       <div className="flex flex-wrap justify-between items-start gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Réquisitions</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{t('nav.requisitions')}</h1>
           <p className="text-gray-500 mt-1">
-            Gérez toutes vos demandes d'achat
+            {t('requisitions.subtitle')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -282,7 +280,7 @@ export default function RequisitionList() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus size={18} />
-            Nouvelle réquisition
+            {t('requisitions.new')}
           </Link>
         </div>
       </div>
@@ -295,7 +293,7 @@ export default function RequisitionList() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
-                placeholder="Rechercher par numéro, titre ou département..."
+                placeholder={t('requisitions.searchPlaceholder')}
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -307,7 +305,7 @@ export default function RequisitionList() {
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Filter size={18} />
-            Filtres
+            {t('common.filters')}
             {(filters.progress !== 'all' || filters.status !== 'all' || filters.priority !== 'all' || filters.departmentId !== 'all' || filters.fromDate || filters.toDate) && (
               <span className="ml-1 w-2 h-2 bg-blue-600 rounded-full" />
             )}
@@ -317,12 +315,12 @@ export default function RequisitionList() {
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <RefreshCw size={18} />
-            Rafraîchir
+            {t('common.refresh')}
           </button>
           <div className="relative group">
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
               <Download size={18} />
-              Exporter
+              {t('common.export')}
             </button>
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 hidden group-hover:block z-10">
               <button
@@ -344,7 +342,7 @@ export default function RequisitionList() {
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg"
               >
                 <Printer size={16} className="inline mr-2" />
-                Imprimer
+                {t('common.print')}
               </button>
             </div>
           </div>
@@ -358,9 +356,9 @@ export default function RequisitionList() {
                 value={filters.progress}
                 onChange={(e) => handleFilterChange('progress', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                aria-label="Avancement"
+                aria-label={t('requisitions.progress')}
               >
-                <option value="all">Tous les avancements</option>
+                <option value="all">{t('requisitions.allProgress')}</option>
                 {Object.entries(PROGRESS).map(([value, p]) => (
                   <option key={value} value={value}>{p.label}</option>
                 ))}
@@ -379,7 +377,7 @@ export default function RequisitionList() {
                 onChange={(e) => handleFilterChange('priority', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                {priorityOptions.map(opt => (
+                {priorityOptions().map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -395,14 +393,14 @@ export default function RequisitionList() {
               </select>
               <input
                 type="date"
-                placeholder="Date début"
+                placeholder={t('requisitions.fromDate')}
                 value={filters.fromDate}
                 onChange={(e) => handleFilterChange('fromDate', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="date"
-                placeholder="Date fin"
+                placeholder={t('requisitions.toDate')}
                 value={filters.toDate}
                 onChange={(e) => handleFilterChange('toDate', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -411,7 +409,7 @@ export default function RequisitionList() {
                 onClick={handleResetFilters}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
               >
-                Réinitialiser
+                {t('common.reset')}
               </button>
             </div>
           </div>
@@ -422,7 +420,7 @@ export default function RequisitionList() {
       {selectedRequisitions.length > 0 && (
         <div className="bg-blue-50 rounded-lg p-4 flex justify-between items-center">
           <span className="text-sm text-blue-700">
-            {selectedRequisitions.length} réquisition(s) sélectionnée(s)
+            {t('requisitions.selected', { count: selectedRequisitions.length })}
           </span>
           <div className="flex gap-2">
             <button
@@ -430,13 +428,13 @@ export default function RequisitionList() {
               className="flex items-center gap-2 px-3 py-1 text-sm text-red-600 hover:bg-red-100 rounded-lg transition-colors"
             >
               <Trash2 size={16} />
-              Supprimer
+              {t('common.delete')}
             </button>
             <button
               onClick={() => setSelectedRequisitions([])}
               className="text-sm text-gray-500 hover:text-gray-700"
             >
-              Annuler
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -457,31 +455,31 @@ export default function RequisitionList() {
                   />
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  N° Réquisition
+                  {t('requisitions.number')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Titre
+                  {t('requisitions.title')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Département
+                  {t('common.department')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Montant
+                  {t('common.amount')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
+                  {t('common.date')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Avancement
+                  {t('requisitions.progress')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Étape
+                  {t('requisitions.step')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Priorité
+                  {t('requisitions.priority')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -490,13 +488,13 @@ export default function RequisitionList() {
                 <tr>
                   <td colSpan="10" className="px-6 py-12 text-center text-gray-500">
                     <FileText className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-                    <p>Aucune réquisition trouvée</p>
+                    <p>{t('requisitions.none')}</p>
                     <Link
                       to="/requisitions/new"
                       className="mt-2 inline-flex items-center text-blue-600 hover:text-blue-800"
                     >
                       <Plus size={16} className="mr-1" />
-                      Créer une réquisition
+                      {t('requisitions.create')}
                     </Link>
                   </td>
                 </tr>
@@ -558,7 +556,7 @@ export default function RequisitionList() {
                         <Link
                           to={`/requisitions/${requisition.id}`}
                           className="text-gray-400 hover:text-blue-600 transition-colors"
-                          title="Voir"
+                          title={t('common.view')}
                         >
                           <Eye size={18} />
                         </Link>
@@ -566,8 +564,8 @@ export default function RequisitionList() {
                           type="button"
                           onClick={() => setWorkflowFor(requisition)}
                           className="text-gray-400 hover:text-blue-600 transition-colors"
-                          title="Suivi du workflow"
-                          aria-label={`Suivi du workflow ${requisition.requisition_number}`}
+                          title={t('requisitions.workflowTracking')}
+                          aria-label={t('requisitions.workflowTrackingOf', { number: requisition.requisition_number })}
                         >
                           <GitBranch size={18} />
                         </button>
@@ -576,14 +574,14 @@ export default function RequisitionList() {
                             <Link
                               to={`/requisitions/${requisition.id}/edit`}
                               className="text-gray-400 hover:text-green-600 transition-colors"
-                              title="Modifier"
+                              title={t('common.edit')}
                             >
                               <Edit size={18} />
                             </Link>
                             <button
                               onClick={() => submitMutation.mutate(requisition.id)}
                               className="text-gray-400 hover:text-purple-600 transition-colors"
-                              title="Soumettre"
+                              title={t('common.submit')}
                             >
                               <Send size={18} />
                             </button>
@@ -593,7 +591,7 @@ export default function RequisitionList() {
                                 setShowDeleteModal(true)
                               }}
                               className="text-gray-400 hover:text-red-600 transition-colors"
-                              title="Supprimer"
+                              title={t('common.delete')}
                             >
                               <Trash2 size={18} />
                             </button>
@@ -603,7 +601,7 @@ export default function RequisitionList() {
                           <Link
                             to={`/requisitions/${requisition.id}/workflow`}
                             className="text-gray-400 hover:text-orange-600 transition-colors"
-                            title="Workflow"
+                            title={t('requisitions.workflow')}
                           >
                             <Clock size={18} />
                           </Link>
@@ -621,8 +619,7 @@ export default function RequisitionList() {
         {totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
             <div className="text-sm text-gray-500">
-              Affichage de {(pagination.page - 1) * pagination.limit + 1} à{' '}
-              {Math.min(pagination.page * pagination.limit, totalItems)} sur {totalItems} résultats
+              {t('requisitions.showing', { from: (pagination.page - 1) * pagination.limit + 1, to: Math.min(pagination.page * pagination.limit, totalItems), total: totalItems })}
             </div>
             <div className="flex gap-2">
               <button
@@ -677,30 +674,30 @@ export default function RequisitionList() {
           setShowDeleteModal(false)
           setRequisitionToDelete(null)
         }}
-        title="Supprimer la réquisition"
+        title={t('requisitions.deleteTitle')}
         type="danger"
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={() => deleteMutation.mutate(requisitionToDelete?.id)}
         isLoading={deleteMutation.isPending}
       >
-        <p>Êtes-vous sûr de vouloir supprimer la réquisition <strong>{requisitionToDelete?.requisition_number}</strong> ?</p>
-        <p className="text-sm text-gray-500 mt-2">Cette action est irréversible.</p>
+        <p>{t('requisitions.deleteConfirmBefore')} <strong>{requisitionToDelete?.requisition_number}</strong> ?</p>
+        <p className="text-sm text-gray-500 mt-2">{t('requisitions.irreversible')}</p>
       </Modal>
 
       {/* Modal de suppression groupée */}
       <Modal
         isOpen={showBulkDeleteModal}
         onClose={() => setShowBulkDeleteModal(false)}
-        title="Supprimer plusieurs réquisitions"
+        title={t('requisitions.bulkDeleteTitle')}
         type="danger"
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={() => bulkDeleteMutation.mutate(selectedRequisitions)}
         isLoading={bulkDeleteMutation.isPending}
       >
-        <p>Êtes-vous sûr de vouloir supprimer <strong>{selectedRequisitions.length}</strong> réquisition(s) ?</p>
-        <p className="text-sm text-gray-500 mt-2">Cette action est irréversible.</p>
+        <p>{t('requisitions.bulkDeleteConfirm', { count: selectedRequisitions.length })}</p>
+        <p className="text-sm text-gray-500 mt-2">{t('requisitions.irreversible')}</p>
       </Modal>
 
       <WorkflowTrackerModal requisition={workflowFor} onClose={() => setWorkflowFor(null)} />

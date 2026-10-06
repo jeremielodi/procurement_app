@@ -50,6 +50,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { SUPPLIER_TYPE_LABELS } from '../../utils/supplierDocs'
 import SupplierPrequalificationPanel from './prequal/SupplierPrequalificationPanel'
 import toast from 'react-hot-toast'
+import { t } from '../../i18n'
 
 export default function SupplierDetail() {
   const { id } = useParams()
@@ -95,11 +96,11 @@ export default function SupplierDetail() {
     mutationFn: () => supplierService.prequalify(supplier.id),
     onSuccess: () => {
       queryClient.invalidateQueries(['supplier', id])
-      toast.success('Fournisseur préqualifié avec succès')
+      toast.success(t('suppliers.prequalifiedOk'))
       setShowPrequalifyModal(false)
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la préqualification')
+      toast.error(error.message || t('suppliers.prequalifyError'))
     }
   })
 
@@ -109,13 +110,13 @@ export default function SupplierDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries(['supplier', id])
       queryClient.invalidateQueries(['supplier-evaluations', id])
-      toast.success('Évaluation enregistrée avec succès')
+      toast.success(t('supplierDetail.rated'))
       setShowRatingModal(false)
       setRatingValue(5)
       setRatingComment('')
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de l\'évaluation')
+      toast.error(error.message || t('supplierDetail.rateError'))
     }
   })
 
@@ -123,11 +124,11 @@ export default function SupplierDetail() {
   const deleteMutation = useMutation({
     mutationFn: () => supplierService.delete(id),
     onSuccess: () => {
-      toast.success('Fournisseur supprimé avec succès')
+      toast.success(t('suppliers.deleted'))
       navigate('/suppliers')
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la suppression')
+      toast.error(error.message || t('requisitions.deleteError'))
     }
   })
 
@@ -144,16 +145,16 @@ export default function SupplierDetail() {
   }
 
   const getPerformanceLevel = function(rating) {
-    if (rating >= 4.5) return { label: 'Excellent', color: 'text-green-600', bg: 'bg-green-100' }
-    if (rating >= 3.5) return { label: 'Bon', color: 'text-blue-600', bg: 'bg-blue-100' }
-    if (rating >= 2.5) return { label: 'Moyen', color: 'text-yellow-600', bg: 'bg-yellow-100' }
-    return { label: 'À améliorer', color: 'text-red-600', bg: 'bg-red-100' }
+    if (rating >= 4.5) return { label: t('supplierDetail.excellent'), color: 'text-green-600', bg: 'bg-green-100' }
+    if (rating >= 3.5) return { label: t('supplierDetail.good'), color: 'text-blue-600', bg: 'bg-blue-100' }
+    if (rating >= 2.5) return { label: t('supplierDetail.average'), color: 'text-yellow-600', bg: 'bg-yellow-100' }
+    return { label: t('supplierDetail.toImprove'), color: 'text-red-600', bg: 'bg-red-100' }
   }
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-96">
-        <LoadingSpinner size="lg" text="Chargement du fournisseur..." />
+        <LoadingSpinner size="lg" text={t('supplierDetail.loading')} />
       </div>
     )
   }
@@ -162,8 +163,8 @@ export default function SupplierDetail() {
     return (
       <div className="p-6">
         <ErrorAlert
-          title="Erreur de chargement"
-          message="Impossible de charger les détails du fournisseur"
+          title={t('requisitions.loadError')}
+          message={t('supplierDetail.loadErrorMsg')}
           details={error.message}
           onRetry={() => refetch()}
         />
@@ -175,14 +176,14 @@ export default function SupplierDetail() {
     return (
       <div className="p-6 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900">Fournisseur non trouvé</h3>
-        <p className="mt-1 text-gray-500">Le fournisseur que vous recherchez n'existe pas.</p>
+        <h3 className="text-lg font-medium text-gray-900">{t('supplierDetail.notFound')}</h3>
+        <p className="mt-1 text-gray-500">{t('supplierDetail.notFoundMsg')}</p>
         <button
           onClick={() => navigate('/suppliers')}
           className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <ArrowLeft size={18} className="mr-2" />
-          Retour à la liste
+          {t('reqDetail.backToList')}
         </button>
       </div>
     )
@@ -213,7 +214,7 @@ export default function SupplierDetail() {
               </h1>
               {approvedCount > 0 || supplier.prequalified
                 ? <StatusBadge status="SUPPLIER_PREQUALIFIED" size="lg" />
-                : <span className="px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm">Non préqualifié</span>}
+                : <span className="px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm">{t('supplierDetail.notPrequalified')}</span>}
               {supplier.status === 'ACTIVE' ? (
                 <StatusBadge status="SUPPLIER_ACTIVE" size="lg" />
               ) : (
@@ -221,8 +222,8 @@ export default function SupplierDetail() {
               )}
             </div>
             <p className="text-gray-500 mt-1">
-              Code : {supplier.supplier_code} · {SUPPLIER_TYPE_LABELS[supplier.supplier_type] || 'Entreprise'}
-              {approvedCount > 0 && <> · préqualifié dans {approvedCount} catégorie(s)</>}
+              {t('supplierDetail.codeLine', { code: supplier.supplier_code, type: SUPPLIER_TYPE_LABELS[supplier.supplier_type] || SUPPLIER_TYPE_LABELS.COMPANY })}
+              {approvedCount > 0 && t('supplierDetail.prequalifiedIn', { count: approvedCount })}
             </p>
           </div>
         </div>
@@ -232,7 +233,7 @@ export default function SupplierDetail() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Edit size={18} />
-            Modifier
+            {t('common.edit')}
           </Link>
           {canPrequalify && (
             <button
@@ -240,7 +241,7 @@ export default function SupplierDetail() {
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <Shield size={18} />
-              Préqualifier
+              {t('supplierDetail.prequalify')}
             </button>
           )}
           <button
@@ -248,14 +249,14 @@ export default function SupplierDetail() {
             className="flex items-center gap-2 px-4 py-2 border border-yellow-500 text-yellow-600 rounded-lg hover:bg-yellow-50 transition-colors"
           >
             <Star size={18} />
-            Évaluer
+            {t('supplierDetail.rate')}
           </button>
           <button
             onClick={() => setShowDeleteModal(true)}
             className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
           >
             <Trash2 size={18} />
-            Supprimer
+            {t('common.delete')}
           </button>
         </div>
       </div>
@@ -265,7 +266,7 @@ export default function SupplierDetail() {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total dépensé</p>
+              <p className="text-sm text-gray-500">{t('supplierDetail.totalSpent')}</p>
               <p className="text-2xl font-bold text-gray-800">
                 {formatAmount(totalSpent)}
               </p>
@@ -276,7 +277,7 @@ export default function SupplierDetail() {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Commandes</p>
+              <p className="text-sm text-gray-500">{t('supplierDetail.orders')}</p>
               <p className="text-2xl font-bold text-blue-600">
                 {purchaseOrders.length}
               </p>
@@ -287,7 +288,7 @@ export default function SupplierDetail() {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Note moyenne</p>
+              <p className="text-sm text-gray-500">{t('supplierDetail.averageRating')}</p>
               <div className="flex items-center gap-1">
                 <p className="text-2xl font-bold text-yellow-600">
                   {averageRating}
@@ -301,7 +302,7 @@ export default function SupplierDetail() {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Performance</p>
+              <p className="text-sm text-gray-500">{t('supplierDetail.performance')}</p>
               <p className={`text-xl font-bold ${performance.color}`}>
                 {performance.label}
               </p>
@@ -322,7 +323,7 @@ export default function SupplierDetail() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Informations
+            {t('supplierDetail.info')}
           </button>
           <button
             onClick={() => setActiveTab('prequalification')}
@@ -332,8 +333,8 @@ export default function SupplierDetail() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Préqualification & documents
-            {supplier.dossier && !supplier.dossier.complete && <span className="ml-1 text-orange-500" title="Dossier incomplet ou à vérifier">●</span>}
+            {t('supplierDetail.prequalTab')}
+            {supplier.dossier && !supplier.dossier.complete && <span className="ml-1 text-orange-500" title={t('supplierDetail.incompleteFile')}>●</span>}
           </button>
           <button
             onClick={() => setActiveTab('purchase-orders')}
@@ -343,7 +344,7 @@ export default function SupplierDetail() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Commandes ({purchaseOrders.length})
+            {t('supplierDetail.ordersTab', { count: purchaseOrders.length })}
           </button>
           <button
             onClick={() => setActiveTab('evaluations')}
@@ -353,7 +354,7 @@ export default function SupplierDetail() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Évaluations ({evaluations.length})
+            {t('supplierDetail.evaluationsTab', { count: evaluations.length })}
           </button>
         </nav>
       </div>
@@ -371,29 +372,29 @@ export default function SupplierDetail() {
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                   <Building2 size={20} />
-                  Informations générales
+                  {t('supplierDetail.generalInfo')}
                 </h2>
               </div>
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-gray-500">Nom complet</label>
+                    <label className="text-sm text-gray-500">{t('supplierDetail.fullName')}</label>
                     <p className="font-medium text-gray-800">{supplier.name}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-gray-500">Code fournisseur</label>
+                    <label className="text-sm text-gray-500">{t('supplierDetail.supplierCode')}</label>
                     <p className="font-medium text-gray-800">{supplier.supplier_code}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-gray-500">N° d'enregistrement</label>
+                    <label className="text-sm text-gray-500">{t('supplierDetail.registration')}</label>
                     <p className="text-gray-800">{supplier.registration_number || '-'}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-gray-500">N° TVA</label>
+                    <label className="text-sm text-gray-500">{t('supplierDetail.vat')}</label>
                     <p className="text-gray-800">{supplier.tax_id || '-'}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-gray-500">Site web</label>
+                    <label className="text-sm text-gray-500">{t('supplierDetail.website')}</label>
                     {supplier.website ? (
                       <a href={supplier.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 flex items-center gap-1">
                         {supplier.website}
@@ -404,7 +405,7 @@ export default function SupplierDetail() {
                     )}
                   </div>
                   <div>
-                    <label className="text-sm text-gray-500">Date d'ajout</label>
+                    <label className="text-sm text-gray-500">{t('supplierDetail.addedOn')}</label>
                     <p className="text-gray-800">{formatDate(supplier.created_at)}</p>
                   </div>
                 </div>
@@ -416,7 +417,7 @@ export default function SupplierDetail() {
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                   <Users size={20} />
-                  Contact
+                  {t('supplierDetail.contact')}
                 </h2>
               </div>
               <div className="p-6 space-y-3">
@@ -452,12 +453,12 @@ export default function SupplierDetail() {
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                   <Shield size={20} />
-                  Certifications & Statuts
+                  {t('supplierDetail.certifications')}
                 </h2>
               </div>
               <div className="p-6 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Préqualifié</span>
+                  <span className="text-sm text-gray-600">{t('supplierDetail.prequalified')}</span>
                   {supplier.prequalified ? (
                     <CheckCircle size={18} className="text-green-500" />
                   ) : (
@@ -465,7 +466,7 @@ export default function SupplierDetail() {
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Due diligence</span>
+                  <span className="text-sm text-gray-600">{t('supplierDetail.dueDiligence')}</span>
                   {supplier.due_diligence_completed ? (
                     <CheckCircle size={18} className="text-green-500" />
                   ) : (
@@ -474,7 +475,7 @@ export default function SupplierDetail() {
                 </div>
                 {supplier.due_diligence_date && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Date due diligence</span>
+                    <span className="text-sm text-gray-600">{t('supplierDetail.dueDiligenceDate')}</span>
                     <span className="text-sm">{formatDate(supplier.due_diligence_date)}</span>
                   </div>
                 )}
@@ -486,7 +487,7 @@ export default function SupplierDetail() {
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                   <Star size={20} />
-                  Évaluation
+                  {t('supplierDetail.evaluation')}
                 </h2>
               </div>
               <div className="p-6 text-center">
@@ -516,24 +517,24 @@ export default function SupplierDetail() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Package size={20} />
-              Historique des commandes
+              {t('supplierDetail.orderHistory')}
             </h2>
           </div>
           {purchaseOrders.length === 0 ? (
             <div className="p-12 text-center">
               <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500">Aucune commande associée à ce fournisseur.</p>
+              <p className="text-gray-500">{t('supplierDetail.noOrders')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N° Commande</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Montant</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('po.number')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('common.date')}</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('common.amount')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('common.status')}</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -572,18 +573,18 @@ export default function SupplierDetail() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <MessageSquare size={20} />
-              Historique des évaluations
+              {t('supplierDetail.evaluationHistory')}
             </h2>
           </div>
           {evaluations.length === 0 ? (
             <div className="p-12 text-center">
               <Star className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500">Aucune évaluation enregistrée.</p>
+              <p className="text-gray-500">{t('supplierDetail.noEvaluation')}</p>
               <button
                 onClick={() => setShowRatingModal(true)}
                 className="mt-2 text-blue-600 hover:text-blue-800"
               >
-                Évaluer ce fournisseur
+                {t('supplierDetail.rateThis')}
               </button>
             </div>
           ) : (
@@ -610,7 +611,7 @@ export default function SupplierDetail() {
                         <p className="text-gray-600 mt-2">{evaluation.comment}</p>
                       )}
                       <p className="text-xs text-gray-400 mt-2">
-                        Évalué par {evaluation.evaluator_name} le {formatDateTime(evaluation.created_at)}
+                        {t('supplierDetail.ratedBy', { name: evaluation.evaluator_name, date: formatDateTime(evaluation.created_at) })}
                       </p>
                     </div>
                   </div>
@@ -625,30 +626,30 @@ export default function SupplierDetail() {
       <Modal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        title="Supprimer le fournisseur"
+        title={t('suppliers.deleteTitle')}
         type="danger"
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={() => deleteMutation.mutate()}
         isLoading={deleteMutation.isPending}
       >
-        <p>Êtes-vous sûr de vouloir supprimer le fournisseur <strong>{supplier.name}</strong> ?</p>
-        <p className="text-sm text-gray-500 mt-2">Cette action est irréversible.</p>
+        <p>{t('suppliers.deleteConfirm')} <strong>{supplier.name}</strong> ?</p>
+        <p className="text-sm text-gray-500 mt-2">{t('requisitions.irreversible')}</p>
       </Modal>
 
       {/* Modal de préqualification */}
       <Modal
         isOpen={showPrequalifyModal}
         onClose={() => setShowPrequalifyModal(false)}
-        title="Préqualifier le fournisseur"
+        title={t('suppliers.prequalifyTitle')}
         type="success"
-        confirmText="Confirmer"
-        cancelText="Annuler"
+        confirmText={t('common.confirm')}
+        cancelText={t('common.cancel')}
         onConfirm={() => prequalifyMutation.mutate()}
         isLoading={prequalifyMutation.isPending}
       >
-        <p>Êtes-vous sûr de vouloir préqualifier le fournisseur <strong>{supplier.name}</strong> ?</p>
-        <p className="text-sm text-gray-500 mt-2">Le fournisseur sera ajouté à la liste des fournisseurs préqualifiés.</p>
+        <p>{t('suppliers.prequalifyConfirm')} <strong>{supplier.name}</strong> ?</p>
+        <p className="text-sm text-gray-500 mt-2">{t('suppliers.prequalifyHint')}</p>
       </Modal>
 
       {/* Modal d'évaluation */}
@@ -659,10 +660,10 @@ export default function SupplierDetail() {
           setRatingValue(5)
           setRatingComment('')
         }}
-        title="Évaluer le fournisseur"
+        title={t('supplierDetail.rateTitle')}
         type="info"
-        confirmText="Enregistrer"
-        cancelText="Annuler"
+        confirmText={t('common.save')}
+        cancelText={t('common.cancel')}
         onConfirm={() => rateMutation.mutate({ rating: ratingValue, comment: ratingComment })}
         isLoading={rateMutation.isPending}
         size="md"
@@ -670,7 +671,7 @@ export default function SupplierDetail() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Note (1-5)
+              {t('supplierDetail.ratingLabel')}
             </label>
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map(star => (
@@ -690,14 +691,14 @@ export default function SupplierDetail() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Commentaire
+              {t('common.comment')}
             </label>
             <textarea
               value={ratingComment}
               onChange={(e) => setRatingComment(e.target.value)}
               rows="4"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Partagez votre expérience avec ce fournisseur..."
+              placeholder={t('supplierDetail.ratingPlaceholder')}
             />
           </div>
         </div>

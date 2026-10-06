@@ -31,11 +31,11 @@ import {
   FileDigit,
   FileStack
 } from 'lucide-react'
+import { t, hasKey } from '../../i18n'
 
 const statusConfig = {
   // Statuts des réquisitions
   DRAFT: {
-    label: 'Brouillon',
     color: 'gray',
     bgColor: 'bg-gray-100',
     textColor: 'text-gray-800',
@@ -44,7 +44,6 @@ const statusConfig = {
     iconColor: 'text-gray-500'
   },
   PENDING: {
-    label: 'En attente',
     color: 'yellow',
     bgColor: 'bg-yellow-100',
     textColor: 'text-yellow-800',
@@ -53,7 +52,6 @@ const statusConfig = {
     iconColor: 'text-yellow-500'
   },
   BUDGET_CHECKED: {
-    label: 'Budget vérifié',
     color: 'blue',
     bgColor: 'bg-blue-100',
     textColor: 'text-blue-800',
@@ -62,7 +60,6 @@ const statusConfig = {
     iconColor: 'text-blue-500'
   },
   BUDGET_INSUFFICIENT: {
-    label: 'Budget insuffisant',
     color: 'red',
     bgColor: 'bg-red-100',
     textColor: 'text-red-800',
@@ -71,7 +68,6 @@ const statusConfig = {
     iconColor: 'text-red-500'
   },
   APPROVED: {
-    label: 'Approuvé',
     color: 'green',
     bgColor: 'bg-green-100',
     textColor: 'text-green-800',
@@ -80,7 +76,6 @@ const statusConfig = {
     iconColor: 'text-green-500'
   },
   REJECTED: {
-    label: 'Rejeté',
     color: 'red',
     bgColor: 'bg-red-100',
     textColor: 'text-red-800',
@@ -89,7 +84,6 @@ const statusConfig = {
     iconColor: 'text-red-500'
   },
   IN_PROGRESS: {
-    label: 'En cours',
     color: 'blue',
     bgColor: 'bg-blue-100',
     textColor: 'text-blue-800',
@@ -98,7 +92,6 @@ const statusConfig = {
     iconColor: 'text-blue-500'
   },
   COMPLETED: {
-    label: 'Terminé',
     color: 'green',
     bgColor: 'bg-green-100',
     textColor: 'text-green-800',
@@ -107,7 +100,6 @@ const statusConfig = {
     iconColor: 'text-green-500'
   },
   CANCELLED: {
-    label: 'Annulé',
     color: 'gray',
     bgColor: 'bg-gray-100',
     textColor: 'text-gray-800',
@@ -118,7 +110,6 @@ const statusConfig = {
 
   // Statuts des commandes d'achat
   PO_DRAFT: {
-    label: 'Brouillon',
     color: 'gray',
     bgColor: 'bg-gray-100',
     textColor: 'text-gray-800',
@@ -127,7 +118,6 @@ const statusConfig = {
     iconColor: 'text-gray-500'
   },
   PO_PENDING: {
-    label: 'En attente d\'approbation',
     color: 'yellow',
     bgColor: 'bg-yellow-100',
     textColor: 'text-yellow-800',
@@ -136,7 +126,6 @@ const statusConfig = {
     iconColor: 'text-yellow-500'
   },
   PO_APPROVED: {
-    label: 'Approuvée',
     color: 'green',
     bgColor: 'bg-green-100',
     textColor: 'text-green-800',
@@ -145,7 +134,6 @@ const statusConfig = {
     iconColor: 'text-green-500'
   },
   PO_REJECTED: {
-    label: 'Rejetée',
     color: 'red',
     bgColor: 'bg-red-100',
     textColor: 'text-red-800',
@@ -154,7 +142,6 @@ const statusConfig = {
     iconColor: 'text-red-500'
   },
   PO_SENT: {
-    label: 'Envoyée',
     color: 'purple',
     bgColor: 'bg-purple-100',
     textColor: 'text-purple-800',
@@ -165,7 +152,6 @@ const statusConfig = {
 
   // Statuts des fournisseurs
   SUPPLIER_ACTIVE: {
-    label: 'Actif',
     color: 'green',
     bgColor: 'bg-green-100',
     textColor: 'text-green-800',
@@ -174,7 +160,6 @@ const statusConfig = {
     iconColor: 'text-green-500'
   },
   SUPPLIER_INACTIVE: {
-    label: 'Inactif',
     color: 'gray',
     bgColor: 'bg-gray-100',
     textColor: 'text-gray-800',
@@ -183,7 +168,6 @@ const statusConfig = {
     iconColor: 'text-gray-500'
   },
   SUPPLIER_PREQUALIFIED: {
-    label: 'Préqualifié',
     color: 'blue',
     bgColor: 'bg-blue-100',
     textColor: 'text-blue-800',
@@ -192,7 +176,6 @@ const statusConfig = {
     iconColor: 'text-blue-500'
   },
   SUPPLIER_PENDING: {
-    label: 'En attente de validation',
     color: 'yellow',
     bgColor: 'bg-yellow-100',
     textColor: 'text-yellow-800',
@@ -203,7 +186,6 @@ const statusConfig = {
 
   // Statuts de livraison
   DELIVERY_PENDING: {
-    label: 'En attente de livraison',
     color: 'yellow',
     bgColor: 'bg-yellow-100',
     textColor: 'text-yellow-800',
@@ -212,7 +194,6 @@ const statusConfig = {
     iconColor: 'text-yellow-500'
   },
   DELIVERY_PARTIAL: {
-    label: 'Livraison partielle',
     color: 'blue',
     bgColor: 'bg-blue-100',
     textColor: 'text-blue-800',
@@ -221,7 +202,6 @@ const statusConfig = {
     iconColor: 'text-blue-500'
   },
   DELIVERY_COMPLETE: {
-    label: 'Livraison complète',
     color: 'green',
     bgColor: 'bg-green-100',
     textColor: 'text-green-800',
@@ -230,7 +210,6 @@ const statusConfig = {
     iconColor: 'text-green-500'
   },
   DELIVERY_DELAYED: {
-    label: 'Livraison retardée',
     color: 'red',
     bgColor: 'bg-red-100',
     textColor: 'text-red-800',
@@ -241,7 +220,6 @@ const statusConfig = {
 
   // Statuts de réception
   GRN_CREATED: {
-    label: 'Bon de réception créé',
     color: 'blue',
     bgColor: 'bg-blue-100',
     textColor: 'text-blue-800',
@@ -250,7 +228,6 @@ const statusConfig = {
     iconColor: 'text-blue-500'
   },
   GRN_VALIDATED: {
-    label: 'Bon de réception validé',
     color: 'green',
     bgColor: 'bg-green-100',
     textColor: 'text-green-800',
@@ -259,7 +236,6 @@ const statusConfig = {
     iconColor: 'text-green-500'
   },
   SERVICE_ACCEPTED: {
-    label: 'Service accepté',
     color: 'green',
     bgColor: 'bg-green-100',
     textColor: 'text-green-800',
@@ -268,7 +244,6 @@ const statusConfig = {
     iconColor: 'text-green-500'
   },
   SERVICE_REJECTED: {
-    label: 'Service rejeté',
     color: 'red',
     bgColor: 'bg-red-100',
     textColor: 'text-red-800',
@@ -279,7 +254,6 @@ const statusConfig = {
 
   // Statuts des factures
   INVOICE_RECEIVED: {
-    label: 'Facture reçue',
     color: 'blue',
     bgColor: 'bg-blue-100',
     textColor: 'text-blue-800',
@@ -288,7 +262,6 @@ const statusConfig = {
     iconColor: 'text-blue-500'
   },
   INVOICE_PROCESSING: {
-    label: 'Facture en traitement',
     color: 'yellow',
     bgColor: 'bg-yellow-100',
     textColor: 'text-yellow-800',
@@ -297,7 +270,6 @@ const statusConfig = {
     iconColor: 'text-yellow-500'
   },
   INVOICE_PAID: {
-    label: 'Facture payée',
     color: 'green',
     bgColor: 'bg-green-100',
     textColor: 'text-green-800',
@@ -308,7 +280,6 @@ const statusConfig = {
 
   // Méthodes d'achat
   DIRECT_PURCHASE: {
-    label: 'Achat direct',
     color: 'blue',
     bgColor: 'bg-blue-100',
     textColor: 'text-blue-800',
@@ -317,7 +288,6 @@ const statusConfig = {
     iconColor: 'text-blue-500'
   },
   MULTIPLE_QUOTATIONS: {
-    label: 'Multiples devis',
     color: 'purple',
     bgColor: 'bg-purple-100',
     textColor: 'text-purple-800',
@@ -326,7 +296,6 @@ const statusConfig = {
     iconColor: 'text-purple-500'
   },
   RFP: {
-    label: 'Appel d\'offres',
     color: 'indigo',
     bgColor: 'bg-indigo-100',
     textColor: 'text-indigo-800',
@@ -335,7 +304,6 @@ const statusConfig = {
     iconColor: 'text-indigo-500'
   },
   SOLE_SOURCE: {
-    label: 'Source unique',
     color: 'orange',
     bgColor: 'bg-orange-100',
     textColor: 'text-orange-800',
@@ -346,7 +314,6 @@ const statusConfig = {
 
   // Priorités
   PRIORITY_LOW: {
-    label: 'Basse',
     color: 'gray',
     bgColor: 'bg-gray-100',
     textColor: 'text-gray-800',
@@ -355,7 +322,6 @@ const statusConfig = {
     iconColor: 'text-gray-500'
   },
   PRIORITY_MEDIUM: {
-    label: 'Moyenne',
     color: 'blue',
     bgColor: 'bg-blue-100',
     textColor: 'text-blue-800',
@@ -364,7 +330,6 @@ const statusConfig = {
     iconColor: 'text-blue-500'
   },
   PRIORITY_HIGH: {
-    label: 'Haute',
     color: 'orange',
     bgColor: 'bg-orange-100',
     textColor: 'text-orange-800',
@@ -373,7 +338,6 @@ const statusConfig = {
     iconColor: 'text-orange-500'
   },
   PRIORITY_URGENT: {
-    label: 'Urgent',
     color: 'red',
     bgColor: 'bg-red-100',
     textColor: 'text-red-800',
@@ -384,7 +348,6 @@ const statusConfig = {
 
   // Statuts génériques
   ACTIVE: {
-    label: 'Actif',
     color: 'green',
     bgColor: 'bg-green-100',
     textColor: 'text-green-800',
@@ -393,7 +356,6 @@ const statusConfig = {
     iconColor: 'text-green-500'
   },
   INACTIVE: {
-    label: 'Inactif',
     color: 'gray',
     bgColor: 'bg-gray-100',
     textColor: 'text-gray-800',
@@ -402,7 +364,6 @@ const statusConfig = {
     iconColor: 'text-gray-500'
   },
   LOCKED: {
-    label: 'Verrouillé',
     color: 'red',
     bgColor: 'bg-red-100',
     textColor: 'text-red-800',
@@ -411,7 +372,6 @@ const statusConfig = {
     iconColor: 'text-red-500'
   },
   ARCHIVED: {
-    label: 'Archivé',
     color: 'gray',
     bgColor: 'bg-gray-100',
     textColor: 'text-gray-800',
@@ -421,10 +381,12 @@ const statusConfig = {
   }
 }
 
-// Fonction utilitaire pour obtenir la configuration d'un statut
+// Fonction utilitaire pour obtenir la configuration d'un statut (libellé traduit : badge.<statut>)
 const getStatusConfig = (status) => {
-  return statusConfig[status] || {
-    label: status?.replace(/_/g, ' ') || 'Inconnu',
+  const label = status && hasKey(`badge.${status}`) ? t(`badge.${status}`) : (status?.replace(/_/g, ' ') || t('common.unknown'))
+  if (statusConfig[status]) return { ...statusConfig[status], label }
+  return {
+    label,
     color: 'gray',
     bgColor: 'bg-gray-100',
     textColor: 'text-gray-800',

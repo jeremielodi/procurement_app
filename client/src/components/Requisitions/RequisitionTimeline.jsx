@@ -1,5 +1,5 @@
 // src/components/Requisitions/RequisitionTimeline.jsx
-// Suivi du workflow d'une réquisition : étapes du cycle complet + historique lisible (en français).
+// Suivi du workflow d'une réquisition : étapes du cycle complet + historique lisible (langue de l'interface).
 // Données : GET /requisitions/:id/timeline (RequisitionTimelineService côté backend).
 import React from 'react'
 import { Link } from 'react-router-dom'
@@ -8,13 +8,15 @@ import {
   CheckCircle2, Clock, XCircle, Circle, MinusCircle, Info, AlertTriangle, User, RefreshCw, ExternalLink
 } from 'lucide-react'
 import requisitionService from '../../services/requisitionService'
+import { t, getLocale, useTranslation } from '../../i18n'
 
+// label : clé timeline.<statut>
 const STEP_STYLE = {
-  done:    { icon: CheckCircle2, cls: 'text-green-600', label: 'Terminé' },
-  current: { icon: Clock,        cls: 'text-blue-600 animate-pulse', label: 'En cours' },
-  failed:  { icon: XCircle,      cls: 'text-red-600', label: 'Bloqué' },
-  pending: { icon: Circle,       cls: 'text-gray-300', label: 'À venir' },
-  skipped: { icon: MinusCircle,  cls: 'text-gray-300', label: 'Non réalisé' },
+  done:    { icon: CheckCircle2, cls: 'text-green-600' },
+  current: { icon: Clock,        cls: 'text-blue-600 animate-pulse' },
+  failed:  { icon: XCircle,      cls: 'text-red-600' },
+  pending: { icon: Circle,       cls: 'text-gray-300' },
+  skipped: { icon: MinusCircle,  cls: 'text-gray-300' },
 }
 
 const EVENT_STYLE = {
@@ -25,7 +27,7 @@ const EVENT_STYLE = {
 }
 
 const fmt = (d, withTime = true) => d
-  ? new Date(d).toLocaleString('fr-FR', withTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' })
+  ? new Date(d).toLocaleString(getLocale(), withTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' })
   : ''
 
 function DocLinks({ links, onNavigate }) {
@@ -43,8 +45,10 @@ function DocLinks({ links, onNavigate }) {
 }
 
 export default function RequisitionTimeline({ requisitionId, onNavigate }) {
+  // Libellés générés par le backend dans la langue demandée (Accept-Language) → rechargés au changement de langue
+  const { lang } = useTranslation()
   const { data, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: ['requisition-timeline', requisitionId],
+    queryKey: ['requisition-timeline', requisitionId, lang],
     queryFn: () => requisitionService.getTimeline(requisitionId),
     enabled: !!requisitionId,
   })
@@ -53,7 +57,7 @@ export default function RequisitionTimeline({ requisitionId, onNavigate }) {
     return <div className="flex justify-center py-12"><RefreshCw className="animate-spin text-blue-500" /></div>
   }
   if (error || !data?.data) {
-    return <p className="p-6 text-center text-gray-500">Impossible de charger le suivi du workflow.</p>
+    return <p className="p-6 text-center text-gray-500">{t('timeline.loadError')}</p>
   }
 
   const { steps, events, progress } = data.data
@@ -68,31 +72,31 @@ export default function RequisitionTimeline({ requisitionId, onNavigate }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-sm">
             {progress.finished ? (
-              <span className="font-semibold text-green-700">Cycle terminé : la réquisition a été payée.</span>
+              <span className="font-semibold text-green-700">{t('timeline.finished')}</span>
             ) : failed ? (
-              <span className="font-semibold text-red-700">Processus arrêté à l'étape « {failed.label} ».</span>
+              <span className="font-semibold text-red-700">{t('timeline.stoppedAt', { step: failed.label })}</span>
             ) : current ? (
-              <span><span className="text-gray-500">Étape en cours :</span> <b className="text-blue-700">{current.label}</b>{current.info && <span className="text-gray-600"> — {current.info}</span>}</span>
+              <span><span className="text-gray-500">{t('timeline.currentStep')}</span> <b className="text-blue-700">{current.label}</b>{current.info && <span className="text-gray-600"> — {current.info}</span>}</span>
             ) : (
-              <span className="text-gray-600">Processus non démarré.</span>
+              <span className="text-gray-600">{t('timeline.notStarted')}</span>
             )}
           </div>
           <button onClick={() => refetch()} className="text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1">
-            <RefreshCw size={12} className={isFetching ? 'animate-spin' : ''} /> Actualiser
+            <RefreshCw size={12} className={isFetching ? 'animate-spin' : ''} /> {t('common.refresh')}
           </button>
         </div>
         <div className="mt-3 flex items-center gap-3">
           <div className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
             <div className={`h-full ${failed ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${pct}%` }} />
           </div>
-          <span className="text-xs text-gray-600 whitespace-nowrap">{progress.done} / {progress.total} étapes</span>
+          <span className="text-xs text-gray-600 whitespace-nowrap">{t('timeline.steps', { done: progress.done, total: progress.total })}</span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Étapes du workflow complet */}
         <div className="lg:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Workflow complet</h3>
+          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{t('timeline.fullWorkflow')}</h3>
           <ol className="relative">
             {steps.map((s, i) => {
               const st = STEP_STYLE[s.status] || STEP_STYLE.pending
@@ -103,7 +107,7 @@ export default function RequisitionTimeline({ requisitionId, onNavigate }) {
                   <Icon size={24} className={`absolute left-0 top-0 bg-white ${st.cls}`} />
                   <div className={`text-sm font-medium ${s.status === 'current' ? 'text-blue-700' : s.status === 'skipped' || s.status === 'pending' ? 'text-gray-400' : 'text-gray-900'}`}>
                     {s.label}
-                    <span className={`ml-2 text-xs font-normal ${st.cls.replace('animate-pulse', '')}`}>{st.label}</span>
+                    <span className={`ml-2 text-xs font-normal ${st.cls.replace('animate-pulse', '')}`}>{t(`timeline.${s.status in STEP_STYLE ? s.status : 'pending'}`)}</span>
                   </div>
                   {s.date && s.status !== 'pending' && <div className="text-xs text-gray-500">{fmt(s.date, false)}</div>}
                   {s.info && <div className="text-xs text-gray-600">{s.info}</div>}
@@ -116,9 +120,9 @@ export default function RequisitionTimeline({ requisitionId, onNavigate }) {
 
         {/* Historique réel */}
         <div className="lg:col-span-3">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Ce qui s'est passé</h3>
+          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{t('timeline.whatHappened')}</h3>
           {events.length === 0 ? (
-            <p className="text-sm text-gray-500">Aucune action enregistrée.</p>
+            <p className="text-sm text-gray-500">{t('timeline.noEvents')}</p>
           ) : (
             <ul className="space-y-3">
               {events.map((e, i) => {

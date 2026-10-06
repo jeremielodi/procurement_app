@@ -6,6 +6,7 @@ import { budgetService } from '../../services/budgetService';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import Modal from '../Common/Modal';
 import LoadingSpinner from '../Common/LoadingSpinner';
+import { t } from '../../i18n';
 
 export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, projectId }) {
   const { formatAmount } = useCurrency();
@@ -51,7 +52,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Rechercher une ligne budgétaire"
+      title={t('budgetSearch.title')}
       size="xl"
       showFooter={false}
     >
@@ -65,7 +66,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Rechercher par code, description, localisation, sous-projet..."
+              placeholder={t('budgetSearch.placeholder')}
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -74,7 +75,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
             className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50"
           >
             <Filter size={16} />
-            Filtres
+            {t('common.filters')}
             {filters.fundingSource !== 'all' && (
               <span className="w-2 h-2 bg-blue-600 rounded-full" />
             )}
@@ -83,13 +84,13 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
             onClick={handleSearch}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
-            Rechercher
+            {t('common.search')}
           </button>
           <button
             onClick={handleReset}
             className="px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-50"
           >
-            Réinitialiser
+            {t('common.reset')}
           </button>
         </div>
 
@@ -98,17 +99,17 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
           <div className="p-4 bg-gray-50 rounded-lg">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Source de financement</label>
+                <label className="block text-sm font-medium mb-1">{t('budgetSearch.fundingSource')}</label>
                 <select
                   value={filters.fundingSource}
                   onChange={(e) => setFilters({ ...filters, fundingSource: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="all">Toutes</option>
+                  <option value="all">{t('budgetSearch.all')}</option>
                   <option value="WWF">WWF</option>
-                  <option value="UE">Union Européenne</option>
-                  <option value="PNUD">PNUD</option>
-                  <option value="Banque Mondiale">Banque Mondiale</option>
+                  <option value="UE">{t('budgetSearch.eu')}</option>
+                  <option value="PNUD">{t('budgetSearch.undp')}</option>
+                  <option value="Banque Mondiale">{t('budgetSearch.worldBank')}</option>
                   <option value="USAID">USAID</option>
                   <option value="GEF">GEF</option>
                 </select>
@@ -124,7 +125,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
           </div>
         ) : budgetLines.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            Aucune ligne budgétaire trouvée
+            {t('budgetSearch.none')}
           </div>
         ) : (
           <div className="border rounded-lg overflow-hidden">
@@ -132,12 +133,12 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entité</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loc</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sous-projet</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code fonction</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budgetSearch.entity')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('common.description')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budgetSearch.loc')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budgetSearch.source')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budgetSearch.subProject')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budgetSearch.functionCode')}</th>
                     {/* <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Alloué</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Utilisé</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Restant</th>
@@ -208,7 +209,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
                             }}
                             className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
                           >
-                            Sélectionner
+                            {t('budgetSearch.select')}
                           </button>
                         </td>
                       </tr>
@@ -223,7 +224,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
         {/* Résumé des résultats */}
         {budgetLines.length > 0 && (
           <div className="text-sm text-gray-500 text-right">
-            {budgetLines.length} ligne(s) budgétaire(s) trouvée(s)
+            {t('budgetSearch.found', { count: budgetLines.length })}
           </div>
         )}
       </div>

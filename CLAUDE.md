@@ -210,7 +210,17 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 ## Site vitrine (FR / EN)
 
 - `client/src/components/Landing/LandingPage.jsx` : page unique publique sur `/` (visiteur non connecté ; connecté → `HomeRedirect`, via `Home` dans `App.jsx`). Éditeur : **Digitales Solutions**
-- Textes dans l'objet `TEXT` (`fr` / `en`) du composant ; langue = `localStorage.landing_lang`, sinon langue du navigateur. Liens : `/login`, `/supplier-register`, contact (`CONTACT_EMAIL` / `CONTACT_PHONE` en tête du fichier)
+- Textes dans `landing.*` des fichiers de langue (voir « Interface multilingue ») ; listes = tableaux JSON, icônes dans le composant (`FEATURE_ICONS`…, même ordre). Liens : `/login`, `/supplier-register`, contact (`CONTACT_EMAIL` / `CONTACT_PHONE` en tête du fichier)
+
+## Interface multilingue (FR / EN)
+
+- **Un fichier JSON par langue** : `client/src/locales/<code>.json` (interface) et `backend/src/i18n/locales/<code>.json` (PDF, suivi du workflow, libellés renvoyés par l'API). Chargés automatiquement : **ajouter une langue = ajouter les deux fichiers** (bloc `_meta: { name, locale }`) ; côté client, ajouter aussi sa locale date-fns dans `src/i18n/dateFns.js`. Clé absente → français
+- Moteur client `src/i18n/index.js` (sans dépendance) : `t('clé', { var })` (`{{var}}`, pluriels `clé_one` / `clé_other` via `count`, `returnObjects` pour tableaux), `getLocale()` pour `Intl`/`toLocale*`, `withLabel(prefix, table)` / `labelMap(prefix, codes)` = tables de statuts dont le `label` est traduit à la lecture
+- Composants : `import { t } from '../../i18n'` suffit (App s'abonne à la langue → tout l'arbre se ré-affiche). `useTranslation()` (→ `{ t, lang, setLang }`) seulement si un `useMemo`/`useEffect`/`queryKey` dépend de la langue. **Ne jamais nommer `t` une variable de boucle** (masque la fonction : utiliser `tn`, `tk`, `dt`…)
+- Langue : choix mémorisé (`localStorage.app_lang`), **français par défaut** (pas de détection navigateur : les e2e tournent en en-US et vérifient des textes FR). Sélecteur `Common/LanguageSwitcher` (en-tête, login/inscription/mot de passe oublié, site vitrine, « Mon profil »)
+- `api.js` envoie `Accept-Language` ; backend : `i18n.fromRequest(req)` (`?lang=` puis en-tête), `translator(lang)` (`{var}`), `workflowLabels.taskLabel(key, lang)` / `groupLabel` / `methodLabel`… Localisés : suivi du workflow (`RequisitionTimelineService.build(id, lang)`), « Qui bloque ? » (noms de profils = donnée FR, rôle traduit sinon), « profil incomplet » du portail fournisseur. Les données renvoyées par le backend avec un code (`rawStatus`, `rawMethod`) sont traduites côté client
+- Restent en français : messages d'erreur/succès de l'API, notifications et emails (stockés/envoyés en FR), PDF autres que la réquisition, données saisies (départements, profils…)
+- Contrôle : `npm run i18n:check` (client) — mêmes clés dans chaque langue (client et backend) + toute clé `t('…')` du code existe
 
 ## Mot de passe oublié / changement
 
@@ -233,8 +243,8 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 
 ## Traductions des documents (FR / EN)
 
-- `backend/src/i18n/index.js` : dictionnaires `fr` / `en` (statuts de réquisition y compris `CLASSIFIED_*`, avancement, priorités, libellés du PDF). `i18n.translator(lang)` → `t('status.APPROVED')` ; `i18n.locale(lang)` pour les dates/montants ; langue inconnue → `fr`
-- PDF de réquisition : `GET /requisitions/:id/export/pdf?lang=fr|en` — en-tête avec l'identité de l'entreprise (logo, nom, adresse, contact, NIF/RCCM via `getBranding`), badges « Étape » (statut) et « Avancement » (progress_status). Le viewer (`RequisitionViewer`) a un sélecteur FR/EN
+- `backend/src/i18n/index.js` + `locales/fr.json` / `en.json` (statuts de réquisition y compris `CLASSIFIED_*`, avancement, priorités, libellés du PDF, `workflow.*`, `timeline.*`, `supplierProfile.*`). `i18n.translator(lang)` → `t('status.APPROVED')` ; `i18n.locale(lang)` pour les dates/montants ; langue inconnue → `fr`
+- PDF de réquisition : `GET /requisitions/:id/export/pdf?lang=fr|en` — en-tête avec l'identité de l'entreprise (logo, nom, adresse, contact, NIF/RCCM via `getBranding`), badges « Étape » (statut) et « Avancement » (progress_status). Le viewer (`RequisitionViewer`) a un sélecteur FR/EN, initialisé sur la langue de l'interface
 - Piège Handlebars : une clé de données portant le même nom qu'un helper enregistré (ex. `priorityLabel`) est masquée par le helper → nommer autrement
 - Nouveau document à traduire : ajouter ses libellés dans les deux dictionnaires et passer `L` (libellés) + valeurs déjà formatées au template
 

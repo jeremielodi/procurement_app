@@ -1,8 +1,9 @@
 // src/services/supplierService.js
 // Fournisseurs (partagés entre les entreprises) — les évaluations sont propres à chaque entreprise.
 import api from './api'
+import { t } from '../i18n'
 
-const unavailable = (what) => Promise.reject(new Error(`${what} : fonctionnalité pas encore disponible`))
+const unavailable = (what) => Promise.reject(new Error(t('services.unavailable', { what })))
 
 export const supplierService = {
   // Liste complète (y compris les fournisseurs inscrits non préqualifiés) ; prequalifiedOnly pour les choix de commande
@@ -39,7 +40,7 @@ export const supplierService = {
   bulkDelete: async (ids) => {
     const results = await Promise.allSettled(ids.map(id => api.delete(`/suppliers/${id}`)))
     const failed = results.filter(r => r.status === 'rejected').length
-    if (failed) throw new Error(`${failed} fournisseur(s) non supprimé(s) (historique ou compte portail)`)
+    if (failed) throw new Error(t('services.suppliersNotDeleted', { count: failed }))
     return { success: true }
   },
 
@@ -96,9 +97,9 @@ export const supplierService = {
     return response.data
   },
 
-  uploadDocuments: async () => unavailable('Documents du fournisseur'),
-  exportToExcel: async () => unavailable('Export Excel des fournisseurs'),
-  exportToPDF: async () => unavailable('Export PDF des fournisseurs'),
+  uploadDocuments: async () => unavailable(t('services.supplierDocs')),
+  exportToExcel: async () => unavailable(t('services.supplierExcel')),
+  exportToPDF: async () => unavailable(t('services.supplierPdf')),
 }
 
 export default supplierService

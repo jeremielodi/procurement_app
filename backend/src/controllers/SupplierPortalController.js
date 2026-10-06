@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
+const i18n = require('../i18n');
 const userModel = require('../models/UserModel');
 const supplierModel = require('../models/SupplierModel');
 const referenceModel = require('../models/ReferenceModel');
@@ -135,6 +136,8 @@ class SupplierPortalController {
         first_name: firstName,
         last_name: rest.join(' ') || null,
         position: 'Fournisseur',
+        // Langue choisie sur la page d'inscription (en-tête Accept-Language envoyé par le client)
+        language: i18n.fromRequest(req),
         is_active: true,
         enterprise_id: null, // fournisseur partagé entre toutes les entreprises
         created_at: new Date(),

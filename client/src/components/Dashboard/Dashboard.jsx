@@ -11,6 +11,7 @@ import KpiCards from './KpiCards';
 import PendingTasksByProfile from './PendingTasksByProfile';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
 import ErrorBoundary from '../../components/Common/ErrorBoundary';
+import { t } from '../../i18n';
 
 export default function Dashboard() {
   const [period, setPeriod] = useState('month');
@@ -24,7 +25,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <LoadingSpinner size="lg" text="Chargement du tableau de bord..." />
+        <LoadingSpinner size="lg" text={t('dashboard.loading')} />
       </div>
     );
   }
@@ -33,13 +34,13 @@ export default function Dashboard() {
     return (
       <div className="p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          <h3 className="font-semibold">Erreur de chargement</h3>
-          <p>Impossible de charger les données du tableau de bord. Veuillez réessayer.</p>
+          <h3 className="font-semibold">{t('dashboard.loadError')}</h3>
+          <p>{t('dashboard.loadErrorMsg')}</p>
           <button 
             onClick={() => refetch()} 
             className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
           >
-            Réessayer
+            {t('common.retry')}
           </button>
         </div>
       </div>
@@ -56,10 +57,10 @@ export default function Dashboard() {
           <div className="flex flex-wrap items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Tableau de bord
+                {t('dashboard.title')}
               </h1>
               <p className="text-sm text-gray-500">
-                Vue d'ensemble de l'activité d'achats
+                {t('dashboard.subtitle')}
               </p>
             </div>
             
@@ -75,7 +76,7 @@ export default function Dashboard() {
                       : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  Semaine
+                  {t('dashboard.week')}
                 </button>
                 <button
                   onClick={() => setPeriod('month')}
@@ -85,7 +86,7 @@ export default function Dashboard() {
                       : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  Mois
+                  {t('dashboard.month')}
                 </button>
                 <button
                   onClick={() => setPeriod('year')}
@@ -95,7 +96,7 @@ export default function Dashboard() {
                       : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  Année
+                  {t('dashboard.year')}
                 </button>
               </div>
 
@@ -103,7 +104,7 @@ export default function Dashboard() {
               <button
                 onClick={() => refetch()}
                 className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-                title="Actualiser"
+                title={t('common.refresh')}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

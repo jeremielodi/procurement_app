@@ -3,17 +3,19 @@ import React, { useEffect, useState } from 'react';
 import { MapPin, Tags, Plus, Pencil, Trash2, Check, X, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { locationService, categoryService } from '../../services/referenceService';
+import { t } from '../../i18n';
 
+// label / intro / extra.label : clés de traduction
 const TABS = {
   locations: {
-    label: 'Localisations', icon: MapPin, service: locationService,
-    intro: 'Bureaux et zones de livraison. Les fournisseurs choisissent à l\'inscription les localisations qu\'ils desservent ; un appel d\'offres peut être limité à une localisation.',
-    extra: { key: 'province', label: 'Province' },
+    label: 'refs.locations', icon: MapPin, service: locationService,
+    intro: 'refs.locationsIntro',
+    extra: { key: 'province', label: 'refs.province' },
   },
   categories: {
-    label: 'Catégories de marché', icon: Tags, service: categoryService,
-    intro: 'Les fournisseurs déclarent les catégories qu\'ils fournissent ; chaque entreprise les préqualifie catégorie par catégorie.',
-    extra: { key: 'description', label: 'Description' },
+    label: 'refs.categories', icon: Tags, service: categoryService,
+    intro: 'refs.categoriesIntro',
+    extra: { key: 'description', label: 'common.description' },
   },
 };
 
@@ -42,7 +44,7 @@ export default function ReferenceData() {
     if (!draft.name.trim()) return;
     try {
       await cfg.service.create({ name: draft.name, [cfg.extra.key]: draft.extra });
-      toast.success(`${draft.name} ajouté(e)`);
+      toast.success(t('refs.added', { name: draft.name }));
       setDraft({ name: '', extra: '' });
       load();
     } catch (_) { /* toast */ }
@@ -64,10 +66,10 @@ export default function ReferenceData() {
   };
 
   const remove = async (row) => {
-    if (!window.confirm(`Supprimer « ${row.name} » ?`)) return;
+    if (!window.confirm(t('refs.confirmDelete', { name: row.name }))) return;
     try {
       await cfg.service.remove(row.id);
-      toast.success('Supprimé');
+      toast.success(t('refs.deleted'));
       load();
     } catch (_) { /* toast : utilisé → désactiver */ }
   };
@@ -75,28 +77,28 @@ export default function ReferenceData() {
   return (
     <div className="p-6 max-w-5xl space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Référentiels de la plateforme</h1>
-        <p className="text-sm text-gray-500">Communs à toutes les entreprises et à tous les fournisseurs</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('refs.title')}</h1>
+        <p className="text-sm text-gray-500">{t('refs.subtitle')}</p>
       </div>
 
       <div className="flex gap-2 border-b">
-        {Object.entries(TABS).map(([k, t]) => (
+        {Object.entries(TABS).map(([k, tb]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === k ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-            <t.icon size={16} /> {t.label}
+            <tb.icon size={16} /> {t(tb.label)}
           </button>
         ))}
       </div>
-      <p className="text-sm text-gray-600">{cfg.intro}</p>
+      <p className="text-sm text-gray-600">{t(cfg.intro)}</p>
 
       <form onSubmit={add} className="flex flex-wrap gap-2 bg-white border border-gray-200 rounded-lg p-3">
-        <input className={`${inputCls} flex-1 min-w-[200px]`} placeholder="Nom" value={draft.name}
+        <input className={`${inputCls} flex-1 min-w-[200px]`} placeholder={t('refs.name')} value={draft.name}
           onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} data-testid="ref-name" />
-        <input className={`${inputCls} flex-1 min-w-[160px]`} placeholder={cfg.extra.label} value={draft.extra}
+        <input className={`${inputCls} flex-1 min-w-[160px]`} placeholder={t(cfg.extra.label)} value={draft.extra}
           onChange={e => setDraft(d => ({ ...d, extra: e.target.value }))} />
         <button type="submit" disabled={!draft.name.trim()}
           className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm disabled:opacity-50">
-          <Plus size={16} /> Ajouter
+          <Plus size={16} /> {t('common.add')}
         </button>
       </form>
 
@@ -107,11 +109,11 @@ export default function ReferenceData() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-600 text-left">
               <tr>
-                <th className="px-4 py-2">Nom</th>
-                <th className="px-4 py-2">{cfg.extra.label}</th>
-                <th className="px-4 py-2 text-right">Fournisseurs</th>
-                <th className="px-4 py-2">Statut</th>
-                <th className="px-4 py-2 text-right">Actions</th>
+                <th className="px-4 py-2">{t('refs.name')}</th>
+                <th className="px-4 py-2">{t(cfg.extra.label)}</th>
+                <th className="px-4 py-2 text-right">{t('refs.suppliers')}</th>
+                <th className="px-4 py-2">{t('common.status')}</th>
+                <th className="px-4 py-2 text-right">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -122,8 +124,8 @@ export default function ReferenceData() {
                   <td className="px-4 py-2 text-right">{row.supplier_count}</td>
                   <td />
                   <td className="px-4 py-2 text-right whitespace-nowrap">
-                    <button onClick={saveEdit} className="p-1.5 text-green-700 hover:bg-green-100 rounded" title="Enregistrer"><Check size={16} /></button>
-                    <button onClick={() => setEditing(null)} className="p-1.5 text-gray-600 hover:bg-gray-100 rounded" title="Annuler"><X size={16} /></button>
+                    <button onClick={saveEdit} className="p-1.5 text-green-700 hover:bg-green-100 rounded" title={t('common.save')}><Check size={16} /></button>
+                    <button onClick={() => setEditing(null)} className="p-1.5 text-gray-600 hover:bg-gray-100 rounded" title={t('common.cancel')}><X size={16} /></button>
                   </td>
                 </tr>
               ) : (
@@ -134,19 +136,19 @@ export default function ReferenceData() {
                   <td className="px-4 py-2">
                     <button onClick={() => toggle(row)}
                       className={`px-2 py-0.5 rounded-full text-xs ${row.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}
-                      title={row.is_active ? 'Désactiver (masqué à l\'inscription)' : 'Réactiver'}>
-                      {row.is_active ? 'Active' : 'Inactive'}
+                      title={row.is_active ? t('refs.deactivate') : t('refs.reactivate')}>
+                      {row.is_active ? t('refs.active') : t('refs.inactive')}
                     </button>
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
                     <button onClick={() => setEditing({ id: row.id, name: row.name, extra: row[cfg.extra.key] || '' })}
-                      className="p-1.5 text-gray-600 hover:bg-gray-100 rounded" title="Modifier"><Pencil size={16} /></button>
+                      className="p-1.5 text-gray-600 hover:bg-gray-100 rounded" title={t('common.edit')}><Pencil size={16} /></button>
                     <button onClick={() => remove(row)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                      title="Supprimer (uniquement si jamais utilisé)"><Trash2 size={16} /></button>
+                      title={t('refs.deleteHint')}><Trash2 size={16} /></button>
                   </td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">Aucun élément</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">{t('refs.none')}</td></tr>}
             </tbody>
           </table>
         )}

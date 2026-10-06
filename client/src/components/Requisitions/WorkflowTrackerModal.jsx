@@ -3,6 +3,7 @@
 import React from 'react'
 import Modal from '../Common/Modal'
 import RequisitionTimeline from './RequisitionTimeline'
+import { t } from '../../i18n'
 
 export default function WorkflowTrackerModal({ requisition, onClose }) {
   if (!requisition) return null
@@ -10,7 +11,7 @@ export default function WorkflowTrackerModal({ requisition, onClose }) {
     <Modal
       isOpen={!!requisition}
       onClose={onClose}
-      title={`Suivi du workflow — ${requisition.requisition_number}${requisition.title ? ` · ${requisition.title}` : ''}`}
+      title={`${t('workflowModal.title', { number: requisition.requisition_number })}${requisition.title ? ` · ${requisition.title}` : ''}`}
       size="full"
       showFooter={false}
     >

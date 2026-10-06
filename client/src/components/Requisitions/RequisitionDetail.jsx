@@ -49,6 +49,7 @@ import RequisitionTimeline from './RequisitionTimeline'
 import WorkflowTrackerModal from './WorkflowTrackerModal'
 import { tenderService } from '../../services/tenderService'
 import { usePermissions } from '../../hooks/usePermissions'
+import { t } from '../../i18n'
 
 export default function RequisitionDetail() {
   const { id } = useParams()
@@ -101,7 +102,7 @@ export default function RequisitionDetail() {
     queryFn: () => taskService.getTasksByProcess(requisitionData?.data?.process_instance_id),
     enabled: !!requisitionData?.data?.process_instance_id,
     onSuccess: (data) => {
-      const pendingCount = data?.data?.filter(t => t.status === 'PENDING').length || 0
+      const pendingCount = data?.data?.filter(tk => tk.status === 'PENDING').length || 0
       setPendingTasksCount(pendingCount)
     }
   })
@@ -120,12 +121,12 @@ export default function RequisitionDetail() {
     mutationFn: (data) => requisitionService.cancel(requisition?.id, data.reason),
     onSuccess: () => {
       queryClient.invalidateQueries(['requisition', id])
-      toast.success('Réquisition annulée avec succès')
+      toast.success(t('reqDetail.cancelled'))
       setShowCancelModal(false)
       setCancellationReason('')
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de l\'annulation')
+      toast.error(error.message || t('reqDetail.cancelError'))
     }
   })
 
@@ -133,11 +134,11 @@ export default function RequisitionDetail() {
   const deleteMutation = useMutation({
     mutationFn: () => requisitionService.delete(id),
     onSuccess: () => {
-      toast.success('Réquisition supprimée avec succès')
+      toast.success(t('requisitions.deleted'))
       navigate('/requisitions')
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la suppression')
+      toast.error(error.message || t('requisitions.deleteError'))
     }
   })
 
@@ -146,10 +147,10 @@ export default function RequisitionDetail() {
     mutationFn: () => requisitionService.submit(requisition?.id),
     onSuccess: () => {
       queryClient.invalidateQueries(['requisition', id])
-      toast.success('Réquisition soumise avec succès')
+      toast.success(t('requisitions.submitted'))
     },
     onError: (error) => {
-      toast.error(error.message || 'Erreur lors de la soumission')
+      toast.error(error.message || t('requisitions.submitError'))
     }
   })
 
@@ -165,9 +166,9 @@ export default function RequisitionDetail() {
       link.click()
       link.remove()
       window.URL.revokeObjectURL(url)
-      toast.success('Téléchargement démarré')
+      toast.success(t('pdf.downloadStarted'))
     } catch (error) {
-      toast.error('Erreur lors du téléchargement')
+      toast.error(t('pdf.downloadError'))
     }
   }
 
@@ -181,24 +182,24 @@ export default function RequisitionDetail() {
   // Version avec gestion d'erreur 404
 const handleGeneratePDF = async () => {
   if (!requisition?.id) {
-    toast.error('Réquisition non disponible');
+    toast.error(t('reqDetail.notAvailable'));
     return;
   }
 
   try {
-    toast.loading('Génération du PDF en cours...', { id: 'pdf-generation' });
+    toast.loading(t('reqDetail.generatingPdf'), { id: 'pdf-generation' });
     
     const response = await requisitionService.generatePDF(requisition.id);
     
     // Vérifier que la réponse est bien un blob
     if (!response || !(response instanceof Blob)) {
       console.error('Invalid response:', response);
-      throw new Error('La réponse du serveur n\'est pas valide');
+      throw new Error(t('reqDetail.invalidResponse'));
     }
     
     // Vérifier que le blob n'est pas vide
     if (response.size === 0) {
-      throw new Error('Le PDF généré est vide');
+      throw new Error(t('pdf.empty'));
     }
     
     // Vérifier que le type est correct
@@ -223,14 +224,14 @@ const handleGeneratePDF = async () => {
       window.URL.revokeObjectURL(url);
     }, 100);
     
-    toast.success('PDF généré avec succès', { id: 'pdf-generation' });
+    toast.success(t('reqDetail.pdfGenerated'), { id: 'pdf-generation' });
   } catch (error) {
     console.error('Error generating PDF:', error);
     
     // Afficher le message d'erreur
-    let errorMessage = 'Erreur lors de la génération du PDF';
+    let errorMessage = t('services.pdfError');
     if (error.response?.status === 404) {
-      errorMessage = 'Réquisition non trouvée';
+      errorMessage = t('reqDetail.notFound');
     } else if (error.message) {
       errorMessage = error.message;
     }
@@ -247,7 +248,7 @@ const handleGeneratePDF = async () => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-96">
-        <LoadingSpinner size="lg" text="Chargement de la réquisition..." />
+        <LoadingSpinner size="lg" text={t('reqDetail.loading')} />
       </div>
     )
   }
@@ -256,8 +257,8 @@ const handleGeneratePDF = async () => {
     return (
       <div className="p-6">
         <ErrorAlert
-          title="Erreur de chargement"
-          message="Impossible de charger les détails de la réquisition"
+          title={t('requisitions.loadError')}
+          message={t('reqDetail.loadErrorMsg')}
           details={error.message}
           onRetry={() => refetch()}
         />
@@ -269,14 +270,14 @@ const handleGeneratePDF = async () => {
     return (
       <div className="p-6 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900">Réquisition non trouvée</h3>
-        <p className="mt-1 text-gray-500">La réquisition que vous recherchez n'existe pas.</p>
+        <h3 className="text-lg font-medium text-gray-900">{t('reqDetail.notFound')}</h3>
+        <p className="mt-1 text-gray-500">{t('reqDetail.notFoundMsg')}</p>
         <button
           onClick={() => navigate('/requisitions')}
           className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <ArrowLeft size={18} className="mr-2" />
-          Retour à la liste
+          {t('reqDetail.backToList')}
         </button>
       </div>
     )
@@ -312,7 +313,7 @@ const handleGeneratePDF = async () => {
               )}
             </div>
             <p className="text-gray-500 mt-1">
-              Créée le {formatDateTime(requisition.created_at)} par {requisition.first_name} {requisition.last_name}
+              {t('reqDetail.createdBy', { date: formatDateTime(requisition.created_at), name: `${requisition.first_name || ''} ${requisition.last_name || ''}`.trim() })}
             </p>
           </div>
         </div>
@@ -328,7 +329,7 @@ const handleGeneratePDF = async () => {
               }`}
             >
               <ListTodo size={18} />
-              Tâches
+              {t('reqDetail.tasks')}
               {pendingTasksCount > 0 && (
                 <span className="ml-1 bg-white text-orange-600 text-xs font-bold px-2 py-0.5 rounded-full">
                   {pendingTasksCount}
@@ -343,7 +344,7 @@ const handleGeneratePDF = async () => {
               className="flex items-center gap-2 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors"
             >
               <Gavel size={18} />
-              AO {linkedTender.tender_number}
+              {t('reqDetail.tender', { number: linkedTender.tender_number })}
             </Link>
           )}
 
@@ -360,7 +361,7 @@ const handleGeneratePDF = async () => {
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <RefreshCw size={18} />
-            Voir le workflow
+            {t('reqDetail.viewWorkflow')}
           </button>
           
           {canSubmit && (
@@ -370,7 +371,7 @@ const handleGeneratePDF = async () => {
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
             >
               <Send size={18} />
-              {submitMutation.isPending ? 'Soumission...' : 'Soumettre'}
+              {submitMutation.isPending ? t('reqDetail.submitting') : t('common.submit')}
             </button>
           )}
           
@@ -380,7 +381,7 @@ const handleGeneratePDF = async () => {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Edit size={18} />
-              Modifier
+              {t('common.edit')}
             </Link>
           )}
           
@@ -390,7 +391,7 @@ const handleGeneratePDF = async () => {
               className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
             >
               <Trash2 size={18} />
-              Supprimer
+              {t('common.delete')}
             </button>
           )}
           
@@ -400,7 +401,7 @@ const handleGeneratePDF = async () => {
               className="flex items-center gap-2 px-4 py-2 border border-orange-300 text-orange-600 rounded-lg hover:bg-orange-50 transition-colors"
             >
               <XCircle size={18} />
-              Annuler
+              {t('common.cancel')}
             </button>
           )}
         </div>
@@ -413,17 +414,17 @@ const handleGeneratePDF = async () => {
             <Clock className="h-5 w-5 text-orange-600" />
             <div>
               <p className="text-sm font-medium text-orange-800">
-                {pendingTasksCount} tâche(s) en attente de traitement
+                {t('reqDetail.pendingTasks', { count: pendingTasksCount })}
               </p>
               <p className="text-xs text-orange-600 mt-1">
-                Cliquez sur le bouton "Tâches" pour traiter les étapes en attente
+                {t('reqDetail.pendingTasksHint')}
               </p>
             </div>
             <Link
               to={`/requisitions/${requisition.id}/tasks`}
               className="ml-auto px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm"
             >
-              Voir les tâches
+              {t('reqDetail.viewTasks')}
             </Link>
           </div>
         </div>
@@ -440,7 +441,7 @@ const handleGeneratePDF = async () => {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Détails
+            {t('reqDetail.details')}
           </button>
           <button
             onClick={() => setActiveTab('items')}
@@ -450,7 +451,7 @@ const handleGeneratePDF = async () => {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Articles
+            {t('reqDetail.items')}
           </button>
           <button
             onClick={() => setActiveTab('purchase-orders')}
@@ -460,7 +461,7 @@ const handleGeneratePDF = async () => {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Commandes ({purchaseOrders.length})
+            {t('reqDetail.orders', { count: purchaseOrders.length })}
           </button>
           <button
             onClick={() => setActiveTab('history')}
@@ -470,7 +471,7 @@ const handleGeneratePDF = async () => {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Suivi du workflow
+            {t('reqDetail.workflow')}
           </button>
         </nav>
       </div>
@@ -485,16 +486,16 @@ const handleGeneratePDF = async () => {
                 <div className="p-6 border-b border-gray-200">
                   <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                     <FileText size={20} />
-                    Description
+                    {t('common.description')}
                   </h2>
                 </div>
                 <div className="p-6">
                   <p className="text-gray-700 whitespace-pre-wrap">
-                    {requisition.description || 'Aucune description fournie.'}
+                    {requisition.description || t('reqDetail.noDescription')}
                   </p>
                   {requisition.justification && (
                     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm font-medium text-gray-700 mb-1">Justification:</p>
+                      <p className="text-sm font-medium text-gray-700 mb-1">{t('reqDetail.justification')}</p>
                       <p className="text-sm text-gray-600">{requisition.justification}</p>
                     </div>
                   )}
@@ -507,7 +508,7 @@ const handleGeneratePDF = async () => {
                   <div className="p-6 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                       <Paperclip size={20} />
-                      Pièces jointes ({requisition.attachments.length})
+                      {t('reqDetail.attachments', { count: requisition.attachments.length })}
                     </h2>
                   </div>
                   <div className="divide-y divide-gray-200">
@@ -524,7 +525,7 @@ const handleGeneratePDF = async () => {
                           <div>
                             <p className="text-sm font-medium text-gray-700">{attachment.file_name}</p>
                             <p className="text-xs text-gray-400">
-                              {(attachment.file_size / 1024).toFixed(2)} KB - Ajouté le {formatDate(attachment.uploaded_at)}
+                              {t('reqDetail.attachmentMeta', { size: (attachment.file_size / 1024).toFixed(2), date: formatDate(attachment.uploaded_at) })}
                             </p>
                           </div>
                         </div>
@@ -534,7 +535,7 @@ const handleGeneratePDF = async () => {
                             <button
                               onClick={() => handleViewPdf(attachment.id, attachment.file_name)}
                               className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-                              title="Visualiser"
+                              title={t('reqDetail.preview')}
                             >
                               <Eye size={18} />
                             </button>
@@ -543,7 +544,7 @@ const handleGeneratePDF = async () => {
                           <button
                             onClick={() => handleDownloadFile(attachment.id, attachment.file_name)}
                             className="p-2 text-gray-500 hover:text-green-600 rounded-lg hover:bg-green-50 transition-colors"
-                            title="Télécharger"
+                            title={t('common.download')}
                           >
                             <Download size={18} />
                           </button>
@@ -553,7 +554,7 @@ const handleGeneratePDF = async () => {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 text-gray-500 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
-                            title="Ouvrir dans un nouvel onglet"
+                            title={t('reqDetail.openNewTab')}
                           >
                             <ExternalLink size={18} />
                           </a>
@@ -570,26 +571,26 @@ const handleGeneratePDF = async () => {
               {/* Informations générales */}
               <div className="bg-white rounded-lg shadow">
                 <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800">Informations</h2>
+                  <h2 className="text-lg font-semibold text-gray-800">{t('reqDetail.information')}</h2>
                 </div>
                 <div className="p-6 space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500 flex items-center gap-1">
                       <Hash size={14} />
-                      Département:
+                      {t('reqDetail.department')}
                     </span>
                     <span className="text-sm font-medium">{requisition.department_name || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500 flex items-center gap-1">
                       <Tag size={14} />
-                      Code projet:
+                      {t('reqDetail.projectCode')}
                     </span>
                     <span className="text-sm font-medium">{requisition.project_name || '-'}</span>
                   </div>
                 
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Montant estimé:</span>
+                    <span className="text-sm text-gray-500">{t('reqDetail.estimatedAmount')}</span>
                     <span className="text-sm font-semibold text-blue-600">
                       {formatCurrency(requisition.estimated_amount, requisition.currency)}
                     </span>
@@ -602,7 +603,7 @@ const handleGeneratePDF = async () => {
                 <div className="p-6 border-b border-gray-200">
                   <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                     <User size={20} />
-                    Demandeur
+                    {t('reqDetail.requester')}
                   </h2>
                 </div>
                 <div className="p-6">
@@ -623,17 +624,17 @@ const handleGeneratePDF = async () => {
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <ListChecks size={20} />
-                Articles de la réquisition
+                {t('reqDetail.itemsTitle')}
               </h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Quantité</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Prix unitaire</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('common.description')}</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('common.quantity')}</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('common.unitPrice')}</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('common.total')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -642,7 +643,7 @@ const handleGeneratePDF = async () => {
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-800">
-                            {item.item_description || item.description || 'Non spécifié'}
+                            {item.item_description || item.description || t('reqDetail.notSpecified')}
                           </div>
                           {item.specifications && (
                             <div className="text-xs text-gray-500 mt-1">{item.specifications}</div>
@@ -664,7 +665,7 @@ const handleGeneratePDF = async () => {
                 <tfoot className="bg-gray-50">
                   <tr>
                     <td colSpan="3" className="px-6 py-4 text-right font-semibold text-gray-800">
-                      Total
+                      {t('common.total')}
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-lg text-blue-600">
                       {formatCurrency(requisition.estimated_amount, requisition.currency)}
@@ -681,13 +682,13 @@ const handleGeneratePDF = async () => {
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <Package size={20} />
-                Commandes associées
+                {t('reqDetail.relatedOrders')}
               </h2>
             </div>
             {purchaseOrders.length === 0 ? (
               <div className="p-12 text-center">
                 <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-gray-500">Aucune commande associée à cette réquisition.</p>
+                <p className="text-gray-500">{t('reqDetail.noOrders')}</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
@@ -701,7 +702,7 @@ const handleGeneratePDF = async () => {
                       <div>
                         <p className="font-medium text-blue-600">{po.po_number}</p>
                         <p className="text-sm text-gray-500 mt-1">
-                          Créée le {formatDate(po.created_at)}
+                          {t('reqDetail.createdOn', { date: formatDate(po.created_at) })}
                         </p>
                       </div>
                       <div className="text-right">
@@ -722,7 +723,7 @@ const handleGeneratePDF = async () => {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-4">
               <History size={20} />
-              Suivi du workflow et historique
+              {t('reqDetail.historyTitle')}
             </h2>
             <RequisitionTimeline requisitionId={requisition.id} />
           </div>
@@ -733,39 +734,39 @@ const handleGeneratePDF = async () => {
       <Modal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        title="Supprimer la réquisition"
+        title={t('requisitions.deleteTitle')}
         type="danger"
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={() => deleteMutation.mutate()}
         isLoading={deleteMutation.isPending}
       >
-        <p>Êtes-vous sûr de vouloir supprimer la réquisition <strong>{requisition.requisition_number}</strong> ?</p>
-        <p className="text-sm text-gray-500 mt-2">Cette action est irréversible.</p>
+        <p>{t('requisitions.deleteConfirmBefore')} <strong>{requisition.requisition_number}</strong> ?</p>
+        <p className="text-sm text-gray-500 mt-2">{t('requisitions.irreversible')}</p>
       </Modal>
 
       <Modal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
-        title="Annuler la réquisition"
+        title={t('reqDetail.cancelTitle')}
         type="warning"
-        confirmText="Annuler"
-        cancelText="Retour"
+        confirmText={t('reqDetail.cancelAction')}
+        cancelText={t('common.back')}
         onConfirm={() => cancelMutation.mutate({ reason: cancellationReason })}
         isLoading={cancelMutation.isPending}
       >
         <div className="space-y-4">
-          <p>Êtes-vous sûr de vouloir annuler la réquisition <strong>{requisition.requisition_number}</strong> ?</p>
+          <p>{t('reqDetail.cancelConfirmBefore')} <strong>{requisition.requisition_number}</strong> ?</p>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Motif de l'annulation
+              {t('reqDetail.cancelReason')}
             </label>
             <textarea
               value={cancellationReason}
               onChange={(e) => setCancellationReason(e.target.value)}
               rows="3"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Veuillez indiquer la raison de l'annulation..."
+              placeholder={t('reqDetail.cancelReasonPlaceholder')}
               required
             />
           </div>

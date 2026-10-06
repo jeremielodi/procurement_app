@@ -1,6 +1,7 @@
 // src/components/Common/Modal.jsx
 import React, { useEffect, useRef } from 'react'
 import { X, AlertTriangle, CheckCircle, Info, AlertCircle } from 'lucide-react'
+import { t } from '../../i18n'
 
 const modalSizes = {
   sm: 'max-w-md',
@@ -49,12 +50,12 @@ export default function Modal({
   closeOnOverlayClick = true,
   closeOnEscape = true,
   showFooter = true,
-  confirmText = 'Confirmer',
-  cancelText = 'Annuler',
+  confirmText = t('common.confirm'),
+  cancelText = t('common.cancel'),
   onConfirm,
   onCancel,
   isLoading = false,
-  loadingText = 'Traitement en cours...',
+  loadingText = t('loading.processing'),
   confirmDisabled = false,
   cancelDisabled = false,
   footerClassName = '',
@@ -149,7 +150,7 @@ export default function Modal({
               <button
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg p-1 transition-colors"
-                aria-label="Fermer"
+                aria-label={t('common.close')}
               >
                 <X size={20} />
               </button>
@@ -204,10 +205,10 @@ export const ConfirmModal = ({
   isOpen, 
   onClose, 
   onConfirm, 
-  title = 'Confirmation',
-  message = 'Êtes-vous sûr de vouloir effectuer cette action ?',
-  confirmText = 'Confirmer',
-  cancelText = 'Annuler',
+  title = t('modal.confirmation'),
+  message = t('modal.confirmMessage'),
+  confirmText = t('common.confirm'),
+  cancelText = t('common.cancel'),
   type = 'warning',
   isLoading = false
 }) => {
@@ -233,7 +234,7 @@ export const DeleteModal = ({
   isOpen, 
   onClose, 
   onConfirm, 
-  itemName = 'cet élément',
+  itemName = t('modal.thisItem'),
   isLoading = false
 }) => {
   return (
@@ -241,9 +242,9 @@ export const DeleteModal = ({
       isOpen={isOpen}
       onClose={onClose}
       onConfirm={onConfirm}
-      title="Confirmer la suppression"
-      message={`Êtes-vous sûr de vouloir supprimer ${itemName} ? Cette action est irréversible.`}
-      confirmText="Supprimer"
+      title={t('modal.confirmDelete')}
+      message={t('modal.deleteMessage', { item: itemName })}
+      confirmText={t('common.delete')}
       type="danger"
       isLoading={isLoading}
     />
@@ -257,8 +258,8 @@ export const FormModal = ({
   title, 
   children, 
   onSubmit,
-  submitText = 'Enregistrer',
-  cancelText = 'Annuler',
+  submitText = t('common.save'),
+  cancelText = t('common.cancel'),
   isLoading = false,
   size = 'lg'
 }) => {
@@ -288,12 +289,12 @@ export const FormModal = ({
 }
 
 // Modal de chargement
-export const LoadingModal = ({ isOpen, message = 'Chargement en cours...' }) => {
+export const LoadingModal = ({ isOpen, message = t('loading.inProgress') }) => {
   return (
     <Modal
       isOpen={isOpen}
       onClose={() => {}}
-      title="Chargement"
+      title={t('loading.title')}
       showFooter={false}
       showCloseButton={false}
       closeOnOverlayClick={false}
@@ -321,7 +322,7 @@ export const DetailModal = ({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
-      confirmText="Fermer"
+      confirmText={t('common.close')}
       cancelText=""
       onConfirm={onClose}
       size={size}
@@ -344,7 +345,7 @@ export const DetailModal = ({
 export const SuccessModal = ({ 
   isOpen, 
   onClose, 
-  title = 'Succès', 
+  title = t('modal.success'), 
   message,
   autoCloseDelay = 3000
 }) => {
@@ -363,7 +364,7 @@ export const SuccessModal = ({
       onClose={onClose}
       title={title}
       type="success"
-      confirmText="Fermer"
+      confirmText={t('common.close')}
       cancelText=""
       onConfirm={onClose}
       size="sm"
@@ -380,7 +381,7 @@ export const SuccessModal = ({
 export const ErrorModal = ({ 
   isOpen, 
   onClose, 
-  title = 'Erreur', 
+  title = t('common.error'), 
   message,
   details,
   onRetry
@@ -391,8 +392,8 @@ export const ErrorModal = ({
       onClose={onClose}
       title={title}
       type="danger"
-      confirmText={onRetry ? "Réessayer" : "Fermer"}
-      cancelText={onRetry ? "Annuler" : ""}
+      confirmText={onRetry ? t('common.retry') : t('common.close')}
+      cancelText={onRetry ? t('common.cancel') : ''}
       onConfirm={onRetry || onClose}
       size="md"
     >
@@ -401,7 +402,7 @@ export const ErrorModal = ({
         <p className="text-gray-600 mb-2">{message}</p>
         {details && (
           <details className="mt-4 text-left">
-            <summary className="text-sm text-gray-500 cursor-pointer">Détails techniques</summary>
+            <summary className="text-sm text-gray-500 cursor-pointer">{t('modal.technicalDetails')}</summary>
             <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-x-auto">
               {typeof details === 'object' ? JSON.stringify(details, null, 2) : details}
             </pre>

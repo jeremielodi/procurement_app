@@ -1,7 +1,8 @@
 // src/components/Common/LoadingSpinner.jsx
 import React from 'react'
+import { t } from '../../i18n'
 
-export function LoadingSpinner({ size = 'md', color = 'blue', fullScreen = false, text = 'Chargement...' }) {
+export function LoadingSpinner({ size = 'md', color = 'blue', fullScreen = false, text = t('common.loading') }) {
   const sizes = {
     sm: 'w-5 h-5',
     md: 'w-8 h-8',
@@ -73,7 +74,7 @@ export const TableSpinner = ({ colSpan }) => {
       <td colSpan={colSpan || 10} className="text-center py-12">
         <div className="flex flex-col items-center justify-center">
           <div className="w-10 h-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-          <p className="mt-3 text-sm text-gray-500">Chargement des données...</p>
+          <p className="mt-3 text-sm text-gray-500">{t('loading.data')}</p>
         </div>
       </td>
     </tr>
@@ -141,7 +142,7 @@ export const ChartSpinner = () => {
     <div className="flex justify-center items-center h-96">
       <div className="text-center">
         <div className="w-12 h-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent mx-auto" />
-        <p className="mt-3 text-gray-500">Chargement des graphiques...</p>
+        <p className="mt-3 text-gray-500">{t('loading.charts')}</p>
       </div>
     </div>
   )

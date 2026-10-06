@@ -12,7 +12,8 @@
     "test:flow": "playwright test tests/api/flow.spec.js --project=api --reporter=line",
     "test:e2e": "playwright test --project=e2e --reporter=line",
     "test:setup": "playwright test --project=e2e-setup",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "i18n:check": "node scripts/i18n-check.js"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.14",

@@ -1,5 +1,6 @@
 // backend/src/controllers/DashboardController.js
 const dashboardModel = require('../models/DashboardModel');
+const i18n = require('../i18n');
 const userModel = require('../models/UserModel');
 
 // Le budget n'est visible que par la Finance (et l'admin)
@@ -155,7 +156,7 @@ class DashboardController {
   async getPendingTasksByProfile(req, res) {
     try {
       // ?projectId= : filtre optionnel (le projet est contrôlé par tenantGuard : même entreprise)
-      const data = await dashboardModel.getPendingTasksByProfile({ projectId: req.query.projectId || undefined });
+      const data = await dashboardModel.getPendingTasksByProfile({ projectId: req.query.projectId || undefined, lang: i18n.fromRequest(req) });
       res.json({ success: true, data });
     } catch (error) {
       console.error('Error getting pending tasks by profile:', error);

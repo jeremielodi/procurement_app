@@ -9,6 +9,7 @@ import ProfilePermissions from './ProfilePermissions';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 import { isSuperAdminUser } from '../../utils/accountType';
+import { t } from '../../i18n';
 
 export default function ProfileList() {
   const queryClient = useQueryClient();
@@ -28,10 +29,10 @@ export default function ProfileList() {
     mutationFn: (id) => profileService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['profiles']);
-      toast.success('Profil supprimé');
+      toast.success(t('profiles.deleted'));
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Erreur lors de la suppression');
+      toast.error(error.response?.data?.message || t('requisitions.deleteError'));
     }
   });
 
@@ -41,8 +42,8 @@ export default function ProfileList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Profils BPMN</h1>
-          <p className="text-gray-500 mt-1">{canEdit ? 'Gérer les profils et leurs permissions (communs à toutes les entreprises)' : 'Profils disponibles pour vos utilisateurs et leurs permissions'}</p>
+          <h1 className="text-2xl font-bold text-gray-800">{t('profiles.title')}</h1>
+          <p className="text-gray-500 mt-1">{canEdit ? t('profiles.subtitleEdit') : t('profiles.subtitleRead')}</p>
         </div>
         {canEdit && <button
           onClick={() => {
@@ -52,13 +53,13 @@ export default function ProfileList() {
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus size={18} />
-          Nouveau profil
+          {t('profiles.new')}
         </button>}
       </div>
 
       {!canEdit && (
         <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800" data-testid="profiles-readonly">
-          Les profils et leurs permissions sont communs à toutes les entreprises de procureApp et gérés par l'administrateur de la plateforme. Attribuez-les à vos utilisateurs depuis la page Utilisateurs.
+          {t('profiles.readonly')}
         </div>
       )}
 
@@ -74,12 +75,12 @@ export default function ProfileList() {
         ) : profiles.length === 0 ? (
           <div className="col-span-full text-center py-12 bg-white rounded-lg shadow">
             <Shield size={48} className="mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-500">Aucun profil</p>
+            <p className="text-gray-500">{t('profiles.none')}</p>
             {canEdit && <button
               onClick={() => setShowModal(true)}
               className="mt-2 text-blue-600 hover:text-blue-800"
             >
-              Créer le premier profil
+              {t('profiles.createFirst')}
             </button>}
           </div>
         ) : (
@@ -98,7 +99,7 @@ export default function ProfileList() {
                         setShowPermissionsModal(true);
                       }}
                       className="text-purple-600 hover:text-purple-800"
-                      title={canEdit ? 'Gérer les permissions' : 'Voir les permissions'}
+                      title={canEdit ? t('profiles.managePermissions') : t('profiles.viewPermissions')}
                     >
                       <Key size={18} />
                     </button>
@@ -108,19 +109,19 @@ export default function ProfileList() {
                         setShowModal(true);
                       }}
                       className="text-blue-600 hover:text-blue-800"
-                      title="Modifier"
+                      title={t('common.edit')}
                     >
                       <Edit size={18} />
                     </button>}
                     {canEdit && profile.id !== 'prof_admin' && (
                       <button
                         onClick={() => {
-                          if (confirm(`Supprimer le profil "${profile.name}" ?`)) {
+                          if (confirm(t('profiles.confirmDelete', { name: profile.name }))) {
                             deleteMutation.mutate(profile.id);
                           }
                         }}
                         className="text-red-600 hover:text-red-800"
-                        title="Supprimer"
+                        title={t('common.delete')}
                       >
                         <Trash2 size={18} />
                       </button>
@@ -133,11 +134,11 @@ export default function ProfileList() {
                 <div className="mt-4 pt-4 border-t flex justify-between text-sm">
                   <div className="flex items-center gap-1 text-gray-500">
                     <Users size={14} />
-                    <span>{profile.user_count || 0} utilisateur(s)</span>
+                    <span>{t('profiles.users', { count: profile.user_count || 0 })}</span>
                   </div>
                   <div className="flex items-center gap-1 text-gray-500">
                     <Key size={14} />
-                    <span>{profile.permission_count || 0} permission(s)</span>
+                    <span>{t('profiles.permissions', { count: profile.permission_count || 0 })}</span>
                   </div>
                 </div>
               </div>
@@ -149,7 +150,7 @@ export default function ProfileList() {
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={selectedProfile ? 'Modifier le profil' : 'Nouveau profil'}
+        title={selectedProfile ? t('profiles.edit') : t('profiles.new')}
         size="md"
         showFooter={false}
       >
@@ -165,7 +166,7 @@ export default function ProfileList() {
       <Modal
         isOpen={showPermissionsModal}
         onClose={() => setShowPermissionsModal(false)}
-        title={`Permissions - ${selectedProfile?.name}`}
+        title={t('profiles.permissionsTitle', { name: selectedProfile?.name })}
         size="xl"
         showFooter={false}
       >

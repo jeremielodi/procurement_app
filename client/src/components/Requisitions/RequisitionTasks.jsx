@@ -28,6 +28,8 @@ import toast from 'react-hot-toast';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { purchaseOrderService } from '../../services/purchaseOrderService';
 import { grnService } from '../../services/grnService';
+import { t, getLocale } from '../../i18n';
+import { TASK_LABELS } from '../../utils/taskLabels';
 
 export default function RequisitionTasks() {
   const { id } = useParams();
@@ -84,7 +86,7 @@ export default function RequisitionTasks() {
       setTasks(enrichedTasks);
     } catch (error) {
       console.error('Error loading data:', error);
-      toast.error('Erreur lors du chargement des données');
+      toast.error(t('reqTasks.loadError'));
     } finally {
       setLoading(false);
     }
@@ -94,11 +96,11 @@ export default function RequisitionTasks() {
     setClaimingTaskId(taskId);
     try {
       await taskService.claimTask(taskId, userEmail);
-      toast.success('Tâche prise en charge avec succès');
+      toast.success(t('reqTasks.claimed'));
       await loadData(); // Recharger les tâches
     } catch (error) {
       console.error('Error claiming task:', error);
-      toast.error(error.response?.data?.message || 'Erreur lors de la prise en charge');
+      toast.error(error.response?.data?.message || t('taskList.claimError'));
     } finally {
       setClaimingTaskId(null);
     }
@@ -174,13 +176,13 @@ export default function RequisitionTasks() {
       if (formData.adjustmentJustification) variables.adjustmentJustification = formData.adjustmentJustification;
 
       await taskService.completeTask(selectedTask.id, variables);
-      toast.success('Tâche complétée avec succès');
+      toast.success(t('taskList.completed'));
       setShowTaskModal(false);
       setSelectedTask(null);
       loadData();
     } catch (error) {
       console.error('Error completing task:', error);
-      toast.error('Erreur lors de la complétion de la tâche');
+      toast.error(t('reqTasks.completeError'));
     } finally {
       setSubmitting(false);
     }
@@ -212,30 +214,32 @@ export default function RequisitionTasks() {
     return 'border-gray-200 bg-gray-50';
   };
 
+  // Nom brut (BPMN) : sert à choisir le formulaire ; displayName : libellé traduit affiché
   const getTaskName = (task) => {
-    return (task.name || task.taskName || task.activityName || 'Tâche sans nom');
+    return (task.name || task.taskName || task.activityName || t('common.unnamedTask'));
   };
+  const displayName = (task) => TASK_LABELS[task.taskDefinitionKey] || getTaskName(task);
 
   const formatCurrency = (amount) => formatAmount(amount || 0);
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Date inconnue';
-    return new Date(dateString).toLocaleString('fr-FR');
+    if (!dateString) return t('taskList.unknownDate');
+    return new Date(dateString).toLocaleString(getLocale());
   };
 
   const getProgress = () => {
     const total = tasks.length;
-    const completed = tasks.filter(t => t.status === 'COMPLETED').length;
+    const completed = tasks.filter(tk => tk.status === 'COMPLETED').length;
     return total > 0 ? (completed / total) * 100 : 0;
   };
 
   if (loading) {
-    return <LoadingSpinner text="Chargement des tâches..." />;
+    return <LoadingSpinner text={t('taskList.loading')} />;
   }
 
   const progress = getProgress();
-  const pendingTasks = tasks.filter(t => t.status === 'PENDING');
-  const completedTasks = tasks.filter(t => t.status === 'COMPLETED');
+  const pendingTasks = tasks.filter(tk => tk.status === 'PENDING');
+  const completedTasks = tasks.filter(tk => tk.status === 'COMPLETED');
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -248,9 +252,9 @@ export default function RequisitionTasks() {
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-800">Tâches du workflow</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{t('reqTasks.title')}</h1>
           <div className="flex items-center gap-3 mt-1">
-            <p className="text-gray-500">Réquisition: {requisition?.requisition_number}</p>
+            <p className="text-gray-500">{t('reqTasks.requisition', { number: requisition?.requisition_number })}</p>
             <StatusBadge status={requisition?.status} size="sm" />
           </div>
         </div>
@@ -259,16 +263,16 @@ export default function RequisitionTasks() {
       {/* Barre de progression */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700">Progression du workflow</span>
+          <span className="text-sm font-medium text-gray-700">{t('reqTasks.progress')}</span>
           <span className="text-sm font-medium text-blue-600">{Math.round(progress)}%</span>
         </div>
         <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
           <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
         <div className="flex justify-between mt-2 text-xs text-gray-500">
-          <span>📋 {completedTasks.length} terminée(s)</span>
-          <span>⏳ {pendingTasks.length} en attente</span>
-          <span>📊 {tasks.length} totale(s)</span>
+          <span>{t('reqTasks.doneCount', { count: completedTasks.length })}</span>
+          <span>{t('reqTasks.pendingCount', { count: pendingTasks.length })}</span>
+          <span>{t('reqTasks.totalCount', { count: tasks.length })}</span>
         </div>
       </div>
 
@@ -276,21 +280,21 @@ export default function RequisitionTasks() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-4 text-center">
           <div className="text-2xl font-bold text-blue-600">{tasks.length}</div>
-          <div className="text-sm text-gray-500">Tâches totales</div>
+          <div className="text-sm text-gray-500">{t('reqTasks.total')}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-4 text-center">
           <div className="text-2xl font-bold text-yellow-600">{pendingTasks.length}</div>
-          <div className="text-sm text-gray-500">En attente</div>
+          <div className="text-sm text-gray-500">{t('reqTasks.pending')}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-4 text-center">
           <div className="text-2xl font-bold text-green-600">{completedTasks.length}</div>
-          <div className="text-sm text-gray-500">Terminées</div>
+          <div className="text-sm text-gray-500">{t('reqTasks.done')}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-4 text-center">
           <div className="text-2xl font-bold text-purple-600">
             {formatCurrency(requisition?.estimated_amount)}
           </div>
-          <div className="text-sm text-gray-500">Montant total</div>
+          <div className="text-sm text-gray-500">{t('reqTasks.totalAmount')}</div>
         </div>
       </div>
 
@@ -300,7 +304,7 @@ export default function RequisitionTasks() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Clock size={20} className="text-yellow-500" />
-              Tâches en attente ({pendingTasks.length})
+              {t('reqTasks.pendingTitle', { count: pendingTasks.length })}
             </h2>
           </div>
           <div className="divide-y divide-gray-200">
@@ -317,37 +321,37 @@ export default function RequisitionTasks() {
                     <div className="flex gap-3 flex-1">
                       {getTaskIcon(getTaskName(task))}
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-800">{getTaskName(task)}</h3>
+                        <h3 className="font-semibold text-gray-800">{displayName(task)}</h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 mt-2 text-sm">
-                          <div className="text-gray-500">Réquisition:</div>
+                          <div className="text-gray-500">{t('reqTasks.requisitionLabel')}</div>
                           <div className="font-medium text-blue-600">{task.variables?.requisitionNumber || '-'}</div>
 
-                          <div className="text-gray-500">Créée le:</div>
+                          <div className="text-gray-500">{t('reqTasks.createdOn')}</div>
                           <div>{formatDate(task.created)}</div>
                         </div>
                         <p className="text-sm text-gray-500 mt-2">
                           {isAssignedToMe && (
                             <span className="inline-flex items-center gap-1 text-green-600">
                               <CheckCircle size={14} />
-                              Assignée à vous
+                              {t('reqTasks.assignedToYou')}
                             </span>
                           )}
                           {isUnassigned && (
                             <span className="inline-flex items-center gap-1 text-yellow-600">
                               <Clock size={14} />
-                              Non assignée
+                              {t('reqTasks.unassigned')}
                             </span>
                           )}
                           {task.assignee && !isAssignedToMe && (
                             <span className="inline-flex items-center gap-1 text-gray-500">
                               <User size={14} />
-                              Assignée à: {task.assignee}
+                              {t('reqTasks.assignedTo', { user: task.assignee })}
                             </span>
                           )}
                           {isUnassigned && !canClaim && task.candidateGroup && (
                             <span className="inline-flex items-center gap-1 text-gray-500 ml-3">
                               <AlertCircle size={14} />
-                              Réservée au groupe « {task.candidateGroup} »
+                              {t('reqTasks.reservedFor', { group: task.candidateGroup })}
                             </span>
                           )}
                         </p>
@@ -365,7 +369,7 @@ export default function RequisitionTasks() {
                           ) : (
                             <UserPlus size={16} />
                           )}
-                          {claimingTaskId === task.id ? 'Prise en charge...' : 'Prendre en charge'}
+                          {claimingTaskId === task.id ? t('reqTasks.claiming') : t('taskList.claim')}
                         </button>
                       )}
                       {canProcess && (
@@ -374,7 +378,7 @@ export default function RequisitionTasks() {
                           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
                         >
                           <Send size={16} />
-                          Traiter
+                          {t('reqTasks.process')}
                         </button>
                       )}
                     </div>
@@ -392,7 +396,7 @@ export default function RequisitionTasks() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <CheckCircle size={20} className="text-green-500" />
-              Tâches terminées ({completedTasks.length})
+              {t('reqTasks.doneTitle', { count: completedTasks.length })}
             </h2>
           </div>
           <div className="divide-y divide-gray-200">
@@ -401,12 +405,12 @@ export default function RequisitionTasks() {
                 <div className="flex gap-3">
                   <CheckCircle size={20} className="text-green-500 mt-0.5" />
                   <div>
-                    <h3 className="font-semibold text-gray-800">{getTaskName(task)}</h3>
+                    <h3 className="font-semibold text-gray-800">{displayName(task)}</h3>
                     <p className="text-sm text-gray-500 mt-1">
-                      Complétée le: {task.completedAt ? formatDate(task.completedAt) : formatDate(task.updated)}
+                      {t('reqTasks.completedOn', { date: task.completedAt ? formatDate(task.completedAt) : formatDate(task.updated) })}
                     </p>
                     {task.assignee && (
-                      <p className="text-xs text-gray-400 mt-1">Par: {task.assignee}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t('reqTasks.by', { user: task.assignee })}</p>
                     )}
                   </div>
                 </div>
@@ -419,7 +423,7 @@ export default function RequisitionTasks() {
       {tasks.length === 0 && (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <CheckCircle size={48} className="mx-auto text-green-500 mb-3" />
-          <p className="text-gray-500">Aucune tâche trouvée pour ce processus</p>
+          <p className="text-gray-500">{t('reqTasks.none')}</p>
         </div>
       )}
 
@@ -430,9 +434,9 @@ export default function RequisitionTasks() {
           setShowTaskModal(false);
           setSelectedTask(null);
         }}
-        title={selectedTask ? getTaskName(selectedTask) : 'Traitement de la tâche'}
-        confirmText="Valider"
-        cancelText="Annuler"
+        title={selectedTask ? displayName(selectedTask) : t('taskList.processTask')}
+        confirmText={t('taskList.validate')}
+        cancelText={t('common.cancel')}
         onConfirm={handleSubmitTask}
         isLoading={submitting}
         size="lg"
@@ -444,22 +448,22 @@ export default function RequisitionTasks() {
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
                   <FileText size={16} />
-                  Informations de la réquisition
+                  {t('taskList.requisitionInfo')}
                 </h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="text-gray-600">Numéro:</div>
+                  <div className="text-gray-600">{t('taskList.number')}</div>
                   <div className="font-medium text-blue-700">{selectedTask.variables.requisitionNumber || '-'}</div>
-                  <div className="text-gray-600">Titre:</div>
+                  <div className="text-gray-600">{t('taskList.title')}</div>
                   <div className="font-medium">{selectedTask.variables.title || '-'}</div>
-                  <div className="text-gray-600">Montant:</div>
+                  <div className="text-gray-600">{t('taskList.amount')}</div>
                   <div className="font-medium">{formatCurrency(selectedTask.variables.estimatedAmount)}</div>
-                  <div className="text-gray-600">Département:</div>
+                  <div className="text-gray-600">{t('taskList.department')}</div>
                   <div className="font-medium">{selectedTask.variables.department || '-'}</div>
-                  <div className="text-gray-600">Demandeur:</div>
+                  <div className="text-gray-600">{t('taskList.requester')}</div>
                   <div className="font-medium">{selectedTask.variables.requester || selectedTask.variables.requesterUsername || '-'}</div>
-                  <div className="text-gray-600">Projet:</div>
+                  <div className="text-gray-600">{t('taskList.project')}</div>
                   <div className="font-medium">{selectedTask.variables.projectName || selectedTask.variables.projectCode || '-'}</div>
-                  <div className="text-gray-600">Créée le:</div>
+                  <div className="text-gray-600">{t('reqTasks.createdOn')}</div>
                   <div className="font-medium">{formatDate(selectedTask.variables.createdAt)}</div>
                 </div>
               </div>
@@ -474,7 +478,7 @@ export default function RequisitionTasks() {
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Décision *
+                      {t('taskList.decision')}
                     </label>
                     <div className="flex gap-4">
                       <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg flex-1 hover:bg-green-50 transition-colors">
@@ -486,7 +490,7 @@ export default function RequisitionTasks() {
                           onChange={(e) => handleInputChange('approved', e.target.value)}
                           className="w-4 h-4 text-green-600"
                         />
-                        <span className="text-green-700">✅ Approuver</span>
+                        <span className="text-green-700">{t('taskList.approve')}</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg flex-1 hover:bg-red-50 transition-colors">
                         <input
@@ -497,20 +501,20 @@ export default function RequisitionTasks() {
                           onChange={(e) => handleInputChange('approved', e.target.value)}
                           className="w-4 h-4 text-red-600"
                         />
-                        <span className="text-red-700">❌ Rejeter</span>
+                        <span className="text-red-700">{t('taskList.reject')}</span>
                       </label>
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Commentaire
+                      {t('common.comment')}
                     </label>
                     <textarea
                       value={formData.comment}
                       onChange={(e) => handleInputChange('comment', e.target.value)}
                       rows="4"
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="Ajoutez un commentaire..."
+                      placeholder={t('taskList.commentPlaceholder')}
                     />
                   </div>
                 </>
@@ -522,14 +526,14 @@ export default function RequisitionTasks() {
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Methode d'achat *
+                      {t('reqTasks.method')}
                     </label>
                     <div className="space-y-2">
                       {[
-                        { value: 'DIRECT_PURCHASE', label: 'Achat direct', desc: 'Pour les achats < 5 000 USD' },
-                        { value: 'MULTIPLE_QUOTATIONS', label: 'Multiples devis', desc: 'Entre 5 000 et 25 000 USD' },
-                        { value: 'RFP', label: 'Appel d\'offres (RFP)', desc: 'Pour les achats > 25 000 USD' },
-                        { value: 'SOLE_SOURCE', label: 'Source unique', desc: 'Avec justification approuvée' }
+                        { value: 'DIRECT_PURCHASE', label: t('procurementMethod.DIRECT_PURCHASE'), desc: t('reqTasks.directDesc') },
+                        { value: 'MULTIPLE_QUOTATIONS', label: t('procurementMethod.MULTIPLE_QUOTATIONS'), desc: t('reqTasks.quotesDesc') },
+                        { value: 'RFP', label: t('reqTasks.rfpLabel'), desc: t('reqTasks.rfpDesc') },
+                        { value: 'SOLE_SOURCE', label: t('procurementMethod.SOLE_SOURCE'), desc: t('reqTasks.soleDesc') }
                       ].map(option => (
                         <label key={option.value} className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                           <input
@@ -550,14 +554,14 @@ export default function RequisitionTasks() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Justification
+                      {t('reqForm.justification')}
                     </label>
                     <textarea
                       value={formData.justification}
                       onChange={(e) => handleInputChange('justification', e.target.value)}
                       rows="3"
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="Justifiez votre choix..."
+                      placeholder={t('reqTasks.justifyPlaceholder')}
                     />
                   </div>
                 </>
@@ -568,7 +572,7 @@ export default function RequisitionTasks() {
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nouveau montant proposé *
+                    {t('reqTasks.newAmount')}
                   </label>
                   <input
                     type="number"
@@ -576,19 +580,19 @@ export default function RequisitionTasks() {
                     value={formData.newBudgetAmount}
                     onChange={(e) => handleInputChange('newBudgetAmount', e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Montant proposé"
+                    placeholder={t('reqTasks.newAmountPlaceholder')}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Justification de l'ajustement
+                    {t('reqTasks.adjustmentJustification')}
                   </label>
                   <textarea
                     value={formData.adjustmentJustification}
                     onChange={(e) => handleInputChange('adjustmentJustification', e.target.value)}
                     rows="3"
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Expliquez pourquoi un ajustement budgétaire est nécessaire..."
+                    placeholder={t('reqTasks.adjustmentPlaceholder')}
                   />
                 </div>
               </>
@@ -604,14 +608,14 @@ export default function RequisitionTasks() {
               !getTaskName(selectedTask).includes('Budget Adjustment') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Commentaire
+                    {t('common.comment')}
                   </label>
                   <textarea
                     value={formData.comment}
                     onChange={(e) => handleInputChange('comment', e.target.value)}
                     rows="4"
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ajoutez un commentaire..."
+                    placeholder={t('taskList.commentPlaceholder')}
                   />
                 </div>
               )}

@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, X, FileText, Image, File, Trash2, Eye, Download } from 'lucide-react';
 import { uploadService } from '../../services/uploadService';
 import toast from 'react-hot-toast';
+import { t } from '../../i18n';
 
 const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = [] }) => {
   const [files, setFiles] = useState(existingFiles);
@@ -17,9 +18,9 @@ const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = []
   };
 
   const formatFileSize = (bytes) => {
-    if (!bytes) return '0 Bytes';
+    const sizes = t('upload.sizes', { returnObjects: true });
+    if (!bytes) return `0 ${sizes[0]}`;
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
@@ -61,7 +62,7 @@ const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = []
       }));
       setFiles(prev => [...prev, ...tempFiles]);
       if (onUploadComplete) onUploadComplete([...files, ...tempFiles]);
-      toast.success(`${newFiles.length} fichier(s) sélectionné(s)`);
+      toast.success(t('upload.selected', { count: newFiles.length }));
       return;
     }
 
@@ -78,9 +79,9 @@ const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = []
       }));
       setFiles(prev => [...prev, ...uploadedFiles]);
       if (onUploadComplete) onUploadComplete([...files, ...uploadedFiles]);
-      toast.success(`${uploadedFiles.length} fichier(s) uploadé(s)`);
+      toast.success(t('upload.uploaded', { count: uploadedFiles.length }));
     } catch (error) {
-      toast.error('Erreur lors de l\'upload');
+      toast.error(t('upload.uploadError'));
     } finally {
       setUploading(false);
     }
@@ -92,7 +93,7 @@ const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = []
       const newFiles = files.filter((_, i) => i !== index);
       setFiles(newFiles);
       if (onUploadComplete) onUploadComplete(newFiles);
-      toast.success('Fichier supprimé');
+      toast.success(t('upload.deleted'));
       return;
     }
 
@@ -101,9 +102,9 @@ const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = []
       const newFiles = files.filter((_, i) => i !== index);
       setFiles(newFiles);
       if (onUploadComplete) onUploadComplete(newFiles);
-      toast.success('Fichier supprimé');
+      toast.success(t('upload.deleted'));
     } catch (error) {
-      toast.error('Erreur lors de la suppression');
+      toast.error(t('upload.deleteError'));
     }
   };
 
@@ -119,7 +120,7 @@ const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = []
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      toast.error('Erreur lors du téléchargement');
+      toast.error(t('pdf.downloadError'));
     }
   };
 
@@ -145,24 +146,24 @@ const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = []
         />
         <Upload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
         <p className="text-sm text-gray-600">
-          Glissez-déposez vos fichiers ici ou{' '}
+          {t('upload.dropHere')}{' '}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="text-blue-600 hover:text-blue-800 font-medium"
           >
-            parcourez
+            {t('upload.browse')}
           </button>
         </p>
         <p className="text-xs text-gray-400 mt-2">
-          PDF, DOC, XLS, JPG, PNG (max. 10MB par fichier)
+          {t('upload.hint')}
         </p>
       </div>
 
       {/* Liste des fichiers */}
       {files.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-gray-700">Fichiers joints ({files.length})</h4>
+          <h4 className="text-sm font-medium text-gray-700">{t('upload.attached', { count: files.length })}</h4>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {files.map((file, index) => (
               <div key={file.id || index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
@@ -183,7 +184,7 @@ const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = []
                       type="button"
                       onClick={() => handleDownload(file.id, file.file_name)}
                       className="p-1 text-gray-500 hover:text-blue-600 rounded"
-                      title="Télécharger"
+                      title={t('common.download')}
                     >
                       <Download size={16} />
                     </button>
@@ -192,7 +193,7 @@ const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = []
                     type="button"
                     onClick={() => handleDelete(file.id, index)}
                     className="p-1 text-gray-500 hover:text-red-600 rounded"
-                    title="Supprimer"
+                    title={t('common.delete')}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -206,7 +207,7 @@ const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = []
       {uploading && (
         <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-          Upload en cours...
+          {t('upload.uploading')}
         </div>
       )}
     </div>

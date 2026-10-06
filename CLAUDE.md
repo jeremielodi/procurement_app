@@ -210,7 +210,8 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 ## Site vitrine (FR / EN)
 
 - `client/src/components/Landing/LandingPage.jsx` : page unique publique sur `/` (visiteur non connecté ; connecté → `HomeRedirect`, via `Home` dans `App.jsx`). Éditeur : **Digitales Solutions**
-- Textes dans `landing.*` des fichiers de langue (voir « Interface multilingue ») ; listes = tableaux JSON, icônes dans le composant (`FEATURE_ICONS`…, même ordre). Liens : `/login`, `/supplier-register`, contact (`CONTACT_EMAIL` / `CONTACT_PHONE` en tête du fichier)
+- Textes dans `landing.*` des fichiers de langue (voir « Interface multilingue ») ; listes = tableaux JSON, icônes dans le composant (`FEATURE_ICONS`…, même ordre). Liens : `/login`, `/supplier-register`
+- **Formulaire de contact** (`Landing/ContactForm.jsx`, aucune adresse ni téléphone affichés) → `POST /public/contact { name, email, company?, phone?, message, website }` (`ContactController`) : email à **`CONTACT_EMAIL`** (`backend/.env`, défaut jeremielodi@gmail.com) via le SMTP de l'app, **Reply-To = visiteur** (`sendEmail(..., { replyTo })`). Validation (erreurs par champ en codes `required`/`invalid`/`tooShort`/`tooLong`, traduites côté client), champ piège `website` (robot → succès sans envoi), 5 messages / IP / heure (429), 502 si l'email n'est pas parti. Tests : `tests/api/contact.spec.js` (n'envoie jamais d'email réel)
 
 ## Interface multilingue (FR / EN)
 
@@ -219,14 +220,19 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - Composants : `import { t } from '../../i18n'` suffit (App s'abonne à la langue → tout l'arbre se ré-affiche). `useTranslation()` (→ `{ t, lang, setLang }`) seulement si un `useMemo`/`useEffect`/`queryKey` dépend de la langue. **Ne jamais nommer `t` une variable de boucle** (masque la fonction : utiliser `tn`, `tk`, `dt`…)
 - Langue : choix mémorisé (`localStorage.app_lang`), **français par défaut** (pas de détection navigateur : les e2e tournent en en-US et vérifient des textes FR). Sélecteur `Common/LanguageSwitcher` (en-tête, login/inscription/mot de passe oublié, site vitrine, « Mon profil »)
 - `api.js` envoie `Accept-Language` ; backend : `i18n.fromRequest(req)` (`?lang=` puis en-tête), `translator(lang)` (`{var}`), `workflowLabels.taskLabel(key, lang)` / `groupLabel` / `methodLabel`… Localisés : suivi du workflow (`RequisitionTimelineService.build(id, lang)`), « Qui bloque ? » (noms de profils = donnée FR, rôle traduit sinon), « profil incomplet » du portail fournisseur. Les données renvoyées par le backend avec un code (`rawStatus`, `rawMethod`) sont traduites côté client
-- Restent en français : messages d'erreur/succès de l'API, notifications et emails (stockés/envoyés en FR), PDF autres que la réquisition, données saisies (départements, profils…)
+- **Langue du compte** (migration `10_user_language.sql`, `users.language`, défaut `fr`) : renvoyée au login / `GET /auth/profile` et appliquée par `AuthContext` ; changement via le sélecteur → `PUT /auth/language` (avant `tenantContext`, ouvert à tous les comptes). Saisie à la création (UserForm, admin d'entreprise) ; fournisseur = langue de la page d'inscription
+- **Emails et notifications dans la langue du destinataire** (`email.*`, `notification.*` des locales backend) : mot de passe oublié, tâche GoFlow (email + in-app), appels d'offres, attribution, nouvelle soumission, envoi du PO au fournisseur (langue de son compte portail)
+- Restent en français : messages d'erreur/succès de l'API, notifications déjà stockées, données saisies (départements, profils…)
 - Contrôle : `npm run i18n:check` (client) — mêmes clés dans chaque langue (client et backend) + toute clé `t('…')` du code existe
 
 ## Mot de passe oublié / changement
 
-- `POST /auth/forgot-password { email }` (public, `AuthController.forgotPassword`) : réponse **générique identique** que le compte existe ou non ; après la réponse, génère un mot de passe (`utils/passwordGenerator.js`, 12 car.) et l'envoie par email à l'utilisateur **actif** ; le mot de passe n'est remplacé que si l'email est parti. Limites en mémoire : 1 régénération / email / 5 min, 5 demandes / IP / 15 min (429)
+- **En deux étapes** (une demande faite par un tiers ne modifie rien) :
+  1. `POST /auth/forgot-password { email }` (public, `AuthController.forgotPassword`) : réponse **générique identique** que le compte existe ou non ; après la réponse, email à l'utilisateur **actif** avec un **lien public de confirmation** `APP_URL/reset-password?token=…` — **le mot de passe n'est pas modifié**. Limites en mémoire : 1 lien / email / 5 min, 5 demandes / IP / 15 min (429)
+  2. Page publique `Auth/ResetPasswordConfirm` (`/reset-password`) → bouton « Confirmer » → `POST /auth/reset-password/confirm { token }` (POST et non GET : les antivirus qui pré-ouvrent les liens ne déclenchent rien) : génère un mot de passe (`utils/passwordGenerator.js`, 12 car.), l'envoie par email, ne le remplace que si l'email est parti. Erreurs : 400 `INVALID_LINK`, 502 `EMAIL_FAILED`, 409 double clic
+  - Lien = JWT `purpose: 'password-reset'`, valable 1 h, **à usage unique** : il contient une empreinte du hash du mot de passe actuel, tout changement de mot de passe invalide les liens déjà émis
 - `POST /auth/change-password { oldPassword, newPassword }` (authentifié, déclaré avant `tenantContext` → ouvert aux fournisseurs et au super admin) : ancien mot de passe faux → **400** (un 401 déconnecterait le client), ≥ 8 caractères
-- Frontend : `Auth/ForgotPassword` (`/forgot-password`, lien depuis le login) ; changement depuis `Auth/Profile`
+- Frontend : `Auth/ForgotPassword` (`/forgot-password`, lien depuis le login), `Auth/ResetPasswordConfirm` (`/reset-password`) ; changement depuis `Auth/Profile`
 - Tests : `client/tests/api/password.spec.js` (n'utilise jamais un vrai email pour forgot-password)
 
 ## Session, déconnexion et WebSocket
@@ -246,7 +252,8 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - `backend/src/i18n/index.js` + `locales/fr.json` / `en.json` (statuts de réquisition y compris `CLASSIFIED_*`, avancement, priorités, libellés du PDF, `workflow.*`, `timeline.*`, `supplierProfile.*`). `i18n.translator(lang)` → `t('status.APPROVED')` ; `i18n.locale(lang)` pour les dates/montants ; langue inconnue → `fr`
 - PDF de réquisition : `GET /requisitions/:id/export/pdf?lang=fr|en` — en-tête avec l'identité de l'entreprise (logo, nom, adresse, contact, NIF/RCCM via `getBranding`), badges « Étape » (statut) et « Avancement » (progress_status). Le viewer (`RequisitionViewer`) a un sélecteur FR/EN, initialisé sur la langue de l'interface
 - Piège Handlebars : une clé de données portant le même nom qu'un helper enregistré (ex. `priorityLabel`) est masquée par le helper → nommer autrement
-- Nouveau document à traduire : ajouter ses libellés dans les deux dictionnaires et passer `L` (libellés) + valeurs déjà formatées au template
+- **Tous les PDF sont traduits** (réquisition détail/liste, PO, GRN, paiement, offre fournisseur) : le client envoie `?lang=<getLang()>` sur chaque requête PDF ; le backend lit `i18n.fromRequest(req)` (`?lang=`, puis `Accept-Language`, défaut `fr`)
+- Nouveau document à traduire : section `pdf.<doc>` dans `fr.json` / `en.json`, puis `pdfContext(lang, '<doc>')` (`utils/pdfI18n.js`) → `{ lang, locale, t, L }` passé au template (`L` = `pdf.common` + `pdf.<doc>`). Helpers Handlebars : dernier argument `options` → `rootLocale(options)` / `rootLabels(options)` ; dans un `#each` : `{{@root.L.x}}` ; phrases avec valeurs pré-formatées dans un objet `T` (HTML : échapper les valeurs avec `Handlebars.escapeExpression` puis `{{{T.x}}}`) ; pied de page Puppeteer : `ctx.L.page`
 
 ## Génération PDF
 
@@ -255,7 +262,7 @@ Tous les PDFs suivent le même pattern :
 1. Template HTML avec expressions Handlebars compilées à l'exécution (pas de fichiers `.hbs`)
 2. `puppeteer.launch(getBrowserOptions())` → `page.setContent(html)` → `page.pdf({ format: 'A4' })`
 3. Réponse : `res.set('Content-Type', 'application/pdf')` + `res.end(pdfBuffer)`
-4. Frontend : `api.get(url, { responseType: 'blob' })` → `URL.createObjectURL(blob)` → **`<iframe key={blobUrl}>`** (jamais `<embed>` : la CSP helmet `object-src 'none'` le bloque en production). Composant générique : `Common/BlobPdfViewer.jsx`
+4. Frontend : `api.get(url, { params: { lang: getLang() }, responseType: 'blob' })` → `URL.createObjectURL(blob)` → **`<iframe key={blobUrl}>`** (jamais `<embed>` : la CSP helmet `object-src 'none'` le bloque en production). Composant générique : `Common/BlobPdfViewer.jsx`
 
 ### Services PDF existants
 | Module | Fichier service | Entrée |

@@ -480,9 +480,25 @@
     "contact": {
       "title": "Contactez-nous",
       "subtitle": "Une démonstration, un déploiement pour votre entreprise ou une question ? L'équipe Digitales Solutions vous répond.",
-      "email": "Email",
-      "phone": "Téléphone / WhatsApp",
-      "mailSubject": "Demande d'information procureApp"
+      "form": {
+        "name": "Nom complet",
+        "email": "Email",
+        "company": "Entreprise / organisation",
+        "phone": "Téléphone",
+        "optional": "facultatif",
+        "message": "Votre message",
+        "messagePlaceholder": "Décrivez votre besoin : démonstration, déploiement, nombre d'utilisateurs…",
+        "submit": "Envoyer le message",
+        "sending": "Envoi…",
+        "sent": "Merci ! Votre message a bien été envoyé. Nous vous répondrons rapidement par email.",
+        "another": "Envoyer un autre message",
+        "required": "Champ obligatoire",
+        "emailInvalid": "Adresse email invalide",
+        "messageTooShort": "Message trop court (10 caractères minimum)",
+        "tooLong": "Texte trop long",
+        "tooMany": "Trop de messages envoyés. Réessayez dans une heure.",
+        "error": "Le message n'a pas pu être envoyé. Réessayez plus tard."
+      }
     },
     "cta": {
       "title": "Prêt à moderniser vos achats ?",
@@ -514,14 +530,14 @@
     "checkingAuth": "Vérification de l'authentification...",
     "forgot": {
       "title": "Mot de passe oublié",
-      "subtitle": "Recevez un nouveau mot de passe par email",
+      "subtitle": "Recevez un lien de confirmation par email",
       "genericError": "Erreur, veuillez réessayer",
-      "checkInboxBefore": "Vérifiez votre boîte de réception (et les spams), puis changez ce mot de passe depuis",
-      "checkInboxAfter": "après connexion.",
       "backToLogin": "Retour à la connexion",
-      "intro": "Saisissez l'email de votre compte. Un nouveau mot de passe sera généré et vous sera envoyé ; l'ancien ne fonctionnera plus.",
+      "intro": "Saisissez l'email de votre compte. Vous recevrez un lien de confirmation : votre mot de passe actuel reste valable tant que vous n'avez pas confirmé.",
       "sending": "Envoi...",
-      "submit": "Recevoir un nouveau mot de passe"
+      "submit": "Recevoir le lien de confirmation",
+      "sent": "Si un compte actif correspond à cet email, un lien de confirmation vient de lui être envoyé.",
+      "sentHint": "Ouvrez l'email (pensez aux spams) et cliquez sur « Confirmer la réinitialisation ». Le lien est valable 1 heure ; votre mot de passe actuel reste inchangé jusque-là."
     },
     "register": {
       "title": "procureApp — Portail fournisseur",
@@ -556,6 +572,20 @@
       "creating": "Création…",
       "submit": "Créer mon compte fournisseur",
       "alreadyRegistered": "Déjà inscrit ?"
+    },
+    "reset": {
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Confirmation de votre demande",
+      "intro": "Vous avez demandé la réinitialisation de votre mot de passe. En confirmant, un nouveau mot de passe sera généré et envoyé à votre adresse email ; l'ancien ne fonctionnera plus.",
+      "confirm": "Confirmer et recevoir un nouveau mot de passe",
+      "confirming": "Confirmation...",
+      "notMe": "Je n'ai rien demandé — retour à la connexion",
+      "done": "C'est fait : un nouveau mot de passe vient de vous être envoyé par email.",
+      "doneHint": "Connectez-vous avec ce mot de passe, puis changez-le depuis Mon profil.",
+      "invalid": "Ce lien est invalide, expiré ou a déjà été utilisé.",
+      "newRequest": "Faire une nouvelle demande",
+      "emailFailed": "L'email n'a pas pu être envoyé : votre mot de passe n'a pas été modifié. Réessayez plus tard.",
+      "missingToken": "Lien incomplet : ouvrez le lien reçu par email."
     }
   },
   "supplierFields": {

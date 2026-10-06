@@ -4,12 +4,14 @@ const puppeteer = require('puppeteer');
 const Handlebars = require('handlebars');
 const db = require('../config/database');
 const { getBrowserOptions } = require('../config/puppeteer');
+const { pdfContext, rootLocale, rootLabels } = require('../utils/pdfI18n');
 
+// Libellés : pdf.grn.status.<statut> des locales
 const STATUS = {
-  DRAFT:    { label: 'Brouillon',   color: '#374151', bg: '#F3F4F6' },
-  PENDING:  { label: 'En attente',  color: '#92400E', bg: '#FEF3C7' },
-  PARTIAL:  { label: 'Partielle',   color: '#9A3412', bg: '#FFEDD5' },
-  COMPLETE: { label: 'Complète',    color: '#065F46', bg: '#D1FAE5' },
+  DRAFT:    { color: '#374151', bg: '#F3F4F6' },
+  PENDING:  { color: '#92400E', bg: '#FEF3C7' },
+  PARTIAL:  { color: '#9A3412', bg: '#FFEDD5' },
+  COMPLETE: { color: '#065F46', bg: '#D1FAE5' },
 };
 
 class GoodsReceiptExportService {
@@ -17,12 +19,13 @@ class GoodsReceiptExportService {
     const safe = (name, fn) => {
       if (!Handlebars.helpers[name]) Handlebars.registerHelper(name, fn);
     };
-    safe('grn_formatDate', (d) => d
-      ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    // Langue : racine du template (locale, L) — voir utils/pdfI18n
+    safe('grn_formatDate', (d, options) => d
+      ? new Date(d).toLocaleDateString(rootLocale(options), { day: '2-digit', month: '2-digit', year: 'numeric' })
       : '—');
-    safe('grn_num', (n) => (n === null || n === undefined || n === '') ? '—' : new Intl.NumberFormat('fr-FR').format(n));
+    safe('grn_num', (n, options) => (n === null || n === undefined || n === '') ? '—' : new Intl.NumberFormat(rootLocale(options)).format(n));
     safe('grn_index1', (i) => i + 1);
-    safe('grn_statusLabel', (s) => (STATUS[s] || { label: s }).label);
+    safe('grn_statusLabel', (s, options) => rootLabels(options).status?.[s] || s);
     safe('grn_statusColor', (s) => (STATUS[s] || STATUS.DRAFT).color);
     safe('grn_statusBg', (s) => (STATUS[s] || STATUS.DRAFT).bg);
   }
@@ -58,7 +61,7 @@ class GoodsReceiptExportService {
 
   getTemplate() {
     return `<!doctype html>
-<html><head><meta charset="utf-8"><title>{{grn.grn_number}}</title>
+<html lang="{{lang}}"><head><meta charset="utf-8"><title>{{grn.grn_number}}</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111827; margin: 0; }
@@ -90,52 +93,52 @@ class GoodsReceiptExportService {
   <div class="header">
     <div>
       <div class="org">{{#if grn.enterprise_name}}{{grn.enterprise_name}} — {{/if}}procureApp</div>
-      <h1>BON DE RÉCEPTION</h1>
+      <h1>{{L.heading}}</h1>
       <div class="num">{{grn.grn_number}}</div>
     </div>
     <div class="meta">
       <span class="badge" style="color:{{grn_statusColor grn.status}};background:{{grn_statusBg grn.status}}">{{grn_statusLabel grn.status}}</span><br>
-      Date de réception : <b>{{grn_formatDate grn.receipt_date}}</b><br>
-      Commande : <b>{{grn.po_number}}</b><br>
-      {{#if grn.requisition_number}}Réquisition : {{grn.requisition_number}}{{/if}}
+      {{L.receiptDate}} <b>{{grn_formatDate grn.receipt_date}}</b><br>
+      {{L.order}} <b>{{grn.po_number}}</b><br>
+      {{#if grn.requisition_number}}{{L.requisition}} {{grn.requisition_number}}{{/if}}
     </div>
   </div>
 
   <div class="grid">
     <div class="box">
-      <h3>Fournisseur</h3>
+      <h3>{{L.supplier}}</h3>
       <div><b>{{grn.supplier_name}}</b>{{#if grn.supplier_code}} ({{grn.supplier_code}}){{/if}}</div>
       {{#if grn.supplier_address}}<div>{{grn.supplier_address}}</div>{{/if}}
       <div>{{#if grn.supplier_phone}}{{grn.supplier_phone}}{{/if}}{{#if grn.supplier_email}} · {{grn.supplier_email}}{{/if}}</div>
     </div>
     <div class="box">
-      <h3>Commande</h3>
-      <div class="row"><span>Date de commande</span><span>{{grn_formatDate grn.order_date}}</span></div>
-      <div class="row"><span>Livraison prévue</span><span>{{grn_formatDate grn.delivery_date}}</span></div>
-      {{#if grn.requisition_title}}<div class="row"><span>Objet</span><span>{{grn.requisition_title}}</span></div>{{/if}}
+      <h3>{{L.orderBox}}</h3>
+      <div class="row"><span>{{L.orderDate}}</span><span>{{grn_formatDate grn.order_date}}</span></div>
+      <div class="row"><span>{{L.expectedDelivery}}</span><span>{{grn_formatDate grn.delivery_date}}</span></div>
+      {{#if grn.requisition_title}}<div class="row"><span>{{L.object}}</span><span>{{grn.requisition_title}}</span></div>{{/if}}
     </div>
   </div>
 
   <table>
     <thead><tr>
-      <th style="width:28px">N°</th><th>Désignation</th>
-      <th class="n">Qté reçue</th><th class="n">Qté acceptée</th><th class="n">Qté rejetée</th>
+      <th style="width:28px">{{L.no}}</th><th>{{L.designation}}</th>
+      <th class="n">{{L.qtyReceived}}</th><th class="n">{{L.qtyAccepted}}</th><th class="n">{{L.qtyRejected}}</th>
     </tr></thead>
     <tbody>
       {{#each items}}
       <tr>
         <td>{{grn_index1 @index}}</td>
-        <td>{{this.item_description}}{{#if this.rejection_reason}}<div class="reason">Motif de rejet : {{this.rejection_reason}}</div>{{/if}}</td>
+        <td>{{this.item_description}}{{#if this.rejection_reason}}<div class="reason">{{@root.L.rejectionReason}} {{this.rejection_reason}}</div>{{/if}}</td>
         <td class="n">{{grn_num this.quantity_received}}</td>
         <td class="n">{{grn_num this.quantity_accepted}}</td>
         <td class="n {{#if this.quantity_rejected}}rej{{/if}}">{{grn_num this.quantity_rejected}}</td>
       </tr>
       {{else}}
-      <tr><td colspan="5" style="text-align:center;color:#9CA3AF">Aucun article</td></tr>
+      <tr><td colspan="5" style="text-align:center;color:#9CA3AF">{{@root.L.noItems}}</td></tr>
       {{/each}}
     </tbody>
     <tfoot><tr>
-      <td colspan="2" class="n">TOTAL</td>
+      <td colspan="2" class="n">{{L.total}}</td>
       <td class="n">{{grn_num totals.received}}</td>
       <td class="n">{{grn_num totals.accepted}}</td>
       <td class="n">{{grn_num totals.rejected}}</td>
@@ -143,21 +146,23 @@ class GoodsReceiptExportService {
   </table>
 
   {{#if grn.observations}}
-  <div class="box obs"><h3>Observations</h3>{{grn.observations}}</div>
+  <div class="box obs"><h3>{{L.observations}}</h3>{{grn.observations}}</div>
   {{/if}}
 
   <div class="signatures">
-    <div class="sig">Réceptionné par<b>{{grn.received_by_name}}</b><br>Signature :</div>
-    <div class="sig">Livreur (fournisseur)<br><br>Nom et signature :</div>
-    <div class="sig">Visa logistique / magasin<br><br>Signature et cachet :</div>
+    <div class="sig">{{L.receivedBy}}<b>{{grn.received_by_name}}</b><br>{{L.signature}}</div>
+    <div class="sig">{{L.deliverer}}<br><br>{{L.nameSignature}}</div>
+    <div class="sig">{{L.warehouse}}<br><br>{{L.signatureStamp}}</div>
   </div>
 </body></html>`;
   }
 
-  async generatePDF(id) {
+  /** lang : langue du document ('fr' par défaut) */
+  async generatePDF(id, { lang } = {}) {
     const grn = await this.getData(id);
     if (!grn) return null;
-    const html = Handlebars.compile(this.getTemplate())({ grn, items: grn.items, totals: grn.totals });
+    const ctx = pdfContext(lang, 'grn');
+    const html = Handlebars.compile(this.getTemplate())({ grn, items: grn.items, totals: grn.totals, ...ctx });
 
     const browser = await puppeteer.launch(getBrowserOptions());
     try {
@@ -171,7 +176,7 @@ class GoodsReceiptExportService {
         footerTemplate: `
           <div style="width:100%;font-size:9px;color:#9CA3AF;padding:0 15mm;display:flex;justify-content:space-between">
             <span>${String(grn.grn_number).replace(/[<>&]/g, '')}</span>
-            <span>Page <span class="pageNumber"></span> / <span class="totalPages"></span></span>
+            <span>${ctx.L.page} <span class="pageNumber"></span> / <span class="totalPages"></span></span>
           </div>`,
         margin: { top: '15mm', bottom: '18mm', left: '15mm', right: '15mm' },
       });

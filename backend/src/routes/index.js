@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const requisitionController = require('../controllers/RequisitionController');
+const contactController = require('../controllers/ContactController');
 const supplierController = require('../controllers/SupplierController');
 const notificationController = require('../controllers/NotificationController');
 const dashboardController = require('../controllers/DashboardController');
@@ -55,6 +56,7 @@ const uploadRoutes = require('./upload');
 router.post('/auth/login', authController.login);
 router.get('/auth/profile', authenticate, authController.getProfile);
 router.post('/auth/forgot-password', authController.forgotPassword);
+router.post('/auth/reset-password/confirm', authController.confirmPasswordReset);
 // Avant tenantContext : accessible à tous les types de compte (fournisseur, super admin)
 router.post('/auth/change-password', authenticate, authController.changePassword);
 router.put('/auth/language', authenticate, authController.setLanguage.bind(authController));
@@ -69,6 +71,8 @@ router.get('/public/enterprises/:id/logo', enterpriseController.getLogo.bind(ent
 // Localisations et catégories de marché actives (formulaire d'inscription fournisseur)
 router.get('/public/locations', referenceController.locations.list);
 router.get('/public/market-categories', referenceController.categories.list);
+// Formulaire de contact du site vitrine (email à CONTACT_EMAIL)
+router.post('/public/contact', contactController.send.bind(contactController));
 
 router.use(authenticate);
 // Multi-entreprise : type de compte + entreprise courante, puis contrôle des identifiants cités

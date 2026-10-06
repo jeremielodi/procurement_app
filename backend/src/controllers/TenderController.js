@@ -676,7 +676,7 @@ class TenderController {
       if (!submission) return res.status(404).json({ success: false, message: 'Aucune soumission pour cet appel d\'offres' });
       const items = await tenderModel.getItems(tender.requisition_id);
 
-      const pdf = await submissionPdfService.generate({ tender, supplier, submission, items });
+      const pdf = await submissionPdfService.generate({ tender, supplier, submission, items, lang: i18n.fromRequest(req) });
       res.set('Content-Type', 'application/pdf');
       res.set('Content-Disposition',
         `inline; filename="offre_${tender.tender_number.replace(/[^\w.-]+/g, '_')}_${supplier.supplier_code}.pdf"`);

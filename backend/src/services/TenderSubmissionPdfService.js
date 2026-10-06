@@ -4,24 +4,26 @@ const puppeteer = require('puppeteer');
 const Handlebars = require('handlebars');
 const { getBrowserOptions } = require('../config/puppeteer');
 const { logoDataUri } = require('../utils/logoUpload');
+const { pdfContext, rootLocale } = require('../utils/pdfI18n');
 
 class TenderSubmissionPdfService {
   constructor() {
     const safe = (name, fn) => {
       if (!Handlebars.helpers[name]) Handlebars.registerHelper(name, fn);
     };
-    safe('tsub_formatDate', (d) => d
-      ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short', timeZone: process.env.APP_TIMEZONE || 'Africa/Kinshasa' })
+    // Langue : racine du template (locale, L) — voir utils/pdfI18n
+    safe('tsub_formatDate', (d, options) => d
+      ? new Date(d).toLocaleString(rootLocale(options), { dateStyle: 'long', timeStyle: 'short', timeZone: process.env.APP_TIMEZONE || 'Africa/Kinshasa' })
       : '—');
-    safe('tsub_money', (n) => new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    safe('tsub_money', (n, options) => new Intl.NumberFormat(rootLocale(options), { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       .format(parseFloat(n) || 0));
-    safe('tsub_qty', (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(parseFloat(n) || 0));
+    safe('tsub_qty', (n, options) => new Intl.NumberFormat(rootLocale(options), { maximumFractionDigits: 2 }).format(parseFloat(n) || 0));
     safe('tsub_index1', (i) => i + 1);
   }
 
   getTemplate() {
     return `<!doctype html>
-<html><head><meta charset="utf-8"><title>Offre {{tender.tender_number}} — {{supplier.name}}</title>
+<html lang="{{lang}}"><head><meta charset="utf-8"><title>{{T.docTitle}}</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111827; margin: 0; }
@@ -58,40 +60,40 @@ class TenderSubmissionPdfService {
         <h1>{{supplier.name}}</h1>
         <div class="info">
           {{#if supplier.address}}{{supplier.address}}<br>{{/if}}
-          {{#if supplier.phone}}Tél : {{supplier.phone}}{{/if}}{{#if supplier.email}} · {{supplier.email}}{{/if}}<br>
-          {{#if supplier.registration_number}}RCCM : {{supplier.registration_number}}{{/if}}
-          {{#if supplier.tax_id}} · N° impôt : {{supplier.tax_id}}{{/if}}
+          {{#if supplier.phone}}{{L.phone}} {{supplier.phone}}{{/if}}{{#if supplier.email}} · {{supplier.email}}{{/if}}<br>
+          {{#if supplier.registration_number}}{{L.rccm}} {{supplier.registration_number}}{{/if}}
+          {{#if supplier.tax_id}} · {{L.taxId}} {{supplier.tax_id}}{{/if}}
           {{#if supplier.website}}<br>{{supplier.website}}{{/if}}
         </div>
       </div>
     </div>
     <div class="doc-title">
-      <h2>Offre de prix</h2>
-      <div class="num">Appel d'offres N° {{tender.tender_number}}</div>
-      {{#if tender.enterprise_name}}<div style="margin-top:4px">Acheteur : <b>{{tender.enterprise_name}}</b></div>{{/if}}
-      <div style="margin-top:4px;color:#6B7280">Code fournisseur : {{supplier.supplier_code}}</div>
+      <h2>{{L.heading}}</h2>
+      <div class="num">{{T.tenderNumber}}</div>
+      {{#if tender.enterprise_name}}<div style="margin-top:4px">{{L.buyer}} <b>{{tender.enterprise_name}}</b></div>{{/if}}
+      <div style="margin-top:4px;color:#6B7280">{{L.supplierCode}} {{supplier.supplier_code}}</div>
     </div>
   </div>
 
   <div class="grid">
     <div class="box">
-      <h3>Appel d'offres</h3>
-      <div class="row"><span>Objet</span><span>{{tender.title}}</span></div>
-      <div class="row"><span>Clôture des soumissions</span><span>{{tsub_formatDate tender.end_date}}</span></div>
-      <div class="row"><span>Délai de livraison maximum</span><span>{{tender.max_delivery_days}} jours</span></div>
+      <h3>{{L.tender}}</h3>
+      <div class="row"><span>{{L.object}}</span><span>{{tender.title}}</span></div>
+      <div class="row"><span>{{L.closing}}</span><span>{{tsub_formatDate tender.end_date}}</span></div>
+      <div class="row"><span>{{L.maxDelivery}}</span><span>{{T.maxDays}}</span></div>
     </div>
     <div class="box">
-      <h3>Notre offre</h3>
-      <div class="row"><span>Montant total</span><span><b>{{tsub_money submission.total_amount}} {{currency}}</b></span></div>
-      <div class="row"><span>Délai de livraison proposé</span><span><b>{{submission.delivery_days}} jours</b></span></div>
-      <div class="row"><span>Soumis / modifié le</span><span>{{tsub_formatDate submission.updated_at}}</span></div>
+      <h3>{{L.ourOffer}}</h3>
+      <div class="row"><span>{{L.totalAmount}}</span><span><b>{{tsub_money submission.total_amount}} {{currency}}</b></span></div>
+      <div class="row"><span>{{L.proposedDelivery}}</span><span><b>{{T.proposedDays}}</b></span></div>
+      <div class="row"><span>{{L.submittedOn}}</span><span>{{tsub_formatDate submission.updated_at}}</span></div>
     </div>
   </div>
 
   <table>
     <thead><tr>
-      <th style="width:28px">N°</th><th>Désignation</th>
-      <th class="num-col">Quantité</th><th class="num-col">Prix unitaire ({{currency}})</th><th class="num-col">Total ({{currency}})</th>
+      <th style="width:28px">{{L.no}}</th><th>{{L.designation}}</th>
+      <th class="num-col">{{L.quantity}}</th><th class="num-col">{{T.unitPrice}}</th><th class="num-col">{{T.lineTotal}}</th>
     </tr></thead>
     <tbody>
       {{#each lines}}
@@ -100,33 +102,33 @@ class TenderSubmissionPdfService {
         <td>{{this.description}}{{#if this.comment}}<div class="comment">{{this.comment}}</div>{{/if}}</td>
         <td class="num-col">{{tsub_qty this.quantity}}</td>
         <td class="num-col">{{#if this.priced}}{{tsub_money this.unit_price}}{{else}}—{{/if}}</td>
-        <td class="num-col">{{#if this.priced}}{{tsub_money this.total_price}}{{else}}Non chiffré{{/if}}</td>
+        <td class="num-col">{{#if this.priced}}{{tsub_money this.total_price}}{{else}}{{@root.L.notPriced}}{{/if}}</td>
       </tr>
       {{/each}}
     </tbody>
     <tfoot><tr>
-      <td colspan="4" class="num-col">TOTAL GÉNÉRAL ({{currency}})</td>
+      <td colspan="4" class="num-col">{{T.grandTotal}}</td>
       <td class="num-col">{{tsub_money submission.total_amount}}</td>
     </tr></tfoot>
   </table>
 
   {{#if submission.notes}}
-  <div class="box notes"><h3>Remarques</h3>{{submission.notes}}</div>
+  <div class="box notes"><h3>{{L.remarks}}</h3>{{submission.notes}}</div>
   {{/if}}
 
   <p class="declaration">
-    Nous, soussignés, <b>{{supplier.name}}</b>, nous engageons à livrer les biens/services décrits ci-dessus
-    aux prix indiqués, dans un délai de <b>{{submission.delivery_days}} jours</b> à compter de la réception du bon de commande.
+    {{{T.declaration}}}
   </p>
 
   <div class="signature">
-    <div class="sig-box">Nom, fonction et signature du représentant</div>
-    <div class="sig-box">Cachet de l'entreprise</div>
+    <div class="sig-box">{{L.representative}}</div>
+    <div class="sig-box">{{L.stamp}}</div>
   </div>
 </body></html>`;
   }
 
-  async generate({ tender, supplier, submission, items }) {
+  /** lang : langue du document ('fr' par défaut) */
+  async generate({ tender, supplier, submission, items, lang }) {
     const priced = new Map(submission.items.map(i => [String(i.requisition_item_id), i]));
     const lines = items.map(item => {
       const p = priced.get(String(item.id));
@@ -139,9 +141,23 @@ class TenderSubmissionPdfService {
         comment: p?.comment
       };
     });
+    const ctx = pdfContext(lang, 'tenderSubmission');
+    const currency = tender.currency_code || '';
+    const k = 'pdf.tenderSubmission.';
+    const T = {
+      docTitle: ctx.t(k + 'docTitle', { number: tender.tender_number, supplier: supplier.name }),
+      tenderNumber: ctx.t(k + 'tenderNumber', { number: tender.tender_number }),
+      maxDays: ctx.t(k + 'days', { count: tender.max_delivery_days }),
+      proposedDays: ctx.t(k + 'days', { count: submission.delivery_days }),
+      unitPrice: ctx.t(k + 'unitPrice', { currency }),
+      lineTotal: ctx.t(k + 'lineTotal', { currency }),
+      grandTotal: ctx.t(k + 'grandTotal', { currency }),
+      // HTML (gras) : valeurs échappées avant interpolation, rendu avec {{{ }}}
+      declaration: ctx.t(k + 'declaration', { supplier: Handlebars.escapeExpression(supplier.name), days: Handlebars.escapeExpression(submission.delivery_days) }),
+    };
     const html = Handlebars.compile(this.getTemplate())({
-      tender, supplier, submission, lines,
-      currency: tender.currency_code || '',
+      tender, supplier, submission, lines, ...ctx, T,
+      currency,
       logo: await logoDataUri(supplier.logo_path) // data URI : pas de requête réseau depuis Chromium
     });
 
@@ -157,7 +173,7 @@ class TenderSubmissionPdfService {
         footerTemplate: `
           <div style="width:100%;font-size:9px;color:#9CA3AF;padding:0 15mm;display:flex;justify-content:space-between">
             <span>${tender.tender_number} — ${String(supplier.name).replace(/[<>&]/g, '')}</span>
-            <span>Page <span class="pageNumber"></span> / <span class="totalPages"></span></span>
+            <span>${ctx.L.page} <span class="pageNumber"></span> / <span class="totalPages"></span></span>
           </div>`,
         margin: { top: '15mm', bottom: '18mm', left: '15mm', right: '15mm' },
       });

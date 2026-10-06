@@ -21,8 +21,8 @@ export default function ForgotPassword() {
     setIsLoading(true);
     setError('');
     try {
-      const { data } = await api.post('/auth/forgot-password', { email: email.trim() });
-      setSentMessage(data.message);
+      await api.post('/auth/forgot-password', { email: email.trim() });
+      setSentMessage(t('auth.forgot.sent'));
     } catch (err) {
       setError(err.response?.data?.message || t('auth.forgot.genericError'));
     } finally {
@@ -46,7 +46,7 @@ export default function ForgotPassword() {
               <CheckCircle size={20} className="shrink-0 mt-0.5" />
               <div className="text-sm space-y-2">
                 <p>{sentMessage}</p>
-                <p>{t('auth.forgot.checkInboxBefore')} <b>{t('nav.myProfile')}</b> {t('auth.forgot.checkInboxAfter')}</p>
+                <p>{t('auth.forgot.sentHint')}</p>
               </div>
             </div>
             <Link to="/login" className="w-full btn-primary flex items-center justify-center gap-2 py-2 px-4 text-white rounded-lg">

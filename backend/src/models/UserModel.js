@@ -311,9 +311,18 @@ class UserModel {
    */
   async findActiveByEmail(email) {
     return await db.one(
-      `SELECT id, email, first_name, last_name, language FROM users
+      `SELECT id, email, first_name, last_name, language, password_hash FROM users
        WHERE LOWER(email) = LOWER($1) AND is_active = true`,
       [email]
+    );
+  }
+
+  /** Utilisateur actif par id, avec le hash du mot de passe (lien de réinitialisation) */
+  async findActiveForReset(id) {
+    return await db.one(
+      `SELECT id, email, first_name, last_name, language, password_hash FROM users
+       WHERE id = $1 AND is_active = true`,
+      [id]
     );
   }
 

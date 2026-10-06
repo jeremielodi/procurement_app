@@ -1,5 +1,6 @@
 // src/services/purchaseOrderService.js
 import api from './api'
+import { getLang } from '../i18n'
 
 export const purchaseOrderService = {
   // Récupérer toutes les commandes
@@ -41,6 +42,7 @@ export const purchaseOrderService = {
   // Générer un PDF de la commande
   generatePDF: async (id) => {
     const response = await api.get(`/purchase-orders/${id}/pdf`, {
+      params: { lang: getLang() }, // langue du document = langue de l'interface
       responseType: 'blob'
     })
     return response.data

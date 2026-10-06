@@ -4,6 +4,7 @@ const Handlebars = require('handlebars');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { getBrowserOptions } = require('../config/puppeteer');
 const { getBranding } = require('../utils/enterpriseBranding');
+const { pdfContext, rootLocale, rootLabels } = require('../utils/pdfI18n');
 
 class PurchaseOrderExportService {
   constructor() {
@@ -15,16 +16,17 @@ class PurchaseOrderExportService {
       if (!Handlebars.helpers[name]) Handlebars.registerHelper(name, fn);
     };
 
-    safe('po_formatDate', (date) => {
+    // Langue : racine du template (locale, L) — voir utils/pdfI18n
+    safe('po_formatDate', (date, options) => {
       if (!date) return '—';
-      return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      return new Date(date).toLocaleDateString(rootLocale(options), { day: '2-digit', month: '2-digit', year: 'numeric' });
     });
 
-    safe('po_formatCurrency', (amount, currency) => {
+    safe('po_formatCurrency', (amount, currency, options) => {
       const cur = typeof currency === 'string' && currency ? currency : 'USD';
       if (amount == null) return '0 ' + cur;
       try {
-        return new Intl.NumberFormat('fr-FR', {
+        return new Intl.NumberFormat(rootLocale(options), {
           style: 'currency', currency: cur,
           minimumFractionDigits: 0, maximumFractionDigits: 0
         }).format(parseFloat(amount) || 0);
@@ -33,14 +35,7 @@ class PurchaseOrderExportService {
       }
     });
 
-    safe('po_statusLabel', (status) => {
-      const map = {
-        DRAFT: 'Brouillon', PENDING: 'En attente', PO_PENDING: 'Soumis pour approbation',
-        PO_APPROVED: 'Approuvé', PO_REJECTED: 'Rejeté',
-        PO_SENT: 'Envoyé au fournisseur', PO_RECEIVED: 'Reçu', PO_COMPLETE: 'Terminé'
-      };
-      return map[status] || status || '—';
-    });
+    safe('po_statusLabel', (status, options) => rootLabels(options).status?.[status] || status || '—');
 
     safe('po_statusColor', (status) => {
       const map = {
@@ -68,10 +63,10 @@ class PurchaseOrderExportService {
 
   getTemplate() {
     return `<!DOCTYPE html>
-<html lang="fr">
+<html lang="{{lang}}">
 <head>
   <meta charset="UTF-8">
-  <title>Bon de Commande {{po.po_number}}</title>
+  <title>{{T.title}}</title>
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
     @page { size: A4; margin: 15mm 15mm 20mm 15mm; }
@@ -231,22 +226,22 @@ class PurchaseOrderExportService {
     {{#if brand.logo}}<img src="{{brand.logo}}" alt="{{brand.name}}" />{{/if}}
     <div>
       <div class="header-org">{{brand.name}}</div>
-      <div class="header-doc">BON DE COMMANDE</div>
+      <div class="header-doc">{{L.heading}}</div>
       <div class="header-doc" style="font-size:18px;color:#374151">{{po.po_number}}</div>
       {{#if po.requisition_number}}
-      <div class="header-ref">Réf. réquisition : {{po.requisition_number}}</div>
+      <div class="header-ref">{{T.requisitionRef}}</div>
       {{/if}}
     </div>
   </div>
   <div class="header-right">
     <span class="status-badge">{{po_statusLabel po.status}}</span>
     <div class="header-dates">
-      <div>📅 Émis le {{po_formatDate po.order_date}}</div>
+      <div>📅 {{T.issuedOn}}</div>
       {{#if po.delivery_date}}
-      <div>🚚 Livraison : {{po_formatDate po.delivery_date}}</div>
+      <div>🚚 {{T.delivery}}</div>
       {{/if}}
       {{#if po.created_by_name}}
-      <div>👤 Créé par : {{po.created_by_name}}</div>
+      <div>👤 {{T.createdBy}}</div>
       {{/if}}
     </div>
   </div>
@@ -255,56 +250,56 @@ class PurchaseOrderExportService {
 <!-- INFO CARDS -->
 <div class="info-grid">
   <div class="card">
-    <div class="card-title">🏢 Fournisseur</div>
+    <div class="card-title">🏢 {{L.supplier}}</div>
     <div class="card-row">
       <div class="card-value large">{{po.supplier_name}}</div>
     </div>
     {{#if po.supplier_code}}
     <div class="card-row">
-      <div class="card-label">Code fournisseur</div>
+      <div class="card-label">{{L.supplierCode}}</div>
       <div class="card-value">{{po.supplier_code}}</div>
     </div>
     {{/if}}
     {{#if po.supplier_email}}
     <div class="card-row">
-      <div class="card-label">Email</div>
+      <div class="card-label">{{L.email}}</div>
       <div class="card-value">{{po.supplier_email}}</div>
     </div>
     {{/if}}
     {{#if po.supplier_phone}}
     <div class="card-row">
-      <div class="card-label">Téléphone</div>
+      <div class="card-label">{{L.phone}}</div>
       <div class="card-value">{{po.supplier_phone}}</div>
     </div>
     {{/if}}
     {{#if po.supplier_address}}
     <div class="card-row">
-      <div class="card-label">Adresse</div>
+      <div class="card-label">{{L.address}}</div>
       <div class="card-value">{{po.supplier_address}}</div>
     </div>
     {{/if}}
   </div>
 
   <div class="card">
-    <div class="card-title">📋 Informations commande</div>
+    <div class="card-title">📋 {{L.orderInfo}}</div>
     {{#if po.requisition_title}}
     <div class="card-row">
-      <div class="card-label">Réquisition objet</div>
+      <div class="card-label">{{L.requisitionObject}}</div>
       <div class="card-value">{{po.requisition_title}}</div>
     </div>
     {{/if}}
     {{#if po.shipping_address}}
     <div class="card-row">
-      <div class="card-label">Adresse de livraison</div>
+      <div class="card-label">{{L.shippingAddress}}</div>
       <div class="card-value">{{po.shipping_address}}</div>
     </div>
     {{/if}}
     <div class="card-row">
-      <div class="card-label">Devise</div>
+      <div class="card-label">{{L.currency}}</div>
       <div class="card-value">{{po.currency}}</div>
     </div>
     <div class="card-row">
-      <div class="card-label">Montant total</div>
+      <div class="card-label">{{L.totalAmount}}</div>
       <div class="card-value large" style="color:#1E3A5F">{{po_formatCurrency po.total_amount po.currency}}</div>
     </div>
   </div>
@@ -312,15 +307,15 @@ class PurchaseOrderExportService {
 
 <!-- ITEMS TABLE -->
 {{#if items.length}}
-<div class="section-title">Articles commandés</div>
+<div class="section-title">{{L.orderedItems}}</div>
 <table>
   <thead>
     <tr>
       <th style="width:30px">#</th>
-      <th>Description</th>
-      <th class="r" style="width:60px">Qté</th>
-      <th class="r" style="width:100px">Prix unitaire</th>
-      <th class="r" style="width:110px">Montant</th>
+      <th>{{L.description}}</th>
+      <th class="r" style="width:60px">{{L.qty}}</th>
+      <th class="r" style="width:100px">{{L.unitPrice}}</th>
+      <th class="r" style="width:110px">{{L.amount}}</th>
     </tr>
   </thead>
   <tbody>
@@ -342,7 +337,7 @@ class PurchaseOrderExportService {
   <tfoot>
     <tr>
       <td colspan="4" style="text-align:right;padding-right:11px;font-size:11px;color:#374151">
-        MONTANT TOTAL TTC
+        {{L.totalTtc}}
       </td>
       <td class="r">{{po_formatCurrency po.total_amount po.currency}}</td>
     </tr>
@@ -351,9 +346,9 @@ class PurchaseOrderExportService {
 
 {{else}}
 <!-- No items — show total only -->
-<div class="section-title">Montant</div>
+<div class="section-title">{{L.amountSection}}</div>
 <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px">
-  <span style="font-size:13px;color:#6B7280;font-weight:600">Montant total de la commande</span>
+  <span style="font-size:13px;color:#6B7280;font-weight:600">{{L.orderTotal}}</span>
   <span style="font-size:22px;font-weight:800;color:#1E3A5F">{{po_formatCurrency po.total_amount po.currency}}</span>
 </div>
 {{/if}}
@@ -361,21 +356,21 @@ class PurchaseOrderExportService {
 <!-- NOTES -->
 {{#if po.notes}}
 <div class="notes-box">
-  <div class="notes-title">Notes / Conditions</div>
+  <div class="notes-title">{{L.notes}}</div>
   {{po.notes}}
 </div>
 {{/if}}
 
 <!-- APPROVALS -->
 {{#if approvals.length}}
-<div class="section-title">Historique des approbations</div>
+<div class="section-title">{{L.approvals}}</div>
 <table class="approval-table">
   <thead>
     <tr>
-      <th>Approbateur</th>
-      <th>Décision</th>
-      <th>Date</th>
-      <th>Commentaire</th>
+      <th>{{L.approver}}</th>
+      <th>{{L.decision}}</th>
+      <th>{{L.date}}</th>
+      <th>{{L.comment}}</th>
     </tr>
   </thead>
   <tbody>
@@ -384,9 +379,9 @@ class PurchaseOrderExportService {
       <td style="font-weight:600">{{this.first_name}} {{this.last_name}}</td>
       <td>
         {{#if (po_eq this.status 'APPROVED')}}
-          <span class="pill-approved">✓ Approuvé</span>
+          <span class="pill-approved">{{@root.L.approved}}</span>
         {{else}}
-          <span class="pill-rejected">✗ Rejeté</span>
+          <span class="pill-rejected">{{@root.L.rejected}}</span>
         {{/if}}
       </td>
       <td style="color:#6B7280">{{po_formatDate this.approved_at}}</td>
@@ -401,37 +396,53 @@ class PurchaseOrderExportService {
 <div class="sig-grid">
   <div class="sig-box">
     <div class="sig-line"></div>
-    <div class="sig-label">Responsable achats — {{brand.name}}</div>
-    <div style="margin-top:4px;color:#9CA3AF">Nom &amp; signature</div>
+    <div class="sig-label">{{T.buyerSignature}}</div>
+    <div style="margin-top:4px;color:#9CA3AF">{{L.nameSignature}}</div>
   </div>
   <div class="sig-box">
     <div class="sig-line"></div>
-    <div class="sig-label">Fournisseur — Cachet &amp; signature</div>
+    <div class="sig-label">{{L.supplierSignature}}</div>
     <div style="margin-top:4px;color:#9CA3AF">{{po.supplier_name}}</div>
   </div>
 </div>
 
 <!-- FOOTER -->
 <div class="doc-footer">
-  <span>{{brand.name}} — généré avec {{brand.appName}}</span>
-  <span>Généré le {{po_formatDate generatedAt}}</span>
+  <span>{{T.generatedWith}}</span>
+  <span>{{T.generatedOn}}</span>
 </div>
 
 </body>
 </html>`;
   }
 
-  async generatePDF(po) {
+  /** lang : 'fr' (défaut) | 'en' … — langue du document */
+  async generatePDF(po, { lang } = {}) {
     if (!po) throw new Error('Purchase order data is required');
 
     const currency = po.currency || await getEnterpriseCurrencyCode();
+    const ctx = pdfContext(lang, 'po');
+    const brand = await getBranding(po.enterprise_id);
+    const fmtDay = (d) => (d ? new Date(d).toLocaleDateString(ctx.locale, { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
     const template = Handlebars.compile(this.getTemplate());
     const html = template({
       po:          { ...po, currency },
       items:       po.items       || [],
       approvals:   po.approvals   || [],
       generatedAt: new Date(),
-      brand:       await getBranding(po.enterprise_id),
+      brand,
+      ...ctx,
+      // Phrases avec valeurs (déjà formatées dans la langue du document)
+      T: {
+        title: ctx.t('pdf.po.title', { number: po.po_number }),
+        requisitionRef: ctx.t('pdf.po.requisitionRef', { number: po.requisition_number }),
+        issuedOn: ctx.t('pdf.po.issuedOn', { date: fmtDay(po.order_date) }),
+        delivery: ctx.t('pdf.po.delivery', { date: fmtDay(po.delivery_date) }),
+        createdBy: ctx.t('pdf.po.createdBy', { name: po.created_by_name }),
+        buyerSignature: ctx.t('pdf.po.buyerSignature', { enterprise: brand.name }),
+        generatedWith: ctx.t('pdf.common.generatedWith', { enterprise: brand.name, app: brand.appName }),
+        generatedOn: ctx.t('pdf.common.generatedOn', { date: fmtDay(new Date()) }),
+      },
     });
 
     const browser = await puppeteer.launch(getBrowserOptions());
@@ -445,7 +456,7 @@ class PurchaseOrderExportService {
         headerTemplate: '<span></span>',
         footerTemplate: `
           <div style="width:100%;font-size:9px;color:#9CA3AF;padding:0 15mm;display:flex;justify-content:flex-end">
-            Page <span class="pageNumber" style="margin:0 3px"></span> / <span class="totalPages"></span>
+            ${ctx.L.page} <span class="pageNumber" style="margin:0 3px"></span> / <span class="totalPages"></span>
           </div>`,
         margin: { top: '15mm', bottom: '18mm', left: '15mm', right: '15mm' },
       });

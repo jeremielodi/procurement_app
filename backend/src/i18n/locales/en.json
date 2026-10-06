@@ -207,10 +207,10 @@
     "footer": "Automatic message — procureApp",
     "password": {
       "subject": "procureApp — Your new password",
-      "intro": "A reset of your procureApp password was requested. Here is your new password:",
+      "intro": "You confirmed the reset of your procureApp password. Here is your new password:",
       "login": "Sign in",
       "change": "For your security, change it as soon as you sign in, from <b>My profile</b>.",
-      "warning": "If you did not request this, sign in with this password and change it, then inform your administrator."
+      "warning": "If you did not confirm this reset, log in with this password, change it, and notify your administrator."
     },
     "task": {
       "subject": "[procureApp] New task: {task} — {number}",
@@ -252,6 +252,23 @@
       "deliveryDate": "Delivery date",
       "total": "Total amount",
       "thanks": "Thank you for your business."
+    },
+    "passwordRequest": {
+      "subject": "procureApp — Confirm your password reset",
+      "intro": "A reset of your procureApp password was requested. <b>Your current password has not been changed.</b> To receive a new password, confirm the request:",
+      "button": "Confirm the reset",
+      "expires": "This link is valid for 1 hour and can only be used once.",
+      "ignore": "If you did not make this request, ignore this email: your password remains unchanged."
+    },
+    "contact": {
+      "subject": "[procureApp] Message from {name}{company}",
+      "intro": "New message received from the procureApp website contact form:",
+      "name": "Name",
+      "email": "Email",
+      "company": "Company",
+      "phone": "Phone",
+      "language": "Website language",
+      "replyHint": "Reply directly to this email: your answer will go to the visitor's address."
     }
   },
   "notification": {
@@ -270,6 +287,165 @@
       "updatedSubmission": "Submission updated",
       "submitted": "{supplier} submitted a bid for {number}",
       "resubmitted": "{supplier} updated their bid for {number}"
+    }
+  },
+  "pdf": {
+    "common": {
+      "page": "Page",
+      "generatedOn": "Generated on {date}",
+      "generatedWith": "{enterprise} — generated with {app}",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "description": "Description",
+      "date": "Date",
+      "comment": "Comment"
+    },
+    "po": {
+      "title": "Purchase Order {number}",
+      "heading": "PURCHASE ORDER",
+      "requisitionRef": "Requisition ref.: {number}",
+      "issuedOn": "Issued on {date}",
+      "delivery": "Delivery: {date}",
+      "createdBy": "Created by: {name}",
+      "supplier": "Supplier",
+      "supplierCode": "Supplier code",
+      "orderInfo": "Order information",
+      "requisitionObject": "Requisition subject",
+      "shippingAddress": "Delivery address",
+      "currency": "Currency",
+      "totalAmount": "Total amount",
+      "orderedItems": "Ordered items",
+      "qty": "Qty",
+      "unitPrice": "Unit price",
+      "amount": "Amount",
+      "totalTtc": "TOTAL AMOUNT (INCL. TAX)",
+      "amountSection": "Amount",
+      "orderTotal": "Total order amount",
+      "notes": "Notes / Terms",
+      "approvals": "Approval history",
+      "approver": "Approver",
+      "decision": "Decision",
+      "approved": "✓ Approved",
+      "rejected": "✗ Rejected",
+      "buyerSignature": "Procurement officer — {enterprise}",
+      "nameSignature": "Name & signature",
+      "supplierSignature": "Supplier — Stamp & signature",
+      "status": {
+        "DRAFT": "Draft",
+        "PENDING": "Pending",
+        "PO_PENDING": "Submitted for approval",
+        "PO_APPROVED": "Approved",
+        "PO_REJECTED": "Rejected",
+        "PO_SENT": "Sent to supplier",
+        "PO_RECEIVED": "Received",
+        "PO_COMPLETE": "Completed"
+      }
+    },
+    "grn": {
+      "heading": "GOODS RECEIPT NOTE",
+      "receiptDate": "Receipt date:",
+      "order": "Order:",
+      "requisition": "Requisition:",
+      "supplier": "Supplier",
+      "orderBox": "Order",
+      "orderDate": "Order date",
+      "expectedDelivery": "Expected delivery",
+      "object": "Subject",
+      "no": "No.",
+      "designation": "Description",
+      "qtyReceived": "Qty received",
+      "qtyAccepted": "Qty accepted",
+      "qtyRejected": "Qty rejected",
+      "rejectionReason": "Rejection reason:",
+      "noItems": "No items",
+      "total": "TOTAL",
+      "observations": "Observations",
+      "receivedBy": "Received by",
+      "signature": "Signature:",
+      "deliverer": "Delivery person (supplier)",
+      "nameSignature": "Name and signature:",
+      "warehouse": "Logistics / warehouse approval",
+      "signatureStamp": "Signature and stamp:",
+      "status": {
+        "DRAFT": "Draft",
+        "PENDING": "Pending",
+        "PARTIAL": "Partial",
+        "COMPLETE": "Complete"
+      }
+    },
+    "payment": {
+      "title": "Payment Receipt",
+      "issuedOn": "{number} · Issued on {date}",
+      "amountPaid": "Amount paid",
+      "method": "Payment method",
+      "paymentDate": "Payment date",
+      "references": "References",
+      "invoice": "Invoice",
+      "order": "Purchase order (PO)",
+      "supplier": "Supplier",
+      "reference": "Reference",
+      "bankAccount": "Bank account",
+      "notes": "Notes:",
+      "methods": {
+        "BANK_TRANSFER": "Bank transfer",
+        "CHECK": "Cheque",
+        "CASH": "Cash",
+        "MOBILE_MONEY": "Mobile Money"
+      },
+      "status": {
+        "PENDING": "Pending",
+        "PROCESSING": "Processing",
+        "PAID": "Paid",
+        "FAILED": "Failed",
+        "CANCELLED": "Cancelled"
+      }
+    },
+    "tenderSubmission": {
+      "docTitle": "Bid {number} — {supplier}",
+      "phone": "Tel:",
+      "rccm": "Trade reg. (RCCM):",
+      "taxId": "Tax ID:",
+      "heading": "Price offer",
+      "tenderNumber": "Call for tenders No. {number}",
+      "buyer": "Buyer:",
+      "supplierCode": "Supplier code:",
+      "tender": "Call for tenders",
+      "object": "Subject",
+      "closing": "Submission deadline",
+      "maxDelivery": "Maximum delivery time",
+      "days": "{count} days",
+      "ourOffer": "Our offer",
+      "totalAmount": "Total amount",
+      "proposedDelivery": "Proposed delivery time",
+      "submittedOn": "Submitted / updated on",
+      "no": "No.",
+      "designation": "Description",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price ({currency})",
+      "lineTotal": "Total ({currency})",
+      "notPriced": "Not priced",
+      "grandTotal": "GRAND TOTAL ({currency})",
+      "remarks": "Remarks",
+      "declaration": "We, the undersigned, <b>{supplier}</b>, undertake to deliver the goods/services described above at the prices stated, within <b>{days} days</b> of receipt of the purchase order.",
+      "representative": "Name, position and signature of the representative",
+      "stamp": "Company stamp"
+    },
+    "requisitionList": {
+      "title": "Requisition list",
+      "total": "Total requisitions",
+      "totalAmount": "Total amount",
+      "pending": "Pending",
+      "approved": "Approved",
+      "no": "No.",
+      "reqTitle": "Title",
+      "department": "Department",
+      "amount": "Amount",
+      "status": "Status",
+      "priority": "Priority",
+      "date": "Date",
+      "empty": "No requisitions found",
+      "footer": "{enterprise} — document generated automatically by {app}"
     }
   }
 }

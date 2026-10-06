@@ -60,6 +60,17 @@ class RequisitionService {
     }
   }
 
+  // Exports de la liste (filtres de l'écran) — PDF dans la langue de l'interface
+  async exportToPDF(filters = {}) {
+    const response = await api.get('/requisitions/export/pdf', { params: { ...filters, lang: getLang() }, responseType: 'blob' })
+    return response.data
+  }
+
+  async exportToExcel(filters = {}) {
+    const response = await api.get('/requisitions/export/excel', { params: { ...filters, lang: getLang() }, responseType: 'blob' })
+    return response.data
+  }
+
   // Créer une nouvelle réquisition
   async create(data) {
     const response = await api.post('/requisitions', data)

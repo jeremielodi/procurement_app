@@ -1,6 +1,7 @@
 // backend/src/controllers/AuthController.js
 const userModel = require('../models/UserModel');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const emailService = require('../services/EmailNotificationService');
 const { generatePassword } = require('../utils/passwordGenerator');
@@ -13,13 +14,17 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const RESET_EMAIL_INTERVAL_MS = 5 * 60 * 1000;   // 1 nouveau mot de passe / email / 5 min
 const RESET_IP_WINDOW_MS = 15 * 60 * 1000;       // 5 demandes / IP / 15 min
 const RESET_IP_MAX = 5;
+const RESET_LINK_TTL = '1h';                     // validité du lien de confirmation
 const lastResetByEmail = new Map();
 const resetRequestsByIp = new Map();
 
 const FORGOT_RESPONSE = {
   success: true,
-  message: 'Si un compte actif correspond à cet email, un nouveau mot de passe vient de lui être envoyé.'
+  message: 'Si un compte actif correspond à cet email, un lien de confirmation vient de lui être envoyé.'
 };
+
+// Confirmations en cours (évite deux mots de passe envoyés pour un double clic)
+const confirmingUsers = new Set();
 
 function pruneOld(now) {
   for (const [k, t] of lastResetByEmail) if (now - t > RESET_EMAIL_INTERVAL_MS) lastResetByEmail.delete(k);
@@ -33,13 +38,41 @@ function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-/** Génère, envoie puis enregistre le nouveau mot de passe (le mot de passe n'est changé que si l'email est parti) */
-async function sendNewPassword(email) {
+const displayName = (user) => [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email;
+
+/**
+ * Empreinte du mot de passe actuel, incluse dans le lien : dès que le mot de passe change
+ * (lien utilisé, changement depuis le profil, réinitialisation par l'admin), tous les liens émis deviennent invalides.
+ */
+const passwordFingerprint = (hash) => crypto.createHash('sha256').update(String(hash || '')).digest('hex').slice(0, 16);
+
+/** Étape 1 : email avec un lien public de confirmation — le mot de passe n'est PAS modifié */
+async function sendResetConfirmation(email) {
   const user = await userModel.findActiveByEmail(email);
   if (!user) return;
 
+  const token = jwt.sign(
+    { purpose: 'password-reset', uid: user.id, fp: passwordFingerprint(user.password_hash) },
+    JWT_SECRET,
+    { expiresIn: RESET_LINK_TTL }
+  );
+  const T = i18n.translator(user.language);
+  const html = `
+    <p>${T('email.hello', { name: escapeHtml(displayName(user)) })}</p>
+    <p>${T('email.passwordRequest.intro')}</p>
+    <p><a href="${appLink(`/reset-password?token=${encodeURIComponent(token)}`)}" style="background: #2563eb; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none;">${T('email.passwordRequest.button')}</a></p>
+    <p>${T('email.passwordRequest.expires')}</p>
+    <p style="color: #6b7280; font-size: 12px;">${T('email.passwordRequest.ignore')}</p>`;
+
+  const sent = await emailService.sendEmail(user.email, T('email.passwordRequest.subject'), html);
+  if (!sent.success) console.error('Mot de passe oublié : lien non envoyé à %s (%s)', user.email, sent.error);
+  else console.log('🔗 Lien de réinitialisation envoyé à %s', user.email);
+}
+
+/** Étape 2 : génère, envoie puis enregistre le nouveau mot de passe (changé seulement si l'email est parti) */
+async function sendNewPassword(user) {
   const password = generatePassword();
-  const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email;
+  const name = displayName(user);
   // Email dans la langue de l'utilisateur (email.password.* des locales)
   const T = i18n.translator(user.language);
   const html = `
@@ -53,10 +86,11 @@ async function sendNewPassword(email) {
   const sent = await emailService.sendEmail(user.email, T('email.password.subject'), html);
   if (!sent.success) {
     console.error('Mot de passe oublié : email non envoyé à %s, mot de passe inchangé (%s)', user.email, sent.error);
-    return;
+    return false;
   }
   await userModel.resetPassword(user.id, password);
   console.log('🔑 Nouveau mot de passe envoyé à %s', user.email);
+  return true;
 }
 
 class AuthController {
@@ -101,7 +135,8 @@ class AuthController {
   /**
    * POST /auth/forgot-password { email } — public.
    * Réponse identique que le compte existe ou non (pas d'énumération des comptes) ;
-   * le traitement (génération + email) se fait après la réponse.
+   * après la réponse, envoie un lien de confirmation — le mot de passe n'est changé qu'après validation
+   * (POST /auth/reset-password/confirm), une demande faite par un tiers ne modifie donc rien.
    */
   async forgotPassword(req, res) {
     const email = String(req.body?.email || '').trim().toLowerCase();
@@ -120,10 +155,41 @@ class AuthController {
 
     res.json(FORGOT_RESPONSE);
 
-    // Une seule régénération par email toutes les 5 minutes (évite de bloquer un compte en boucle)
+    // Un seul lien par email toutes les 5 minutes (évite d'inonder une boîte mail)
     if (lastResetByEmail.has(email)) return;
     lastResetByEmail.set(email, now);
-    sendNewPassword(email).catch(err => console.error('Mot de passe oublié :', err.message));
+    sendResetConfirmation(email).catch(err => console.error('Mot de passe oublié :', err.message));
+  }
+
+  /**
+   * POST /auth/reset-password/confirm { token } — public (lien reçu par email, page /reset-password).
+   * POST et non GET : les antivirus de messagerie qui pré-ouvrent les liens ne déclenchent rien.
+   * Lien à usage unique : invalide dès que le mot de passe a changé (empreinte), expire après 1 h.
+   */
+  async confirmPasswordReset(req, res) {
+    const invalid = () => res.status(400).json({ success: false, code: 'INVALID_LINK', message: 'Lien invalide ou expiré' });
+    let payload;
+    try {
+      payload = jwt.verify(String(req.body?.token || ''), JWT_SECRET);
+    } catch {
+      return invalid();
+    }
+    if (payload?.purpose !== 'password-reset' || !payload.uid) return invalid();
+    if (confirmingUsers.has(payload.uid)) return res.status(409).json({ success: false, message: 'Confirmation déjà en cours' });
+
+    confirmingUsers.add(payload.uid);
+    try {
+      const user = await userModel.findActiveForReset(payload.uid);
+      if (!user || passwordFingerprint(user.password_hash) !== payload.fp) return invalid();
+      const sent = await sendNewPassword(user);
+      if (!sent) return res.status(502).json({ success: false, code: 'EMAIL_FAILED', message: 'Email non envoyé, mot de passe inchangé' });
+      res.json({ success: true, message: 'Un nouveau mot de passe vous a été envoyé par email' });
+    } catch (error) {
+      console.error('Confirmation mot de passe oublié :', error.message);
+      res.status(500).json({ success: false, message: 'Erreur, veuillez réessayer' });
+    } finally {
+      confirmingUsers.delete(payload.uid);
+    }
   }
 
   /**

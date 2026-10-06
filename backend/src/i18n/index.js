@@ -50,6 +50,9 @@ function has(lang, key) {
   return typeof lookup(DICTS[normalizeLang(lang)], key) === 'string' || typeof lookup(DICTS[DEFAULT_LANG], key) === 'string';
 }
 
+/** Bloc brut d'une langue (ex. section('fr', 'pdf.po')) — utilisé pour construire les libellés des PDF */
+const section = (lang, key) => lookup(DICTS[normalizeLang(lang)], key);
+
 const locale = (lang) => DICTS[normalizeLang(lang)]._meta?.locale || 'fr-FR';
 
-module.exports = { normalizeLang, fromRequest, translator, has, locale, LANGS: Object.keys(DICTS), DEFAULT_LANG };
+module.exports = { normalizeLang, fromRequest, translator, has, section, locale, LANGS: Object.keys(DICTS), DEFAULT_LANG };

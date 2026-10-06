@@ -1,4 +1,5 @@
 import api from './api';
+import { getLang } from '../i18n';
 
 export const grnService = {
   getAll: async (params = {}) => {
@@ -18,12 +19,12 @@ export const grnService = {
     return response.data;
   },
   getPDF: async (id) => {
-    const response = await api.get(`/goods-receipts/${id}/pdf`, { responseType: 'blob' });
+    const response = await api.get(`/goods-receipts/${id}/pdf`, { params: { lang: getLang() }, responseType: 'blob' });
     return response.data;
   },
   // Téléchargement direct (sans aperçu)
   downloadPDF: async (id, grnNumber) => {
-    const response = await api.get(`/goods-receipts/${id}/pdf`, { responseType: 'blob' });
+    const response = await api.get(`/goods-receipts/${id}/pdf`, { params: { lang: getLang() }, responseType: 'blob' });
     const url = URL.createObjectURL(response.data);
     const a = document.createElement('a');
     a.href = url;

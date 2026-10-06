@@ -16,8 +16,9 @@ const transporter = nodemailer.createTransport({
 class EmailNotificationService {
   /**
    * Envoie un email. Ne lève jamais d'exception : retourne { success, error? }
+   * options.replyTo : adresse de réponse (ex. visiteur du formulaire de contact)
    */
-  async sendEmail(receiverAddress, subject, htmlContent) {
+  async sendEmail(receiverAddress, subject, htmlContent, { replyTo } = {}) {
     try {
       // 2. Define the email options
       const mailOptions = {
@@ -25,6 +26,7 @@ class EmailNotificationService {
         to: receiverAddress,
         subject,
         html: htmlContent,
+        ...(replyTo ? { replyTo } : {}),
       };
 
       // 3. Send the email

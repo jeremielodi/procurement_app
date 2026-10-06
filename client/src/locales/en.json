@@ -480,9 +480,25 @@
     "contact": {
       "title": "Contact us",
       "subtitle": "A demo, a deployment for your company or a question? The Digitales Solutions team is here to help.",
-      "email": "Email",
-      "phone": "Phone / WhatsApp",
-      "mailSubject": "procureApp information request"
+      "form": {
+        "name": "Full name",
+        "email": "Email",
+        "company": "Company / organisation",
+        "phone": "Phone",
+        "optional": "optional",
+        "message": "Your message",
+        "messagePlaceholder": "Describe your needs: demo, deployment, number of users…",
+        "submit": "Send message",
+        "sending": "Sending…",
+        "sent": "Thank you! Your message has been sent. We will get back to you quickly by email.",
+        "another": "Send another message",
+        "required": "Required field",
+        "emailInvalid": "Invalid email address",
+        "messageTooShort": "Message too short (at least 10 characters)",
+        "tooLong": "Text too long",
+        "tooMany": "Too many messages sent. Please try again in an hour.",
+        "error": "The message could not be sent. Please try again later."
+      }
     },
     "cta": {
       "title": "Ready to modernize your procurement?",
@@ -514,14 +530,14 @@
     "checkingAuth": "Checking authentication...",
     "forgot": {
       "title": "Forgot password",
-      "subtitle": "Receive a new password by email",
+      "subtitle": "Receive a confirmation link by email",
       "genericError": "Error, please try again",
-      "checkInboxBefore": "Check your inbox (and spam folder), then change this password from",
-      "checkInboxAfter": "after signing in.",
       "backToLogin": "Back to sign in",
-      "intro": "Enter your account email. A new password will be generated and sent to you; the old one will no longer work.",
+      "intro": "Enter your account email. You will receive a confirmation link: your current password remains valid until you confirm.",
       "sending": "Sending...",
-      "submit": "Get a new password"
+      "submit": "Receive the confirmation link",
+      "sent": "If an active account matches this email, a confirmation link has just been sent to it.",
+      "sentHint": "Open the email (check your spam folder) and click \"Confirm the reset\". The link is valid for 1 hour; your current password stays unchanged until then."
     },
     "register": {
       "title": "procureApp — Supplier portal",
@@ -556,6 +572,20 @@
       "creating": "Creating…",
       "submit": "Create my supplier account",
       "alreadyRegistered": "Already registered?"
+    },
+    "reset": {
+      "title": "Reset password",
+      "subtitle": "Confirm your request",
+      "intro": "You requested a password reset. If you confirm, a new password will be generated and sent to your email address; the old one will stop working.",
+      "confirm": "Confirm and receive a new password",
+      "confirming": "Confirming...",
+      "notMe": "I did not request this — back to login",
+      "done": "Done: a new password has just been sent to you by email.",
+      "doneHint": "Log in with this password, then change it from My profile.",
+      "invalid": "This link is invalid, expired or has already been used.",
+      "newRequest": "Make a new request",
+      "emailFailed": "The email could not be sent: your password has not been changed. Please try again later.",
+      "missingToken": "Incomplete link: open the link you received by email."
     }
   },
   "supplierFields": {

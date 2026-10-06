@@ -1,4 +1,5 @@
 import api from './api';
+import { getLang } from '../i18n';
 
 export const supplierLogoUrl = (supplier) =>
   supplier?.logo_path ? `/api/public/suppliers/${supplier.id}/logo?v=${encodeURIComponent(supplier.logo_path)}` : null;
@@ -42,7 +43,7 @@ export const supplierPortalService = {
     return response.data;
   },
   getSubmissionPdf: async (id) => {
-    const response = await api.get(`/supplier-portal/tenders/${id}/submission/pdf`, { responseType: 'blob' });
+    const response = await api.get(`/supplier-portal/tenders/${id}/submission/pdf`, { params: { lang: getLang() }, responseType: 'blob' });
     return response.data;
   }
 };

@@ -2,6 +2,7 @@
 const grnModel       = require('../models/GoodsReceiptModel');
 const camundaService = require('../services/CamundaService');
 const db             = require('../config/database');
+const i18n           = require('../i18n');
 const grnExportService = require('../services/GoodsReceiptExportService');
 
 class GoodsReceiptController {
@@ -111,7 +112,7 @@ class GoodsReceiptController {
   /** GET /api/goods-receipts/:id/pdf — aperçu / téléchargement du bon de réception */
   async generatePDF(req, res) {
     try {
-      const result = await grnExportService.generatePDF(req.params.id);
+      const result = await grnExportService.generatePDF(req.params.id, { lang: i18n.fromRequest(req) });
       if (!result) return res.status(404).json({ success: false, message: 'GRN introuvable' });
       res.set('Content-Type', 'application/pdf');
       res.set('Content-Disposition', `inline; filename="${String(result.grn.grn_number).replace(/[^\w.-]+/g, '_')}.pdf"`);

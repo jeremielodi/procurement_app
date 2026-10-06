@@ -8,6 +8,7 @@ const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { getBranding } = require('../utils/enterpriseBranding');
 const i18n = require('../i18n');
 const { getBrowserOptions } = require('../config/puppeteer');
+const { pdfContext, labels, rootLocale } = require('../utils/pdfI18n');
 const db = require('../config/database');
 
 // Couleurs des badges (étape = statut technique, avancement = cycle complet)
@@ -138,11 +139,12 @@ class RequisitionExportService {
     this.registerHelpers();
   }
 
+  // Langue : racine du template (locale, S = statuts, P = priorités) — voir utils/pdfI18n
   registerHelpers() {
     // Helper pour formater les dates
-    Handlebars.registerHelper('formatDate', (date) => {
+    Handlebars.registerHelper('formatDate', (date, options) => {
       if (!date) return '-';
-      return new Date(date).toLocaleDateString('fr-FR', {
+      return new Date(date).toLocaleDateString(rootLocale(options), {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
@@ -150,24 +152,25 @@ class RequisitionExportService {
     });
 
     // Helper pour formater l'heure
-    Handlebars.registerHelper('formatTime', (date) => {
+    Handlebars.registerHelper('formatTime', (date, options) => {
       if (!date) return '-';
-      return new Date(date).toLocaleTimeString('fr-FR', { 
+      return new Date(date).toLocaleTimeString(rootLocale(options), { 
         hour: '2-digit', 
         minute: '2-digit' 
       });
     });
 
     // Helper pour formater les nombres
-    Handlebars.registerHelper('formatNumber', (number) => {
+    Handlebars.registerHelper('formatNumber', (number, options) => {
       if (number === null || number === undefined || number === '') return '0';
-      return Number(number).toLocaleString('fr-FR');
+      return Number(number).toLocaleString(rootLocale(options));
     });
 
     // Helper pour formater les montants
-    Handlebars.registerHelper('formatCurrency', (amount, currency = 'USD') => {
+    Handlebars.registerHelper('formatCurrency', (amount, currency, options) => {
+      if (typeof currency !== 'string' || !currency) { options = options || currency; currency = 'USD'; }
       if (amount === null || amount === undefined || amount === '') return '0 ' + currency;
-      return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(amount);
+      return new Intl.NumberFormat(rootLocale(options), { style: 'currency', currency }).format(amount);
     });
 
     // Helper pour les conditions
@@ -191,37 +194,15 @@ class RequisitionExportService {
       return colors[status] || '#6B7280';
     });
 
-    // Helper pour le statut en français
-    Handlebars.registerHelper('statusLabel', (status) => {
-      const labels = {
-        'DRAFT': 'Brouillon',
-        'PENDING': 'En attente',
-        'BUDGET_CHECKED': 'Budget vérifié',
-        'APPROVED': 'Approuvé',
-        'REJECTED': 'Rejeté',
-        'IN_PROGRESS': 'En cours',
-        'COMPLETED': 'Terminé',
-        'CANCELLED': 'Annulé'
-      };
-      return labels[status] || status;
-    });
-
-    // Helper pour les priorités
-    Handlebars.registerHelper('priorityLabel', (priority) => {
-      const labels = {
-        'LOW': 'Basse',
-        'MEDIUM': 'Moyenne',
-        'HIGH': 'Haute',
-        'URGENT': 'Urgente'
-      };
-      return labels[priority] || priority;
-    });
+    // Statut / priorité traduits (dictionnaires status.* / priority.* des locales)
+    Handlebars.registerHelper('statusLabel', (status, options) => options?.data?.root?.S?.[status] || status);
+    Handlebars.registerHelper('priorityLabel', (priority, options) => options?.data?.root?.P?.[priority] || priority);
   }
 
   /**
    * Générer le template HTML pour l'export PDF
    */
-  generateHTML(requisitions, title = 'Liste des réquisitions', brand = null) {
+  generateHTML(requisitions, title = null, brand = null, { lang } = {}) {
     // Validation
     if (!Array.isArray(requisitions)) {
       throw new Error('requisitions must be an array');
@@ -229,7 +210,7 @@ class RequisitionExportService {
 
     const template = `
       <!DOCTYPE html>
-      <html>
+      <html lang="{{lang}}">
         <head>
           <meta charset="UTF-8">
           <title>{{title}}</title>
@@ -351,26 +332,26 @@ class RequisitionExportService {
           <div class="header">
             <h1>{{title}}</h1>
             <div class="subtitle">
-              Généré le {{formatDate generatedAt}} à {{formatTime generatedAt}}
+              {{T.generatedOn}}
             </div>
           </div>
 
           <div class="summary">
             <div class="summary-item">
               <div class="number">{{totalRequisitions}}</div>
-              <div class="label">Total réquisitions</div>
+              <div class="label">{{L.total}}</div>
             </div>
             <div class="summary-item">
               <div class="number">{{formatNumber totalAmount}} USD</div>
-              <div class="label">Montant total</div>
+              <div class="label">{{L.totalAmount}}</div>
             </div>
             <div class="summary-item">
               <div class="number">{{pendingCount}}</div>
-              <div class="label">En attente</div>
+              <div class="label">{{L.pending}}</div>
             </div>
             <div class="summary-item">
               <div class="number">{{approvedCount}}</div>
-              <div class="label">Approuvées</div>
+              <div class="label">{{L.approved}}</div>
             </div>
           </div>
 
@@ -378,13 +359,13 @@ class RequisitionExportService {
           <table>
             <thead>
               <tr>
-                <th>N°</th>
-                <th>Titre</th>
-                <th>Département</th>
-                <th>Montant</th>
-                <th>Statut</th>
-                <th>Priorité</th>
-                <th>Date</th>
+                <th>{{L.no}}</th>
+                <th>{{L.reqTitle}}</th>
+                <th>{{L.department}}</th>
+                <th>{{L.amount}}</th>
+                <th>{{L.status}}</th>
+                <th>{{L.priority}}</th>
+                <th>{{L.date}}</th>
               </tr>
             </thead>
             <tbody>
@@ -411,13 +392,12 @@ class RequisitionExportService {
           </table>
           {{else}}
           <div class="text-center" style="padding: 40px; color: #6B7280;">
-            Aucune réquisition trouvée
+            {{L.empty}}
           </div>
           {{/if}}
 
           <div class="footer">
-            <p>{{brand.name}} — document généré automatiquement par {{brand.appName}}</p>
-            <p>Page <span class="font-bold"></span> / <span class="font-bold"></span></p>
+            <p>{{T.footer}}</p>
           </div>
         </body>
       </html>
@@ -432,9 +412,21 @@ class RequisitionExportService {
     const approvedCount = requisitions.filter(r => r.status === 'APPROVED' || r.status === 'COMPLETED').length;
 
     // Données pour le template
+    const ctx = pdfContext(lang, 'requisitionList');
+    const now = new Date();
     const data = {
+      ...ctx,
+      S: labels(ctx.lang, 'status'),
+      P: labels(ctx.lang, 'priority'),
+      T: {
+        generatedOn: ctx.t('requisition.generatedOn', {
+          date: now.toLocaleDateString(ctx.locale, { day: '2-digit', month: '2-digit', year: 'numeric' }),
+          time: now.toLocaleTimeString(ctx.locale, { hour: '2-digit', minute: '2-digit' }),
+        }),
+        footer: ctx.t('pdf.requisitionList.footer', { enterprise: brand?.name || '', app: brand?.appName || 'procureApp' }),
+      },
       brand,
-      title,
+      title: title || ctx.L.title,
       requisitions,
       totalRequisitions: requisitions.length,
       totalAmount,
@@ -449,7 +441,8 @@ class RequisitionExportService {
   /**
    * Générer le PDF pour une ou plusieurs réquisitions
    */
-  async generatePDF(requisitions, title = 'Liste des réquisitions') {
+  /** lang : langue du document ('fr' par défaut) ; title absent → titre traduit */
+  async generatePDF(requisitions, title = null, { lang } = {}) {
     let browser = null;
     
     try {
@@ -468,7 +461,7 @@ class RequisitionExportService {
       const page = await browser.newPage();
 
       // Générer le HTML
-      const html = this.generateHTML(requisitions, title, await getBranding());
+      const html = this.generateHTML(requisitions, title, await getBranding(), { lang });
 
       // Charger le HTML
       await page.setContent(html, {
@@ -487,7 +480,7 @@ class RequisitionExportService {
         },
         displayHeaderFooter: true,
         headerTemplate: '<div style="font-size: 10px; color: #6B7280; padding-left: 20px; padding-top: 10px;">procureApp</div>',
-        footerTemplate: '<div style="font-size: 10px; color: #6B7280; padding-right: 20px; padding-bottom: 10px; text-align: right;">Page <span class="pageNumber"></span> / <span class="totalPages"></span></div>'
+        footerTemplate: '<div style="font-size: 10px; color: #6B7280; padding-right: 20px; padding-bottom: 10px; text-align: right;">' + i18n.translator(lang)('pdf.common.page') + ' <span class="pageNumber"></span> / <span class="totalPages"></span></div>'
       });
 
       return pdfBuffer;

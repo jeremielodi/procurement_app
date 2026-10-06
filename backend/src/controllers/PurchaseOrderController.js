@@ -2,6 +2,7 @@
 const purchaseOrderModel = require('../models/PurchaseOrderModel');
 const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
+const i18n = require('../i18n');
 const purchaseOrderExportService = require('../services/PurchaseOrderExportService');
 
 class PurchaseOrderController {
@@ -280,7 +281,7 @@ class PurchaseOrderController {
         return res.status(404).json({ success: false, message: 'Commande non trouvée' });
       }
 
-      const pdfBuffer = await purchaseOrderExportService.generatePDF(po);
+      const pdfBuffer = await purchaseOrderExportService.generatePDF(po, { lang: i18n.fromRequest(req) });
       const filename = `PO-${po.po_number || id}.pdf`;
 
       res.set({

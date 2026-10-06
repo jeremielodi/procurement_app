@@ -5,15 +5,13 @@ import { Link } from 'react-router-dom';
 import {
   ShoppingCart, CheckCircle2, Building2, ShieldCheck, Truck, Receipt, CreditCard,
   Workflow, BarChart3, Bell, Lock, FileSpreadsheet, Gavel, ArrowRight, Menu, X,
-  ClipboardCheck, PackageCheck, LogIn, Store, FileText, Mail, Phone,
+  ClipboardCheck, PackageCheck, LogIn, Store, FileText,
 } from 'lucide-react';
 import { t as tr, useTranslation } from '../../i18n';
 import LanguageSwitcher from '../Common/LanguageSwitcher';
+import ContactForm from './ContactForm';
 
 const OWNER = 'Digitales Solutions';
-const CONTACT_EMAIL = 'jeremielodi@gmail.com';
-const CONTACT_PHONE = '+243812537702';
-const CONTACT_PHONE_DISPLAY = '+243 812 537 702';
 
 // Icônes des listes (dans l'ordre des tableaux de landing.* dans src/locales/*.json)
 const FEATURE_ICONS = [ShoppingCart, Workflow, Gavel, FileText, Receipt, BarChart3, Bell, FileSpreadsheet];
@@ -242,35 +240,10 @@ export default function LandingPage() {
 
       {/* Contact */}
       <section id="contact" className="py-20 bg-slate-50 scroll-mt-16">
-        <div className="max-w-4xl mx-auto px-4 text-center">
+        <div className="max-w-3xl mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold text-slate-900">{t.contact.title}</h2>
           <p className="mt-3 text-slate-600">{t.contact.subtitle}</p>
-          <div className="mt-10 grid sm:grid-cols-2 gap-6 text-left">
-            <a
-              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(t.contact.mailSubject)}`}
-              className="flex items-center gap-4 rounded-xl bg-white border border-slate-200 p-5 hover:shadow-md transition"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-                <Mail className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm text-slate-500">{t.contact.email}</div>
-                <div className="font-semibold text-slate-900 break-all">{CONTACT_EMAIL}</div>
-              </div>
-            </a>
-            <a
-              href={`tel:${CONTACT_PHONE}`}
-              className="flex items-center gap-4 rounded-xl bg-white border border-slate-200 p-5 hover:shadow-md transition"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-                <Phone className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-sm text-slate-500">{t.contact.phone}</div>
-                <div className="font-semibold text-slate-900">{CONTACT_PHONE_DISPLAY}</div>
-              </div>
-            </a>
-          </div>
+          <ContactForm />
         </div>
       </section>
 

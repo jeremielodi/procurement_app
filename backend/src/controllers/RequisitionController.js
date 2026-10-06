@@ -8,6 +8,7 @@ const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const { v4: uuidv4 } = require('uuid');
 const requisitionExportService = require('../services/RequisitionExportService');
+const i18n = require('../i18n');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -804,10 +805,7 @@ async exportPDF(req, res) {
       limit: 1000 // Limite pour performance
     });
     
-    const pdfBuffer = await requisitionExportService.generatePDF(
-      requisitions,
-      'Liste des réquisitions'
-    );
+    const pdfBuffer = await requisitionExportService.generatePDF(requisitions, null, { lang: i18n.fromRequest(req) });
     
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=requisitions_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -837,7 +835,7 @@ async exportRequisitionPDF(req, res) {
     }
 
     // Langue du document : ?lang=fr (défaut) ou ?lang=en
-    const pdfBuffer = await requisitionExportService.generateRequisitionDetailPDF(requisition, { lang: req.query.lang });
+    const pdfBuffer = await requisitionExportService.generateRequisitionDetailPDF(requisition, { lang: i18n.fromRequest(req) });
 
     res.set({
       'Content-Type': 'application/pdf',

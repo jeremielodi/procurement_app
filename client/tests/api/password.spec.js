@@ -16,6 +16,18 @@ test.describe('API › Mot de passe', () => {
     expect(body.message).toMatch(/Si un compte actif/);
   });
 
+  test('POST /api/auth/reset-password/confirm — public, lien invalide → 400 INVALID_LINK', async ({ request }) => {
+    for (const token of ['', 'pas-un-jwt']) {
+      const res = await request.post('/api/auth/reset-password/confirm', { data: { token } });
+      expect(res.status()).toBe(400);
+      expect((await res.json()).code).toBe('INVALID_LINK');
+    }
+    // Un JWT de session ne vaut pas lien de réinitialisation
+    const session = await getToken(request);
+    const res = await request.post('/api/auth/reset-password/confirm', { data: { token: session } });
+    expect(res.status()).toBe(400);
+  });
+
   test('POST /api/auth/change-password — 401 sans token', async ({ request }) => {
     const res = await request.post('/api/auth/change-password', { data: { oldPassword: 'x', newPassword: 'yyyyyyyy' } });
     expect(res.status()).toBe(401);

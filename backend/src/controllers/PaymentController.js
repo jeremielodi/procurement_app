@@ -5,6 +5,8 @@ const db             = require('../config/database');
 const puppeteer      = require('puppeteer');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { getBranding } = require('../utils/enterpriseBranding');
+const i18n = require('../i18n');
+const { pdfContext } = require('../utils/pdfI18n');
 
 class PaymentController {
 
@@ -155,14 +157,16 @@ class PaymentController {
       const currency = pay.currency || await getEnterpriseCurrencyCode();
       const brand = await getBranding(pay.enterprise_id);
       const esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-      const fmt = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(parseFloat(n) || 0);
-      const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+      // Langue du document : ?lang= (défaut fr) — libellés pdf.payment.* des locales
+      const { L, t, locale, lang } = pdfContext(i18n.fromRequest(req), 'payment');
+      const fmt = (n) => new Intl.NumberFormat(locale, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(parseFloat(n) || 0);
+      const fmtDate = (d) => d ? new Date(d).toLocaleDateString(locale) : '—';
 
-      const METHOD_LABELS = { BANK_TRANSFER: 'Virement bancaire', CHECK: 'Chèque', CASH: 'Espèces', MOBILE_MONEY: 'Mobile Money' };
-      const STATUS_LABELS = { PENDING: 'En attente', PROCESSING: 'En cours', PAID: 'Payé', FAILED: 'Échoué', CANCELLED: 'Annulé' };
+      const METHOD_LABELS = L.methods;
+      const STATUS_LABELS = L.status;
       const STATUS_COLORS = { PENDING: '#D97706', PROCESSING: '#2563EB', PAID: '#059669', FAILED: '#DC2626', CANCELLED: '#6B7280' };
 
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+      const html = `<!DOCTYPE html><html lang="${lang}"><head><meta charset="UTF-8">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Helvetica,Arial,sans-serif;padding:40px;color:#1F2937;font-size:13px}
@@ -186,44 +190,44 @@ body{font-family:Helvetica,Arial,sans-serif;padding:40px;color:#1F2937;font-size
 </style></head><body>
 <div class="header">
   <div>
-    <div class="title">Reçu de Paiement</div>
-    <div class="subtitle">${pay.payment_number} · Émis le ${fmtDate(pay.created_at)}</div>
+    <div class="title">${L.title}</div>
+    <div class="subtitle">${esc(t('pdf.payment.issuedOn', { number: pay.payment_number, date: fmtDate(pay.created_at) }))}</div>
   </div>
-  <span class="badge">${STATUS_LABELS[pay.status] || pay.status}</span>
+  <span class="badge">${esc(STATUS_LABELS[pay.status] || pay.status)}</span>
 </div>
 
 <div class="grid3">
   <div class="card amount-card" style="grid-column:span 1">
-    <div class="lbl">Montant payé</div>
+    <div class="lbl">${L.amountPaid}</div>
     <div class="val">${fmt(pay.amount)}</div>
   </div>
   <div class="card">
-    <div class="lbl">Mode de paiement</div>
-    <div class="val">${METHOD_LABELS[pay.payment_method] || pay.payment_method || '—'}</div>
+    <div class="lbl">${L.method}</div>
+    <div class="val">${esc(METHOD_LABELS[pay.payment_method] || pay.payment_method || '—')}</div>
   </div>
   <div class="card">
-    <div class="lbl">Date de paiement</div>
+    <div class="lbl">${L.paymentDate}</div>
     <div class="val">${fmtDate(pay.payment_date)}</div>
   </div>
 </div>
 
-<div class="section">Références</div>
+<div class="section">${L.references}</div>
 <div class="ref-box">
   <div class="ref-row">
-    ${pay.invoice_number ? `<div class="item"><div class="lbl">Facture</div><div class="val" style="font-size:13px">${pay.invoice_number}</div></div>` : ''}
-    ${pay.po_number ? `<div class="item"><div class="lbl">Commande (PO)</div><div class="val" style="font-size:13px">${pay.po_number}</div></div>` : ''}
-    ${pay.supplier_name ? `<div class="item"><div class="lbl">Fournisseur</div><div class="val" style="font-size:13px">${pay.supplier_name}</div></div>` : ''}
-    ${pay.reference ? `<div class="item"><div class="lbl">Référence</div><div class="val" style="font-size:13px">${pay.reference}</div></div>` : ''}
+    ${pay.invoice_number ? `<div class="item"><div class="lbl">${L.invoice}</div><div class="val" style="font-size:13px">${esc(pay.invoice_number)}</div></div>` : ''}
+    ${pay.po_number ? `<div class="item"><div class="lbl">${L.order}</div><div class="val" style="font-size:13px">${esc(pay.po_number)}</div></div>` : ''}
+    ${pay.supplier_name ? `<div class="item"><div class="lbl">${L.supplier}</div><div class="val" style="font-size:13px">${esc(pay.supplier_name)}</div></div>` : ''}
+    ${pay.reference ? `<div class="item"><div class="lbl">${L.reference}</div><div class="val" style="font-size:13px">${esc(pay.reference)}</div></div>` : ''}
   </div>
 </div>
 
-${pay.bank_account ? `<div class="grid2"><div class="card"><div class="lbl">Compte bancaire</div><div class="val" style="font-size:13px">${pay.bank_account}</div></div></div>` : ''}
+${pay.bank_account ? `<div class="grid2"><div class="card"><div class="lbl">${L.bankAccount}</div><div class="val" style="font-size:13px">${esc(pay.bank_account)}</div></div></div>` : ''}
 
-${pay.notes ? `<div class="notes"><strong>Notes :</strong> ${pay.notes}</div>` : ''}
+${pay.notes ? `<div class="notes"><strong>${L.notes}</strong> ${esc(pay.notes)}</div>` : ''}
 
 <div class="footer">
-  <span>${esc(brand.name)} — généré avec procureApp</span>
-  <span>Généré le ${new Date().toLocaleString('fr-FR')}</span>
+  <span>${esc(t('pdf.common.generatedWith', { enterprise: brand.name, app: brand.appName || 'procureApp' }))}</span>
+  <span>${esc(t('pdf.common.generatedOn', { date: new Date().toLocaleString(locale) }))}</span>
 </div>
 </body></html>`;
 

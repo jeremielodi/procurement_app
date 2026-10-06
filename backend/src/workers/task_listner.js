@@ -80,6 +80,7 @@ function connectSSE() {
 
       if      (data.eventType === 'TASK_CREATED')   await handleTaskCreated(data);
       else if (data.eventType === 'TASK_CLAIMED')   await handleTaskClaimed(data);
+      else if (data.eventType === 'TASK_UNCLAIMED') logEvent('Task unclaimed: %s (ID: %s)', data.taskName, data.taskId);
       else if (data.eventType === 'TASK_COMPLETED') await handleTaskCompleted(data);
       else if (data.eventType === 'TASK_FAILED')    await handleTaskFailed(data);
       else if (data.eventType === 'TASK_CANCELLED') await handleTaskCancelled(data);

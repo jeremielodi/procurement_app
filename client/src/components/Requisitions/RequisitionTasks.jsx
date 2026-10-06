@@ -24,6 +24,8 @@ import { useAuth } from '../../hooks/useAuth';
 import StatusBadge from '../Common/StatusBadge';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import Modal from '../Common/Modal';
+import ClaimTaskConfirm from '../Task/ClaimTaskConfirm';
+import { UserMinus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { purchaseOrderService } from '../../services/purchaseOrderService';
@@ -45,6 +47,9 @@ export default function RequisitionTasks() {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [claimingTaskId, setClaimingTaskId] = useState(null);
+  const [taskToClaim, setTaskToClaim] = useState(null); // confirmation avant prise en charge
+  const [taskToRelease, setTaskToRelease] = useState(null); // confirmation avant libération
+  const [releasing, setReleasing] = useState(false);
 
   // États pour le formulaire
   const [formData, setFormData] = useState({
@@ -92,11 +97,26 @@ export default function RequisitionTasks() {
     }
   };
 
+  const handleUnclaimTask = async (taskId) => {
+    setReleasing(true);
+    try {
+      await taskService.unclaimTask(taskId);
+      toast.success(t('taskList.unclaimed'));
+      setTaskToRelease(null);
+      await loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || t('taskList.unclaimError'));
+    } finally {
+      setReleasing(false);
+    }
+  };
+
   const handleClaimTask = async (taskId) => {
     setClaimingTaskId(taskId);
     try {
       await taskService.claimTask(taskId, userEmail);
       toast.success(t('reqTasks.claimed'));
+      setTaskToClaim(null);
       await loadData(); // Recharger les tâches
     } catch (error) {
       console.error('Error claiming task:', error);
@@ -360,7 +380,7 @@ export default function RequisitionTasks() {
                     <div className="flex gap-2">
                       {canClaim && (
                         <button
-                          onClick={() => handleClaimTask(task.id)}
+                          onClick={() => setTaskToClaim(task)}
                           disabled={claimingTaskId === task.id}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
                         >
@@ -370,6 +390,17 @@ export default function RequisitionTasks() {
                             <UserPlus size={16} />
                           )}
                           {claimingTaskId === task.id ? t('reqTasks.claiming') : t('taskList.claim')}
+                        </button>
+                      )}
+                      {task.canUnclaim && (
+                        <button
+                          onClick={() => setTaskToRelease(task)}
+                          disabled={releasing}
+                          title={t('taskList.unclaimHint')}
+                          className="px-4 py-2 border border-amber-300 text-amber-700 bg-white rounded-lg hover:bg-amber-50 flex items-center gap-2 disabled:opacity-50"
+                        >
+                          <UserMinus size={16} />
+                          {t('taskList.unclaim')}
                         </button>
                       )}
                       {canProcess && (
@@ -622,6 +653,22 @@ export default function RequisitionTasks() {
           </div>
         )}
       </Modal>
+
+      <ClaimTaskConfirm
+        task={taskToClaim}
+        onCancel={() => !claimingTaskId && setTaskToClaim(null)}
+        onConfirm={() => handleClaimTask(taskToClaim.id)}
+        isLoading={!!claimingTaskId}
+      />
+
+      <ClaimTaskConfirm
+        mode="unclaim"
+        task={taskToRelease}
+        currentUserEmail={userEmail}
+        onCancel={() => !releasing && setTaskToRelease(null)}
+        onConfirm={() => handleUnclaimTask(taskToRelease.id)}
+        isLoading={releasing}
+      />
     </div>
   );
 }

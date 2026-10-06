@@ -1,5 +1,6 @@
 // backend/src/controllers/UserController.js
 const userModel = require('../models/UserModel');
+const { audit, AUDIT } = require('../utils/auditLog');
 
 // Profils non attribuables par un administrateur d'entreprise
 const RESERVED_PROFILES = ['prof_superadmin', 'prof_supplier'];
@@ -72,6 +73,10 @@ class UserController {
         enterpriseId: req.enterpriseId,
       });
       
+      await audit(req, AUDIT.USER_CREATED, {
+        target: { id: result.id, email: result.email, enterprise_id: req.enterpriseId },
+        details: { username, email, firstName, lastName, language, profileIds: profileIds || [] },
+      });
       res.status(201).json({ success: true, data: result });
     } catch (error) {
       console.error('Error creating user:', error);
@@ -122,6 +127,11 @@ class UserController {
         language,
         profileIds: profileIds || []
       });
+      await audit(req, AUDIT.USER_UPDATED, {
+        target: { id, email: existing.email, enterprise_id: existing.enterpriseId },
+        oldValue: { firstName: existing.firstName, lastName: existing.lastName, department: existing.department, position: existing.position, language: existing.language, profileIds: (existing.profiles || []).map(p => p.id) },
+        details: { firstName, lastName, department, position, language, profileIds: profileIds || [] },
+      });
       
       res.json({ success: true, message: 'Utilisateur mis à jour' });
     } catch (error) {
@@ -144,6 +154,9 @@ class UserController {
       }
       
       await userModel.toggleActive(id, isActive);
+      await audit(req, isActive ? AUDIT.USER_ACTIVATED : AUDIT.USER_DEACTIVATED, {
+        target: { id, email: existing.email, enterprise_id: existing.enterpriseId },
+      });
       
       res.json({
         success: true,
@@ -168,6 +181,10 @@ class UserController {
       }
       
       await userModel.delete(id);
+      await audit(req, AUDIT.USER_DELETED, {
+        target: { id, email: existing.email, enterprise_id: existing.enterpriseId },
+        oldValue: { username: existing.username, email: existing.email, firstName: existing.firstName, lastName: existing.lastName },
+      });
       
       res.json({ success: true, message: 'Utilisateur supprimé' });
     } catch (error) {
@@ -194,6 +211,7 @@ class UserController {
       }
       
       await userModel.resetPassword(id, newPassword);
+      await audit(req, AUDIT.PASSWORD_RESET_BY_ADMIN, { target: { id, email: existing.email, enterprise_id: existing.enterpriseId } });
       
       res.json({ success: true, message: 'Mot de passe réinitialisé' });
     } catch (error) {

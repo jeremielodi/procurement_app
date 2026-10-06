@@ -139,6 +139,17 @@ class RequisitionTimelineService {
         tasks.set(row.task_id, t);
         continue;
       }
+      if (action === 'TASK_UNCLAIMED') {
+        const t = tasks.get(row.task_id) || { key, label: taskLabel(key || row.task_name), createdAt: row.performed_at };
+        events.push({
+          date: row.performed_at, kind: 'info', title: T('timeline.released', { task: t.label }), actor: who(row),
+          details: t.claimedBy ? [T('timeline.releasedFrom', { name: t.claimedBy })] : [], links: [],
+        });
+        delete t.claimedBy;
+        delete t.claimedAt;
+        tasks.set(row.task_id, t);
+        continue;
+      }
       if (action === 'TASK_COMPLETED') {
         const t = tasks.get(row.task_id) || { key, label: taskLabel(key || row.task_name), createdAt: null };
         t.completedAt = row.performed_at;

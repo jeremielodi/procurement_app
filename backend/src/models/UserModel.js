@@ -187,6 +187,7 @@ class UserModel {
       department: user.department,
       position: user.position,
       enterpriseId: user.enterprise_id,
+      language: user.language,
       isActive: user.is_active,
       lastLogin: user.last_login,
       createdAt: user.created_at,
@@ -228,6 +229,7 @@ class UserModel {
       department: user.department,
       position: user.position,
       isActive: user.is_active,
+      enterpriseId: user.enterprise_id,
       lastLogin: user.last_login,
       createdAt: user.created_at,
       profiles
@@ -530,6 +532,7 @@ async authenticate(email, password) {
       position: user.position,
       language: user.language,
       isActive: user.is_active,
+      enterpriseId: user.enterprise_id,
       profiles,
       permissions
     }

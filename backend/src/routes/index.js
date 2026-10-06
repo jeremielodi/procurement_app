@@ -59,6 +59,7 @@ router.post('/auth/forgot-password', authController.forgotPassword);
 router.post('/auth/reset-password/confirm', authController.confirmPasswordReset);
 // Avant tenantContext : accessible à tous les types de compte (fournisseur, super admin)
 router.post('/auth/change-password', authenticate, authController.changePassword);
+router.post('/auth/logout', authenticate, authController.logout);
 router.put('/auth/language', authenticate, authController.setLanguage.bind(authController));
 
 // Inscription fournisseur + logo (publics)
@@ -205,6 +206,11 @@ router.get('/tasks/:taskId/form',
 router.post('/tasks/:taskId/claim',
   authenticate,
   taskController.claimTask
+);
+
+router.post('/tasks/:taskId/unclaim',
+  authenticate,
+  taskController.unclaimTask
 );
 
 router.post('/tasks/:taskId/complete',

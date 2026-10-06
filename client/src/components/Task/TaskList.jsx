@@ -22,6 +22,8 @@ import { taskService } from '../../services/taskService';
 import { useAuth } from '../../hooks/useAuth';
 import { getTaskLabel } from '../../utils/taskLabels';
 import Modal from '../Common/Modal';
+import ClaimTaskConfirm from './ClaimTaskConfirm';
+import { UserMinus } from 'lucide-react';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { useCurrency } from '../../contexts/EnterpriseContext';
@@ -35,6 +37,8 @@ const TaskList = () => {
   const userEmail = user?.email;
   
   const [selectedTask, setSelectedTask] = useState(null);
+  const [taskToClaim, setTaskToClaim] = useState(null); // confirmation avant prise en charge
+  const [taskToRelease, setTaskToRelease] = useState(null); // confirmation avant libération
   const [filter, setFilter] = useState('pending'); // 'all', 'pending', 'completed'
   const [submitting, setSubmitting] = useState(false);
   
@@ -52,6 +56,7 @@ const TaskList = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['user-tasks', userEmail]);
       toast.success(t('taskList.claimed'));
+      setTaskToClaim(null);
     },
     onError: (error) => {
       toast.error(error.message || t('taskList.claimError'));
@@ -86,9 +91,20 @@ const TaskList = () => {
     return true; // 'all'
   });
   
-  const handleClaim = async (taskId) => {
-    await claimMutation.mutateAsync(taskId);
-  };
+  const unclaimMutation = useMutation({
+    mutationFn: (taskId) => taskService.unclaimTask(taskId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['user-tasks', userEmail]);
+      toast.success(t('taskList.unclaimed'));
+      setTaskToRelease(null);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || t('taskList.unclaimError'));
+    }
+  });
+
+  const handleClaim = (task) => setTaskToClaim(task);
+  const confirmClaim = () => claimMutation.mutate(taskToClaim.id);
   
   const handleCompleteTask = (task) => {
     const route = getFormRoute(task);
@@ -502,13 +518,27 @@ const TaskList = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleClaim(task.id);
+                              handleClaim(task);
                             }}
                             disabled={claimMutation.isPending}
                             className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                           >
                             <User size={16} />
                             {t('taskList.claim')}
+                          </button>
+                        )}
+                        {task.canUnclaim && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTaskToRelease(task);
+                            }}
+                            disabled={unclaimMutation.isPending}
+                            title={t('taskList.unclaimHint')}
+                            className="flex items-center gap-2 px-4 py-2 text-sm border border-amber-300 text-amber-700 bg-white rounded-lg hover:bg-amber-50 disabled:opacity-50"
+                          >
+                            <UserMinus size={16} />
+                            {t('taskList.unclaim')}
                           </button>
                         )}
                         
@@ -543,6 +573,22 @@ const TaskList = () => {
           />
         )}
       </Modal>
+
+      <ClaimTaskConfirm
+        task={taskToClaim}
+        onCancel={() => !claimMutation.isPending && setTaskToClaim(null)}
+        onConfirm={confirmClaim}
+        isLoading={claimMutation.isPending}
+      />
+
+      <ClaimTaskConfirm
+        mode="unclaim"
+        task={taskToRelease}
+        currentUserEmail={userEmail}
+        onCancel={() => !unclaimMutation.isPending && setTaskToRelease(null)}
+        onConfirm={() => unclaimMutation.mutate(taskToRelease.id)}
+        isLoading={unclaimMutation.isPending}
+      />
     </div>
   );
 };

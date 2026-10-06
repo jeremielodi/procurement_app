@@ -7,6 +7,7 @@ const emailService = require('../services/EmailNotificationService');
 const { generatePassword } = require('../utils/passwordGenerator');
 const { appLink } = require('../utils/appUrl');
 const i18n = require('../i18n');
+const { audit, AUDIT } = require('../utils/auditLog');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -47,9 +48,12 @@ const displayName = (user) => [user.first_name, user.last_name].filter(Boolean).
 const passwordFingerprint = (hash) => crypto.createHash('sha256').update(String(hash || '')).digest('hex').slice(0, 16);
 
 /** Étape 1 : email avec un lien public de confirmation — le mot de passe n'est PAS modifié */
-async function sendResetConfirmation(email) {
+async function sendResetConfirmation(email, req) {
   const user = await userModel.findActiveByEmail(email);
-  if (!user) return;
+  if (!user) {
+    await audit(req, AUDIT.PASSWORD_RESET_REQUESTED, { actor: null, details: { email, accountFound: false } });
+    return;
+  }
 
   const token = jwt.sign(
     { purpose: 'password-reset', uid: user.id, fp: passwordFingerprint(user.password_hash) },
@@ -67,6 +71,7 @@ async function sendResetConfirmation(email) {
   const sent = await emailService.sendEmail(user.email, T('email.passwordRequest.subject'), html);
   if (!sent.success) console.error('Mot de passe oublié : lien non envoyé à %s (%s)', user.email, sent.error);
   else console.log('🔗 Lien de réinitialisation envoyé à %s', user.email);
+  await audit(req, AUDIT.PASSWORD_RESET_REQUESTED, { actor: null, target: user, details: { email, accountFound: true, emailSent: sent.success } });
 }
 
 /** Étape 2 : génère, envoie puis enregistre le nouveau mot de passe (changé seulement si l'email est parti) */
@@ -105,6 +110,14 @@ class AuthController {
       const result = await userModel.authenticate(email, password);
       
       if (!result.success) {
+        // Motif précis dans le journal uniquement (la réponse ne change pas)
+        const known = await userModel.findByEmail(email).catch(() => null);
+        const reason = !known ? 'UNKNOWN_EMAIL' : known.isActive === false || known.is_active === false ? 'INACTIVE_ACCOUNT' : 'WRONG_PASSWORD';
+        await audit(req, AUDIT.LOGIN_FAILED, {
+          actor: null,
+          target: known ? { id: known.id, email: known.email, enterprise_id: known.enterpriseId || known.enterprise_id } : null,
+          details: { email: String(email).slice(0, 255), reason },
+        });
         return res.status(401).json({ success: false, message: result.message });
       }
       
@@ -119,6 +132,9 @@ class AuthController {
         { expiresIn: '24h' }
       );
       
+      const loggedIn = { id: result.user.id, email: result.user.email, enterprise_id: result.user.enterpriseId };
+      await audit(req, AUDIT.LOGIN_SUCCESS, { actor: loggedIn, target: loggedIn });
+
       res.json({ 
         success: true, 
         data: { 
@@ -149,6 +165,7 @@ class AuthController {
     const ip = req.ip || 'unknown';
     const ipRequests = resetRequestsByIp.get(ip) || [];
     if (ipRequests.length >= RESET_IP_MAX) {
+      audit(req, AUDIT.PASSWORD_RESET_REQUESTED, { actor: null, details: { email, rateLimited: true } });
       return res.status(429).json({ success: false, message: 'Trop de demandes. Réessayez dans quelques minutes.' });
     }
     resetRequestsByIp.set(ip, [...ipRequests, now]);
@@ -156,9 +173,12 @@ class AuthController {
     res.json(FORGOT_RESPONSE);
 
     // Un seul lien par email toutes les 5 minutes (évite d'inonder une boîte mail)
-    if (lastResetByEmail.has(email)) return;
+    if (lastResetByEmail.has(email)) {
+      audit(req, AUDIT.PASSWORD_RESET_REQUESTED, { actor: null, details: { email, throttled: true } });
+      return;
+    }
     lastResetByEmail.set(email, now);
-    sendResetConfirmation(email).catch(err => console.error('Mot de passe oublié :', err.message));
+    sendResetConfirmation(email, req).catch(err => console.error('Mot de passe oublié :', err.message));
   }
 
   /**
@@ -167,7 +187,10 @@ class AuthController {
    * Lien à usage unique : invalide dès que le mot de passe a changé (empreinte), expire après 1 h.
    */
   async confirmPasswordReset(req, res) {
-    const invalid = () => res.status(400).json({ success: false, code: 'INVALID_LINK', message: 'Lien invalide ou expiré' });
+    const invalid = (target = null) => {
+      audit(req, AUDIT.PASSWORD_RESET_INVALID_LINK, { actor: null, target });
+      return res.status(400).json({ success: false, code: 'INVALID_LINK', message: 'Lien invalide ou expiré' });
+    };
     let payload;
     try {
       payload = jwt.verify(String(req.body?.token || ''), JWT_SECRET);
@@ -180,8 +203,9 @@ class AuthController {
     confirmingUsers.add(payload.uid);
     try {
       const user = await userModel.findActiveForReset(payload.uid);
-      if (!user || passwordFingerprint(user.password_hash) !== payload.fp) return invalid();
+      if (!user || passwordFingerprint(user.password_hash) !== payload.fp) return invalid(user ? { id: user.id, email: user.email } : null);
       const sent = await sendNewPassword(user);
+      await audit(req, AUDIT.PASSWORD_RESET_CONFIRMED, { actor: null, target: { id: user.id, email: user.email }, details: { emailSent: sent } });
       if (!sent) return res.status(502).json({ success: false, code: 'EMAIL_FAILED', message: 'Email non envoyé, mot de passe inchangé' });
       res.json({ success: true, message: 'Un nouveau mot de passe vous a été envoyé par email' });
     } catch (error) {
@@ -206,12 +230,24 @@ class AuthController {
       }
       const result = await userModel.changePassword(req.user.id, oldPassword, newPassword);
       // 400 (et non 401) : un 401 déconnecterait l'utilisateur côté client
-      if (!result.success) return res.status(400).json(result);
+      if (!result.success) {
+        await audit(req, AUDIT.PASSWORD_CHANGE_FAILED, { target: req.user, details: { reason: 'WRONG_OLD_PASSWORD' } });
+        return res.status(400).json(result);
+      }
+      await audit(req, AUDIT.PASSWORD_CHANGED, { target: req.user });
       res.json({ success: true, message: 'Mot de passe changé avec succès' });
     } catch (error) {
       console.error('Change password error:', error);
       res.status(500).json({ success: false, message: error.message });
     }
+  }
+
+  /**
+   * POST /auth/logout — trace la déconnexion (le JWT est sans état : le client supprime le token)
+   */
+  async logout(req, res) {
+    await audit(req, AUDIT.LOGOUT, { target: req.user });
+    res.json({ success: true });
   }
 
   /**

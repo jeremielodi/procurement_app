@@ -858,9 +858,12 @@ class DashboardModel {
         WHERE action = 'TASK_COMPLETED' AND comments LIKE '%"next_element":"Event\_%' ESCAPE '\'
       ),
       claimed AS (
-        SELECT DISTINCT ON (task_id) task_id, comments, performed_by
-        FROM workflow_history WHERE action = 'TASK_CLAIMED' AND task_id IS NOT NULL
-        ORDER BY task_id, performed_at DESC
+        -- Dernière prise en charge / libération de chaque tâche : une tâche libérée n'a plus de responsable
+        SELECT task_id, comments, performed_by FROM (
+          SELECT DISTINCT ON (task_id) task_id, action, comments, performed_by
+          FROM workflow_history WHERE action IN ('TASK_CLAIMED', 'TASK_UNCLAIMED') AND task_id IS NOT NULL
+          ORDER BY task_id, performed_at DESC
+        ) last_claim WHERE action = 'TASK_CLAIMED'
       )
       SELECT c.task_id, c.task_definition_id, c.task_name, c.created_at,
              r.id AS requisition_id, r.requisition_number, r.title AS requisition_title,

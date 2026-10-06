@@ -686,7 +686,18 @@
     "viewRequisition": "Voir la réquisition",
     "claim": "Prendre en charge",
     "processTask": "Traitement de la tâche",
-    "validate": "Valider"
+    "validate": "Valider",
+    "claimConfirmTitle": "Prendre en charge cette tâche ?",
+    "claimConfirmText": "Elle vous sera assignée : vous serez seul(e) à pouvoir la traiter et elle n'apparaîtra plus dans la liste des autres membres de votre groupe.",
+    "unclaim": "Libérer",
+    "unclaimHint": "Rendre la tâche à son groupe",
+    "unclaimed": "Tâche libérée : elle est de nouveau disponible pour le groupe",
+    "unclaimError": "Erreur lors de la libération de la tâche",
+    "unclaimConfirmTitle": "Libérer cette tâche ?",
+    "unclaimConfirmText": "Elle ne vous sera plus assignée et redeviendra disponible pour tous les membres du groupe, qui pourront la prendre en charge.",
+    "unclaimOtherAssignee": "Actuellement prise en charge par {{assignee}}.",
+    "releasing": "Libération…",
+    "unclaimConfirmTextOther": "Elle ne lui sera plus assignée et redeviendra disponible pour tous les membres du groupe, qui pourront la prendre en charge."
   },
   "notifications": {
     "unknownDate": "Date inconnue",

@@ -34,7 +34,8 @@ Le fichier `backend/src/services/CamundaService.js` montre comment appeler GoFlo
 - Auth : Bearer token ou Basic auth
 - Start process : `POST /engine-rest/v2/process-definitions/{processKey}/start`
 - External tasks : `POST /external-task/fetchAndLock` → workers en polling toutes les 5s
-- User tasks : complétées via `POST /tasks/{taskId}/complete`
+- User tasks : complétées via `POST /tasks/{taskId}/complete`, prises via `POST /tasks/{taskId}/claim { assignee }`, libérées via `POST /tasks/{taskId}/unclaim` (sans corps ; événement `TASK_UNCLAIMED`)
+- Prise en charge / libération côté app : `POST /api/tasks/:taskId/claim|unclaim` (`TaskController`). Permissions calculées (`getTaskPermissions`) : `canClaim` (groupe, non assignée), `canUnclaim` (**la personne qui l'a prise ou un admin**), `canComplete`. Les deux actions passent par une **confirmation** (`Task/ClaimTaskConfirm`, `mode="claim"|"unclaim"`) dans « Mes tâches » et l'onglet tâches de la réquisition. « Qui bloque ? » et le suivi du workflow prennent la **dernière** action TASK_CLAIMED / TASK_UNCLAIMED (tâche libérée = sans responsable, événement « libérée »)
 
 ## Cycle procure-to-pay (objectif)
 1. **Réquisition** — employé crée une demande avec items + lignes budgétaires
@@ -226,6 +227,13 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - **Emails et notifications dans la langue du destinataire** (`email.*`, `notification.*` des locales backend) : mot de passe oublié, tâche GoFlow (email + in-app), appels d'offres, attribution, nouvelle soumission, envoi du PO au fournisseur (langue de son compte portail)
 - Restent en français : messages d'erreur/succès de l'API, notifications déjà stockées, données saisies (départements, profils…)
 - Contrôle : `npm run i18n:check` (client) — mêmes clés dans chaque langue (client et backend) + toute clé `t('…')` du code existe
+
+## Journal d'audit (audit_logs)
+
+- Migration `12_audit_logs.sql` (idempotente) : colonnes `user_email` (copie conservée si le compte est supprimé) et `enterprise_id`, FK `user_id` **ON DELETE SET NULL** (sinon un utilisateur ayant un historique ne pouvait plus être supprimé), index `(action, created_at)` / `(enterprise_id, created_at)`
+- `utils/auditLog.js` : `audit(req, AUDIT.X, { actor, target, details, oldValue })` — ne lève jamais d'erreur, **jamais de mot de passe ni de token**. `user_id` = auteur (défaut `req.user`, `null` pour un visiteur), `entity_id` = compte concerné, `new_value` = détails, `old_value` = valeurs avant modification, IP (`X-Forwarded-For` retenu **seulement** si la connexion vient d'un proxy local/privé) + user-agent ; entreprise de l'auteur/du compte (lue en base si absente du contexte)
+- Actions : `LOGIN_SUCCESS`, `LOGIN_FAILED` (motif `UNKNOWN_EMAIL` / `WRONG_PASSWORD` / `INACTIVE_ACCOUNT`, la réponse au client ne change pas), `LOGOUT` (`POST /auth/logout`, appelé par `AuthContext.logout` avec le token en en-tête et un corps `{}` — `null` est refusé par express.json), `PASSWORD_CHANGED` / `PASSWORD_CHANGE_FAILED`, `PASSWORD_RESET_REQUESTED` (compte trouvé ou non, `throttled`, `rateLimited`), `PASSWORD_RESET_CONFIRMED`, `PASSWORD_RESET_INVALID_LINK`, `PASSWORD_RESET_BY_ADMIN`, `SUPPLIER_REGISTERED`, `USER_CREATED` / `USER_UPDATED` (avant/après) / `USER_ACTIVATED` / `USER_DEACTIVATED` / `USER_DELETED`
+- Toute nouvelle action sensible sur un compte → ajouter une constante `AUDIT` et un appel `audit()`. `created_at` est un TIMESTAMP sans fuseau : filtrer par `id` dans les scripts. Tests : `tests/api/audit.spec.js`
 
 ## Mot de passe oublié / changement
 

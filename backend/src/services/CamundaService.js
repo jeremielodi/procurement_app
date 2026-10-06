@@ -314,6 +314,19 @@ async function assignTask(taskId, userId) {
 }
 
 /**
+ * Libérer une tâche (GoFlow : POST /tasks/:id/unclaim, sans corps) — elle redevient disponible pour son groupe
+ */
+async function unassignTask(taskId) {
+  try {
+    await client.post(`/tasks/${taskId}/unclaim`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error unassigning task:', error);
+    return { success: false, error: error.response?.data?.message || error.message };
+  }
+}
+
+/**
  * Récupérer les variables d'un processus
  */
 async function getProcessVariables(processInstanceId) {
@@ -722,6 +735,7 @@ module.exports = {
   getGroupTasks,
   completeTask,
   assignTask,
+  unassignTask,
 
   // Deployment
   deployProcess,

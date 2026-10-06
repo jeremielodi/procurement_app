@@ -17,6 +17,12 @@ export const taskService = {
     return response.data;
   },
 
+  // Libérer une tâche prise en charge : elle redevient disponible pour son groupe
+  unclaimTask: async (taskId) => {
+    const response = await api.post(`/tasks/${taskId}/unclaim`);
+    return response.data;
+  },
+
   /**
    * Complete a Camunda user task and sync the DB.
    *

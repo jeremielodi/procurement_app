@@ -686,7 +686,18 @@
     "viewRequisition": "View requisition",
     "claim": "Claim",
     "processTask": "Process task",
-    "validate": "Submit"
+    "validate": "Submit",
+    "claimConfirmTitle": "Claim this task?",
+    "claimConfirmText": "It will be assigned to you: only you will be able to process it, and it will no longer appear in the list of the other members of your group.",
+    "unclaim": "Release",
+    "unclaimHint": "Give the task back to its group",
+    "unclaimed": "Task released: it is available to the group again",
+    "unclaimError": "Error while releasing the task",
+    "unclaimConfirmTitle": "Release this task?",
+    "unclaimConfirmText": "It will no longer be assigned to you and will be available again to all members of the group, who will be able to claim it.",
+    "unclaimOtherAssignee": "Currently claimed by {{assignee}}.",
+    "releasing": "Releasing…",
+    "unclaimConfirmTextOther": "It will no longer be assigned to that person and will be available again to all members of the group, who will be able to claim it."
   },
   "notifications": {
     "unknownDate": "Unknown date",

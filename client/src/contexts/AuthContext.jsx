@@ -82,6 +82,9 @@ export const AuthProvider = ({ children }) => {
    * Les réponses 401 des requêtes encore en vol sont ignorées par api.js (plus de token).
    */
   const logout = useCallback(() => {
+    // Trace côté serveur (journal d'audit) : token passé explicitement, la session locale est vidée juste après
+    const token = localStorage.getItem('token');
+    if (token) api.post('/auth/logout', {}, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
     clearStoredSession();
     disconnectRealtime();
     queryClient.cancelQueries();

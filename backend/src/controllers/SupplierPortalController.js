@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const i18n = require('../i18n');
 const userModel = require('../models/UserModel');
+const { audit, AUDIT } = require('../utils/auditLog');
 const supplierModel = require('../models/SupplierModel');
 const referenceModel = require('../models/ReferenceModel');
 const notificationModel = require('../models/NotificationModel');
@@ -191,6 +192,8 @@ class SupplierPortalController {
         JWT_SECRET,
         { expiresIn: '24h' }
       );
+      const registered = { id: auth.user.id, email: auth.user.email };
+      await audit(req, AUDIT.SUPPLIER_REGISTERED, { actor: registered, target: registered, details: { supplierCode, name: b.name } });
       res.status(201).json({ success: true, data: { token, user: auth.user, supplierCode } });
     } catch (error) {
       for (const key of storedKeys) await storage.remove(key).catch(() => {});

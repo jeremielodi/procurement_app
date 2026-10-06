@@ -181,7 +181,9 @@
     "roleLower": "rôle {role}",
     "undefinedRole": "non défini",
     "waitingInfo": "En attente{task} — {who}",
-    "approvalInfo": "{task} : {decision}"
+    "approvalInfo": "{task} : {decision}",
+    "released": "{task} — libérée (remise à disposition du groupe)",
+    "releasedFrom": "Était prise en charge par {name}"
   },
   "supplierProfile": {
     "logo_path": "Logo",

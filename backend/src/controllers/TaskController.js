@@ -70,6 +70,8 @@ function getTaskPermissions(task, currentUser) {
   return {
     isMine: isMine(task, currentUser),
     canClaim: !isCompleted && !task.assignee && inGroup,
+    // Libérer : la personne qui l'a prise, ou un admin (ex. collègue absent)
+    canUnclaim: !isCompleted && !!task.assignee && (isMine(task, currentUser) || currentUser.isAdmin),
     canComplete: !isCompleted && isMine(task, currentUser)
   };
 }
@@ -225,6 +227,37 @@ async function claimTask(req, res) {
   } catch (error) {
     console.error('Error claiming task:', error);
     res.status(500).json({ success: false, message: 'Erreur lors de la réclamation', error: error.message });
+  }
+}
+
+/**
+ * POST /api/tasks/:taskId/unclaim — rend la tâche à son groupe (GoFlow : TASK_UNCLAIMED)
+ */
+async function unclaimTask(req, res) {
+  try {
+    const { taskId } = req.params;
+    const currentUser = await getCurrentUserContext(req.user.id);
+
+    const task = await findEnterpriseTask(taskId);
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Tâche introuvable ou déjà terminée' });
+    }
+    if (!task.assignee) {
+      return res.status(409).json({ success: false, message: 'Cette tâche n\'est prise en charge par personne' });
+    }
+    if (!getTaskPermissions(task, currentUser).canUnclaim) {
+      return res.status(403).json({ success: false, message: `Seul(e) ${task.assignee} ou un administrateur peut libérer cette tâche` });
+    }
+
+    const result = await camundaService.unassignTask(taskId);
+    if (!result.success) {
+      return res.status(500).json({ success: false, message: result.error || 'Erreur lors de la libération' });
+    }
+
+    res.json({ success: true, message: `Tâche ${taskId} libérée` });
+  } catch (error) {
+    console.error('Error unclaiming task:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la libération', error: error.message });
   }
 }
 
@@ -554,6 +587,7 @@ module.exports = {
   getGroupTasks,
   getTaskForm,
   claimTask,
+  unclaimTask,
   completeTask,
   getTasksByProcess,
   getPendingTasksCount,

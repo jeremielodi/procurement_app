@@ -70,6 +70,13 @@ export default function RequisitionList() {
     fromDate: '',
     toDate: ''
   })
+  // Texte saisi dans la barre de recherche : appliqué au filtre après une courte pause de frappe
+  const [searchInput, setSearchInput] = useState('')
+  useEffect(() => {
+    if (searchInput === filters.search) return
+    const timer = setTimeout(() => handleFilterChange('search', searchInput), 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
   const [showFilters, setShowFilters] = useState(false)
   const [workflowFor, setWorkflowFor] = useState(null)
   const [pagination, setPagination] = useState({
@@ -111,7 +118,10 @@ export default function RequisitionList() {
       ...(filters.search && { search: filters.search }),
       ...(filters.fromDate && { fromDate: filters.fromDate }),
       ...(filters.toDate && { toDate: filters.toDate })
-    })
+    }),
+    // Garde la liste affichée pendant le chargement d'un nouveau filtre : sans cela, le spinner
+    // pleine page démonte la barre de recherche, qui perd le focus à chaque lettre tapée
+    keepPreviousData: true
   })
 
   // Mutation pour supprimer une réquisition
@@ -164,6 +174,7 @@ export default function RequisitionList() {
   }
 
   const handleResetFilters = () => {
+    setSearchInput('')
     setFilters({
       progress: 'all',
       status: 'all',
@@ -294,8 +305,8 @@ export default function RequisitionList() {
               <input
                 type="text"
                 placeholder={t('requisitions.searchPlaceholder')}
-                value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>

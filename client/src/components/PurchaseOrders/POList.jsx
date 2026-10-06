@@ -18,6 +18,8 @@ export default function POList() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['purchase-orders', filter, searchTerm],
     queryFn: () => purchaseOrderService.getAll({ status: filter, search: searchTerm }),
+    // Liste conservée pendant le chargement : le spinner pleine page ferait perdre le focus à la recherche
+    keepPreviousData: true,
   })
 
   const approveMutation = useMutation({

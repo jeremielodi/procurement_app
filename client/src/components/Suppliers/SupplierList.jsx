@@ -94,7 +94,9 @@ export default function SupplierList() {
       ...(filters.prequalified !== 'all' && { prequalified: filters.prequalified === 'true' }),
       ...(filters.minRating !== 'all' && { minRating: parseFloat(filters.minRating) }),
       ...(filters.search && { search: filters.search })
-    })
+    }),
+    // Liste conservée pendant le chargement : le spinner pleine page ferait perdre le focus à la recherche
+    keepPreviousData: true
   })
 
   // Mutation pour supprimer un fournisseur

@@ -8,6 +8,7 @@ import { supplierService } from '../../services/supplierService';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { t, getLocale } from '../../i18n';
 import CatalogAutocomplete from '../Stock/CatalogAutocomplete';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function POForm() {
   const { requisitionId, taskId } = useParams();
@@ -166,7 +167,7 @@ export default function POForm() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('common.supplier')} <span className="text-red-500">*</span>
               </label>
-              <select
+              <SearchSelect
                 required
                 value={supplierId}
                 onChange={e => setSupplierId(e.target.value)}
@@ -176,7 +177,7 @@ export default function POForm() {
                 {suppliers.map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('po.orderDate')}</label>

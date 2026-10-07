@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { currencyService } from '../../services/currencyService';
 import { enterpriseLogoUrl } from '../../contexts/EnterpriseContext';
 import { t, LANGUAGES } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500';
 
@@ -86,10 +87,10 @@ export default function EnterpriseInfoForm({ enterprise, onSubmit, submitting, c
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="ent-currency">{t('enterprises.currency')}</label>
-          <select id="ent-currency" className={inputCls} value={form.currencyId || ''} onChange={e => set('currencyId', e.target.value)}>
+          <SearchSelect id="ent-currency" className={inputCls} value={form.currencyId || ''} onChange={e => set('currencyId', e.target.value)}>
             <option value="">{t('enterprises.choose')}</option>
             {currencyList.map(c => <option key={c.id} value={c.id}>{c.format_key} — {c.name}</option>)}
-          </select>
+          </SearchSelect>
         </div>
         {FIELDS.map(([k]) => (
           <div key={k} className={k === 'name' || k === 'address' ? 'md:col-span-2' : ''}>
@@ -108,9 +109,9 @@ export default function EnterpriseInfoForm({ enterprise, onSubmit, submitting, c
             <input className={inputCls} placeholder={t('enterprises.lastName')} value={form.adminLastName || ''} onChange={e => set('adminLastName', e.target.value)} />
             <input className={inputCls} type="email" placeholder={t('enterprises.loginEmail')} aria-label={t('enterprises.adminEmail')} value={form.adminEmail || ''} onChange={e => set('adminEmail', e.target.value)} />
             <input className={inputCls} type="password" placeholder={t('enterprises.password')} aria-label={t('enterprises.adminPassword')} value={form.adminPassword || ''} onChange={e => set('adminPassword', e.target.value)} />
-            <select className={inputCls} aria-label={t('users.language')} value={form.adminLanguage || LANGUAGES[0].code} onChange={e => set('adminLanguage', e.target.value)}>
+            <SearchSelect className={inputCls} aria-label={t('users.language')} value={form.adminLanguage || LANGUAGES[0].code} onChange={e => set('adminLanguage', e.target.value)}>
               {LANGUAGES.map(l => <option key={l.code} value={l.code}>{t('users.language')} : {l.name}</option>)}
-            </select>
+            </SearchSelect>
           </div>
         </div>
       )}

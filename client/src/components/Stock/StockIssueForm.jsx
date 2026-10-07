@@ -1,21 +1,29 @@
 // src/components/Stock/StockIssueForm.jsx
-// Nouvelle sortie de stock vers un utilisateur : dépôt (accès de l'utilisateur), bénéficiaire, projet (facultatif),
-// motif, articles. Lots : FEFO automatique (péremption la plus proche d'abord) ou lot imposé.
+// Nouvelle sortie de stock depuis un dépôt (accès de l'utilisateur), selon le type :
+//   USER (vers un employé : bénéficiaire), WAREHOUSE (transfert : dépôt de destination),
+//   DEPARTMENT (département + personne qui retire, facultative). Projet (facultatif), motif, articles.
+// Lots : FEFO automatique (péremption la plus proche d'abord) ou lot imposé ; un transfert accepte un lot périmé
+// imposé et le matériel endommagé.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, PackageMinus, Plus, Trash2, Save, User, X, Warehouse } from 'lucide-react';
+import { ArrowLeft, PackageMinus, Plus, Trash2, Save, User, X, Warehouse, ArrowRightLeft, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CatalogAutocomplete from './CatalogAutocomplete';
 import { warehouseService, stockService, stockIssueService, equipmentService } from '../../services/stockService';
 import { projectService } from '../../services/projectService';
 import { t, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(getLocale()) : '');
 const today = () => new Date().toISOString().slice(0, 10);
 const newLine = () => ({ key: Math.random().toString(36).slice(2), text: '', item: null, lotId: '', quantity: '', balances: null, units: null, unitIds: [] });
-const ERROR_CODES = ['STOCK_INSUFFICIENT', 'WAREHOUSE_FORBIDDEN', 'RECIPIENT_INVALID', 'LOT_EXPIRED', 'ITEM_NOT_STOCKABLE', 'NO_LINES', 'INVALID_QUANTITY', 'UNITS_REQUIRED', 'UNIT_UNAVAILABLE'];
+const ERROR_CODES = ['STOCK_INSUFFICIENT', 'WAREHOUSE_FORBIDDEN', 'RECIPIENT_INVALID', 'LOT_EXPIRED', 'ITEM_NOT_STOCKABLE', 'NO_LINES', 'INVALID_QUANTITY', 'UNITS_REQUIRED', 'UNIT_UNAVAILABLE',
+  'INVALID_DESTINATION', 'RECIPIENT_REQUIRED', 'DESTINATION_REQUIRED', 'SAME_WAREHOUSE', 'DESTINATION_INVALID', 'DEPARTMENT_REQUIRED', 'DEPARTMENT_INVALID'];
+
+// Types de sortie (ordre d'affichage) et leurs icônes
+export const ISSUE_TYPES = [['USER', User], ['WAREHOUSE', ArrowRightLeft], ['DEPARTMENT', Building2]];
 
 /** Recherche d'un bénéficiaire (utilisateurs actifs de l'entreprise) */
 export function RecipientPicker({ value, onChange }) {
@@ -62,8 +70,13 @@ export default function StockIssueForm() {
   const [params] = useSearchParams();
   const [warehouses, setWarehouses] = useState(null);
   const [warehouseId, setWarehouseId] = useState(params.get('warehouseId') || '');
+  const [type, setType] = useState(ISSUE_TYPES.some(([k]) => k === params.get('type')) ? params.get('type') : 'USER');
+  const [destinations, setDestinations] = useState({ warehouses: [], departments: [] });
+  const [destinationWarehouseId, setDestinationWarehouseId] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
   const [projects, setProjects] = useState([]);
   const [recipient, setRecipient] = useState(null);
+  const isTransfer = type === 'WAREHOUSE';
   const [projectId, setProjectId] = useState('');
   const [purpose, setPurpose] = useState('');
   const [lines, setLines] = useState([newLine()]);
@@ -78,7 +91,25 @@ export default function StockIssueForm() {
       else if (warehouseId && !list.some(w => String(w.id) === String(warehouseId))) setWarehouseId('');
     }).catch(() => setWarehouses([]));
     projectService.getAll().then(r => setProjects(r.data || [])).catch(() => {});
+    stockIssueService.destinations().then(r => setDestinations(r.data || { warehouses: [], departments: [] })).catch(() => {});
   }, []);
+
+  // Le dépôt de destination ne peut pas être le dépôt source
+  useEffect(() => { if (destinationWarehouseId && destinationWarehouseId === warehouseId) setDestinationWarehouseId(''); }, [warehouseId]);
+
+  // Hors transfert : désélectionne le matériel endommagé et les lots périmés choisis pendant un transfert
+  useEffect(() => {
+    if (isTransfer) return;
+    setLines(prev => prev.map(l => {
+      const lot = (l.balances || []).find(b => b.lot_id === l.lotId);
+      const lotExpired = lot?.expiry_date && String(lot.expiry_date).slice(0, 10) < today();
+      return {
+        ...l,
+        lotId: lotExpired ? '' : l.lotId,
+        unitIds: l.unitIds.filter(id => (l.units || []).find(u => u.id === id)?.condition === 'GOOD'),
+      };
+    }));
+  }, [type]);
 
   // Disponible par article dans le dépôt choisi (rechargé si le dépôt change)
   const loadBalances = async (key, item, whId = warehouseId) => {
@@ -104,6 +135,7 @@ export default function StockIssueForm() {
     return lines.map(l => {
       const qty = l.item?.track_serials ? l.unitIds.length : parseFloat(String(l.quantity).replace(',', '.')) || 0;
       const rows = l.balances || [];
+      // Lot imposé : tout son stock (un lot périmé n'est imposable que pour un transfert) ; sinon lots non périmés
       const usable = rows.filter(b => (l.lotId ? b.lot_id === l.lotId : !b.expiry_date || String(b.expiry_date).slice(0, 10) >= today()));
       const available = usable.reduce((s, b) => s + Number(b.quantity), 0);
       const key = `${l.item?.id}|${l.lotId}`;
@@ -124,13 +156,19 @@ export default function StockIssueForm() {
     e.preventDefault();
     setSubmitted(true);
     if (!warehouseId) { toast.error(t('stock.issue.err.warehouse')); return; }
-    if (!recipient) { toast.error(t('stock.issue.err.recipient')); return; }
+    if (type === 'USER' && !recipient) { toast.error(t('stock.issue.err.recipient')); return; }
+    if (type === 'WAREHOUSE' && !destinationWarehouseId) { toast.error(t('stock.issue.err.destination')); return; }
+    if (type === 'DEPARTMENT' && !departmentId) { toast.error(t('stock.issue.err.department')); return; }
     if (!filledLines.length) { toast.error(t('stock.issue.err.noLines')); return; }
     if (hasErrors) { toast.error(t('grn.err.fixLines')); return; }
     setSaving(true);
     try {
       const res = await stockIssueService.create({
-        warehouseId, recipientId: recipient.id, projectId: projectId || undefined, purpose,
+        destinationType: type, warehouseId,
+        recipientId: type !== 'WAREHOUSE' ? recipient?.id : undefined,
+        destinationWarehouseId: isTransfer ? destinationWarehouseId : undefined,
+        departmentId: type === 'DEPARTMENT' ? departmentId : undefined,
+        projectId: !isTransfer && projectId ? projectId : undefined, purpose,
         lines: lines.map((l, i) => ({ l, c: computed[i] })).filter(({ l }) => l.item)
           .map(({ l, c }) => (l.item.track_serials
             ? { stockItemId: l.item.id, unitIds: l.unitIds }
@@ -153,29 +191,75 @@ export default function StockIssueForm() {
       <p className="mb-6 text-sm text-gray-500">{t('stock.issue.newSubtitle')}</p>
 
       <form onSubmit={submit} className="space-y-6" noValidate>
+        <fieldset>
+          <legend className="mb-2 text-sm font-medium text-gray-700">{t('stock.issue.typeLabel')} *</legend>
+          <div className="grid gap-3 sm:grid-cols-3" role="radiogroup">
+            {ISSUE_TYPES.map(([key, Icon]) => (
+              <button key={key} type="button" role="radio" aria-checked={type === key} onClick={() => setType(key)} data-testid={`issue-type-${key}`}
+                className={`rounded-xl border-2 p-3 text-left transition ${type === key ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                <span className={`flex items-center gap-2 text-sm font-semibold ${type === key ? 'text-blue-800' : 'text-gray-800'}`}><Icon size={18} /> {t(`stock.issue.types.${key}`)}</span>
+                <span className="mt-1 block text-xs text-gray-500">{t(`stock.issue.typeHelp.${key}`)}</span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
         <div className="grid gap-4 md:grid-cols-2">
           <label className="text-sm">
-            <span className="mb-1 flex items-center gap-2 font-medium text-gray-700"><Warehouse size={15} /> {t('stock.warehouse')} *</span>
+            <span className="mb-1 flex items-center gap-2 font-medium text-gray-700"><Warehouse size={15} /> {isTransfer ? t('stock.issue.sourceWarehouse') : t('stock.warehouse')} *</span>
             {warehouses && warehouses.length === 0 ? (
               <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-red-700">{t('grn.err.NO_WAREHOUSE_ACCESS')}</p>
             ) : (
-              <select value={warehouseId} onChange={e => setWarehouseId(e.target.value)} className={`${inputCls} ${submitted && !warehouseId ? 'border-red-400' : ''}`} data-testid="issue-warehouse">
+              <SearchSelect value={warehouseId} onChange={e => setWarehouseId(e.target.value)} className={`${inputCls} ${submitted && !warehouseId ? 'border-red-400' : ''}`} data-testid="issue-warehouse">
                 {(warehouses || []).length !== 1 && <option value="">{t('grn.chooseWarehouse')}</option>}
                 {(warehouses || []).map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name} ({w.code})</option>)}
-              </select>
+              </SearchSelect>
             )}
           </label>
-          <div className="text-sm">
-            <span className="mb-1 flex items-center gap-2 font-medium text-gray-700"><User size={15} /> {t('stock.issue.recipient')} *</span>
-            <RecipientPicker value={recipient} onChange={setRecipient} />
-          </div>
-          <label className="text-sm">
-            <span className="mb-1 block font-medium text-gray-700">{t('stock.issue.project')}</span>
-            <select value={projectId} onChange={e => setProjectId(e.target.value)} className={inputCls}>
-              <option value="">—</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
-            </select>
-          </label>
+          {type === 'USER' && (
+            <div className="text-sm">
+              <span className="mb-1 flex items-center gap-2 font-medium text-gray-700"><User size={15} /> {t('stock.issue.recipient')} *</span>
+              <RecipientPicker value={recipient} onChange={setRecipient} />
+            </div>
+          )}
+          {type === 'WAREHOUSE' && (
+            <label className="text-sm">
+              <span className="mb-1 flex items-center gap-2 font-medium text-gray-700"><ArrowRightLeft size={15} /> {t('stock.issue.destinationWarehouse')} *</span>
+              <SearchSelect value={destinationWarehouseId} onChange={e => setDestinationWarehouseId(e.target.value)} data-testid="issue-destination-warehouse"
+                className={`${inputCls} ${submitted && !destinationWarehouseId ? 'border-red-400' : ''}`}>
+                <option value="">{t('stock.issue.chooseDestination')}</option>
+                {destinations.warehouses.filter(w => String(w.id) !== String(warehouseId)).map(w => (
+                  <option key={w.id} value={w.id}>{w.location_name} — {w.name} ({w.code})</option>
+                ))}
+              </SearchSelect>
+            </label>
+          )}
+          {type === 'DEPARTMENT' && (
+            <label className="text-sm">
+              <span className="mb-1 flex items-center gap-2 font-medium text-gray-700"><Building2 size={15} /> {t('stock.issue.department')} *</span>
+              <SearchSelect value={departmentId} onChange={e => setDepartmentId(e.target.value)} data-testid="issue-department"
+                className={`${inputCls} ${submitted && !departmentId ? 'border-red-400' : ''}`}>
+                <option value="">{t('stock.issue.chooseDepartment')}</option>
+                {destinations.departments.map(d => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
+              </SearchSelect>
+            </label>
+          )}
+          {type === 'DEPARTMENT' && (
+            <div className="text-sm">
+              <span className="mb-1 flex items-center gap-2 font-medium text-gray-700"><User size={15} /> {t('stock.issue.collectedBy')}</span>
+              <RecipientPicker value={recipient} onChange={setRecipient} />
+              {!recipient && <p className="mt-1 text-xs text-gray-500">{t('stock.issue.collectedByHint')}</p>}
+            </div>
+          )}
+          {!isTransfer && (
+            <label className="text-sm">
+              <span className="mb-1 block font-medium text-gray-700">{t('stock.issue.project')}</span>
+              <SearchSelect value={projectId} onChange={e => setProjectId(e.target.value)} className={inputCls}>
+                <option value="">—</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
+              </SearchSelect>
+            </label>
+          )}
           <label className="text-sm">
             <span className="mb-1 block font-medium text-gray-700">{t('stock.issue.purpose')}</span>
             <input value={purpose} onChange={e => setPurpose(e.target.value)} maxLength={2000} placeholder={t('stock.issue.purposePlaceholder')} className={inputCls} />
@@ -185,7 +269,7 @@ export default function StockIssueForm() {
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3">
             <h2 className="font-medium text-gray-700">{t('stock.issue.items')}</h2>
-            <span className="text-xs text-gray-500">{t('stock.issue.fefoHint')}</span>
+            <span className="text-xs text-gray-500">{isTransfer ? t('stock.issue.transferHint') : t('stock.issue.fefoHint')}</span>
           </div>
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-gray-500">
@@ -220,13 +304,13 @@ export default function StockIssueForm() {
                     <td className="px-3 py-2 text-right align-top font-medium">{l.item ? (l.balances ? `${fmtQty(c.available)} ${l.item.unit}` : '…') : '—'}</td>
                     <td className="px-3 py-2 align-top">
                       {l.item?.track_lots ? (
-                        <select value={l.lotId} onChange={e => updateLine(l.key, { lotId: e.target.value })} className={inputCls} aria-label={t('stock.lot')}>
+                        <SearchSelect value={l.lotId} onChange={e => updateLine(l.key, { lotId: e.target.value })} className={inputCls} aria-label={t('stock.lot')}>
                           <option value="">{t('stock.issue.autoLot')}</option>
                           {lots.map(b => {
                             const expired = b.expiry_date && String(b.expiry_date).slice(0, 10) < today();
-                            return <option key={b.lot_id} value={b.lot_id} disabled={expired}>{b.lot_number} — {fmtQty(b.quantity)}{b.expiry_date ? ` · ${fmtDate(b.expiry_date)}` : ''}{expired ? ` (${t('stock.expired')})` : ''}</option>;
+                            return <option key={b.lot_id} value={b.lot_id} disabled={expired && !isTransfer}>{b.lot_number} — {fmtQty(b.quantity)}{b.expiry_date ? ` · ${fmtDate(b.expiry_date)}` : ''}{expired ? ` (${t('stock.expired')})` : ''}</option>;
                           })}
-                        </select>
+                        </SearchSelect>
                       ) : <span className="text-gray-400">—</span>}
                     </td>
                     <td className="px-3 py-2 align-top">
@@ -238,8 +322,8 @@ export default function StockIssueForm() {
                             <ul className="max-h-40 overflow-auto rounded-lg border border-gray-200 text-xs" aria-label={t('stock.issue.chooseUnits')}>
                               {l.units.map(u => (
                                 <li key={u.id}>
-                                  <label className={`flex items-center gap-2 px-2 py-1 ${u.condition === 'GOOD' ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
-                                    <input type="checkbox" disabled={u.condition !== 'GOOD'} checked={l.unitIds.includes(u.id)}
+                                  <label className={`flex items-center gap-2 px-2 py-1 ${u.condition === 'GOOD' || isTransfer ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
+                                    <input type="checkbox" disabled={u.condition !== 'GOOD' && !isTransfer} checked={l.unitIds.includes(u.id)}
                                       onChange={e => updateLine(l.key, { unitIds: e.target.checked ? [...l.unitIds, u.id] : l.unitIds.filter(x => x !== u.id) })} />
                                     <span className="font-mono">{u.serial_number}</span>
                                     {u.asset_tag && <span className="text-gray-400">{u.asset_tag}</span>}
@@ -274,7 +358,7 @@ export default function StockIssueForm() {
         <div className="flex gap-3">
           <button type="button" onClick={() => navigate(-1)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50">{t('common.cancel')}</button>
           <button type="submit" disabled={saving || !warehouseId} className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-            <Save size={16} /> {saving ? t('po.saving') : t('stock.issue.save')}
+            <Save size={16} /> {saving ? t('po.saving') : isTransfer ? t('stock.issue.saveTransfer') : t('stock.issue.save')}
           </button>
         </div>
       </form>

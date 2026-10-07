@@ -38,6 +38,7 @@ import Modal from '../Common/Modal'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 import { t, withLabel } from '../../i18n'
+import SearchSelect from '../Common/SearchSelect'
 
 
 
@@ -363,7 +364,7 @@ export default function RequisitionList() {
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <select
+              <SearchSelect
                 value={filters.progress}
                 onChange={(e) => handleFilterChange('progress', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -373,8 +374,8 @@ export default function RequisitionList() {
                 {Object.entries(PROGRESS).map(([value, p]) => (
                   <option key={value} value={value}>{p.label}</option>
                 ))}
-              </select>
-              <select
+              </SearchSelect>
+              <SearchSelect
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -382,8 +383,8 @@ export default function RequisitionList() {
                 {requisitionService.getStatusOptions().map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
-              <select
+              </SearchSelect>
+              <SearchSelect
                 value={filters.priority}
                 onChange={(e) => handleFilterChange('priority', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -391,8 +392,8 @@ export default function RequisitionList() {
                 {priorityOptions().map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
-              <select
+              </SearchSelect>
+              <SearchSelect
                 value={filters.departmentId}
                 onChange={(e) => handleFilterChange('departmentId', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -401,7 +402,7 @@ export default function RequisitionList() {
                 {departmentOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
+              </SearchSelect>
               <input
                 type="date"
                 placeholder={t('requisitions.fromDate')}

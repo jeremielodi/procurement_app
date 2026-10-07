@@ -53,7 +53,7 @@ export function StockReturnList() {
                 <tr>
                   <th className="px-4 py-2">{t('stock.return.number')}</th>
                   <th className="px-4 py-2">{t('stock.mv.date')}</th>
-                  <th className="px-4 py-2">{t('stock.return.holder')}</th>
+                  <th className="px-4 py-2">{t('stock.return.holderType')}</th>
                   <th className="px-4 py-2">{t('stock.return.destination')}</th>
                   <th className="px-4 py-2">{t('stock.issue.items')}</th>
                   <th className="px-4 py-2">{t('stock.return.receivedBy')}</th>
@@ -64,7 +64,7 @@ export function StockReturnList() {
                   <tr key={r.id}>
                     <td className="px-4 py-2"><Link to={`/stock/returns/${r.id}`} className="font-mono font-semibold text-blue-600 hover:underline">{r.return_number}</Link></td>
                     <td className="whitespace-nowrap px-4 py-2">{new Date(r.received_at).toLocaleDateString(getLocale())}</td>
-                    <td className="px-4 py-2">{r.returned_by_name}</td>
+                    <td className="px-4 py-2">{r.department_name ? t('stock.equipment.departmentHolder', { name: r.department_name }) : r.returned_by_name}</td>
                     <td className="px-4 py-2">{r.warehouse_name}</td>
                     <td className="px-4 py-2">{t('stock.issue.lineCount', { count: r.line_count })}{r.lost_count > 0 && <span className="ml-2 text-xs text-red-600">{t('stock.return.lostCount', { count: r.lost_count })}</span>}</td>
                     <td className="px-4 py-2 text-gray-500">{r.received_by_name}</td>
@@ -92,7 +92,7 @@ export function StockReturnDetail() {
       <div className="rounded-xl border border-gray-200 bg-white p-5">
         <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900"><Undo2 className="text-blue-600" /> {ret.return_number}</h1>
         <p className="mt-1 text-sm text-gray-500">{fmtDateTime(ret.received_at)} · {t('stock.return.receivedByLine', { name: ret.received_by_name || '—', warehouse: ret.warehouse_name })}</p>
-        <p className="mt-2 text-sm"><span className="text-gray-500">{t('stock.return.holder')} :</span> <b>{ret.returned_by_name}</b> <span className="text-gray-500">{ret.returned_by_email}</span></p>
+        <p className="mt-2 text-sm"><span className="text-gray-500">{t('stock.return.holderType')} :</span> <b>{ret.department_name ? t('stock.equipment.departmentHolder', { name: ret.department_name }) : ret.returned_by_name}</b> <span className="text-gray-500">{ret.returned_by_email}</span></p>
         {ret.comment && <p className="mt-2 text-sm text-gray-700">{ret.comment}</p>}
       </div>
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">

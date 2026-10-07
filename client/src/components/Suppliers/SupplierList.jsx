@@ -37,6 +37,7 @@ import Modal from '../Common/Modal'
 import { useCurrency } from '../../contexts/EnterpriseContext'
 import toast from 'react-hot-toast'
 import { t } from '../../i18n'
+import SearchSelect from '../Common/SearchSelect'
 
 // Options des filtres (fonctions : libellés traduits à l'affichage)
 const statusOptions = () => [
@@ -335,7 +336,7 @@ export default function SupplierList() {
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <select
+              <SearchSelect
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -343,8 +344,8 @@ export default function SupplierList() {
                 {statusOptions().map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
-              <select
+              </SearchSelect>
+              <SearchSelect
                 value={filters.prequalified}
                 onChange={(e) => handleFilterChange('prequalified', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -352,8 +353,8 @@ export default function SupplierList() {
                 {prequalificationOptions().map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
-              <select
+              </SearchSelect>
+              <SearchSelect
                 value={filters.minRating}
                 onChange={(e) => handleFilterChange('minRating', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -361,7 +362,7 @@ export default function SupplierList() {
                 {ratingOptions().map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
+              </SearchSelect>
               <button
                 onClick={handleResetFilters}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"

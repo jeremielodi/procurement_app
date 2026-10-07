@@ -8,6 +8,7 @@ import { stockService, warehouseService } from '../../services/stockService';
 import { categoryService } from '../../services/referenceService';
 import { t, getLocale, useTranslation } from '../../i18n';
 import { usePermissions } from '../../hooks/usePermissions';
+import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
@@ -131,21 +132,21 @@ export default function StockOverview() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('stock.overview.search')} className={`${inputCls} w-full pl-9`} />
         </div>
-        <select value={filters.warehouseId} onChange={e => setFilter('warehouseId', e.target.value)} className={inputCls} aria-label={t('stock.warehouse')}>
+        <SearchSelect value={filters.warehouseId} onChange={e => setFilter('warehouseId', e.target.value)} className={inputCls} aria-label={t('stock.warehouse')}>
           <option value="">{t('stock.allWarehouses')}</option>
           {warehouses.map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name}</option>)}
-        </select>
-        <select value={filters.categoryId} onChange={e => setFilter('categoryId', e.target.value)} className={inputCls} aria-label={t('stock.category')}>
+        </SearchSelect>
+        <SearchSelect value={filters.categoryId} onChange={e => setFilter('categoryId', e.target.value)} className={inputCls} aria-label={t('stock.category')}>
           <option value="">{t('stock.allCategories')}</option>
           {categories.filter(c => c.is_stockable).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select value={filters.expiringWithinDays} onChange={e => setFilter('expiring', e.target.value)} className={inputCls} aria-label={t('stock.overview.expiryFilter')}>
+        </SearchSelect>
+        <SearchSelect value={filters.expiringWithinDays} onChange={e => setFilter('expiring', e.target.value)} className={inputCls} aria-label={t('stock.overview.expiryFilter')}>
           <option value="">{t('stock.overview.anyExpiry')}</option>
           <option value="0">{t('stock.overview.expiredOnly')}</option>
           <option value="30">{t('stock.overview.within', { days: 30 })}</option>
           <option value="90">{t('stock.overview.within', { days: 90 })}</option>
           <option value="180">{t('stock.overview.within', { days: 180 })}</option>
-        </select>
+        </SearchSelect>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">

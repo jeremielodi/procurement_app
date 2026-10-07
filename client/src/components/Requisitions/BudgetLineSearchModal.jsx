@@ -7,6 +7,7 @@ import { useCurrency } from '../../contexts/EnterpriseContext';
 import Modal from '../Common/Modal';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import { t } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, projectId }) {
   const { formatAmount } = useCurrency();
@@ -100,7 +101,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">{t('budgetSearch.fundingSource')}</label>
-                <select
+                <SearchSelect
                   value={filters.fundingSource}
                   onChange={(e) => setFilters({ ...filters, fundingSource: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -112,7 +113,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
                   <option value="Banque Mondiale">{t('budgetSearch.worldBank')}</option>
                   <option value="USAID">USAID</option>
                   <option value="GEF">GEF</option>
-                </select>
+                </SearchSelect>
               </div>
             </div>
           </div>

@@ -31,6 +31,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function RecentActivities({ activities = [], limit = 5 }) {
   const [expanded, setExpanded] = useState(false);
@@ -253,7 +254,7 @@ export default function RecentActivities({ activities = [], limit = 5 }) {
           <div className="flex flex-wrap items-center gap-2">
             {/* Filtre par action */}
             <div className="relative">
-              <select
+              <SearchSelect
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 className="appearance-none pl-3 pr-8 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -263,7 +264,7 @@ export default function RecentActivities({ activities = [], limit = 5 }) {
                     {action === 'all' ? 'Toutes les actions' : getActionLabel(action)}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
               <Filter className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
             </div>
 

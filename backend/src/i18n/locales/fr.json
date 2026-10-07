@@ -296,7 +296,13 @@
       "acknowledgedTitle": "Réception confirmée : {number}",
       "acknowledgedMessage": "{name} a confirmé la réception des articles du bon {number}.",
       "cancelledTitle": "Sortie annulée : {number}",
-      "cancelledMessage": "Le bon de sortie {number} a été annulé : les articles sont revenus en stock."
+      "cancelledMessage": "Le bon de sortie {number} a été annulé : les articles sont revenus en stock.",
+      "departmentIssuedTitle": "Sortie vers votre département : {number}",
+      "departmentIssuedMessage": "Des articles ont été sortis du stock pour le département {department} ({number}). Confirmez leur réception.",
+      "transferTitle": "Transfert entrant : {number}",
+      "transferMessage": "Des articles ont été transférés du dépôt {from} vers le dépôt {to} ({number}). Confirmez leur arrivée.",
+      "transferCancelledTitle": "Transfert annulé : {number}",
+      "transferCancelledMessage": "Le transfert {number} vers le dépôt {to} a été annulé : les articles sont revenus au dépôt {from}."
     },
     "stockReturn": {
       "title": "Retour enregistré : {number}",
@@ -487,7 +493,19 @@
       "recipientSignature": "Bénéficiaire (reçu conforme)",
       "signature": "Date et signature :",
       "acknowledgedOn": "Réception confirmée dans procureApp par {name} le {date}",
-      "cancelledOn": "Bon annulé par {name} le {date} — motif : {reason}. Les articles ont été remis en stock."
+      "cancelledOn": "Bon annulé par {name} le {date} — motif : {reason}. Les articles ont été remis en stock.",
+      "transferTitle": "BON DE TRANSFERT",
+      "destination": "Destination",
+      "destinationType": "Type de sortie",
+      "typeUSER": "Vers un employé",
+      "typeWAREHOUSE": "Transfert vers un dépôt",
+      "typeDEPARTMENT": "Vers un département",
+      "sourceWarehouse": "Dépôt d'origine",
+      "destinationWarehouse": "Dépôt de destination",
+      "department": "Département",
+      "collectedBy": "Retiré par",
+      "receiverSignature": "Réceptionnaire (reçu conforme)",
+      "transferCancelledOn": "Transfert annulé par {name} le {date} — motif : {reason}. Les articles sont revenus au dépôt d'origine."
     }
   },
   "stockExport": {

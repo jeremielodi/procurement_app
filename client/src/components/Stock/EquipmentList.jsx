@@ -10,6 +10,7 @@ import { equipmentService, stockItemService, warehouseService } from '../../serv
 import { usePermissions } from '../../hooks/usePermissions';
 import { MovementTable } from './StockMovements';
 import { t, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const STATUS_CLS = { IN_STOCK: 'bg-green-100 text-green-800', ASSIGNED: 'bg-blue-100 text-blue-800', LOST: 'bg-red-100 text-red-700', RETIRED: 'bg-gray-200 text-gray-600' };
@@ -110,10 +111,10 @@ export default function EquipmentList() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={filters.search} onChange={set('search')} placeholder={t('stock.equipment.search')} className={`${inputCls} pl-9`} />
         </div>
-        <select value={filters.stockItemId} onChange={set('stockItemId')} className={`${inputCls} w-auto`} aria-label={t('stock.item')}>
+        <SearchSelect value={filters.stockItemId} onChange={set('stockItemId')} className={`${inputCls} w-auto`} aria-label={t('stock.item')}>
           <option value="">{t('stock.equipment.allItems')}</option>
           {serialItems.map(i => <option key={i.id} value={i.id}>{i.code} — {i.name}</option>)}
-        </select>
+        </SearchSelect>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
@@ -140,7 +141,12 @@ export default function EquipmentList() {
                     <td className="px-4 py-2">{u.item_name}</td>
                     <td className="px-4 py-2"><UnitStatusBadge status={u.status} />{u.condition === 'DAMAGED' && <span className="ml-1 text-xs text-amber-700">{t('stock.equipment.condition.DAMAGED')}</span>}</td>
                     <td className="px-4 py-2">
-                      {u.status === 'ASSIGNED' ? (
+                      {u.status === 'ASSIGNED' && u.department_id ? (
+                        <>
+                          <b>{t('stock.equipment.departmentHolder', { name: u.department_name })}</b>
+                          {hasPermission('ISSUE_STOCK') && <Link to={`/stock/returns/new?departmentId=${u.department_id}`} className="ml-2 text-xs text-blue-600 hover:underline">{t('stock.equipment.recover')}</Link>}
+                        </>
+                      ) : u.status === 'ASSIGNED' ? (
                         <>
                           <b>{u.holder_name}</b>{u.holder_active === false && <span className="ml-1 rounded bg-red-50 px-1 text-xs text-red-700">{t('stock.equipment.holderInactive')}</span>}
                           {hasPermission('ISSUE_STOCK') && <Link to={`/stock/returns/new?userId=${u.holder_id}`} className="ml-2 text-xs text-blue-600 hover:underline">{t('stock.equipment.recover')}</Link>}
@@ -163,15 +169,15 @@ export default function EquipmentList() {
         {register && (
           <div className="space-y-3 text-sm">
             <p className="text-gray-600">{t('stock.equipment.registerHint')}</p>
-            <select value={register.stockItemId} onChange={e => setRegister({ ...register, stockItemId: e.target.value })} className={inputCls} aria-label={t('stock.item')}>
+            <SearchSelect value={register.stockItemId} onChange={e => setRegister({ ...register, stockItemId: e.target.value })} className={inputCls} aria-label={t('stock.item')}>
               <option value="">{t('stock.equipment.chooseItem')}</option>
               {serialItems.map(i => <option key={i.id} value={i.id}>{i.code} — {i.name}</option>)}
-            </select>
+            </SearchSelect>
             {serialItems.length === 0 && <p className="text-xs text-amber-700">{t('stock.equipment.noSerialItems')}</p>}
-            <select value={register.warehouseId} onChange={e => setRegister({ ...register, warehouseId: e.target.value })} className={inputCls} aria-label={t('stock.warehouse')}>
+            <SearchSelect value={register.warehouseId} onChange={e => setRegister({ ...register, warehouseId: e.target.value })} className={inputCls} aria-label={t('stock.warehouse')}>
               <option value="">{t('grn.chooseWarehouse')}</option>
               {warehouses.map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name}</option>)}
-            </select>
+            </SearchSelect>
             <textarea rows={8} value={register.text} onChange={e => setRegister({ ...register, text: e.target.value })}
               placeholder={t('grn.serialsPlaceholder')} aria-label={t('grn.serials')} className={`${inputCls} font-mono`} />
             <p className="text-xs text-gray-500">{t('stock.equipment.lineCount', { count: register.text.split(/\r?\n/).filter(s => s.trim()).length })}</p>
@@ -186,7 +192,7 @@ export default function EquipmentList() {
               <UnitStatusBadge status={detail.status} />
               <span>{t(`stock.equipment.condition.${detail.condition}`)}</span>
               {detail.asset_tag && <span className="font-mono text-gray-500">{detail.asset_tag}</span>}
-              <span className="text-gray-500">{detail.status === 'ASSIGNED' ? t('stock.equipment.heldBy', { name: detail.holder_name }) : detail.warehouse_name}</span>
+              <span className="text-gray-500">{detail.status === 'ASSIGNED' ? t('stock.equipment.heldBy', { name: detail.department_name ? t('stock.equipment.departmentHolder', { name: detail.department_name }) : detail.holder_name }) : detail.warehouse_name}</span>
             </div>
             {detail.notes && <p className="rounded bg-gray-50 p-2 text-gray-700">{detail.notes}</p>}
             {detail.status === 'IN_STOCK' && hasPermission('ISSUE_STOCK') && (

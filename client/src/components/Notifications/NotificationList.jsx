@@ -22,6 +22,7 @@ import { t } from '../../i18n';
 import { getDateFnsLocale } from '../../i18n/dateFns';
 import toast from 'react-hot-toast';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import SearchSelect from '../Common/SearchSelect';
 
 const getNotificationIcon = (type) => {
   switch (type) {
@@ -240,7 +241,7 @@ export default function NotificationList() {
           
           <div className="flex items-center gap-2 ml-auto">
             <Filter size={16} className="text-gray-400" />
-            <select
+            <SearchSelect
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
               className="px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -249,7 +250,7 @@ export default function NotificationList() {
               {notificationTypes.map(type => (
                 <option key={type} value={type}>{type}</option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
         </div>
       </div>

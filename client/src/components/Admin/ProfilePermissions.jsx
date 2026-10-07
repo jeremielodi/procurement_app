@@ -5,6 +5,7 @@ import { Check, X, Search, Shield, Lock, Unlock } from 'lucide-react';
 import { profileService } from '../../services/profileService';
 import toast from 'react-hot-toast';
 import { t } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function ProfilePermissions({ profile, onClose, readOnly = false }) {
   const queryClient = useQueryClient();
@@ -101,7 +102,7 @@ export default function ProfilePermissions({ profile, onClose, readOnly = false 
             />
           </div>
         </div>
-        <select
+        <SearchSelect
           value={selectedResource}
           onChange={(e) => setSelectedResource(e.target.value)}
           className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -110,7 +111,7 @@ export default function ProfilePermissions({ profile, onClose, readOnly = false 
           {resources.map(resource => (
             <option key={resource} value={resource}>{resource}</option>
           ))}
-        </select>
+        </SearchSelect>
       </div>
 
       {/* Résumé */}

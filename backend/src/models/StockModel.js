@@ -70,6 +70,9 @@ class StockModel {
       LEFT JOIN purchase_orders po ON po.id = g.po_id
       LEFT JOIN stock_issues sis ON m.source_type = 'ISSUE' AND sis.id::text = m.source_id
       LEFT JOIN users ru ON ru.id = sis.recipient_id
+      LEFT JOIN departments sd ON sd.id = sis.department_id
+      LEFT JOIN warehouses sdw ON sdw.id = sis.destination_warehouse_id
+      LEFT JOIN warehouses ssw ON ssw.id = sis.warehouse_id
       LEFT JOIN stock_units su ON su.id = m.unit_id
       LEFT JOIN stock_returns sr ON m.source_type = 'RETURN' AND sr.id::text = m.source_id
       ${where}`;
@@ -82,7 +85,14 @@ class StockModel {
               w.id AS warehouse_id, w.code AS warehouse_code, w.name AS warehouse_name,
               lt.id AS lot_id, lt.lot_number, lt.expiry_date,
               g.grn_number, po.id AS po_id, po.po_number,
-              sis.issue_number, TRIM(COALESCE(ru.first_name, '') || ' ' || COALESCE(ru.last_name, '')) AS recipient_name,
+              sis.issue_number, sis.destination_type,
+              -- Destination de la sortie ; transfert (et son annulation) : l'autre dépôt du mouvement
+              CASE
+                WHEN sis.destination_type = 'WAREHOUSE' AND m.warehouse_id = sis.destination_warehouse_id THEN ssw.name
+                WHEN sis.destination_type = 'WAREHOUSE' THEN sdw.name
+                WHEN sis.destination_type = 'DEPARTMENT' THEN sd.name
+                ELSE TRIM(COALESCE(ru.first_name, '') || ' ' || COALESCE(ru.last_name, ''))
+              END AS recipient_name,
               su.serial_number, sr.return_number,
               TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS performed_by_name
        ${from}

@@ -44,6 +44,7 @@ import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
 import { formatDateTime } from '../../utils/formatters'
 import toast from 'react-hot-toast'
+import SearchSelect from '../Common/SearchSelect'
 
 export default function RequisitionWorkflow() {
   const { id } = useParams()
@@ -531,7 +532,7 @@ export default function RequisitionWorkflow() {
                     {config.label || key}
                   </label>
                   {config.type === 'boolean' ? (
-                    <select
+                    <SearchSelect
                       value={taskVariables[key] || ''}
                       onChange={(e) => setTaskVariables({...taskVariables, [key]: e.target.value === 'true'})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
@@ -539,7 +540,7 @@ export default function RequisitionWorkflow() {
                       <option value="">Sélectionner</option>
                       <option value="true">Oui</option>
                       <option value="false">Non</option>
-                    </select>
+                    </SearchSelect>
                   ) : config.type === 'number' ? (
                     <input
                       type="number"

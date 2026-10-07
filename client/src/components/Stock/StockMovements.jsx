@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { History, RefreshCw, Search } from 'lucide-react';
 import { stockService, warehouseService } from '../../services/stockService';
 import { t, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4, signDisplay: 'exceptZero' }).format(Number(n) || 0);
@@ -45,7 +46,7 @@ export function MovementTable({ rows, showItem = true }) {
               {m.source_type === 'GRN' && m.grn_number
                 ? <><Link to={`/goods-receipts/${m.source_id}`} className="text-blue-600 hover:underline">{m.grn_number}</Link>{m.po_number && <span className="text-gray-400"> · {m.po_number}</span>}</>
                 : m.source_type === 'ISSUE' && m.issue_number
-                  ? <><Link to={`/stock/issues/${m.source_id}`} className="text-blue-600 hover:underline">{m.issue_number}</Link>{m.recipient_name && <span className="text-gray-400"> → {m.recipient_name}</span>}</>
+                  ? <><Link to={`/stock/issues/${m.source_id}`} className="text-blue-600 hover:underline">{m.issue_number}</Link>{m.recipient_name && <span className="text-gray-400"> {Number(m.quantity) > 0 && m.movement_type === 'TRANSFER_IN' ? '←' : '→'} {m.recipient_name}</span>}</>
                   : m.source_type === 'RETURN' && m.return_number
                     ? <Link to={`/stock/returns/${m.source_id}`} className="text-blue-600 hover:underline">{m.return_number}</Link>
                     : (m.comment || '—')}
@@ -94,14 +95,14 @@ export default function StockMovements() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={filters.search} onChange={set('search')} placeholder={t('stock.mv.search')} className={`${inputCls} w-full pl-9`} />
         </div>
-        <select value={filters.warehouseId} onChange={set('warehouseId')} className={inputCls} aria-label={t('stock.warehouse')}>
+        <SearchSelect value={filters.warehouseId} onChange={set('warehouseId')} className={inputCls} aria-label={t('stock.warehouse')}>
           <option value="">{t('stock.allWarehouses')}</option>
           {warehouses.map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name}</option>)}
-        </select>
-        <select value={filters.type} onChange={set('type')} className={inputCls} aria-label={t('stock.mv.type')}>
+        </SearchSelect>
+        <SearchSelect value={filters.type} onChange={set('type')} className={inputCls} aria-label={t('stock.mv.type')}>
           <option value="">{t('stock.mv.allTypes')}</option>
           {TYPES.map(tp => <option key={tp} value={tp}>{t(`stock.mvType.${tp}`)}</option>)}
-        </select>
+        </SearchSelect>
         <input type="date" value={filters.fromDate} onChange={set('fromDate')} className={inputCls} aria-label={t('stock.mv.from')} title={t('stock.mv.from')} />
         <input type="date" value={filters.toDate} onChange={set('toDate')} className={inputCls} aria-label={t('stock.mv.to')} title={t('stock.mv.to')} />
       </div>

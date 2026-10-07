@@ -5,6 +5,7 @@ import { UserPlus, UserMinus, Users, Calendar, Building2, User } from 'lucide-re
 import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
 import { t, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function ProjectDetail({ project, onClose }) {
   const queryClient = useQueryClient();
@@ -90,7 +91,7 @@ export default function ProjectDetail({ project, onClose }) {
 
         {showAddMember && (
           <div className="bg-gray-50 rounded-lg p-4 mb-4 flex gap-3">
-            <select
+            <SearchSelect
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
               className="flex-1 px-3 py-2 border rounded-lg"
@@ -103,14 +104,14 @@ export default function ProjectDetail({ project, onClose }) {
                     {user.first_name} {user.last_name} ({user.email})
                   </option>
                 ))}
-            </select>
-            <select
+            </SearchSelect>
+            <SearchSelect
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
               className="w-32 px-3 py-2 border rounded-lg"
             >
               {['MEMBER', 'CONTRIBUTOR', 'OBSERVER'].map(r => <option key={r} value={r}>{t(`projects.roles.${r}`)}</option>)}
-            </select>
+            </SearchSelect>
             <button
               onClick={() => addMemberMutation.mutate({ projectId: project.id, userId: selectedUser, role: selectedRole })}
               disabled={!selectedUser || addMemberMutation.isPending}

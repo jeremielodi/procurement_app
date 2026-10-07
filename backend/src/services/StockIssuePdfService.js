@@ -50,7 +50,7 @@ const TEMPLATE = `<!doctype html>
       <div><h2>{{brand.name}}</h2><div>{{#if brand.address}}{{brand.address}}<br>{{/if}}{{#if brand.phone}}{{brand.phone}}{{/if}}{{#if brand.email}} · {{brand.email}}{{/if}}</div></div>
     </div>
     <div class="title">
-      <h1>{{L.title}}</h1>
+      <h1>{{#if transfer}}{{L.transferTitle}}{{else}}{{L.title}}{{/if}}</h1>
       <div class="num">{{issue.issue_number}}</div>
       <div>{{L.date}} : <b>{{sis_datetime issue.issued_at}}</b></div>
       {{#if cancelled}}<div class="cancelled">{{L.cancelled}}</div>{{/if}}
@@ -59,13 +59,22 @@ const TEMPLATE = `<!doctype html>
 
   <div class="grid">
     <div class="box">
-      <h3>{{L.recipient}}</h3>
+      <h3>{{L.destination}}</h3>
+      <div class="row"><span>{{L.destinationType}}</span><b>{{T.destinationType}}</b></div>
+      {{#if transfer}}
+      <div class="row"><span>{{L.destinationWarehouse}}</span><b>{{issue.destination_warehouse_name}} ({{issue.destination_warehouse_code}})</b></div>
+      <div class="row"><span>{{L.location}}</span><span>{{issue.destination_warehouse_location}}</span></div>
+      {{else}}{{#if department}}
+      <div class="row"><span>{{L.department}}</span><b>{{issue.department_code}} — {{issue.department_name}}</b></div>
+      {{#if issue.recipient_id}}<div class="row"><span>{{L.collectedBy}}</span><span>{{issue.recipient_name}}</span></div>{{/if}}
+      {{else}}
       <div class="row"><span>{{L.name}}</span><b>{{issue.recipient_name}}</b></div>
       <div class="row"><span>{{L.email}}</span><span>{{issue.recipient_email}}</span></div>
+      {{/if}}{{/if}}
       {{#if issue.project_name}}<div class="row"><span>{{L.project}}</span><span>{{issue.project_code}} — {{issue.project_name}}</span></div>{{/if}}
     </div>
     <div class="box">
-      <h3>{{L.warehouse}}</h3>
+      <h3>{{#if transfer}}{{L.sourceWarehouse}}{{else}}{{L.warehouse}}{{/if}}</h3>
       <div class="row"><span>{{L.warehouse}}</span><b>{{issue.warehouse_name}} ({{issue.warehouse_code}})</b></div>
       <div class="row"><span>{{L.location}}</span><span>{{issue.warehouse_location}}</span></div>
       <div class="row"><span>{{L.issuedBy}}</span><span>{{issue.issued_by_name}}</span></div>
@@ -98,7 +107,7 @@ const TEMPLATE = `<!doctype html>
 
   <div class="signatures">
     <div class="sig">{{L.storekeeper}}<b>{{issue.issued_by_name}}</b>{{L.signature}}</div>
-    <div class="sig">{{L.recipientSignature}}<b>{{issue.recipient_name}}</b>{{L.signature}}</div>
+    <div class="sig">{{#if transfer}}{{L.receiverSignature}}<b>{{issue.destination_warehouse_name}}</b>{{else}}{{L.recipientSignature}}<b>{{T.receiverName}}</b>{{/if}}{{L.signature}}</div>
   </div>
 </body></html>`;
 
@@ -110,12 +119,18 @@ class StockIssuePdfService {
     const ctx = pdfContext(lang, 'stockIssue');
     const brand = await getBranding(issue.enterprise_id);
     const dt = (d) => new Date(d).toLocaleString(ctx.locale, { dateStyle: 'short', timeStyle: 'short' });
+    const transfer = issue.destination_type === 'WAREHOUSE';
+    const department = issue.destination_type === 'DEPARTMENT';
     const T = {
-      acknowledged: issue.acknowledged_at ? ctx.t('pdf.stockIssue.acknowledgedOn', { name: issue.recipient_name, date: dt(issue.acknowledged_at) }) : '',
+      destinationType: ctx.t(`pdf.stockIssue.type${issue.destination_type || 'USER'}`),
+      receiverName: department && !issue.recipient_id ? issue.department_name : issue.recipient_name,
+      acknowledged: issue.acknowledged_at
+        ? ctx.t('pdf.stockIssue.acknowledgedOn', { name: issue.acknowledged_by_name || issue.recipient_name || '—', date: dt(issue.acknowledged_at) }) : '',
       cancelled: issue.status === 'CANCELLED'
-        ? ctx.t('pdf.stockIssue.cancelledOn', { name: issue.cancelled_by_name || '—', date: dt(issue.cancelled_at), reason: issue.cancel_reason || '—' }) : '',
+        ? ctx.t(transfer ? 'pdf.stockIssue.transferCancelledOn' : 'pdf.stockIssue.cancelledOn',
+          { name: issue.cancelled_by_name || '—', date: dt(issue.cancelled_at), reason: issue.cancel_reason || '—' }) : '',
     };
-    const html = Handlebars.compile(TEMPLATE)({ issue, brand, cancelled: issue.status === 'CANCELLED', T, ...ctx });
+    const html = Handlebars.compile(TEMPLATE)({ issue, brand, cancelled: issue.status === 'CANCELLED', transfer, department, T, ...ctx });
     const browser = await puppeteer.launch(getBrowserOptions());
     try {
       const page = await browser.newPage();

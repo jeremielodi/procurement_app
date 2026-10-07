@@ -10,6 +10,7 @@ import LoadingSpinner from '../Common/LoadingSpinner'
 import toast from 'react-hot-toast'
 import { t } from '../../i18n'
 import { DeliveryStatusBadge } from './PODeliveryTracking'
+import SearchSelect from '../Common/SearchSelect'
 
 export default function POList() {
   const queryClient = useQueryClient()
@@ -95,7 +96,7 @@ export default function POList() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <select
+          <SearchSelect
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -104,7 +105,7 @@ export default function POList() {
             {['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'COMPLETED'].map(s => (
               <option key={s} value={s}>{t(`badge.${s}`)}</option>
             ))}
-          </select>
+          </SearchSelect>
         </div>
       </div>
 

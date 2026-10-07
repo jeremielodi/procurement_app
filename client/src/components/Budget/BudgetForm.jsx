@@ -5,6 +5,7 @@ import { budgetService } from '../../services/budgetService';
 import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
 import { t } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function BudgetForm({ budget, onClose }) {
   const [formData, setFormData] = useState({
@@ -121,7 +122,7 @@ export default function BudgetForm({ budget, onClose }) {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {t('budget.fundingSource')}
           </label>
-          <select
+          <SearchSelect
             value={formData.fundingSource}
             onChange={(e) => setFormData({ ...formData, fundingSource: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -141,7 +142,7 @@ export default function BudgetForm({ budget, onClose }) {
                 <option key={source} value={source}>{source}</option>
               )
             ))}
-          </select>
+          </SearchSelect>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -174,7 +175,7 @@ export default function BudgetForm({ budget, onClose }) {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {t('budget.linkedProject')}
           </label>
-          <select
+          <SearchSelect
             value={formData.projectId}
             onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -190,7 +191,7 @@ export default function BudgetForm({ budget, onClose }) {
                 </option>
               ))
             )}
-          </select>
+          </SearchSelect>
           {!projectsLoading && projects.length === 0 && (
             <p className="text-xs text-amber-600 mt-1">
               {t('budget.noActiveProject')} <a href="/projects" className="text-blue-600 hover:underline">{t('budget.createProject')}</a> {t('budget.first')}

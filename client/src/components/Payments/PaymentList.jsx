@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { paymentService } from '../../services/paymentService';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { t, withLabel, labelMap, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const STATUS_LABELS = withLabel('paymentStatus', {
   PENDING:    { cls: 'bg-yellow-100 text-yellow-700' },
@@ -90,11 +91,11 @@ export default function PaymentList() {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+        <SearchSelect value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
           <option value="">{t('invoice.allStatuses')}</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
+        </SearchSelect>
         <button onClick={load} className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
           <RefreshCw size={16} className={loading ? 'animate-spin text-blue-500' : 'text-gray-500'} />
         </button>

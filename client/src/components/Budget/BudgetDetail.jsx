@@ -9,6 +9,7 @@ import { purchaseOrderService } from '../../services/purchaseOrderService';
 import Modal from '../Common/Modal';
 import toast from 'react-hot-toast';
 import { t, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function BudgetDetail({ budget, onClose }) {
   const { formatAmount } = useCurrency();
@@ -196,7 +197,7 @@ export default function BudgetDetail({ budget, onClose }) {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('budget.linkedRequisition')}</label>
-            <select
+            <SearchSelect
               value={expenseForm.requisitionId}
               onChange={(e) => setExpenseForm({ ...expenseForm, requisitionId: e.target.value, purchaseOrderId: '' })}
               className="w-full px-3 py-2 border rounded-lg"
@@ -205,11 +206,11 @@ export default function BudgetDetail({ budget, onClose }) {
               {requisitionsData?.data?.map((req) => (
                 <option key={req.id} value={req.id}>{req.requisition_number} - {req.title}</option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('budget.linkedOrder')}</label>
-            <select
+            <SearchSelect
               value={expenseForm.purchaseOrderId}
               onChange={(e) => setExpenseForm({ ...expenseForm, purchaseOrderId: e.target.value, requisitionId: '' })}
               className="w-full px-3 py-2 border rounded-lg"
@@ -218,7 +219,7 @@ export default function BudgetDetail({ budget, onClose }) {
               {purchaseOrdersData?.data?.map((po) => (
                 <option key={po.id} value={po.id}>{po.po_number} - {po.supplier_name}</option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
         </div>
       </Modal>

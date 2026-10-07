@@ -5,6 +5,7 @@ import { departmentService } from '../../services/departmentService';
 import { AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { t } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function DepartmentForm({ department, onClose }) {
   const [formData, setFormData] = useState({
@@ -153,7 +154,7 @@ export default function DepartmentForm({ department, onClose }) {
         <label className="block text-sm font-medium text-gray-700 mb-1">
           {t('departments.manager')} <span className="text-red-500">*</span>
         </label>
-        <select
+        <SearchSelect
           value={formData.managerId}
           onChange={(e) => handleChange('managerId', e.target.value)}
           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
@@ -171,7 +172,7 @@ export default function DepartmentForm({ department, onClose }) {
               </option>
             ))
           )}
-        </select>
+        </SearchSelect>
         {errors.managerId && (
           <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
             <AlertCircle size={14} />

@@ -9,6 +9,7 @@ import ProjectForm from './ProjectForm';
 import ProjectDetail from './ProjectDetail';
 import toast from 'react-hot-toast';
 import { t, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function ProjectList() {
   const queryClient = useQueryClient();
@@ -84,14 +85,14 @@ export default function ProjectList() {
             />
           </div>
         </div>
-        <select
+        <SearchSelect
           value={status}
           onChange={(e) => setStatus(e.target.value)}
           className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
         >
           <option value="all">{t('requisitions.allStatuses')}</option>
           {['ACTIVE', 'COMPLETED', 'ON_HOLD', 'CANCELLED'].map(s => <option key={s} value={s}>{t(`projects.status.${s}`)}</option>)}
-        </select>
+        </SearchSelect>
       </div>
 
       {/* Liste */}

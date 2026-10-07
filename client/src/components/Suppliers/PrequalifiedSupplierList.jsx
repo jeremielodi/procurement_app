@@ -8,6 +8,7 @@ import { supplierService } from '../../services/supplierService';
 import { locationService, categoryService } from '../../services/referenceService';
 import { SUPPLIER_TYPE_LABELS, downloadBlob } from '../../utils/supplierDocs';
 import { t, getLocale, useTranslation } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const selectCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white';
 
@@ -69,19 +70,19 @@ export default function PrequalifiedSupplierList() {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('prequal.searchPlaceholder')}
             className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm" />
         </div>
-        <select className={selectCls} value={filters.categoryId} onChange={set('categoryId')} aria-label={t('prequal.category')}>
+        <SearchSelect className={selectCls} value={filters.categoryId} onChange={set('categoryId')} aria-label={t('prequal.category')}>
           <option value="">{t('prequal.allCategories')}</option>
           {refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select className={selectCls} value={filters.locationId} onChange={set('locationId')} aria-label={t('prequal.location')}>
+        </SearchSelect>
+        <SearchSelect className={selectCls} value={filters.locationId} onChange={set('locationId')} aria-label={t('prequal.location')}>
           <option value="">{t('prequal.allLocations')}</option>
           {refs.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-        </select>
-        <select className={selectCls} value={filters.supplierType} onChange={set('supplierType')} aria-label={t('prequal.type_')}>
+        </SearchSelect>
+        <SearchSelect className={selectCls} value={filters.supplierType} onChange={set('supplierType')} aria-label={t('prequal.type_')}>
           <option value="">{t('prequal.allTypes')}</option>
           <option value="COMPANY">{t('prequal.companies')}</option>
           <option value="INDIVIDUAL">{t('prequal.individuals')}</option>
-        </select>
+        </SearchSelect>
       </div>
 
       <p className="text-sm text-gray-600">{t('prequal.counts', { suppliers: supplierCount, rows: rows.length })}</p>

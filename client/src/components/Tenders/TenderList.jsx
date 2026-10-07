@@ -5,6 +5,7 @@ import { Gavel, Plus, Search, RefreshCw, Eye, Users } from 'lucide-react';
 import { tenderService } from '../../services/tenderService';
 import { TENDER_STATUS, fmtDateTime, timeLeft } from '../../utils/tenderStatus';
 import { t } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function TenderList() {
   const navigate = useNavigate();
@@ -56,11 +57,11 @@ export default function TenderList() {
             onChange={e => setSearch(e.target.value)}
           />
         </form>
-        <select value={status} onChange={e => setStatus(e.target.value)}
+        <SearchSelect value={status} onChange={e => setStatus(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">{t('requisitions.allStatuses')}</option>
           {Object.entries(TENDER_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
+        </SearchSelect>
         <button onClick={load} className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
           <RefreshCw size={16} className={loading ? 'animate-spin text-blue-500' : 'text-gray-500'} />
         </button>

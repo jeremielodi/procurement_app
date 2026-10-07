@@ -565,6 +565,7 @@ router.get('/stock/movements', authenticate, hasPermission('VIEW_STOCK'), st.mov
 // Sorties de stock vers un utilisateur (bons de sortie)
 // Consultation : VIEW_STOCK, ou le bénéficiaire pour ses propres bons (contrôlé dans le contrôleur)
 router.get('/stock-issues/recipients', authenticate, hasPermission('ISSUE_STOCK'), stockIssueController.recipients);
+router.get('/stock-issues/destinations', authenticate, hasPermission('ISSUE_STOCK'), stockIssueController.destinations);
 router.get('/stock-issues', authenticate, stockIssueController.list);
 router.get('/stock-issues/:id/pdf', authenticate, stockIssueController.pdf);
 router.get('/stock-issues/:id', authenticate, stockIssueController.get);

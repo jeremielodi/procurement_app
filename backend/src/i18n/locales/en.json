@@ -296,7 +296,13 @@
       "acknowledgedTitle": "Receipt confirmed: {number}",
       "acknowledgedMessage": "{name} confirmed receipt of the items of note {number}.",
       "cancelledTitle": "Issue cancelled: {number}",
-      "cancelledMessage": "Stock issue note {number} was cancelled: the items are back in stock."
+      "cancelledMessage": "Stock issue note {number} was cancelled: the items are back in stock.",
+      "departmentIssuedTitle": "Issue to your department: {number}",
+      "departmentIssuedMessage": "Items were issued from stock to the {department} department ({number}). Please confirm receipt.",
+      "transferTitle": "Incoming transfer: {number}",
+      "transferMessage": "Items were transferred from warehouse {from} to warehouse {to} ({number}). Please confirm their arrival.",
+      "transferCancelledTitle": "Transfer cancelled: {number}",
+      "transferCancelledMessage": "Transfer {number} to warehouse {to} was cancelled: the items went back to warehouse {from}."
     },
     "stockReturn": {
       "title": "Return recorded: {number}",
@@ -487,7 +493,19 @@
       "recipientSignature": "Recipient (received in good order)",
       "signature": "Date and signature:",
       "acknowledgedOn": "Receipt confirmed in procureApp by {name} on {date}",
-      "cancelledOn": "Note cancelled by {name} on {date} — reason: {reason}. The items were returned to stock."
+      "cancelledOn": "Note cancelled by {name} on {date} — reason: {reason}. The items were returned to stock.",
+      "transferTitle": "TRANSFER NOTE",
+      "destination": "Destination",
+      "destinationType": "Exit type",
+      "typeUSER": "To an employee",
+      "typeWAREHOUSE": "Transfer to a warehouse",
+      "typeDEPARTMENT": "To a department",
+      "sourceWarehouse": "Source warehouse",
+      "destinationWarehouse": "Destination warehouse",
+      "department": "Department",
+      "collectedBy": "Collected by",
+      "receiverSignature": "Receiver (received in good order)",
+      "transferCancelledOn": "Transfer cancelled by {name} on {date} — reason: {reason}. The items went back to the source warehouse."
     }
   },
   "stockExport": {

@@ -43,6 +43,8 @@ export const stockIssueService = {
   list: (params = {}) => api.get('/stock-issues', { params }).then(data),
   get: (id) => api.get(`/stock-issues/${id}`).then(data),
   recipients: (q) => api.get('/stock-issues/recipients', { params: { q } }).then(data),
+  // Dépôts (transfert) et départements actifs de l'entreprise
+  destinations: () => api.get('/stock-issues/destinations').then(data),
   // Erreurs métier (stock insuffisant, dépôt…) affichées par le formulaire
   create: (payload) => api.post('/stock-issues', payload, { skipErrorToast: true }).then(data),
   acknowledge: (id, comment) => api.post(`/stock-issues/${id}/acknowledge`, { comment }).then(data),
@@ -59,6 +61,7 @@ export const equipmentService = {
   updateUnit: (id, payload) => api.put(`/stock-units/${id}`, payload).then(data),
   // { data: lignes détenues, user: { id, first_name, last_name, email, is_active } }
   holdings: (userId) => api.get('/stock-holdings', { params: { userId } }).then(data),
+  departmentHoldings: (departmentId) => api.get('/stock-holdings', { params: { departmentId } }).then(data),
   myHoldings: () => api.get('/stock-holdings/mine').then(data),
 };
 

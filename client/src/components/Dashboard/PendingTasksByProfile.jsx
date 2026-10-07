@@ -11,6 +11,7 @@ import { dashboardService } from '../../services/dashboardService';
 import { projectService } from '../../services/projectService';
 import { usePermissions } from '../../hooks/usePermissions';
 import { t, getLocale, useTranslation } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const BAR_COLOR = '#2563EB'; // bleu de l'application (série unique)
 const STATUS = {
@@ -134,11 +135,11 @@ export default function PendingTasksByProfile() {
         </div>
         <div className="flex items-center gap-2">
           {canFilterProjects && (
-            <select value={projectId} onChange={e => setProjectId(e.target.value)} aria-label={t('dashboard.pending.filterProject')}
+            <SearchSelect value={projectId} onChange={e => setProjectId(e.target.value)} aria-label={t('dashboard.pending.filterProject')}
               className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[260px]">
               <option value="">{t('dashboard.pending.allProjects')}</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.code ? `${p.code} — ` : ''}{p.name}</option>)}
-            </select>
+            </SearchSelect>
           )}
           <button type="button" onClick={() => refetch()} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" title={t('common.refresh')}>
             <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />

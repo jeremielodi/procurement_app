@@ -7,6 +7,7 @@ import { warehouseService } from '../../services/stockService';
 import api from '../../services/api';
 import CatalogAutocomplete from '../Stock/CatalogAutocomplete';
 import { t, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const EPS = 1e-9;
 const toNum = (v) => {
@@ -212,14 +213,14 @@ export default function GRNForm() {
                 <p className="flex items-start gap-2 text-red-700"><AlertTriangle size={16} className="mt-0.5 shrink-0" /> {t('grn.err.NO_WAREHOUSE_ACCESS')}</p>
               ) : (
                 <>
-                  <select id="grn-warehouse" value={warehouseId} onChange={e => setWarehouseId(e.target.value)}
+                  <SearchSelect id="grn-warehouse" value={warehouseId} onChange={e => setWarehouseId(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     data-testid="grn-warehouse">
                     {warehouses.length > 1 && <option value="">{t('grn.chooseWarehouse')}</option>}
                     {warehouses.map(w => (
                       <option key={w.id} value={w.id}>{w.location_name} — {w.name} ({w.code})</option>
                     ))}
-                  </select>
+                  </SearchSelect>
                   <p className="mt-1 text-xs text-gray-500">
                     {warehouses.length > 1 ? t('grn.warehouseChoiceHint') : t('grn.warehouseSingleHint')}
                   </p>

@@ -5,8 +5,10 @@ import { Link } from 'react-router-dom';
 import { PackageMinus, Plus, RefreshCw, Search, Inbox } from 'lucide-react';
 import { stockIssueService, warehouseService, equipmentService } from '../../services/stockService';
 import { usePermissions } from '../../hooks/usePermissions';
-import { IssueStatusBadge } from './StockIssueDetail';
+import { IssueStatusBadge, IssueTypeBadge } from './StockIssueDetail';
+import { ISSUE_TYPES } from './StockIssueForm';
 import { t, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -16,7 +18,7 @@ export default function StockIssueList({ mine = false }) {
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({});
   const [warehouses, setWarehouses] = useState([]);
-  const [filters, setFilters] = useState({ search: '', warehouseId: '', status: '' });
+  const [filters, setFilters] = useState({ search: '', warehouseId: '', status: '', destinationType: '' });
   const [debounced, setDebounced] = useState(filters);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -85,16 +87,22 @@ export default function StockIssueList({ mine = false }) {
           <input value={filters.search} onChange={set('search')} placeholder={t('stock.issue.search')} className={`${inputCls} w-full pl-9`} />
         </div>
         {!mine && (
-          <select value={filters.warehouseId} onChange={set('warehouseId')} className={inputCls} aria-label={t('stock.warehouse')}>
+          <SearchSelect value={filters.destinationType} onChange={set('destinationType')} className={inputCls} aria-label={t('stock.issue.typeLabel')} data-testid="issue-type-filter">
+            <option value="">{t('stock.issue.allTypes')}</option>
+            {ISSUE_TYPES.map(([k]) => <option key={k} value={k}>{t(`stock.issue.types.${k}`)}</option>)}
+          </SearchSelect>
+        )}
+        {!mine && (
+          <SearchSelect value={filters.warehouseId} onChange={set('warehouseId')} className={inputCls} aria-label={t('stock.warehouse')}>
             <option value="">{t('stock.allWarehouses')}</option>
             {warehouses.map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name}</option>)}
-          </select>
+          </SearchSelect>
         )}
-        <select value={filters.status} onChange={set('status')} className={inputCls} aria-label={t('common.status')}>
+        <SearchSelect value={filters.status} onChange={set('status')} className={inputCls} aria-label={t('common.status')}>
           <option value="">{t('stock.issue.allStatuses')}</option>
           <option value="ISSUED">{t('stock.issue.status.ISSUED')}</option>
           <option value="CANCELLED">{t('stock.issue.status.CANCELLED')}</option>
-        </select>
+        </SearchSelect>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
@@ -106,7 +114,8 @@ export default function StockIssueList({ mine = false }) {
                 <tr>
                   <th className="px-4 py-2">{t('stock.issue.number')}</th>
                   <th className="px-4 py-2">{t('stock.mv.date')}</th>
-                  {!mine && <th className="px-4 py-2">{t('stock.issue.recipient')}</th>}
+                  <th className="px-4 py-2">{t('stock.issue.typeLabel')}</th>
+                  {!mine && <th className="px-4 py-2">{t('stock.issue.destination')}</th>}
                   <th className="px-4 py-2">{t('stock.warehouse')}</th>
                   <th className="px-4 py-2">{t('stock.issue.items')}</th>
                   <th className="px-4 py-2">{t('common.status')}</th>
@@ -117,7 +126,13 @@ export default function StockIssueList({ mine = false }) {
                   <tr key={r.id} className={r.status === 'CANCELLED' ? 'text-gray-400' : ''}>
                     <td className="px-4 py-2"><Link to={`${base}/${r.id}`} className="font-mono font-semibold text-blue-600 hover:underline">{r.issue_number}</Link></td>
                     <td className="whitespace-nowrap px-4 py-2">{new Date(r.issued_at).toLocaleDateString(getLocale())}</td>
-                    {!mine && <td className="px-4 py-2">{r.recipient_name}</td>}
+                    <td className="px-4 py-2"><IssueTypeBadge type={r.destination_type} /></td>
+                    {!mine && (
+                      <td className="px-4 py-2">
+                        {r.destination_label}
+                        {r.destination_type === 'DEPARTMENT' && r.recipient_id && <div className="text-xs text-gray-500">{t('stock.issue.collectedByLabel')} : {r.recipient_name}</div>}
+                      </td>
+                    )}
                     <td className="px-4 py-2">{r.warehouse_name}</td>
                     <td className="max-w-md truncate px-4 py-2" title={r.items}>{t('stock.issue.lineCount', { count: r.line_count })} — {r.items}</td>
                     <td className="px-4 py-2"><IssueStatusBadge issue={r} /></td>

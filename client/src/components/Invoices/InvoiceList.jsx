@@ -4,6 +4,7 @@ import { FileText, Plus, Search, RefreshCw, Eye, CheckCircle, XCircle, AlertTria
 import toast from 'react-hot-toast';
 import { invoiceService } from '../../services/invoiceService';
 import { t, withLabel, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const STATUS_LABELS = withLabel('invoiceStatus', {
   DRAFT:          { cls: 'bg-gray-100 text-gray-700' },
@@ -84,16 +85,16 @@ export default function InvoiceList() {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+        <SearchSelect value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
           <option value="">{t('invoice.allStatuses')}</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
-        <select value={matchFilter} onChange={e => { setMatchFilter(e.target.value); setPage(1); }}
+        </SearchSelect>
+        <SearchSelect value={matchFilter} onChange={e => { setMatchFilter(e.target.value); setPage(1); }}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
           <option value="">{t('invoice.allMatches')}</option>
           {Object.entries(MATCH_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
+        </SearchSelect>
         <button onClick={load} className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
           <RefreshCw size={16} className={loading ? 'animate-spin text-blue-500' : 'text-gray-500'} />
         </button>

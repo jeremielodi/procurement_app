@@ -33,6 +33,7 @@ import Modal from '../Common/Modal'
 import { validateEmail, validatePhone } from '../../utils/validators'
 import toast from 'react-hot-toast'
 import { t, useTranslation } from '../../i18n'
+import SearchSelect from '../Common/SearchSelect'
 
 export default function SupplierForm() {
   const { id } = useParams()
@@ -570,7 +571,7 @@ export default function SupplierForm() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t('supplierForm.paymentTerms')}
                 </label>
-                <select
+                <SearchSelect
                   name="payment_terms"
                   value={formData.payment_terms}
                   onChange={handleChange}
@@ -578,14 +579,14 @@ export default function SupplierForm() {
                 >
                   <option value="">{t('common.select')}</option>
                   {['NET_15', 'NET_30', 'NET_45', 'NET_60', 'COD', 'PREPAID'].map(v => <option key={v} value={v}>{t(`supplierForm.terms.${v}`)}</option>)}
-                </select>
+                </SearchSelect>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t('supplierForm.deliveryTerms')}
                 </label>
-                <select
+                <SearchSelect
                   name="delivery_terms"
                   value={formData.delivery_terms}
                   onChange={handleChange}
@@ -593,7 +594,7 @@ export default function SupplierForm() {
                 >
                   <option value="">{t('common.select')}</option>
                   {['EXW', 'FOB', 'CIF', 'DDP'].map(v => <option key={v} value={v}>{t(`supplierForm.incoterms.${v}`)}</option>)}
-                </select>
+                </SearchSelect>
               </div>
             </div>
           </div>
@@ -613,7 +614,7 @@ export default function SupplierForm() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t('common.status')}
                 </label>
-                <select
+                <SearchSelect
                   name="status"
                   value={formData.status}
                   onChange={handleChange}
@@ -621,7 +622,7 @@ export default function SupplierForm() {
                 >
                   <option value="ACTIVE">{t('common.active')}</option>
                   <option value="INACTIVE">{t('common.inactive')}</option>
-                </select>
+                </SearchSelect>
               </div>
 
               <p className="text-sm text-gray-500 self-center">

@@ -10,6 +10,7 @@ import requisitionService from '../../services/requisitionService';
 import { toLocalInput, fmtMoney } from '../../utils/tenderStatus';
 import TenderTargetingFields from './TenderTargetingFields';
 import { t } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -132,14 +133,14 @@ export default function TenderForm() {
             </p>
           ) : (
             <div className="flex gap-3 items-center">
-              <select value={requisitionId} onChange={e => setRequisitionId(e.target.value)} className={inputCls} data-testid="requisition-select">
+              <SearchSelect value={requisitionId} onChange={e => setRequisitionId(e.target.value)} className={inputCls} data-testid="requisition-select">
                 <option value="">{t('tenders.chooseRequisitionOption')}</option>
                 {choices.map(r => (
                   <option key={r.id} value={r.id}>
                     {r.requisition_number} — {r.title}{tenderByReq[r.id] ? t('tenders.existingWarn', { number: tenderByReq[r.id].tender_number }) : ''}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
               <label className="text-sm text-gray-600 whitespace-nowrap flex items-center gap-1">
                 <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} />
                 {t('tenders.allRequisitions')}

@@ -8,6 +8,7 @@ import Modal from '../Common/Modal';
 import UserForm from './UserForm';
 import toast from 'react-hot-toast';
 import { t } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function UserList() {
   const queryClient = useQueryClient();
@@ -91,7 +92,7 @@ export default function UserList() {
               />
             </div>
           </div>
-          <select
+          <SearchSelect
             value={filters.is_active}
             onChange={(e) => setFilters({ ...filters, is_active: e.target.value, page: 1 })}
             className="px-3 py-2 border rounded-lg"
@@ -99,7 +100,7 @@ export default function UserList() {
             <option value="all">{t('users.all')}</option>
             <option value="true">{t('users.active')}</option>
             <option value="false">{t('users.blocked')}</option>
-          </select>
+          </SearchSelect>
         </div>
       </div>
 

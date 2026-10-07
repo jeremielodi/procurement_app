@@ -5,6 +5,7 @@ const notificationModel = require('../models/NotificationModel');
 const userModel = require('../models/UserModel');
 const stockModel = require('../models/StockModel');
 const i18n = require('../i18n');
+const db = require('../config/database');
 
 function sendError(res, error, fallback) {
   if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, line: error.line, remaining: error.remaining });
@@ -19,10 +20,15 @@ const page = (req, max = 200) => {
 };
 
 module.exports = {
-  /** GET /stock-holdings?userId= — ce que détient un utilisateur (VIEW_STOCK) */
+  /** GET /stock-holdings?userId= | ?departmentId= — ce que détient un employé ou un département (VIEW_STOCK) */
   async holdings(req, res) {
     try {
-      if (!req.query.userId) return res.status(400).json({ success: false, message: 'userId requis' });
+      if (req.query.departmentId) {
+        const department = await db.one('SELECT id, code, name FROM departments WHERE id::text = $1', [String(req.query.departmentId)]);
+        if (!department) return res.status(404).json({ success: false, message: 'Département introuvable' });
+        return res.json({ success: true, data: await equipmentModel.holdings(null, { departmentId: department.id }), department });
+      }
+      if (!req.query.userId) return res.status(400).json({ success: false, message: 'userId ou departmentId requis' });
       const user = await userModel.findById(req.query.userId);
       if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
       res.json({
@@ -40,16 +46,18 @@ module.exports = {
     } catch (error) { return sendError(res, error, 'Erreur lors du chargement des détentions'); }
   },
 
-  /** POST /stock-returns { warehouseId, returnedBy, lines: [{ issueLineId, quantity, condition }], comment } */
+  /** POST /stock-returns { warehouseId, returnedBy | departmentId, lines: [{ issueLineId, quantity, condition }], comment } */
   async createReturn(req, res) {
     try {
       const b = req.body || {};
-      if (!b.warehouseId || !b.returnedBy) return res.status(400).json({ success: false, code: 'REQUIRED', message: 'Dépôt et utilisateur requis' });
+      if (!b.warehouseId || (!b.returnedBy && !b.departmentId)) {
+        return res.status(400).json({ success: false, code: 'REQUIRED', message: 'Dépôt et employé (ou département) requis' });
+      }
       const result = await equipmentModel.createReturn(
-        { warehouseId: b.warehouseId, returnedBy: b.returnedBy, lines: b.lines, comment: b.comment },
+        { warehouseId: b.warehouseId, returnedBy: b.departmentId ? null : b.returnedBy, departmentId: b.departmentId || null, lines: b.lines, comment: b.comment },
         { userId: req.user.id }
       );
-      if (String(b.returnedBy) !== String(req.user.id)) {
+      if (!b.departmentId && String(b.returnedBy) !== String(req.user.id)) {
         try {
           const user = await userModel.findById(b.returnedBy);
           const T = i18n.translator(user?.language);

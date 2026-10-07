@@ -7,6 +7,7 @@ import { Globe, BadgeCheck, Users, Building2, User, Lock } from 'lucide-react';
 import { locationService, categoryService } from '../../services/referenceService';
 import { tenderService } from '../../services/tenderService';
 import { t, labelMap, useTranslation } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const selectCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -82,17 +83,17 @@ export default function TenderTargetingFields({ value, onChange, lockedIds = [] 
           <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="categoryId">
             {t('tenders.category')} {reserved && '*'}
           </label>
-          <select id="categoryId" className={selectCls} value={value.categoryId || ''} onChange={e => set({ categoryId: e.target.value })}>
+          <SearchSelect id="categoryId" className={selectCls} value={value.categoryId || ''} onChange={e => set({ categoryId: e.target.value })}>
             <option value="">{t('tenders.none_option')}</option>
             {refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          </SearchSelect>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="locationId">{t('tenders.location')}</label>
-          <select id="locationId" className={selectCls} value={value.locationId || ''} onChange={e => set({ locationId: e.target.value })}>
+          <SearchSelect id="locationId" className={selectCls} value={value.locationId || ''} onChange={e => set({ locationId: e.target.value })}>
             <option value="">{t('tenders.all_option')}</option>
             {refs.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
+          </SearchSelect>
         </div>
       </div>
 

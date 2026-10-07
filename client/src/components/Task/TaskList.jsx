@@ -28,6 +28,7 @@ import LoadingSpinner from '../Common/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { t, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const TaskList = () => {
   const navigate = useNavigate();
@@ -272,7 +273,7 @@ const TaskList = () => {
           <>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('taskList.decision')}</label>
-              <select
+              <SearchSelect
                 defaultValue=""
                 onChange={(e) => {
                   onChange('approved', e.target.value === 'true');
@@ -283,7 +284,7 @@ const TaskList = () => {
                 <option value="">{t('common.select')}</option>
                 <option value="true">{t('taskList.approve')}</option>
                 <option value="false">{t('taskList.reject')}</option>
-              </select>
+              </SearchSelect>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.comment')}</label>
@@ -303,7 +304,7 @@ const TaskList = () => {
           <>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('taskList.poDecision')}</label>
-              <select
+              <SearchSelect
                 defaultValue=""
                 onChange={(e) => onChange('poApproved', e.target.value === 'true')}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -312,7 +313,7 @@ const TaskList = () => {
                 <option value="">{t('common.select')}</option>
                 <option value="true">{t('taskList.approvePo')}</option>
                 <option value="false">{t('taskList.rejectPo')}</option>
-              </select>
+              </SearchSelect>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.comment')}</label>
@@ -331,7 +332,7 @@ const TaskList = () => {
         {isDetermineType && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('taskList.method')}</label>
-            <select
+            <SearchSelect
               defaultValue=""
               onChange={(e) => onChange('procurementMethod', e.target.value)}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -342,7 +343,7 @@ const TaskList = () => {
               <option value="MULTIPLE_QUOTATIONS">{t('taskList.methodQuotes')}</option>
               <option value="RFP">{t('taskList.methodRfp')}</option>
               <option value="SOLE_SOURCE">{t('taskList.methodSole')}</option>
-            </select>
+            </SearchSelect>
           </div>
         )}
 

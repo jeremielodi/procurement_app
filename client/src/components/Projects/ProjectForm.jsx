@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
 import { t } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function ProjectForm({ project, onClose }) {
   const [formData, setFormData] = useState({
@@ -99,7 +100,7 @@ export default function ProjectForm({ project, onClose }) {
         
         <div>
           <label className="block text-sm font-medium mb-1">{t('projects.projectManager')}</label>
-          <select
+          <SearchSelect
             value={formData.projectManagerId}
             onChange={(e) => setFormData({ ...formData, projectManagerId: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -110,7 +111,7 @@ export default function ProjectForm({ project, onClose }) {
                 {user.first_name} {user.last_name}
               </option>
             ))}
-          </select>
+          </SearchSelect>
         </div>
       </div>
 
@@ -137,13 +138,13 @@ export default function ProjectForm({ project, onClose }) {
 
       <div>
         <label className="block text-sm font-medium mb-1">{t('common.status')}</label>
-        <select
+        <SearchSelect
           value={formData.status}
           onChange={(e) => setFormData({ ...formData, status: e.target.value })}
           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
         >
           {['ACTIVE', 'COMPLETED', 'ON_HOLD', 'CANCELLED'].map(s => <option key={s} value={s}>{t(`projects.status.${s}`)}</option>)}
-        </select>
+        </SearchSelect>
       </div>
 
       <div className="flex justify-end gap-3 pt-4">

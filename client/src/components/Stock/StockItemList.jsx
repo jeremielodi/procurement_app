@@ -10,6 +10,7 @@ import { stockItemService } from '../../services/stockService';
 import { categoryService } from '../../services/referenceService';
 import { usePermissions } from '../../hooks/usePermissions';
 import { t, getLocale, useTranslation } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const UNITS = ['pce', 'boîte', 'carton', 'paquet', 'rame', 'L', 'kg', 't', 'm', 'm²', 'm³', 'sac', 'lot', 'kit', 'paire'];
@@ -105,15 +106,15 @@ export default function StockItemList() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={filters.search} onChange={set('search')} placeholder={t('stock.items.search')} className={`${inputCls} pl-9`} />
         </div>
-        <select value={filters.categoryId} onChange={set('categoryId')} className={`${inputCls} w-auto`} aria-label={t('stock.category')}>
+        <SearchSelect value={filters.categoryId} onChange={set('categoryId')} className={`${inputCls} w-auto`} aria-label={t('stock.category')}>
           <option value="">{t('stock.allCategories')}</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select value={filters.stockable} onChange={set('stockable')} className={`${inputCls} w-auto`} aria-label={t('stock.items.stockable')}>
+        </SearchSelect>
+        <SearchSelect value={filters.stockable} onChange={set('stockable')} className={`${inputCls} w-auto`} aria-label={t('stock.items.stockable')}>
           <option value="">{t('stock.items.allTypes')}</option>
           <option value="true">{t('stock.items.stockableOnly')}</option>
           <option value="false">{t('stock.notStockable')}</option>
-        </select>
+        </SearchSelect>
         <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={filters.belowMin} onChange={set('belowMin')} /> {t('stock.items.belowMin')}</label>
         <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={filters.all} onChange={set('all')} /> {t('stock.items.showInactive')}</label>
       </div>
@@ -182,10 +183,10 @@ export default function StockItemList() {
             </label>
             <label className="text-sm">
               <span className="mb-1 block font-medium text-gray-700">{t('stock.category')}</span>
-              <select className={inputCls} value={editing.categoryId} onChange={e => onCategory(e.target.value)}>
+              <SearchSelect className={inputCls} value={editing.categoryId} onChange={e => onCategory(e.target.value)}>
                 <option value="">—</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              </SearchSelect>
             </label>
             <label className="text-sm sm:col-span-2">
               <span className="mb-1 block font-medium text-gray-700">{t('stock.items.name')} *</span>

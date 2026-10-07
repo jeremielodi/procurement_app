@@ -115,7 +115,7 @@ const KEY_TABLES = {
   managerId: 'users', manager_id: 'users', projectManagerId: 'users', project_manager_id: 'users',
   userId: 'users', user_id: 'users', requesterId: 'users',
   // Gestion de stock (UUID : pas de collision avec les identifiants entiers des autres tables)
-  warehouseId: 'warehouses', warehouse_id: 'warehouses',
+  warehouseId: 'warehouses', warehouse_id: 'warehouses', destinationWarehouseId: 'warehouses',
   stockItemId: 'stock_items', stock_item_id: 'stock_items',
   lotId: 'stock_lots', lot_id: 'stock_lots',
   recipientId: 'users', recipient_id: 'users', returnedBy: 'users', holderId: 'users',

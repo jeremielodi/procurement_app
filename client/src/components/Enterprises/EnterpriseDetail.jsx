@@ -9,6 +9,7 @@ import EnterpriseInfoForm from './EnterpriseInfoForm';
 import { enterpriseService } from '../../services/enterpriseService';
 import { enterpriseLogoUrl } from '../../contexts/EnterpriseContext';
 import { t, LANGUAGES } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -133,9 +134,9 @@ export default function EnterpriseDetail() {
             <input className={`${inputCls} col-span-2`} type="email" placeholder={t('enterprises.loginEmail')} value={adminForm.email} onChange={ev => setAdminForm(f => ({ ...f, email: ev.target.value }))} />
             <input className={`${inputCls} col-span-2`} type="password" placeholder={t('enterprises.password')} value={adminForm.password} onChange={ev => setAdminForm(f => ({ ...f, password: ev.target.value }))} />
             <label className="col-span-2 text-sm text-gray-600">{t('users.language')}
-              <select className={`${inputCls} mt-1`} value={adminForm.language} onChange={ev => setAdminForm(f => ({ ...f, language: ev.target.value }))}>
+              <SearchSelect className={`${inputCls} mt-1`} value={adminForm.language} onChange={ev => setAdminForm(f => ({ ...f, language: ev.target.value }))}>
                 {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
-              </select>
+              </SearchSelect>
             </label>
           </div>
         )}

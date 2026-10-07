@@ -1,10 +1,12 @@
 // backend/src/controllers/StockIssueController.js
-// Bons de sortie de stock vers un utilisateur : création (ISSUE_STOCK + accès au dépôt), consultation
-// (VIEW_STOCK, ou le bénéficiaire pour ses propres bons), accusé de réception (bénéficiaire), annulation, PDF.
+// Bons de sortie de stock — vers un employé, un autre dépôt (transfert) ou un département : création (ISSUE_STOCK +
+// accès au dépôt source), consultation (VIEW_STOCK, ou la personne qui doit confirmer la réception), accusé de
+// réception, annulation, PDF.
 const stockIssueModel = require('../models/StockIssueModel');
 const stockIssuePdfService = require('../services/StockIssuePdfService');
 const notificationModel = require('../models/NotificationModel');
 const userModel = require('../models/UserModel');
+const db = require('../config/database');
 const i18n = require('../i18n');
 
 function sendError(res, error, fallback) {
@@ -29,10 +31,41 @@ async function notify(req, userId, key, vars, link) {
   }
 }
 
-/** Consultation d'un bon : VIEW_STOCK, ou bénéficiaire */
+/** Personnes concernées par une sortie : bénéficiaire ; département sans bénéficiaire → son responsable ;
+ *  transfert → utilisateurs actifs ayant accès au dépôt de destination et admins de l'entreprise */
+async function receivers(issue) {
+  if (issue.destination_type === 'WAREHOUSE') {
+    const rows = await db.select(
+      `SELECT u.id FROM users u
+       WHERE u.is_active AND u.enterprise_id = $2
+         AND (EXISTS (SELECT 1 FROM warehouse_users wu WHERE wu.warehouse_id = $1 AND wu.user_id = u.id)
+              OR EXISTS (SELECT 1 FROM user_profiles up WHERE up.user_id = u.id AND up.profile_id = 'prof_admin'))`,
+      [issue.destination_warehouse_id, issue.enterprise_id]
+    );
+    return rows.map(r => r.id);
+  }
+  if (issue.recipient_id) return [issue.recipient_id];
+  return issue.department_manager_id ? [issue.department_manager_id] : [];
+}
+
+async function notifyReceivers(req, issue, key, link) {
+  const vars = {
+    number: issue.issue_number, department: issue.department_name,
+    from: issue.warehouse_name, to: issue.destination_warehouse_name,
+  };
+  for (const userId of await receivers(issue)) {
+    if (String(userId) !== String(req.user.id)) await notify(req, userId, key, vars, link);
+  }
+}
+
+/** Lien de la notification : « Mes articles reçus » pour une personne, sinon la fiche du bon */
+const issueLink = (issue) => (issue.destination_type !== 'WAREHOUSE' && issue.recipient_id ? `/my-items/${issue.id}` : `/stock/issues/${issue.id}`);
+
+/** Consultation d'un bon : VIEW_STOCK, bénéficiaire, ou personne qui peut en confirmer la réception */
 async function canView(req, issue) {
   if (String(issue.recipient_id) === String(req.user.id)) return true;
-  return userModel.hasPermission(req.user.id, 'VIEW_STOCK');
+  if (await userModel.hasPermission(req.user.id, 'VIEW_STOCK')) return true;
+  return stockIssueModel.canAcknowledge(issue, req.user.id);
 }
 
 module.exports = {
@@ -54,10 +87,18 @@ module.exports = {
     } catch (error) { return sendError(res, error, 'Erreur lors de la recherche des bénéficiaires'); }
   },
 
+  /** GET /stock-issues/destinations — dépôts (transfert) et départements actifs de l'entreprise */
+  async destinations(req, res) {
+    try {
+      res.json({ success: true, data: await stockIssueModel.destinations() });
+    } catch (error) { return sendError(res, error, 'Erreur lors du chargement des destinations'); }
+  },
+
   async get(req, res) {
     try {
       const issue = await stockIssueModel.getById(req.params.id);
       if (!issue || !(await canView(req, issue))) return res.status(404).json({ success: false, message: 'Bon de sortie introuvable' });
+      issue.can_acknowledge = issue.status === 'ISSUED' && !issue.acknowledged_at && await stockIssueModel.canAcknowledge(issue, req.user.id);
       res.json({ success: true, data: issue });
     } catch (error) { return sendError(res, error, 'Erreur lors du chargement du bon de sortie'); }
   },
@@ -65,39 +106,43 @@ module.exports = {
   async create(req, res) {
     try {
       const b = req.body || {};
-      if (!b.warehouseId || !b.recipientId) return res.status(400).json({ success: false, code: 'REQUIRED', message: 'Dépôt et bénéficiaire requis' });
+      if (!b.warehouseId) return res.status(400).json({ success: false, code: 'REQUIRED', message: 'Dépôt requis' });
       const result = await stockIssueModel.create(
-        { warehouseId: b.warehouseId, recipientId: b.recipientId, projectId: b.projectId, purpose: b.purpose, lines: b.lines },
+        {
+          destinationType: b.destinationType || 'USER', warehouseId: b.warehouseId, recipientId: b.recipientId,
+          destinationWarehouseId: b.destinationWarehouseId, departmentId: b.departmentId,
+          projectId: b.projectId, purpose: b.purpose, lines: b.lines,
+        },
         { userId: req.user.id }
       );
-      if (String(result.recipientId) !== String(req.user.id)) {
-        await notify(req, result.recipientId, 'issued', { number: result.issueNumber }, `/my-items/${result.id}`);
-      }
+      const issue = await stockIssueModel.getById(result.id);
+      const key = issue.destination_type === 'WAREHOUSE' ? 'transfer'
+        : issue.destination_type === 'DEPARTMENT' && !issue.recipient_id ? 'departmentIssued' : 'issued';
+      await notifyReceivers(req, issue, key, issueLink(issue));
       res.status(201).json({ success: true, data: result, message: 'Sortie enregistrée' });
     } catch (error) { return sendError(res, error, 'Erreur lors de la sortie de stock'); }
   },
 
-  /** POST /stock-issues/:id/acknowledge { comment } — le bénéficiaire confirme avoir reçu les articles */
+  /** POST /stock-issues/:id/acknowledge { comment } — confirmation de réception (voir StockIssueModel.canAcknowledge) */
   async acknowledge(req, res) {
     try {
       await stockIssueModel.acknowledge(req.params.id, { userId: req.user.id, comment: req.body?.comment });
       const issue = await stockIssueModel.getById(req.params.id);
       if (issue.issued_by && String(issue.issued_by) !== String(req.user.id)) {
-        await notify(req, issue.issued_by, 'acknowledged', { number: issue.issue_number, name: issue.recipient_name }, `/stock/issues/${issue.id}`);
+        await notify(req, issue.issued_by, 'acknowledged', { number: issue.issue_number, name: issue.acknowledged_by_name }, `/stock/issues/${issue.id}`);
       }
       res.json({ success: true, data: issue, message: 'Réception confirmée' });
     } catch (error) { return sendError(res, error, 'Erreur lors de la confirmation'); }
   },
 
-  /** POST /stock-issues/:id/cancel { reason } — retour en stock (écritures inverses) */
+  /** POST /stock-issues/:id/cancel { reason } — écritures inverses (retour en stock / retour au dépôt source) */
   async cancel(req, res) {
     try {
       const reason = String(req.body?.reason || '').trim();
       if (!reason) return res.status(400).json({ success: false, code: 'REASON_REQUIRED', message: 'Motif obligatoire' });
       const result = await stockIssueModel.cancel(req.params.id, { userId: req.user.id, reason });
-      if (String(result.recipientId) !== String(req.user.id)) {
-        await notify(req, result.recipientId, 'cancelled', { number: result.issueNumber }, `/my-items/${result.id}`);
-      }
+      const issue = await stockIssueModel.getById(req.params.id);
+      await notifyReceivers(req, issue, issue.destination_type === 'WAREHOUSE' ? 'transferCancelled' : 'cancelled', issueLink(issue));
       res.json({ success: true, data: result, message: 'Sortie annulée' });
     } catch (error) { return sendError(res, error, 'Erreur lors de l\'annulation de la sortie'); }
   },

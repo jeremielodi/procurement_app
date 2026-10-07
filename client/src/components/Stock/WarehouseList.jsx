@@ -11,6 +11,7 @@ import { locationService } from '../../services/referenceService';
 import { userService } from '../../services/userService';
 import { usePermissions } from '../../hooks/usePermissions';
 import { t } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const EMPTY = { code: '', name: '', locationId: '', address: '', description: '' };
@@ -167,10 +168,10 @@ export default function WarehouseList() {
             </label>
             <label className="text-sm">
               <span className="mb-1 block font-medium text-gray-700">{t('stock.wh.location')} *</span>
-              <select className={inputCls} value={editing.locationId} onChange={e => setEditing({ ...editing, locationId: e.target.value })}>
+              <SearchSelect className={inputCls} value={editing.locationId} onChange={e => setEditing({ ...editing, locationId: e.target.value })}>
                 <option value="">{t('common.select')}</option>
                 {locations.map(l => <option key={l.id} value={l.id}>{l.name}{l.province ? ` (${l.province})` : ''}</option>)}
-              </select>
+              </SearchSelect>
             </label>
             <label className="text-sm sm:col-span-2">
               <span className="mb-1 block font-medium text-gray-700">{t('stock.wh.name')} *</span>

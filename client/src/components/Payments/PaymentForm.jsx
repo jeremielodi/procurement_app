@@ -6,6 +6,7 @@ import { paymentService } from '../../services/paymentService';
 import api from '../../services/api';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { t, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 const PAYMENT_METHODS = ['BANK_TRANSFER', 'CHECK', 'CASH', 'MOBILE_MONEY'];
 
@@ -115,7 +116,7 @@ export default function PaymentForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.currency')}</label>
-            <select
+            <SearchSelect
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               value={form.currency}
               onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
@@ -123,19 +124,19 @@ export default function PaymentForm() {
               {currencies.length > 0
                 ? currencies.map(c => <option key={c.id} value={c.format_key}>{c.format_key} — {c.name}</option>)
                 : <option value={currency.code}>{currency.code}</option>}
-            </select>
+            </SearchSelect>
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">{t('payment.method')}</label>
-          <select
+          <SearchSelect
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
             value={form.paymentMethod}
             onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value }))}
           >
             {PAYMENT_METHODS.map(m => <option key={m} value={m}>{t(`paymentMethod.${m}`)}</option>)}
-          </select>
+          </SearchSelect>
         </div>
 
         <div>

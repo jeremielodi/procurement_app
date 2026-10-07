@@ -84,7 +84,9 @@
     "open": "Ouvrir",
     "select": "Sélectionner...",
     "noFileSelected": "Aucun fichier sélectionné",
-    "pageOf": "Page {{page}} / {{pages}}"
+    "pageOf": "Page {{page}} / {{pages}}",
+    "searchInList": "Rechercher dans la liste…",
+    "noMatch": "Aucun résultat"
   },
   "nav": {
     "groups": {
@@ -2540,13 +2542,13 @@
     },
     "issue": {
       "title": "Sorties de stock",
-      "subtitle": "Articles remis aux utilisateurs depuis les dépôts",
+      "subtitle": "Articles sortis des dépôts : remises aux employés, transferts entre dépôts, sorties vers les départements",
       "myTitle": "Mes articles reçus",
       "mySubtitle": "Articles qui vous ont été remis depuis les dépôts ; confirmez leur réception",
       "new": "Nouvelle sortie",
       "newTitle": "Nouvelle sortie de stock",
-      "newSubtitle": "Remise d'articles d'un dépôt à un utilisateur ; le stock diminue immédiatement.",
-      "search": "N° de bon, bénéficiaire, article…",
+      "newSubtitle": "Choisissez le type de sortie ; le stock du dépôt source diminue immédiatement.",
+      "search": "N° de bon, bénéficiaire, dépôt, département, article…",
       "allStatuses": "Tous les statuts",
       "none": "Aucune sortie",
       "myNone": "Aucun article ne vous a été remis",
@@ -2610,19 +2612,60 @@
         "INVALID_QUANTITY": "Quantité invalide",
         "units": "Choisissez au moins une unité",
         "UNITS_REQUIRED": "Choisissez les unités (n° de série)",
-        "UNIT_UNAVAILABLE": "Unité indisponible"
+        "UNIT_UNAVAILABLE": "Unité indisponible",
+        "destination": "Choisissez le dépôt de destination",
+        "department": "Choisissez le département",
+        "INVALID_DESTINATION": "Type de sortie invalide",
+        "RECIPIENT_REQUIRED": "Bénéficiaire requis",
+        "DESTINATION_REQUIRED": "Dépôt de destination requis",
+        "SAME_WAREHOUSE": "Le dépôt de destination doit être différent du dépôt source",
+        "DESTINATION_INVALID": "Dépôt de destination invalide",
+        "DEPARTMENT_REQUIRED": "Département requis",
+        "DEPARTMENT_INVALID": "Département invalide",
+        "TRANSFER_USED": "Annulation impossible"
       },
       "projectLabel": "Projet",
       "noUnits": "Aucune unité en stock dans ce dépôt",
       "chooseUnits": "Unités à remettre",
-      "selectedUnits": "{{count}} unité(s) sélectionnée(s)"
+      "selectedUnits": "{{count}} unité(s) sélectionnée(s)",
+      "typeLabel": "Type de sortie",
+      "types": {
+        "USER": "Vers un employé",
+        "WAREHOUSE": "Vers un dépôt (transfert)",
+        "DEPARTMENT": "Vers un département"
+      },
+      "typeHelp": {
+        "USER": "Remise d'articles à une personne de l'entreprise, qui confirme la réception.",
+        "WAREHOUSE": "Transfert entre dépôts : le stock passe du dépôt source au dépôt de destination (mêmes lots, mêmes n° de série).",
+        "DEPARTMENT": "Articles sortis pour un département (consommation ou matériel du service) ; le responsable ou la personne qui les retire confirme."
+      },
+      "allTypes": "Tous les types",
+      "destination": "Destination",
+      "sourceWarehouse": "Dépôt source",
+      "destinationWarehouse": "Dépôt de destination",
+      "chooseDestination": "Choisir le dépôt de destination",
+      "department": "Département",
+      "chooseDepartment": "Choisir le département",
+      "collectedBy": "Retiré par (facultatif)",
+      "collectedByHint": "Sans personne indiquée, le responsable du département confirme la réception.",
+      "collectedByLabel": "Retiré par",
+      "transferHint": "Transfert : les lots (même périmés, si vous les choisissez) et le matériel endommagé partent tels quels.",
+      "saveTransfer": "Enregistrer le transfert",
+      "pdfTransfer": "Bon de transfert (PDF)",
+      "ackTransferText": "Vous confirmez que les articles sont bien arrivés au dépôt {{name}}.",
+      "ackTransferPrompt": "Transfert vers un dépôt auquel vous avez accès : vérifiez les articles puis confirmez leur arrivée.",
+      "ackDeptPrompt": "Sortie pour votre département : vérifiez les articles puis confirmez leur réception.",
+      "cancelTransfer": "Annuler le transfert",
+      "cancelTransferText": "Les articles repartiront du dépôt de destination vers le dépôt d'origine (écritures inverses). Impossible si une partie a déjà été utilisée au dépôt de destination.",
+      "transferCancelled": "Transfert annulé : articles revenus au dépôt d'origine",
+      "transferMovements": "Sortie / entrée"
     },
     "return": {
       "title": "Retours en stock",
       "subtitle": "Matériel et articles rendus par les utilisateurs (départ, fin de mission…)",
       "new": "Nouveau retour",
       "newTitle": "Retour en stock",
-      "newSubtitle": "Récupérez auprès d'un utilisateur ce qu'il détient : équipements et articles non utilisés.",
+      "newSubtitle": "Récupérez auprès d'un employé ou d'un département ce qu'il détient : équipements et articles non utilisés.",
       "record": "Enregistrer un retour",
       "holder": "Utilisateur",
       "destination": "Dépôt de retour",
@@ -2661,8 +2704,16 @@
         "NOT_HOLDER": "Article détenu par un autre utilisateur",
         "ISSUE_CANCELLED": "Bon de sortie annulé",
         "WAREHOUSE_FORBIDDEN": "Vous n'avez pas accès à ce dépôt",
-        "NO_LINES": "Aucun article"
-      }
+        "NO_LINES": "Aucun article",
+        "department": "Choisissez le département",
+        "HOLDER_REQUIRED": "Indiquez l'employé ou le département"
+      },
+      "holderType": "Rendu par",
+      "holderTypes": {
+        "USER": "Un employé",
+        "DEPARTMENT": "Un département"
+      },
+      "chooseDepartment": "Choisir le département"
     },
     "equipment": {
       "title": "Équipements",
@@ -2702,7 +2753,8 @@
       "retireReason": "Motif de la réforme",
       "retired": "Équipement réformé",
       "updated": "Équipement mis à jour",
-      "truncated": "{{shown}} affichés sur {{total}} : affinez la recherche"
+      "truncated": "{{shown}} affichés sur {{total}} : affinez la recherche",
+      "departmentHolder": "Département {{name}}"
     }
   },
   "help": {
@@ -3455,21 +3507,65 @@
         ]
       },
       "issues": {
-        "title": "Sorties de stock vers un utilisateur",
-        "summary": "Remettre des articles à un employé, avec accusé de réception.",
+        "title": "Sorties de stock et transferts",
+        "summary": "Vers un employé, vers un autre dépôt ou vers un département, avec accusé de réception.",
         "blocks": [
+          {
+            "type": "p",
+            "text": "Toute sortie de stock a un type, choisi en haut du formulaire « Nouvelle sortie ». Le stock du dépôt source diminue immédiatement et un bon numéroté (SOR-AAAA-NNNNN) est créé."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Type de sortie",
+                "Ce qui se passe"
+              ],
+              [
+                "Vers un employé",
+                "Remise à une personne de l'entreprise. Elle est notifiée et confirme la réception dans « Mes articles reçus ». Un équipement lui est affecté."
+              ],
+              [
+                "Vers un dépôt (transfert)",
+                "Le stock passe du dépôt source au dépôt de destination (sortie + entrée), avec les mêmes lots et n° de série. Les utilisateurs du dépôt de destination sont prévenus et l'un d'eux confirme l'arrivée. Bon de transfert PDF."
+              ],
+              [
+                "Vers un département",
+                "Articles sortis pour un service (consommation ou matériel du service). Indiquez si besoin la personne qui les retire : elle confirme la réception ; sinon, c'est le responsable du département. Un équipement est affecté au département."
+              ]
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Créer une sortie"
+          },
           {
             "type": "steps",
             "items": [
-              "Stock → Sorties → « Nouvelle sortie » : choisissez le dépôt (parmi vos accès), le bénéficiaire, éventuellement un projet, et le motif.",
+              "Stock → Sorties → « Nouvelle sortie » : choisissez le type, le dépôt source (parmi vos accès), puis la destination (employé, dépôt ou département), éventuellement un projet et le motif.",
               "Ajoutez les articles : le disponible du dépôt est affiché. Pour un article suivi par lot, laissez « Automatique » : les lots dont la péremption est la plus proche sortent en premier (FEFO). Vous pouvez aussi imposer un lot.",
-              "Pour un équipement, cochez les appareils précis (n° de série) à remettre.",
-              "Enregistrez : le stock diminue immédiatement et le bon de sortie (SOR-AAAA-NNNNN) est créé. Imprimez-le pour signature si besoin."
+              "Pour un équipement, cochez les appareils précis (n° de série).",
+              "Enregistrez, puis imprimez le bon pour signature si besoin."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Un transfert peut aussi déplacer du matériel endommagé (ex. vers un dépôt de réparation) et un lot périmé que vous choisissez vous-même (ex. vers un dépôt de destruction) ; une remise à un employé ou à un département ne le permet pas."
+          },
+          {
+            "type": "h",
+            "text": "Annuler"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Remise (employé, département) : « Annuler / retour en stock » remet tout en stock par des écritures inverses, avec un motif obligatoire. Impossible si une partie a déjà été rendue : enregistrez un retour.",
+              "Transfert : « Annuler le transfert » renvoie les articles au dépôt d'origine. Refusé si une partie du stock transféré a déjà été utilisée au dépôt de destination."
             ]
           },
           {
             "type": "p",
-            "text": "Le bénéficiaire est notifié. Dans « Mes articles reçus », il voit ses remises et confirme leur réception (avec un commentaire facultatif) ; le magasinier en est informé. En cas d'erreur, « Annuler / retour en stock » remet tout en stock par des écritures inverses, avec un motif obligatoire. Une sortie dont une partie a déjà été rendue ne peut plus être annulée : enregistrez un retour."
+            "text": "La liste des sorties se filtre par type, dépôt (sorties et transferts reçus) et statut. Dans le journal des mouvements, une flèche indique la destination (→) ou le dépôt d'origine d'un transfert reçu (←)."
           },
           {
             "type": "links",
@@ -3477,6 +3573,10 @@
               {
                 "to": "/stock/issues",
                 "label": "Sorties"
+              },
+              {
+                "to": "/stock/issues/new",
+                "label": "Nouvelle sortie"
               },
               {
                 "to": "/my-items",
@@ -3512,7 +3612,7 @@
           },
           {
             "type": "p",
-            "text": "Stock → Retours → « Nouveau retour » (ou « Récupérer » depuis l'écran Équipements) : choisissez la personne, tout ce qu'elle détient s'affiche, toutes sorties confondues. Cochez ce qui est rendu (« Tout récupérer » pour un départ), indiquez l'état et le dépôt de retour. Le retour fonctionne aussi pour des consommables non utilisés, en quantité partielle."
+            "text": "Stock → Retours → « Nouveau retour » (ou « Récupérer » depuis l'écran Équipements) : choisissez « Un employé » ou « Un département », puis la personne ou le service ; tout ce qu'il détient s'affiche, toutes sorties confondues. Cochez ce qui est rendu (« Tout récupérer » pour un départ), indiquez l'état et le dépôt de retour. Le retour fonctionne aussi pour des consommables non utilisés, en quantité partielle."
           },
           {
             "type": "table",
@@ -3568,12 +3668,14 @@
       },
       "dashboard": {
         "title": "Tableau de bord",
-        "summary": "Indicateurs, graphiques et « Qui bloque ? ».",
+        "summary": "Indicateurs, alertes et « Qui bloque ? ».",
         "blocks": [
           {
             "type": "list",
             "items": [
-              "Indicateurs clés et graphiques filtrables (départements, statuts, méthodes d'achat, fournisseurs, lignes budgétaires).",
+              "Indicateurs clés sur la période choisie (semaine, mois, année) : taux d'approbation, délai moyen d'approbation, conversion en commandes, livraisons à temps, conformité budgétaire.",
+              "Compteurs du cycle : réquisitions, approbations en attente, commandes, réceptions, factures (rapprochées / écarts), paiements, fournisseurs actifs.",
+              "Alertes : réquisitions en attente depuis plus de 5 jours, lignes budgétaires utilisées à plus de 80 %, fournisseurs notés moins de 3/5.",
               "« Qui bloque ? » : les tâches GoFlow en attente regroupées par profil, avec leur ancienneté (orange après 3 jours, rouge « bloqué » après 7 jours) et le détail par réquisition. Une alerte signale un profil sans aucun utilisateur.",
               "Le résumé budgétaire n'est visible que par la Finance et les administrateurs."
             ]

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { t, LANGUAGES } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function UserForm({ user, onClose }) {
   const queryClient = useQueryClient();
@@ -157,9 +158,9 @@ export default function UserForm({ user, onClose }) {
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">{t('users.language')}</label>
-          <select value={formData.language} onChange={(e) => setFormData({ ...formData, language: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
+          <SearchSelect value={formData.language} onChange={(e) => setFormData({ ...formData, language: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
             {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
-          </select>
+          </SearchSelect>
         </div>
       </div>
 

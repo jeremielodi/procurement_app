@@ -10,6 +10,7 @@ import BudgetForm from './BudgetForm';
 import BudgetDetail from './BudgetDetail';
 import toast from 'react-hot-toast';
 import { t } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function BudgetList() {
   const { formatAmount } = useCurrency();
@@ -126,7 +127,7 @@ export default function BudgetList() {
               />
             </div>
           </div>
-          <select
+          <SearchSelect
             value={fundingSource}
             onChange={(e) => setFundingSource(e.target.value)}
             className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -136,7 +137,7 @@ export default function BudgetList() {
             <option value="UE">{t('budget.eu')}</option>
             <option value="PNUD">{t('budget.undp')}</option>
             <option value="Banque Mondiale">{t('budget.worldBank')}</option>
-          </select>
+          </SearchSelect>
         </div>
       </div>
 

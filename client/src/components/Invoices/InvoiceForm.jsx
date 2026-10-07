@@ -6,6 +6,7 @@ import { invoiceService } from '../../services/invoiceService';
 import api from '../../services/api';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { t, getLocale } from '../../i18n';
+import SearchSelect from '../Common/SearchSelect';
 
 export default function InvoiceForm() {
   const navigate = useNavigate();
@@ -137,14 +138,14 @@ export default function InvoiceForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.supplier')}</label>
-            <select
+            <SearchSelect
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={form.supplierId}
               onChange={e => set('supplierId', e.target.value)}
             >
               <option value="">{t('common.select')}</option>
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            </SearchSelect>
           </div>
         </div>
 
@@ -197,7 +198,7 @@ export default function InvoiceForm() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.currency')}</label>
-            <select
+            <SearchSelect
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               value={form.currency}
               onChange={e => set('currency', e.target.value)}
@@ -205,7 +206,7 @@ export default function InvoiceForm() {
               {currencies.length > 0
               ? currencies.map(c => <option key={c.id} value={c.format_key}>{c.format_key} — {c.name}</option>)
               : <option value={currency.code}>{currency.code}</option>}
-            </select>
+            </SearchSelect>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('invoice.poNumber')}</label>

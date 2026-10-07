@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService } from '../../services/dashboardService';
 import StatsCards from './StatsCards';
-import ChartsSection from './ChartsSection';
 import RecentRequisitions from './RecentRequisitions';
 import RecentActivities from './RecentActivities';
 import AlertsSection from './AlertsSection';
@@ -129,12 +128,6 @@ export default function Dashboard() {
 
           {/* Stats Cards */}
           <StatsCards stats={dashboardData.stats} />
-
-          {/* Charts */}
-          <ChartsSection 
-            chartData={dashboardData.chartData}
-            period={period}
-          />
 
           {/* Recent Requisitions & Activities */}
           {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -16,6 +16,7 @@ import ImportItemsModal from './ImportItemsModal'
 import FileUpload from '../Common/FileUpload'
 import CatalogAutocomplete from '../Stock/CatalogAutocomplete'
 import { t, getLocale } from '../../i18n'
+import SearchSelect from '../Common/SearchSelect'
 
 const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
 const priorityLabel = (p) => t(`priority.${p}`)
@@ -350,7 +351,7 @@ export default function RequisitionForm() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('reqForm.departmentLabel')}
               </label>
-              <select
+              <SearchSelect
                 {...register('departmentId', { required: t('reqForm.departmentRequired') })}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.departmentId ? 'border-red-500' : 'border-gray-300'
                   }`}
@@ -366,7 +367,7 @@ export default function RequisitionForm() {
                     </option>
                   ))
                 )}
-              </select>
+              </SearchSelect>
               {errors.departmentId && (
                 <p className="text-red-500 text-sm mt-1">{errors.departmentId.message}</p>
               )}
@@ -381,7 +382,7 @@ export default function RequisitionForm() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('reqForm.projectLabel')}
               </label>
-              <select
+              <SearchSelect
                 value={projectId}
                 onChange={handleProjectChange}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${!projectId ? 'border-red-500' : 'border-gray-300'
@@ -398,7 +399,7 @@ export default function RequisitionForm() {
                     </option>
                   ))
                 )}
-              </select>
+              </SearchSelect>
               {!projectId && <p className="text-red-500 text-sm mt-1">{t('reqForm.projectRequired')}</p>}
               {!projectsLoading && projects.length === 0 && (
                 <p className="text-sm text-amber-600 mt-1">
@@ -411,7 +412,7 @@ export default function RequisitionForm() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('reqForm.priorityLabel')}
               </label>
-              <select
+              <SearchSelect
                 {...register('priority', { required: t('reqForm.priorityRequired') })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
@@ -420,7 +421,7 @@ export default function RequisitionForm() {
                     {priorityLabel(priority)}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
           </div>
 

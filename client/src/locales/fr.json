@@ -2672,5 +2672,1088 @@
       "updated": "Équipement mis à jour",
       "truncated": "{{shown}} affichés sur {{total}} : affinez la recherche"
     }
+  },
+  "help": {
+    "button": "Aide — comment fonctionne l'application",
+    "title": "Guide d'utilisation",
+    "subtitle": "Tout ce qu'il faut savoir pour utiliser procureApp",
+    "search": "Rechercher dans l'aide (ex. dépôt, facture, lot…)",
+    "noResult": "Aucun résultat pour « {{q}} ».",
+    "results_one": "{{count}} rubrique trouvée",
+    "results_other": "{{count}} rubriques trouvées",
+    "contents": "Sommaire",
+    "forYou": "Pour vos profils",
+    "others": "Autres rubriques",
+    "thisPage": "Cet écran",
+    "quickLinks": "Accès rapide",
+    "tip": "Astuce",
+    "warning": "Attention",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "back": "Sommaire",
+    "close": "Fermer",
+    "footer": "Une question non couverte ? Contactez l'administrateur de votre entreprise.",
+    "sections": {
+      "overview": {
+        "title": "Comment fonctionne procureApp",
+        "summary": "Le cycle complet d'un achat, de la demande au paiement, et le rôle de GoFlow.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "procureApp gère tout le cycle d'achat d'une entreprise (« procure-to-pay ») : une personne exprime un besoin, ce besoin est vérifié et approuvé, un fournisseur est choisi, la marchandise ou le service est commandé, reçu, facturé puis payé. Chaque étape produit un document numéroté et traçable."
+          },
+          {
+            "type": "h",
+            "text": "Les étapes du cycle"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Réquisition (REQ-AAAA-NNNN) : le demandeur décrit ce qu'il faut acheter, les quantités, les prix estimés et la ligne budgétaire à imputer.",
+              "Vérification du budget : automatique. Si une ligne budgétaire n'a pas assez de disponible, le circuit s'arrête (« Budget insuffisant »).",
+              "Approbation : un seul niveau, choisi selon le montant — Manager (N1), Finance (N2) ou Direction générale (N3).",
+              "Méthode d'achat : déterminée automatiquement selon le montant (achat direct, devis multiples, appel d'offres) ou source unique justifiée.",
+              "Choix du fournisseur : devis, appel d'offres publié sur le portail fournisseurs, ou fournisseur unique.",
+              "Bon de commande (PO-AAAA-NNNN) : créé par les achats, approuvé par la direction, puis envoyé automatiquement par email au fournisseur.",
+              "Réception (GRN-AAAA-NNNN) : la logistique enregistre ce qui est arrivé (accepté / rejeté) ; les articles stockables entrent en stock.",
+              "Acceptation de service (SAN-AAAA-NNNN) : le demandeur confirme que la prestation a été rendue.",
+              "Facture (INV-AAAA-NNNN) : la finance saisit la facture du fournisseur ; le rapprochement 3 voies (commande + réception + facture) est automatique.",
+              "Paiement (PAY-AAAA-NNNN) : la finance enregistre le paiement ; un reçu PDF est disponible."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "GoFlow : le moteur qui pilote le circuit"
+          },
+          {
+            "type": "p",
+            "text": "Le déroulement est orchestré par GoFlow, un moteur de workflow. Dès qu'une réquisition est soumise, GoFlow crée les tâches dans le bon ordre et pour le bon groupe de personnes : il est impossible, par exemple, de saisir une facture avant la réception. Les étapes automatiques (budget, classification, envoi du bon de commande, rapprochement) sont exécutées par l'application sans intervention."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Les actions humaines arrivent dans « Mes tâches » (et par email aux personnes concernées).",
+              "Une tâche est proposée à tout un groupe (ex. tous les managers du projet) ; une personne la « prend en charge » puis la traite.",
+              "Le « Suivi du workflow » de chaque réquisition raconte en clair tout ce qui s'est passé : qui a fait quoi, quand, avec quel commentaire et combien de temps chaque étape a pris."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Plusieurs entreprises, une plateforme"
+          },
+          {
+            "type": "p",
+            "text": "procureApp est une plateforme multi-entreprise : chaque entreprise ne voit que ses propres données (réquisitions, commandes, stock, budget, utilisateurs). Les fournisseurs, eux, sont communs à toute la plateforme et voient les appels d'offres de toutes les entreprises qui les y invitent."
+          },
+          {
+            "type": "tip",
+            "text": "Le « ? » de l'en-tête ouvre toujours l'aide de l'écran sur lequel vous êtes. Utilisez la recherche en haut de ce panneau pour retrouver une règle précise."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/dashboard",
+                "label": "Tableau de bord"
+              },
+              {
+                "to": "/tasks",
+                "label": "Mes tâches"
+              },
+              {
+                "to": "/requisitions/new",
+                "label": "Nouvelle réquisition"
+              }
+            ]
+          }
+        ]
+      },
+      "roles": {
+        "title": "Profils : qui fait quoi",
+        "summary": "Chaque utilisateur a un ou plusieurs profils qui déterminent ses écrans et ses tâches.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Les profils sont attribués par l'administrateur de votre entreprise (menu Administration → Utilisateurs). Un même utilisateur peut cumuler plusieurs profils. Les tâches GoFlow sont envoyées aux personnes ayant le profil requis ET membres du projet de la réquisition."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Profil",
+                "Rôle dans procureApp"
+              ],
+              [
+                "Demandeur",
+                "Crée les réquisitions, suit leur avancement, accepte les services (SAN), reçoit des articles du stock et confirme leur réception."
+              ],
+              [
+                "Manager",
+                "Approuve ou rejette les réquisitions de moins de 25 000 (niveau N1)."
+              ],
+              [
+                "Finance",
+                "Approuve les réquisitions de 25 000 à 99 999 (N2), saisit les factures, enregistre les paiements, gère le budget."
+              ],
+              [
+                "DG (Direction générale)",
+                "Approuve les réquisitions de 100 000 et plus (N3)."
+              ],
+              [
+                "Achats (Procurement)",
+                "Choisit la méthode d'achat, lance devis et appels d'offres, crée les bons de commande, gère les fournisseurs et le catalogue d'articles."
+              ],
+              [
+                "Direction (Management)",
+                "Approuve ou rejette les bons de commande."
+              ],
+              [
+                "Logistique",
+                "Enregistre les réceptions (GRN), gère le stock, les sorties vers les utilisateurs, les équipements et les retours."
+              ],
+              [
+                "Administrateur d'entreprise",
+                "Gère les utilisateurs, projets, départements, dépôts et la fiche de l'entreprise ; préqualifie les fournisseurs. A tous les droits de son entreprise."
+              ],
+              [
+                "Fournisseur",
+                "Compte externe : accède uniquement au portail fournisseur (appels d'offres, offres, profil, documents)."
+              ],
+              [
+                "Super administrateur",
+                "Administre la plateforme : entreprises, référentiels (localisations, catégories), rôles. N'a pas accès aux achats."
+              ]
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Si un menu ou un bouton décrit dans cette aide n'apparaît pas chez vous, c'est que votre profil ne le permet pas : demandez à votre administrateur. Après un changement de profil, reconnectez-vous pour que vos menus soient mis à jour."
+          }
+        ]
+      },
+      "tasks": {
+        "title": "Mes tâches",
+        "summary": "Prendre en charge, traiter ou libérer les tâches que GoFlow vous assigne.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "« Mes tâches » liste les actions qui vous attendent : approbations, choix de la méthode d'achat, création du bon de commande, réception, acceptation de service, facture, paiement… Une tâche apparaît quand GoFlow atteint l'étape correspondante, pour tous les membres du groupe concerné. Vous recevez aussi un email et une notification."
+          },
+          {
+            "type": "h",
+            "text": "Traiter une tâche"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Cliquez « Prendre en charge » : une confirmation s'affiche, car la tâche vous sera assignée et disparaîtra de la liste de vos collègues.",
+              "Cliquez sur la tâche. Selon son type, un formulaire s'ouvre dans une fenêtre (approbation, choix…) ou vous êtes redirigé vers l'écran dédié (bon de réception, acceptation de service, facture, paiement, appel d'offres).",
+              "Complétez et validez : GoFlow passe automatiquement à l'étape suivante et prévient le groupe suivant."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Libérer une tâche"
+          },
+          {
+            "type": "p",
+            "text": "Si vous avez pris une tâche par erreur ou ne pouvez pas la traiter, cliquez « Libérer » : elle redevient disponible pour tout le groupe. Un administrateur peut aussi libérer la tâche d'un collègue absent."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Filtres : « En attente », « Terminées », « Toutes ».",
+              "Chaque carte rappelle la réquisition, son titre, son montant et son projet.",
+              "Le tableau de bord (« Qui bloque ? ») montre les tâches en attente par profil, avec leur ancienneté."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "Les écrans de réception, d'acceptation de service, de facture et de paiement doivent être ouverts depuis la tâche : c'est ce lien qui fait avancer le circuit dans GoFlow."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/tasks",
+                "label": "Mes tâches"
+              }
+            ]
+          }
+        ]
+      },
+      "requisitions": {
+        "title": "Réquisitions",
+        "summary": "Créer une demande d'achat complète, la suivre et l'exporter.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Créer une réquisition"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Menu Achats → Réquisitions → « Nouvelle réquisition ».",
+              "Renseignez le titre, la description, la justification, la priorité, le département et le projet. Le projet détermine les lignes budgétaires disponibles et les personnes qui recevront les tâches.",
+              "Ajoutez les articles : description, quantité, fréquence et prix unitaire. Total de la ligne = quantité × fréquence × prix unitaire.",
+              "Affectez une ligne budgétaire à chaque article (bouton de recherche). Vous pouvez cocher plusieurs articles et leur affecter la même ligne en une fois.",
+              "Joignez si besoin des pièces (devis, cahier des charges…) puis enregistrez : la réquisition est soumise et GoFlow démarre le circuit."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Articles du catalogue ou texte libre"
+          },
+          {
+            "type": "p",
+            "text": "En tapant la description, procureApp propose les articles du catalogue de votre entreprise (code et unité). Choisir une suggestion lie la ligne à l'article : il suivra jusqu'au bon de commande et à la réception, et entrera en stock s'il est stockable. Vous pouvez aussi garder du texte libre (ex. une prestation, un achat ponctuel) : la ligne ne sera jamais stockée. Le petit « × » sur la pastille délie l'article."
+          },
+          {
+            "type": "h",
+            "text": "Importer des articles depuis Excel"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Bouton « Importer » : fichier .xlsx ou .csv, 2 Mo et 500 lignes maximum. Téléchargez le modèle proposé dans la fenêtre.",
+              "Colonnes : Description, Quantité, Fréquence (facultative, 1 par défaut), Prix unitaire, Code article (facultative).",
+              "Un code article reconnu lie la ligne au catalogue ; un code inconnu est signalé ligne par ligne.",
+              "Les lignes budgétaires ne sont pas importées : affectez-les ensuite dans le formulaire.",
+              "Un aperçu permet de vérifier avant d'ajouter, et de remplacer ou compléter les articles existants."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Suivre une réquisition"
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Avancement",
+                "Signification"
+              ],
+              [
+                "Brouillon",
+                "Pas encore partie dans le circuit."
+              ],
+              [
+                "En cours",
+                "Le circuit avance (approbation, achat, commande, réception…)."
+              ],
+              [
+                "Terminé",
+                "Le circuit est arrivé au bout, ou toutes ses commandes ont une facture payée."
+              ],
+              [
+                "Rejeté / Annulé",
+                "Refusée à une étape d'approbation, ou annulée."
+              ]
+            ]
+          },
+          {
+            "type": "list",
+            "items": [
+              "La fiche d'une réquisition contient l'onglet « Suivi du workflow » : les 12 étapes du cycle (faites, en cours, à venir) et l'historique détaillé en clair.",
+              "L'icône « Voir le workflow » de la liste ouvre ce même suivi sans quitter la liste.",
+              "PDF de la réquisition en français ou en anglais (avec logo et coordonnées de l'entreprise) ; export de la liste en Excel ou PDF.",
+              "La recherche de la liste porte sur le numéro, le titre, la description, le département, le projet et le demandeur."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/requisitions",
+                "label": "Réquisitions"
+              },
+              {
+                "to": "/requisitions/new",
+                "label": "Nouvelle réquisition"
+              }
+            ]
+          }
+        ]
+      },
+      "approval": {
+        "title": "Budget et approbation",
+        "summary": "Vérification automatique du budget et niveau d'approbation selon le montant.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Vérification du budget"
+          },
+          {
+            "type": "p",
+            "text": "Dès la soumission, chaque ligne budgétaire utilisée est contrôlée : son disponible doit couvrir le total des articles qui lui sont imputés. Si une seule ligne est insuffisante, la réquisition passe au statut « Budget insuffisant » et le demandeur reçoit la tâche « Ajustement budgétaire » : la traiter clôt la réquisition (statut « Rejeté »). Faites ajuster le budget par la Finance (ou choisissez une autre ligne), puis soumettez une nouvelle réquisition."
+          },
+          {
+            "type": "h",
+            "text": "Qui approuve ?"
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Montant estimé",
+                "Niveau d'approbation"
+              ],
+              [
+                "moins de 25 000",
+                "N1 — Manager"
+              ],
+              [
+                "de 25 000 à 99 999",
+                "N2 — Finance"
+              ],
+              [
+                "100 000 et plus",
+                "N3 — Direction générale"
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "Un seul niveau intervient, celui correspondant au montant. L'approbateur peut approuver ou rejeter, avec un commentaire qui apparaît dans le suivi du workflow. Un rejet arrête le circuit (statut « Rejeté ») et le demandeur est notifié."
+          },
+          {
+            "type": "tip",
+            "text": "Seuls les approbateurs membres du projet de la réquisition reçoivent la tâche. Si personne ne la reçoit, vérifiez les membres du projet (Organisation → Projets)."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/budget",
+                "label": "Budget"
+              }
+            ]
+          }
+        ]
+      },
+      "sourcing": {
+        "title": "Méthode d'achat",
+        "summary": "Achat direct, devis multiples, appel d'offres ou source unique.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Après approbation, l'application classe automatiquement la réquisition selon son montant, puis l'équipe Achats confirme la méthode et réalise l'étape correspondante."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Montant",
+                "Méthode"
+              ],
+              [
+                "jusqu'à 5 000",
+                "Achat direct auprès d'un fournisseur"
+              ],
+              [
+                "de 5 001 à 25 000",
+                "Devis multiples (comparaison de plusieurs offres)"
+              ],
+              [
+                "plus de 25 000",
+                "Appel d'offres (RFP) sur le portail fournisseurs"
+              ],
+              [
+                "quel que soit le montant",
+                "Source unique, si une justification a été approuvée"
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "Pour un appel d'offres, la tâche « Appel d'offres » ouvre directement la création de l'appel d'offres lié à la réquisition. Elle se termine quand l'appel d'offres est attribué : l'offre retenue est transmise à l'analyse des offres, puis à la création du bon de commande."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/tenders",
+                "label": "Appels d'offres"
+              }
+            ]
+          }
+        ]
+      },
+      "tenders": {
+        "title": "Appels d'offres",
+        "summary": "Publier, inviter, recevoir des offres scellées, comparer et attribuer.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Créer un appel d'offres"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Depuis la tâche « Appel d'offres » (ou Achats → Appels d'offres → Nouveau), choisissez la réquisition : ses articles seront ceux à chiffrer.",
+              "Saisissez le numéro (unique dans votre entreprise), l'objet, la description, les dates d'ouverture et de clôture et le délai de livraison maximal.",
+              "Choisissez la diffusion : « Tous les fournisseurs » (tous les fournisseurs inscrits sont notifiés) ou « Fournisseurs préqualifiés » (catégorie obligatoire, localisation facultative).",
+              "Pour un appel réservé, sélectionnez les fournisseurs invités parmi ceux préqualifiés dans la catégorie et desservant la localisation. Seuls les invités le voient et peuvent soumettre."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Pendant et après la consultation"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Statut calculé : À venir → Ouvert (entre les dates) → Clôturé ; puis Attribué ou Annulé.",
+              "Offres scellées : tant que l'appel est ouvert, vous ne voyez que le nom des soumissionnaires et la date de dépôt, jamais les prix.",
+              "Vous pouvez clôturer avant la date prévue. Après clôture avec des offres, l'appel ne peut plus être prolongé.",
+              "Comparatif Excel après clôture : tableau croisé articles × fournisseurs, détail des offres et liste des fournisseurs.",
+              "Attribution au fournisseur retenu : la tâche GoFlow est terminée et le circuit continue vers le bon de commande. Les fournisseurs sont informés du résultat."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/tenders",
+                "label": "Appels d'offres"
+              },
+              {
+                "to": "/suppliers/prequalified",
+                "label": "Fournisseurs préqualifiés"
+              }
+            ]
+          }
+        ]
+      },
+      "suppliers": {
+        "title": "Fournisseurs et préqualification",
+        "summary": "Fiches fournisseurs, documents à vérifier et préqualification par catégorie.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Les fournisseurs s'inscrivent eux-mêmes sur le portail (ou sont créés par les achats). Ils déclarent leur type (entreprise ou personne physique), les localisations qu'ils desservent, les catégories de marché qu'ils fournissent, et déposent leurs documents."
+          },
+          {
+            "type": "h",
+            "text": "Documents et vérification"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Entreprise : pièce d'identité du représentant, RCCM, attestation fiscale, ID Nat, RIB. Personne physique : pièce d'identité et RIB.",
+              "Chaque document est vérifié par votre entreprise (« Vérifié » ou « Rejeté » avec motif, notifié au fournisseur). Un document remplacé redevient « à vérifier »."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Préqualification"
+          },
+          {
+            "type": "p",
+            "text": "La préqualification se fait catégorie par catégorie et par entreprise (onglet « Préqualification » de la fiche fournisseur). Elle n'est possible que si le fournisseur est actif, a déclaré la catégorie et a un dossier complet : tous les documents déposés et vérifiés. Un rejet exige un motif. Seuls les fournisseurs préqualifiés peuvent être invités aux appels d'offres réservés et sont proposés dans les bons de commande."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/suppliers",
+                "label": "Fournisseurs"
+              },
+              {
+                "to": "/suppliers/prequalified",
+                "label": "Fournisseurs préqualifiés"
+              }
+            ]
+          }
+        ]
+      },
+      "purchaseOrders": {
+        "title": "Bons de commande",
+        "summary": "Création, approbation, envoi au fournisseur et suivi des livraisons.",
+        "blocks": [
+          {
+            "type": "steps",
+            "items": [
+              "Depuis la tâche « Créer le bon de commande », choisissez le fournisseur (préqualifié), les dates et l'adresse de livraison. Les articles de la réquisition sont repris avec leur article du catalogue ; vous pouvez ajuster quantités et prix.",
+              "Le bon de commande est créé directement « En attente d'approbation » : la direction reçoit la tâche d'approbation.",
+              "Une fois approuvé, il est envoyé automatiquement par email au fournisseur (dans la langue de son compte), avec le PDF."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Suivi des livraisons"
+          },
+          {
+            "type": "p",
+            "text": "La fiche du bon de commande affiche, pour chaque ligne : commandé, reçu, accepté, rejeté et reste à livrer, avec la liste des réceptions. Le reste à livrer = commandé − accepté : une quantité rejetée reste due par le fournisseur. Le statut « Non livré », « Livré partiellement » ou « Livré » apparaît aussi dans la liste des commandes."
+          },
+          {
+            "type": "warn",
+            "text": "Un bon de commande en cours d'approbation n'est plus modifiable. En cas d'erreur, il doit être rejeté par l'approbateur."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/purchase-orders",
+                "label": "Bons de commande"
+              }
+            ]
+          }
+        ]
+      },
+      "receiving": {
+        "title": "Réception des marchandises (GRN)",
+        "summary": "Enregistrer ce qui est arrivé, choisir le dépôt, saisir lots et n° de série.",
+        "blocks": [
+          {
+            "type": "steps",
+            "items": [
+              "Ouvrez la tâche « Bon de réception » : le formulaire reprend la commande. Pour chaque ligne, la quantité proposée est le reste à livrer.",
+              "Indiquez la quantité reçue et la quantité rejetée (avec son motif) : l'acceptée est calculée (reçu − rejeté).",
+              "Choisissez le dépôt de destination si au moins un article est stockable. Si vous n'avez accès qu'à un dépôt, il est choisi d'office ; si vous en avez plusieurs, le choix est obligatoire.",
+              "Complétez les informations demandées selon l'article : n° de lot et date de péremption, ou un n° de série par unité pour un équipement (« n° de série ; n° d'inventaire », une ligne par appareil).",
+              "Enregistrez : le bon de réception est créé, la quantité acceptée entre en stock (un mouvement par ligne ou par appareil) et le circuit avance."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Contrôles"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Sur-livraison refusée : le cumul accepté d'une ligne ne peut pas dépasser la quantité commandée.",
+              "Un lot déjà périmé est refusé (il faut le rejeter) ; un lot existant ne peut pas changer de date de péremption.",
+              "Les n° de série sont uniques par article, les n° d'inventaire uniques dans l'entreprise.",
+              "Une ligne de commande en texte libre peut être rattachée à un article du catalogue au moment de la réception."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Après la réception"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Bon de réception PDF (dépôt, articles, lots, zones de signature).",
+              "Plusieurs réceptions partielles sont possibles pour une même commande.",
+              "Annulation (direction) : passe des écritures de stock inverses ; refusée si une partie du stock reçu a déjà été sortie ou affectée."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/goods-receipts",
+                "label": "Bons de réception"
+              }
+            ]
+          }
+        ]
+      },
+      "services": {
+        "title": "Acceptation de service (SAN)",
+        "summary": "Confirmer qu'une prestation a bien été rendue.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Pour une prestation (formation, maintenance, consultance…), le demandeur reçoit la tâche « Acceptation de service ». Il indique si le service a été rendu de manière satisfaisante et ajoute un commentaire. Un service accepté permet de passer à la facture ; un service rejeté arrête le circuit."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/service-acceptance-notes",
+                "label": "Acceptations de service"
+              }
+            ]
+          }
+        ]
+      },
+      "invoices": {
+        "title": "Factures et rapprochement 3 voies",
+        "summary": "Saisir la facture du fournisseur et comprendre le résultat du rapprochement.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "La Finance saisit la facture depuis la tâche « Saisir la facture » : numéro du fournisseur, date, montants. L'application rapproche automatiquement trois documents : la commande, la réception et la facture."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Résultat",
+                "Signification"
+              ],
+              [
+                "Conforme (MATCHED)",
+                "Commande approuvée, réception complète, montant facturé ≤ commande + 2 %."
+              ],
+              [
+                "Écart de prix",
+                "Le montant facturé dépasse la commande de plus de 2 %."
+              ],
+              [
+                "Sans réception",
+                "Aucun bon de réception n'est lié à la facture."
+              ],
+              [
+                "Réception partielle",
+                "La réception comporte des rejets ou n'est pas complète."
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "Une facture conforme passe à l'étape de paiement. Une facture non conforme est bloquée : vérifiez la commande, la réception ou demandez un avoir au fournisseur."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/invoices",
+                "label": "Factures"
+              }
+            ]
+          }
+        ]
+      },
+      "payments": {
+        "title": "Paiements",
+        "summary": "Enregistrer le paiement d'une facture et produire le reçu.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Depuis la tâche « Paiement », la Finance enregistre le paiement : montant, date, mode (virement bancaire, chèque, espèces, Mobile Money), référence et compte. Le paiement clôt le cycle : la réquisition passe à « Terminé ». Un reçu de paiement PDF (français ou anglais) est disponible."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/payments",
+                "label": "Paiements"
+              }
+            ]
+          }
+        ]
+      },
+      "stock": {
+        "title": "Stock : dépôts, articles et mouvements",
+        "summary": "Où est le stock, ce qu'il contient et tout ce qui l'a fait bouger.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Dépôts et accès"
+          },
+          {
+            "type": "p",
+            "text": "Chaque entreprise crée ses dépôts (Stock → Dépôts), rattachés à une localisation : une ville peut avoir plusieurs dépôts. L'administrateur choisit, pour chaque dépôt, les utilisateurs autorisés à y réceptionner, sortir ou récupérer des articles. Un dépôt désactivé ne reçoit plus de marchandises."
+          },
+          {
+            "type": "h",
+            "text": "Catalogue d'articles"
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Réglage",
+                "Effet"
+              ],
+              [
+                "Stockable",
+                "L'article entre en stock à la réception. Par défaut selon la catégorie (carburant, fournitures… oui ; hôtellerie, location… non)."
+              ],
+              [
+                "Suivi par lot",
+                "Un n° de lot est demandé à la réception ; le stock est suivi lot par lot."
+              ],
+              [
+                "Péremption",
+                "Une date de péremption est obligatoire pour chaque lot ; les lots périmés ne sortent jamais."
+              ],
+              [
+                "N° de série (équipement)",
+                "Chaque unité est suivie individuellement : ordinateurs, téléphones, GPS… (voir « Équipements »)."
+              ],
+              [
+                "Stock minimum",
+                "Alerte quand le stock total passe en dessous."
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "Une fois l'article mouvementé, son unité et ses règles de suivi ne sont plus modifiables (cela fausserait l'historique)."
+          },
+          {
+            "type": "h",
+            "text": "État du stock et mouvements"
+          },
+          {
+            "type": "list",
+            "items": [
+              "« État du stock » : quantités par article, dépôt et lot, avec alertes (sous le minimum, lots qui expirent sous 90 jours, lots périmés) et export Excel.",
+              "« Mouvements » : journal de toutes les entrées et sorties (réception, sortie, retour, annulation, stock initial, réforme), avec son origine et son auteur.",
+              "Le journal est immuable : une erreur se corrige par une écriture inverse, jamais par une modification. Un stock ne peut jamais devenir négatif."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/stock",
+                "label": "État du stock"
+              },
+              {
+                "to": "/stock/items",
+                "label": "Articles"
+              },
+              {
+                "to": "/stock/movements",
+                "label": "Mouvements"
+              },
+              {
+                "to": "/stock/warehouses",
+                "label": "Dépôts"
+              }
+            ]
+          }
+        ]
+      },
+      "issues": {
+        "title": "Sorties de stock vers un utilisateur",
+        "summary": "Remettre des articles à un employé, avec accusé de réception.",
+        "blocks": [
+          {
+            "type": "steps",
+            "items": [
+              "Stock → Sorties → « Nouvelle sortie » : choisissez le dépôt (parmi vos accès), le bénéficiaire, éventuellement un projet, et le motif.",
+              "Ajoutez les articles : le disponible du dépôt est affiché. Pour un article suivi par lot, laissez « Automatique » : les lots dont la péremption est la plus proche sortent en premier (FEFO). Vous pouvez aussi imposer un lot.",
+              "Pour un équipement, cochez les appareils précis (n° de série) à remettre.",
+              "Enregistrez : le stock diminue immédiatement et le bon de sortie (SOR-AAAA-NNNNN) est créé. Imprimez-le pour signature si besoin."
+            ]
+          },
+          {
+            "type": "p",
+            "text": "Le bénéficiaire est notifié. Dans « Mes articles reçus », il voit ses remises et confirme leur réception (avec un commentaire facultatif) ; le magasinier en est informé. En cas d'erreur, « Annuler / retour en stock » remet tout en stock par des écritures inverses, avec un motif obligatoire. Une sortie dont une partie a déjà été rendue ne peut plus être annulée : enregistrez un retour."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/stock/issues",
+                "label": "Sorties"
+              },
+              {
+                "to": "/my-items",
+                "label": "Mes articles reçus"
+              }
+            ]
+          }
+        ]
+      },
+      "equipment": {
+        "title": "Équipements affectés et retours",
+        "summary": "Ordinateurs et matériel prêtés aux employés : affectation, retour, départ.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Un équipement (ordinateur, téléphone, GPS, appareil photo…) reste la propriété de l'entreprise : il est affecté à un employé puis récupéré. Chaque appareil est suivi par son n° de série et, si vous le souhaitez, par un n° d'inventaire."
+          },
+          {
+            "type": "h",
+            "text": "Mettre en place"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Dans le catalogue, créez l'article en cochant « Équipement suivi par n° de série ».",
+              "Les nouveaux appareils entrent à la réception (un n° de série par appareil). Pour le parc déjà acheté, utilisez Stock → Équipements → « Enregistrer le parc existant » et collez la liste des n° de série.",
+              "Affectez les appareils avec une sortie de stock (en cochant les n° de série)."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Récupérer le matériel"
+          },
+          {
+            "type": "p",
+            "text": "Stock → Retours → « Nouveau retour » (ou « Récupérer » depuis l'écran Équipements) : choisissez la personne, tout ce qu'elle détient s'affiche, toutes sorties confondues. Cochez ce qui est rendu (« Tout récupérer » pour un départ), indiquez l'état et le dépôt de retour. Le retour fonctionne aussi pour des consommables non utilisés, en quantité partielle."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "État au retour",
+                "Effet"
+              ],
+              [
+                "Bon état",
+                "L'appareil revient en stock et peut être réaffecté."
+              ],
+              [
+                "Endommagé",
+                "Il revient en stock mais n'est plus proposé tant qu'il n'est pas marqué « remis en état »."
+              ],
+              [
+                "Perdu",
+                "Aucune entrée en stock ; l'appareil passe au statut « Perdu »."
+              ]
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Départ d'un employé"
+          },
+          {
+            "type": "p",
+            "text": "Quand un administrateur désactive un compte, procureApp refuse tant que la personne détient des équipements et en affiche la liste, avec un lien direct vers le retour. « Désactiver quand même » reste possible : le matériel reste alors affecté à cette personne (visible dans Équipements, compte signalé comme désactivé) et l'action est tracée dans le journal d'audit."
+          },
+          {
+            "type": "list",
+            "items": [
+              "L'écran Équipements montre, pour chaque appareil, où il est (dépôt) ou qui le détient, depuis quand, et son historique complet.",
+              "Un appareil en stock peut être signalé endommagé, remis en état ou réformé (il sort alors définitivement du stock).",
+              "Chaque employé voit son matériel dans « Mes articles reçus » → « En ma possession »."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/stock/equipment",
+                "label": "Équipements"
+              },
+              {
+                "to": "/stock/returns/new",
+                "label": "Nouveau retour"
+              }
+            ]
+          }
+        ]
+      },
+      "dashboard": {
+        "title": "Tableau de bord",
+        "summary": "Indicateurs, graphiques et « Qui bloque ? ».",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Indicateurs clés et graphiques filtrables (départements, statuts, méthodes d'achat, fournisseurs, lignes budgétaires).",
+              "« Qui bloque ? » : les tâches GoFlow en attente regroupées par profil, avec leur ancienneté (orange après 3 jours, rouge « bloqué » après 7 jours) et le détail par réquisition. Une alerte signale un profil sans aucun utilisateur.",
+              "Le résumé budgétaire n'est visible que par la Finance et les administrateurs."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/dashboard",
+                "label": "Tableau de bord"
+              }
+            ]
+          }
+        ]
+      },
+      "budget": {
+        "title": "Budget",
+        "summary": "Lignes budgétaires par projet : alloué, consommé, disponible.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Le module Budget est réservé à la Finance et aux administrateurs. Chaque projet a des lignes budgétaires (code, description, montant alloué). Les réquisitions consomment le disponible des lignes qui leur sont imputées ; une réquisition qui dépasse le disponible est arrêtée à la vérification du budget. Les demandeurs ne voient les lignes que pour les choisir dans leur réquisition."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/budget",
+                "label": "Budget"
+              }
+            ]
+          }
+        ]
+      },
+      "admin": {
+        "title": "Administration",
+        "summary": "Utilisateurs, projets, départements, entreprise, référentiels.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Administrateur d'entreprise"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Utilisateurs : création avec profils et langue (français ou anglais, utilisée pour l'interface et les emails), réinitialisation du mot de passe, activation / désactivation.",
+              "Projets et départements : les membres d'un projet sont ceux qui reçoivent les tâches GoFlow de ses réquisitions — tenez-les à jour.",
+              "« Mon entreprise » : nom, logo, adresse, contacts, NIF / RCCM, devise. Ils apparaissent sur tous les PDF.",
+              "Dépôts et accès de la logistique (voir « Stock »).",
+              "Préqualification des fournisseurs et vérification de leurs documents."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Super administrateur de la plateforme"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Entreprises : création (avec leur premier administrateur), activation.",
+              "Référentiels communs : localisations (villes de la RDC) et catégories de marché, avec un code stable identique dans toutes les bases, la traduction anglaise des catégories et l'indicateur « stockable ».",
+              "Rôles et permissions."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Les actions sensibles (connexions, mots de passe, gestion des utilisateurs, accès aux dépôts) sont enregistrées dans le journal d'audit."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/users",
+                "label": "Utilisateurs"
+              },
+              {
+                "to": "/projects",
+                "label": "Projets"
+              },
+              {
+                "to": "/settings/enterprise",
+                "label": "Mon entreprise"
+              }
+            ]
+          }
+        ]
+      },
+      "account": {
+        "title": "Mon compte, langue et notifications",
+        "summary": "Langue, mot de passe, notifications et emails.",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Langue : le sélecteur FR / EN de l'en-tête change l'interface ; votre choix est enregistré sur votre compte et utilisé pour vos emails et vos documents PDF.",
+              "Mot de passe : modifiable dans « Mon profil » (8 caractères minimum).",
+              "Mot de passe oublié : depuis la page de connexion, saisissez votre email ; vous recevez un lien de confirmation valable 1 heure. Votre mot de passe actuel n'est pas modifié tant que vous n'avez pas confirmé ; un nouveau mot de passe vous est alors envoyé.",
+              "Notifications : la cloche affiche en temps réel les nouvelles tâches, décisions, remises de stock, etc. Un clic ouvre l'écran concerné.",
+              "Emails : envoyés pour les tâches, appels d'offres, envoi des bons de commande, mots de passe — dans la langue du destinataire.",
+              "Déconnexion depuis le menu de votre profil (en haut à droite)."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/profile",
+                "label": "Mon profil"
+              },
+              {
+                "to": "/notifications",
+                "label": "Notifications"
+              }
+            ]
+          }
+        ]
+      },
+      "faq": {
+        "title": "Questions fréquentes",
+        "summary": "Les situations les plus courantes et que faire.",
+        "faq": [
+          {
+            "q": "Ma réquisition est « Budget insuffisant ».",
+            "a": "Une ligne budgétaire n'avait pas assez de disponible. Traitez la tâche « Ajustement budgétaire » (la réquisition est clôturée), contactez la Finance pour ajuster le budget ou choisissez une autre ligne, puis soumettez une nouvelle réquisition."
+          },
+          {
+            "q": "Personne ne reçoit la tâche d'approbation.",
+            "a": "La tâche est envoyée aux personnes qui ont le profil requis ET sont membres du projet. Vérifiez les membres du projet et leurs profils ; « Qui bloque ? » signale un profil sans utilisateur."
+          },
+          {
+            "q": "Je ne vois pas une tâche que mon collègue a prise.",
+            "a": "Une tâche prise en charge n'apparaît que chez la personne qui l'a prise. Demandez-lui de la libérer, ou à un administrateur s'il est absent."
+          },
+          {
+            "q": "La réception refuse ma quantité (« sur-livraison »).",
+            "a": "Le cumul accepté dépasse la quantité commandée. Saisissez seulement le reste à livrer ; l'excédent doit être rejeté ou faire l'objet d'une nouvelle commande."
+          },
+          {
+            "q": "On me demande de choisir un dépôt.",
+            "a": "Vous avez accès à plusieurs dépôts : choisissez celui où les articles sont physiquement rangés. Si vous n'avez accès à aucun dépôt, demandez un accès à votre administrateur."
+          },
+          {
+            "q": "Ma facture est « Écart de prix ».",
+            "a": "Le montant facturé dépasse le bon de commande de plus de 2 %. Vérifiez la facture et la commande ; demandez un avoir ou une correction au fournisseur."
+          },
+          {
+            "q": "Je n'arrive pas à désactiver un employé qui part.",
+            "a": "Il détient encore du matériel. Cliquez « Enregistrer le retour du matériel », récupérez tout (« Tout récupérer »), puis désactivez le compte."
+          },
+          {
+            "q": "Un article n'apparaît pas dans les suggestions.",
+            "a": "Il n'existe pas (ou plus) dans le catalogue de votre entreprise. Saisissez la ligne en texte libre, ou demandez aux achats / à la logistique de créer l'article."
+          },
+          {
+            "q": "Je n'ai pas reçu l'email de mot de passe oublié.",
+            "a": "Vérifiez les indésirables. Un seul lien est envoyé toutes les 5 minutes pour une même adresse ; le lien expire après 1 heure et ne sert qu'une fois."
+          },
+          {
+            "q": "Un menu décrit ici n'apparaît pas chez moi.",
+            "a": "Votre profil ne le permet pas. Demandez la permission à votre administrateur puis reconnectez-vous."
+          }
+        ]
+      },
+      "supplierPortal": {
+        "title": "Guide du portail fournisseur",
+        "summary": "Profil, documents, appels d'offres et offres.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Votre profil"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Complétez vos informations (identifiants légaux, coordonnées, banque), les localisations que vous desservez et les catégories que vous fournissez.",
+              "Déposez vos documents : pièce d'identité, RCCM, attestation fiscale, ID Nat, RIB (entreprise) ou pièce d'identité et RIB (personne physique). Chaque entreprise acheteuse les vérifie ; un document rejeté vous est signalé avec le motif.",
+              "Un dossier complet et vérifié permet d'être préqualifié par les entreprises, et donc invité à leurs appels d'offres réservés."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Répondre à un appel d'offres"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Le tableau de bord et la liste « Appels d'offres » montrent les appels ouverts ou à venir qui vous concernent (publics, ou sur invitation).",
+              "Ouvrez l'appel : saisissez vos prix unitaires article par article, votre délai de livraison (dans la limite demandée) et vos remarques.",
+              "Vous pouvez modifier votre offre tant que l'appel est ouvert. Vos prix ne sont jamais visibles par les autres fournisseurs, ni par l'acheteur avant la clôture.",
+              "Téléchargez le PDF de votre offre (avec votre logo) pour l'imprimer, la signer et la cacheter si l'acheteur le demande.",
+              "Après attribution, le résultat apparaît sur votre tableau de bord ; le bon de commande vous est envoyé par email."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/supplier/dashboard",
+                "label": "Tableau de bord"
+              },
+              {
+                "to": "/supplier/tenders",
+                "label": "Appels d'offres"
+              },
+              {
+                "to": "/supplier/profile",
+                "label": "Mon profil"
+              }
+            ]
+          }
+        ]
+      }
+    }
   }
 }

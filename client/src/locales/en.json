@@ -2672,5 +2672,1088 @@
       "updated": "Equipment updated",
       "truncated": "{{shown}} shown out of {{total}}: refine the search"
     }
+  },
+  "help": {
+    "button": "Help — how the application works",
+    "title": "User guide",
+    "subtitle": "Everything you need to know to use procureApp",
+    "search": "Search the help (e.g. warehouse, invoice, lot…)",
+    "noResult": "No results for \"{{q}}\".",
+    "results_one": "{{count}} topic found",
+    "results_other": "{{count}} topics found",
+    "contents": "Contents",
+    "forYou": "For your profiles",
+    "others": "Other topics",
+    "thisPage": "This screen",
+    "quickLinks": "Quick access",
+    "tip": "Tip",
+    "warning": "Warning",
+    "previous": "Previous",
+    "next": "Next",
+    "back": "Contents",
+    "close": "Close",
+    "footer": "A question not covered here? Contact your company administrator.",
+    "sections": {
+      "overview": {
+        "title": "How procureApp works",
+        "summary": "The complete purchasing cycle, from request to payment, and the role of GoFlow.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "procureApp manages the company's whole purchasing cycle (\"procure-to-pay\"): someone expresses a need, the need is checked and approved, a supplier is chosen, the goods or service are ordered, received, invoiced and then paid. Each step produces a numbered, traceable document."
+          },
+          {
+            "type": "h",
+            "text": "The steps of the cycle"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Requisition (REQ-YYYY-NNNN): the requester describes what to buy, quantities, estimated prices and the budget line to charge.",
+              "Budget check: automatic. If a budget line does not have enough available funds, the process stops (\"Insufficient budget\").",
+              "Approval: a single level, chosen according to the amount — Manager (N1), Finance (N2) or General Management (N3).",
+              "Purchasing method: determined automatically from the amount (direct purchase, multiple quotations, call for tenders) or a justified sole source.",
+              "Supplier selection: quotations, a call for tenders published on the supplier portal, or a single supplier.",
+              "Purchase order (PO-YYYY-NNNN): created by procurement, approved by management, then sent automatically by email to the supplier.",
+              "Goods receipt (GRN-YYYY-NNNN): logistics records what arrived (accepted / rejected); stockable items enter stock.",
+              "Service acceptance (SAN-YYYY-NNNN): the requester confirms that the service was delivered.",
+              "Invoice (INV-YYYY-NNNN): finance records the supplier invoice; the 3-way match (order + receipt + invoice) is automatic.",
+              "Payment (PAY-YYYY-NNNN): finance records the payment; a PDF receipt is available."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "GoFlow: the engine that drives the process"
+          },
+          {
+            "type": "p",
+            "text": "The flow is orchestrated by GoFlow, a workflow engine. As soon as a requisition is submitted, GoFlow creates the tasks in the right order and for the right group of people: for example, an invoice cannot be entered before the goods receipt. Automatic steps (budget, classification, sending the purchase order, matching) are run by the application without human action."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Human actions arrive in \"My tasks\" (and by email to the people concerned).",
+              "A task is offered to a whole group (e.g. all managers of the project); one person \"claims\" it and then processes it.",
+              "The \"Workflow tracking\" of each requisition explains in plain language everything that happened: who did what, when, with which comment and how long each step took."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Several companies, one platform"
+          },
+          {
+            "type": "p",
+            "text": "procureApp is a multi-company platform: each company only sees its own data (requisitions, orders, stock, budget, users). Suppliers, however, are shared across the platform and see the calls for tenders of every company that invites them."
+          },
+          {
+            "type": "tip",
+            "text": "The \"?\" in the header always opens the help for the screen you are on. Use the search at the top of this panel to find a specific rule."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/dashboard",
+                "label": "Dashboard"
+              },
+              {
+                "to": "/tasks",
+                "label": "My tasks"
+              },
+              {
+                "to": "/requisitions/new",
+                "label": "New requisition"
+              }
+            ]
+          }
+        ]
+      },
+      "roles": {
+        "title": "Profiles: who does what",
+        "summary": "Each user has one or more profiles that determine their screens and tasks.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Profiles are assigned by your company administrator (Administration → Users menu). A user can hold several profiles. GoFlow tasks are sent to people who have the required profile AND are members of the requisition's project."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Profile",
+                "Role in procureApp"
+              ],
+              [
+                "Requester",
+                "Creates requisitions, follows their progress, accepts services (SAN), receives items from stock and confirms receipt."
+              ],
+              [
+                "Manager",
+                "Approves or rejects requisitions below 25,000 (level N1)."
+              ],
+              [
+                "Finance",
+                "Approves requisitions from 25,000 to 99,999 (N2), records invoices and payments, manages the budget."
+              ],
+              [
+                "GM (General Management)",
+                "Approves requisitions of 100,000 and above (N3)."
+              ],
+              [
+                "Procurement",
+                "Chooses the purchasing method, runs quotations and calls for tenders, creates purchase orders, manages suppliers and the item catalogue."
+              ],
+              [
+                "Management",
+                "Approves or rejects purchase orders."
+              ],
+              [
+                "Logistics",
+                "Records goods receipts (GRN), manages stock, issues to users, equipment and returns."
+              ],
+              [
+                "Company administrator",
+                "Manages users, projects, departments, warehouses and the company profile; prequalifies suppliers. Has all rights within the company."
+              ],
+              [
+                "Supplier",
+                "External account: only accesses the supplier portal (calls for tenders, bids, profile, documents)."
+              ],
+              [
+                "Super administrator",
+                "Administers the platform: companies, reference data (locations, categories), roles. Has no access to purchasing."
+              ]
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "If a menu or button described in this help does not appear for you, your profile does not allow it: ask your administrator. After a profile change, log in again so that your menus are refreshed."
+          }
+        ]
+      },
+      "tasks": {
+        "title": "My tasks",
+        "summary": "Claim, process or release the tasks GoFlow assigns to you.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "\"My tasks\" lists the actions waiting for you: approvals, choosing the purchasing method, creating the purchase order, goods receipt, service acceptance, invoice, payment… A task appears when GoFlow reaches the corresponding step, for every member of the group concerned. You also receive an email and a notification."
+          },
+          {
+            "type": "h",
+            "text": "Processing a task"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Click \"Claim\": a confirmation appears, because the task will be assigned to you and will disappear from your colleagues' list.",
+              "Click the task. Depending on its type, a form opens in a window (approval, choice…) or you are taken to the dedicated screen (goods receipt, service acceptance, invoice, payment, call for tenders).",
+              "Complete and validate: GoFlow automatically moves to the next step and notifies the next group."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Releasing a task"
+          },
+          {
+            "type": "p",
+            "text": "If you claimed a task by mistake or cannot process it, click \"Release\": it becomes available to the whole group again. An administrator can also release the task of an absent colleague."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Filters: \"Pending\", \"Completed\", \"All\".",
+              "Each card shows the requisition, its title, amount and project.",
+              "The dashboard (\"Who is blocking?\") shows pending tasks by profile, with how long they have been waiting."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "The goods receipt, service acceptance, invoice and payment screens must be opened from the task: that link is what moves the process forward in GoFlow."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/tasks",
+                "label": "My tasks"
+              }
+            ]
+          }
+        ]
+      },
+      "requisitions": {
+        "title": "Requisitions",
+        "summary": "Create a complete purchase request, follow it and export it.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Creating a requisition"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Purchasing menu → Requisitions → \"New requisition\".",
+              "Fill in the title, description, justification, priority, department and project. The project determines the available budget lines and the people who will receive the tasks.",
+              "Add the items: description, quantity, frequency and unit price. Line total = quantity × frequency × unit price.",
+              "Assign a budget line to each item (search button). You can tick several items and assign them the same line at once.",
+              "Attach documents if needed (quotes, specifications…) then save: the requisition is submitted and GoFlow starts the process."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Catalogue items or free text"
+          },
+          {
+            "type": "p",
+            "text": "As you type the description, procureApp suggests the items in your company catalogue (code and unit). Picking a suggestion links the line to the item: it will follow through to the purchase order and receipt, and enter stock if stockable. You can also keep free text (e.g. a service, a one-off purchase): the line will never be stocked. The small \"×\" on the badge unlinks the item."
+          },
+          {
+            "type": "h",
+            "text": "Importing items from Excel"
+          },
+          {
+            "type": "list",
+            "items": [
+              "\"Import\" button: .xlsx or .csv file, 2 MB and 500 lines maximum. Download the template offered in the window.",
+              "Columns: Description, Quantity, Frequency (optional, 1 by default), Unit price, Item code (optional).",
+              "A recognised item code links the line to the catalogue; an unknown code is reported line by line.",
+              "Budget lines are not imported: assign them afterwards in the form.",
+              "A preview lets you check before adding, and replace or extend the existing items."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Following a requisition"
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Progress",
+                "Meaning"
+              ],
+              [
+                "Draft",
+                "Not yet in the process."
+              ],
+              [
+                "In progress",
+                "The process is moving (approval, purchasing, order, receipt…)."
+              ],
+              [
+                "Completed",
+                "The process reached its end, or all its orders have a paid invoice."
+              ],
+              [
+                "Rejected / Cancelled",
+                "Refused at an approval step, or cancelled."
+              ]
+            ]
+          },
+          {
+            "type": "list",
+            "items": [
+              "A requisition's page contains the \"Workflow tracking\" tab: the 12 steps of the cycle (done, in progress, upcoming) and the detailed history in plain language.",
+              "The \"View workflow\" icon in the list opens the same tracking without leaving the list.",
+              "Requisition PDF in French or English (with the company logo and details); export of the list to Excel or PDF.",
+              "The list search covers the number, title, description, department, project and requester."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/requisitions",
+                "label": "Requisitions"
+              },
+              {
+                "to": "/requisitions/new",
+                "label": "New requisition"
+              }
+            ]
+          }
+        ]
+      },
+      "approval": {
+        "title": "Budget and approval",
+        "summary": "Automatic budget check and approval level according to the amount.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Budget check"
+          },
+          {
+            "type": "p",
+            "text": "On submission, every budget line used is checked: its available amount must cover the total of the items charged to it. If a single line is insufficient, the requisition moves to \"Insufficient budget\" and the requester receives the \"Budget adjustment\" task: processing it closes the requisition (\"Rejected\" status). Have Finance adjust the budget (or choose another line), then submit a new requisition."
+          },
+          {
+            "type": "h",
+            "text": "Who approves?"
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Estimated amount",
+                "Approval level"
+              ],
+              [
+                "below 25,000",
+                "N1 — Manager"
+              ],
+              [
+                "25,000 to 99,999",
+                "N2 — Finance"
+              ],
+              [
+                "100,000 and above",
+                "N3 — General Management"
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "Only one level is involved, the one matching the amount. The approver can approve or reject, with a comment that appears in the workflow tracking. A rejection stops the process (\"Rejected\" status) and the requester is notified."
+          },
+          {
+            "type": "tip",
+            "text": "Only approvers who are members of the requisition's project receive the task. If nobody receives it, check the project members (Organisation → Projects)."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/budget",
+                "label": "Budget"
+              }
+            ]
+          }
+        ]
+      },
+      "sourcing": {
+        "title": "Purchasing method",
+        "summary": "Direct purchase, multiple quotations, call for tenders or sole source.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "After approval, the application automatically classifies the requisition according to its amount, then the Procurement team confirms the method and carries out the corresponding step."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Amount",
+                "Method"
+              ],
+              [
+                "up to 5,000",
+                "Direct purchase from a supplier"
+              ],
+              [
+                "5,001 to 25,000",
+                "Multiple quotations (comparison of several offers)"
+              ],
+              [
+                "above 25,000",
+                "Call for tenders (RFP) on the supplier portal"
+              ],
+              [
+                "any amount",
+                "Sole source, if a justification has been approved"
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "For a call for tenders, the \"Call for tenders\" task opens the creation of the call linked to the requisition directly. It ends when the call is awarded: the selected bid is passed on to the offer analysis, then to the creation of the purchase order."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/tenders",
+                "label": "Calls for tenders"
+              }
+            ]
+          }
+        ]
+      },
+      "tenders": {
+        "title": "Calls for tenders",
+        "summary": "Publish, invite, receive sealed bids, compare and award.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Creating a call for tenders"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "From the \"Call for tenders\" task (or Purchasing → Calls for tenders → New), choose the requisition: its items are the ones to be priced.",
+              "Enter the number (unique within your company), subject, description, opening and closing dates and maximum delivery time.",
+              "Choose the audience: \"All suppliers\" (every registered supplier is notified) or \"Prequalified suppliers\" (category required, location optional).",
+              "For a restricted call, select the invited suppliers among those prequalified in the category and serving the location. Only invited suppliers see it and can bid."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "During and after the consultation"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Computed status: Upcoming → Open (between the dates) → Closed; then Awarded or Cancelled.",
+              "Sealed bids: while the call is open, you only see the bidders' names and submission dates, never the prices.",
+              "You can close it before the planned date. Once closed with bids, the call can no longer be extended.",
+              "Excel comparison after closing: items × suppliers matrix, bid details and list of suppliers.",
+              "Award to the selected supplier: the GoFlow task is completed and the process continues to the purchase order. Suppliers are informed of the result."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/tenders",
+                "label": "Calls for tenders"
+              },
+              {
+                "to": "/suppliers/prequalified",
+                "label": "Prequalified suppliers"
+              }
+            ]
+          }
+        ]
+      },
+      "suppliers": {
+        "title": "Suppliers and prequalification",
+        "summary": "Supplier records, documents to check and prequalification by category.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Suppliers register themselves on the portal (or are created by procurement). They declare their type (company or individual), the locations they serve and the market categories they supply, and upload their documents."
+          },
+          {
+            "type": "h",
+            "text": "Documents and verification"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Company: representative's ID, trade register (RCCM), tax certificate, national ID (ID Nat), bank details. Individual: ID and bank details.",
+              "Each document is verified by your company (\"Verified\" or \"Rejected\" with a reason, notified to the supplier). A replaced document goes back to \"to verify\"."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Prequalification"
+          },
+          {
+            "type": "p",
+            "text": "Prequalification is done category by category and per company (\"Prequalification\" tab of the supplier record). It is only possible if the supplier is active, has declared the category and has a complete file: all documents uploaded and verified. A rejection requires a reason. Only prequalified suppliers can be invited to restricted calls for tenders and are offered in purchase orders."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/suppliers",
+                "label": "Suppliers"
+              },
+              {
+                "to": "/suppliers/prequalified",
+                "label": "Prequalified suppliers"
+              }
+            ]
+          }
+        ]
+      },
+      "purchaseOrders": {
+        "title": "Purchase orders",
+        "summary": "Creation, approval, sending to the supplier and delivery tracking.",
+        "blocks": [
+          {
+            "type": "steps",
+            "items": [
+              "From the \"Create purchase order\" task, choose the supplier (prequalified), dates and delivery address. The requisition items are copied with their catalogue item; you can adjust quantities and prices.",
+              "The purchase order is created directly as \"Pending approval\": management receives the approval task.",
+              "Once approved, it is sent automatically by email to the supplier (in the language of their account), with the PDF."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Delivery tracking"
+          },
+          {
+            "type": "p",
+            "text": "The purchase order page shows, for each line: ordered, received, accepted, rejected and remaining, with the list of receipts. Remaining = ordered − accepted: a rejected quantity is still owed by the supplier. The status \"Not delivered\", \"Partially delivered\" or \"Delivered\" also appears in the order list."
+          },
+          {
+            "type": "warn",
+            "text": "A purchase order under approval can no longer be modified. In case of error, the approver must reject it."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/purchase-orders",
+                "label": "Purchase orders"
+              }
+            ]
+          }
+        ]
+      },
+      "receiving": {
+        "title": "Goods receipt (GRN)",
+        "summary": "Record what arrived, choose the warehouse, enter lots and serial numbers.",
+        "blocks": [
+          {
+            "type": "steps",
+            "items": [
+              "Open the \"Goods receipt\" task: the form loads the order. For each line, the proposed quantity is the remaining quantity.",
+              "Enter the quantity received and the quantity rejected (with its reason): the accepted quantity is calculated (received − rejected).",
+              "Choose the destination warehouse if at least one item is stockable. If you only have access to one warehouse, it is selected automatically; if you have several, the choice is mandatory.",
+              "Fill in the information required by the item: lot number and expiry date, or one serial number per unit for equipment (\"serial number ; asset tag\", one line per device).",
+              "Save: the goods receipt is created, the accepted quantity enters stock (one movement per line or per device) and the process moves on."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Checks"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Over-delivery refused: the accepted total of a line cannot exceed the ordered quantity.",
+              "An already expired lot is refused (it must be rejected); an existing lot cannot change its expiry date.",
+              "Serial numbers are unique per item, asset tags unique within the company.",
+              "A free-text order line can be linked to a catalogue item at the time of receipt."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "After the receipt"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Goods receipt PDF (warehouse, items, lots, signature areas).",
+              "Several partial receipts are possible for the same order.",
+              "Cancellation (management): posts reversing stock entries; refused if part of the received stock has already been issued or assigned."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/goods-receipts",
+                "label": "Goods receipts"
+              }
+            ]
+          }
+        ]
+      },
+      "services": {
+        "title": "Service acceptance (SAN)",
+        "summary": "Confirm that a service was actually delivered.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "For a service (training, maintenance, consultancy…), the requester receives the \"Service acceptance\" task. They indicate whether the service was delivered satisfactorily and add a comment. An accepted service moves on to the invoice; a rejected service stops the process."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/service-acceptance-notes",
+                "label": "Service acceptances"
+              }
+            ]
+          }
+        ]
+      },
+      "invoices": {
+        "title": "Invoices and 3-way matching",
+        "summary": "Record the supplier invoice and understand the matching result.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Finance records the invoice from the \"Enter invoice\" task: supplier number, date, amounts. The application automatically matches three documents: the order, the receipt and the invoice."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Result",
+                "Meaning"
+              ],
+              [
+                "Matched",
+                "Order approved, receipt complete, invoiced amount ≤ order + 2%."
+              ],
+              [
+                "Price mismatch",
+                "The invoiced amount exceeds the order by more than 2%."
+              ],
+              [
+                "No receipt",
+                "No goods receipt is linked to the invoice."
+              ],
+              [
+                "Partial receipt",
+                "The receipt has rejections or is not complete."
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "A matched invoice moves to the payment step. A non-matching invoice is blocked: check the order and receipt, or ask the supplier for a credit note."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/invoices",
+                "label": "Invoices"
+              }
+            ]
+          }
+        ]
+      },
+      "payments": {
+        "title": "Payments",
+        "summary": "Record the payment of an invoice and produce the receipt.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "From the \"Payment\" task, Finance records the payment: amount, date, method (bank transfer, cheque, cash, Mobile Money), reference and account. The payment closes the cycle: the requisition becomes \"Completed\". A PDF payment receipt (French or English) is available."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/payments",
+                "label": "Payments"
+              }
+            ]
+          }
+        ]
+      },
+      "stock": {
+        "title": "Stock: warehouses, items and movements",
+        "summary": "Where the stock is, what it contains and everything that moved it.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Warehouses and access"
+          },
+          {
+            "type": "p",
+            "text": "Each company creates its warehouses (Stock → Warehouses), linked to a location: a city can have several warehouses. For each warehouse, the administrator chooses the users allowed to receive, issue or recover items there. A deactivated warehouse no longer receives goods."
+          },
+          {
+            "type": "h",
+            "text": "Item catalogue"
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Setting",
+                "Effect"
+              ],
+              [
+                "Stockable",
+                "The item enters stock on receipt. Default depends on the category (fuel, supplies… yes; hotel, rental… no)."
+              ],
+              [
+                "Lot tracking",
+                "A lot number is required on receipt; stock is tracked lot by lot."
+              ],
+              [
+                "Expiry",
+                "An expiry date is required for each lot; expired lots are never issued."
+              ],
+              [
+                "Serial number (equipment)",
+                "Each unit is tracked individually: laptops, phones, GPS… (see \"Equipment\")."
+              ],
+              [
+                "Minimum stock",
+                "Alert when total stock falls below it."
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "Once the item has stock movements, its unit and tracking rules can no longer be changed (that would distort the history)."
+          },
+          {
+            "type": "h",
+            "text": "Stock levels and movements"
+          },
+          {
+            "type": "list",
+            "items": [
+              "\"Stock levels\": quantities by item, warehouse and lot, with alerts (below minimum, lots expiring within 90 days, expired lots) and Excel export.",
+              "\"Movements\": log of every entry and exit (receipt, issue, return, cancellation, opening stock, retirement), with its source and author.",
+              "The log is immutable: an error is corrected with a reversing entry, never by editing. Stock can never become negative."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/stock",
+                "label": "Stock levels"
+              },
+              {
+                "to": "/stock/items",
+                "label": "Items"
+              },
+              {
+                "to": "/stock/movements",
+                "label": "Movements"
+              },
+              {
+                "to": "/stock/warehouses",
+                "label": "Warehouses"
+              }
+            ]
+          }
+        ]
+      },
+      "issues": {
+        "title": "Stock issues to a user",
+        "summary": "Hand over items to an employee, with acknowledgement of receipt.",
+        "blocks": [
+          {
+            "type": "steps",
+            "items": [
+              "Stock → Issues → \"New issue\": choose the warehouse (among your access), the recipient, optionally a project, and the purpose.",
+              "Add the items: the warehouse's available stock is shown. For a lot-tracked item, leave \"Automatic\": the lots with the earliest expiry go out first (FEFO). You can also force a lot.",
+              "For equipment, tick the exact devices (serial numbers) to hand over.",
+              "Save: stock decreases immediately and the issue note (SOR-YYYY-NNNNN) is created. Print it for signature if needed."
+            ]
+          },
+          {
+            "type": "p",
+            "text": "The recipient is notified. In \"My received items\", they see their handovers and confirm receipt (with an optional comment); the storekeeper is informed. In case of error, \"Cancel / return to stock\" puts everything back in stock with reversing entries, with a mandatory reason. An issue that has already been partly returned can no longer be cancelled: record a return instead."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/stock/issues",
+                "label": "Issues"
+              },
+              {
+                "to": "/my-items",
+                "label": "My received items"
+              }
+            ]
+          }
+        ]
+      },
+      "equipment": {
+        "title": "Assigned equipment and returns",
+        "summary": "Laptops and equipment lent to employees: assignment, return, departure.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "A piece of equipment (laptop, phone, GPS, camera…) remains company property: it is assigned to an employee and then recovered. Each device is tracked by its serial number and, if you wish, by an asset tag."
+          },
+          {
+            "type": "h",
+            "text": "Setting up"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "In the catalogue, create the item and tick \"Equipment tracked by serial number\".",
+              "New devices enter on receipt (one serial number per device). For equipment already owned, use Stock → Equipment → \"Register existing equipment\" and paste the list of serial numbers.",
+              "Assign the devices with a stock issue (ticking the serial numbers)."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Recovering equipment"
+          },
+          {
+            "type": "p",
+            "text": "Stock → Returns → \"New return\" (or \"Recover\" from the Equipment screen): choose the person and everything they hold is displayed, across all issues. Tick what is returned (\"Recover everything\" for a departure), indicate the condition and the return warehouse. Returns also work for unused consumables, in partial quantities."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Condition on return",
+                "Effect"
+              ],
+              [
+                "Good",
+                "The device returns to stock and can be reassigned."
+              ],
+              [
+                "Damaged",
+                "It returns to stock but is no longer offered until marked \"repaired\"."
+              ],
+              [
+                "Lost",
+                "No stock entry; the device is marked \"Lost\"."
+              ]
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Employee departure"
+          },
+          {
+            "type": "p",
+            "text": "When an administrator deactivates an account, procureApp refuses as long as the person holds equipment and lists it, with a direct link to the return. \"Deactivate anyway\" remains possible: the equipment then stays assigned to that person (visible in Equipment, account flagged as deactivated) and the action is logged in the audit trail."
+          },
+          {
+            "type": "list",
+            "items": [
+              "The Equipment screen shows, for each device, where it is (warehouse) or who holds it, since when, and its complete history.",
+              "A device in stock can be reported damaged, repaired or retired (it then leaves stock permanently).",
+              "Each employee sees their equipment in \"My received items\" → \"In my possession\"."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/stock/equipment",
+                "label": "Equipment"
+              },
+              {
+                "to": "/stock/returns/new",
+                "label": "New return"
+              }
+            ]
+          }
+        ]
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "summary": "Indicators, charts and \"Who is blocking?\".",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Key indicators and filterable charts (departments, statuses, purchasing methods, suppliers, budget lines).",
+              "\"Who is blocking?\": pending GoFlow tasks grouped by profile, with how long they have been waiting (orange after 3 days, red \"blocked\" after 7 days) and the details per requisition. An alert flags a profile without any user.",
+              "The budget summary is only visible to Finance and administrators."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/dashboard",
+                "label": "Dashboard"
+              }
+            ]
+          }
+        ]
+      },
+      "budget": {
+        "title": "Budget",
+        "summary": "Budget lines per project: allocated, spent, available.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "The Budget module is reserved for Finance and administrators. Each project has budget lines (code, description, allocated amount). Requisitions consume the available amount of the lines charged; a requisition that exceeds the available amount is stopped at the budget check. Requesters only see the lines to choose them in their requisition."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/budget",
+                "label": "Budget"
+              }
+            ]
+          }
+        ]
+      },
+      "admin": {
+        "title": "Administration",
+        "summary": "Users, projects, departments, company, reference data.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Company administrator"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Users: creation with profiles and language (French or English, used for the interface and emails), password reset, activation / deactivation.",
+              "Projects and departments: a project's members are the people who receive the GoFlow tasks for its requisitions — keep them up to date.",
+              "\"My company\": name, logo, address, contacts, tax ID / trade register, currency. They appear on every PDF.",
+              "Warehouses and logistics access (see \"Stock\").",
+              "Supplier prequalification and verification of their documents."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Platform super administrator"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Companies: creation (with their first administrator), activation.",
+              "Shared reference data: locations (DRC cities) and market categories, with a stable code identical in every database, the English translation of categories and the \"stockable\" flag.",
+              "Roles and permissions."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Sensitive actions (logins, passwords, user management, warehouse access) are recorded in the audit trail."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/users",
+                "label": "Users"
+              },
+              {
+                "to": "/projects",
+                "label": "Projects"
+              },
+              {
+                "to": "/settings/enterprise",
+                "label": "My company"
+              }
+            ]
+          }
+        ]
+      },
+      "account": {
+        "title": "My account, language and notifications",
+        "summary": "Language, password, notifications and emails.",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Language: the FR / EN switch in the header changes the interface; your choice is saved on your account and used for your emails and PDF documents.",
+              "Password: can be changed in \"My profile\" (8 characters minimum).",
+              "Forgotten password: from the login page, enter your email; you receive a confirmation link valid for 1 hour. Your current password is not changed until you confirm; a new password is then sent to you.",
+              "Notifications: the bell shows new tasks, decisions, stock handovers, etc. in real time. A click opens the relevant screen.",
+              "Emails: sent for tasks, calls for tenders, purchase orders, passwords — in the recipient's language.",
+              "Log out from your profile menu (top right)."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/profile",
+                "label": "My profile"
+              },
+              {
+                "to": "/notifications",
+                "label": "Notifications"
+              }
+            ]
+          }
+        ]
+      },
+      "faq": {
+        "title": "Frequently asked questions",
+        "summary": "The most common situations and what to do.",
+        "faq": [
+          {
+            "q": "My requisition is \"Insufficient budget\".",
+            "a": "A budget line did not have enough available funds. Process the \"Budget adjustment\" task (the requisition is closed), contact Finance to adjust the budget, or choose another line, then submit a new requisition."
+          },
+          {
+            "q": "Nobody receives the approval task.",
+            "a": "The task is sent to people who have the required profile AND are project members. Check the project members and their profiles; \"Who is blocking?\" flags a profile without users."
+          },
+          {
+            "q": "I cannot see a task my colleague claimed.",
+            "a": "A claimed task only appears for the person who claimed it. Ask them to release it, or ask an administrator if they are away."
+          },
+          {
+            "q": "The receipt refuses my quantity (\"over-delivery\").",
+            "a": "The accepted total exceeds the ordered quantity. Enter only the remaining quantity; any excess must be rejected or covered by a new order."
+          },
+          {
+            "q": "I am asked to choose a warehouse.",
+            "a": "You have access to several warehouses: choose the one where the items are physically stored. If you have no warehouse access, ask your administrator."
+          },
+          {
+            "q": "My invoice is \"Price mismatch\".",
+            "a": "The invoiced amount exceeds the purchase order by more than 2%. Check the invoice and the order; ask the supplier for a credit note or correction."
+          },
+          {
+            "q": "I cannot deactivate a departing employee.",
+            "a": "They still hold equipment. Click \"Record the return of the equipment\", recover everything (\"Recover everything\"), then deactivate the account."
+          },
+          {
+            "q": "An item does not appear in the suggestions.",
+            "a": "It does not exist (or no longer) in your company catalogue. Enter the line as free text, or ask procurement / logistics to create the item."
+          },
+          {
+            "q": "I did not receive the forgotten password email.",
+            "a": "Check your spam folder. Only one link is sent every 5 minutes for the same address; the link expires after 1 hour and can only be used once."
+          },
+          {
+            "q": "A menu described here does not appear for me.",
+            "a": "Your profile does not allow it. Ask your administrator for the permission, then log in again."
+          }
+        ]
+      },
+      "supplierPortal": {
+        "title": "Supplier portal guide",
+        "summary": "Profile, documents, calls for tenders and bids.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Your profile"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Complete your information (legal identifiers, contact details, bank), the locations you serve and the categories you supply.",
+              "Upload your documents: ID, trade register (RCCM), tax certificate, national ID (ID Nat), bank details (company) or ID and bank details (individual). Each buying company verifies them; a rejected document is reported to you with the reason.",
+              "A complete, verified file allows you to be prequalified by companies, and therefore invited to their restricted calls for tenders."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Responding to a call for tenders"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "The dashboard and the \"Calls for tenders\" list show open or upcoming calls that concern you (public, or by invitation).",
+              "Open the call: enter your unit prices item by item, your delivery time (within the requested limit) and your remarks.",
+              "You can modify your bid as long as the call is open. Your prices are never visible to other suppliers, nor to the buyer before closing.",
+              "Download the PDF of your bid (with your logo) to print, sign and stamp it if the buyer requests it.",
+              "After the award, the result appears on your dashboard; the purchase order is sent to you by email."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/supplier/dashboard",
+                "label": "Dashboard"
+              },
+              {
+                "to": "/supplier/tenders",
+                "label": "Calls for tenders"
+              },
+              {
+                "to": "/supplier/profile",
+                "label": "My profile"
+              }
+            ]
+          }
+        ]
+      }
+    }
   }
 }

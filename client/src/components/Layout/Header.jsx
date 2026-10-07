@@ -6,6 +6,7 @@ import NotificationBell from '../Notifications/NotificationBell'
 import { useAuth } from '../../hooks/useAuth'
 import { useTranslation } from '../../i18n'
 import LanguageSwitcher from '../Common/LanguageSwitcher'
+import HelpCenter from '../Help/HelpCenter'
 
 export default function Header({ toggleSidebar }) {
   const { t } = useTranslation()
@@ -68,6 +69,9 @@ export default function Header({ toggleSidebar }) {
         {/* Right section - Notifications & User */}
         <div className="flex items-center gap-4">
           <LanguageSwitcher />
+
+          {/* Aide : guide d'utilisation */}
+          <HelpCenter />
 
           {/* Notifications */}
           <NotificationBell userId={user?.id || 1} />

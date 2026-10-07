@@ -211,6 +211,13 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - Rôle déduit de `TASK_CANDIDATE_GROUPS` si l'événement n'a pas de `candidateGroup` ; clé lue en `taskDefinitionKey` ou `TaskDefinitionKey` ; notifications et emails indépendants (l'échec de l'un n'empêche pas l'autre) ; bilan « 📧 … email(s) envoyé(s) » ou « aucun membre du projet avec le profil » dans les logs
 - Liens des emails (tâches GoFlow et appels d'offres) : `utils/appUrl.js` (`APP_URL`, `appLink(path)`) — `APP_URL` à définir dans `backend/.env` avec l'adresse publique (défaut `http://localhost:5000`, avertissement au démarrage en production)
 
+## Centre d'aide (« ? » de l'en-tête)
+
+- `components/Help/HelpCenter.jsx` (monté dans `Layout/Header.jsx`, entre le sélecteur de langue et la cloche) : panneau latéral « Guide d'utilisation » — sommaire, recherche (sans accents), précédent / suivant, FAQ dépliable, liens rapides (ferment le panneau), Échap
+- **Contenu dans les locales client** `help.sections.<id>` (`title`, `summary`, `blocks[]`, `faq[]`) ; blocs `h` / `p` / `tip` / `warn` (`text`), `steps` / `list` (`items`), `table` (`rows`, 1re ligne = en-tête), `links` (`{ to, label }`). Toute modification se fait **dans fr.json ET en.json** (même structure)
+- Dans le composant : ordre des rubriques et profils mis en avant (`SECTIONS`), rubrique ouverte selon l'écran (`ROUTE_SECTIONS`), fournisseur = `supplierPortal` + `account` (liens limités aux écrans fournisseur), super admin = `overview` / `roles` / `admin` / `account`
+- **Nouvelle fonctionnalité visible → mettre à jour la rubrique d'aide correspondante** (règles, seuils, libellés de boutons identiques à l'interface)
+
 ## Site vitrine (FR / EN)
 
 - `client/src/components/Landing/LandingPage.jsx` : page unique publique sur `/` (visiteur non connecté ; connecté → `HomeRedirect`, via `Home` dans `App.jsx`). Éditeur : **Digitales Solutions**

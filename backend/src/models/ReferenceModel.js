@@ -7,8 +7,8 @@ const { localizedSql } = require('../utils/requestLang');
 
 // table → colonnes modifiables et table de liaison fournisseur (pour le contrôle avant suppression)
 const TABLES = {
-  locations: { columns: ['name', 'province'], link: 'supplier_locations', linkColumn: 'location_id', tenderColumn: 'location_id' },
-  market_categories: { columns: ['name', 'description'], translatable: ['name', 'description'], link: 'supplier_categories', linkColumn: 'category_id', tenderColumn: 'category_id' },
+  locations: { columns: ['code', 'name', 'province'], link: 'supplier_locations', linkColumn: 'location_id', tenderColumn: 'location_id' },
+  market_categories: { columns: ['code', 'name', 'description', 'is_stockable'], translatable: ['name', 'description'], link: 'supplier_categories', linkColumn: 'category_id', tenderColumn: 'category_id' },
 };
 
 const MAX_TRANSLATION = { name: 150, description: 1000 };
@@ -32,6 +32,26 @@ class ReferenceModel {
     return db.one(`SELECT * FROM ${table} WHERE id = $1`, [id]);
   }
 
+  /**
+   * Code stable (identique dans toutes les bases) : saisi, ou dérivé du nom — majuscules sans accents,
+   * ex. « Matériel de bureau » → MATERIEL_DE_BUREAU ; suffixe _2, _3… si déjà pris
+   */
+  async uniqueCode(table, source, exceptId = null) {
+    const base = String(source || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toUpperCase().replace(/[^A-Z0-9-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 45) || 'REF';
+    for (let i = 1; ; i++) {
+      const code = i === 1 ? base : `${base}_${i}`;
+      if (!(await this.findByCode(table, code, exceptId))) return code;
+    }
+  }
+
+  async findByCode(table, code, exceptId = null) {
+    return db.one(
+      `SELECT id FROM ${table} WHERE UPPER(code) = UPPER($1) AND ($2::int IS NULL OR id <> $2)`,
+      [code, exceptId]
+    );
+  }
+
   async findByName(table, name, exceptId = null) {
     return db.one(
       `SELECT id FROM ${table} WHERE LOWER(name) = LOWER($1) AND ($2::int IS NULL OR id <> $2)`,
@@ -41,6 +61,7 @@ class ReferenceModel {
 
   async create(table, data) {
     const fields = this.pick(table, data);
+    fields.code = await this.uniqueCode(table, fields.code || fields.name);
     const translations = this.cleanTranslations(table, data.translations);
     if (translations) fields.translations = JSON.stringify(translations);
     const cols = Object.keys(fields);

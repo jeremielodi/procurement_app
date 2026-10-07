@@ -29,7 +29,14 @@ import {
   Gavel,
   Briefcase,
   MapPin,
-  BadgeCheck
+  BadgeCheck,
+  Warehouse,
+  Boxes,
+  History,
+  PackageMinus,
+  Inbox,
+  Laptop,
+  Undo2
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -65,6 +72,13 @@ const menuGroups = [
         path: '/tasks', 
         icon: CheckSquare, 
         label: 'nav.myTasks',
+        permission: null,
+        hideForSupplier: true
+      },
+      {
+        path: '/my-items',
+        icon: Inbox,
+        label: 'nav.myItems',
         permission: null,
         hideForSupplier: true
       }
@@ -143,6 +157,20 @@ const menuGroups = [
         label: 'nav.myCompany',
         permission: 'SUPPLIER_PORTAL'
       }
+    ]
+  },
+  {
+    id: 'stock',
+    label: 'nav.groups.stock',
+    icon: Warehouse,
+    items: [
+      { path: '/stock', icon: Package, label: 'nav.stock', permission: 'VIEW_STOCK' },
+      { path: '/stock/items', icon: Boxes, label: 'nav.stockItems', permission: 'VIEW_STOCK' },
+      { path: '/stock/issues', icon: PackageMinus, label: 'nav.stockIssues', permission: 'VIEW_STOCK' },
+      { path: '/stock/returns', icon: Undo2, label: 'nav.stockReturns', permission: 'VIEW_STOCK' },
+      { path: '/stock/equipment', icon: Laptop, label: 'nav.equipment', permission: 'VIEW_STOCK' },
+      { path: '/stock/movements', icon: History, label: 'nav.stockMovements', permission: 'VIEW_STOCK' },
+      { path: '/stock/warehouses', icon: Warehouse, label: 'nav.warehouses', permission: 'VIEW_STOCK' }
     ]
   },
   {

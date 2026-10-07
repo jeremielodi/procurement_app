@@ -5,11 +5,20 @@ const db             = require('../config/database');
 const i18n           = require('../i18n');
 const grnExportService = require('../services/GoodsReceiptExportService');
 
+// Erreurs métier du modèle ({ status, code }) → réponse HTTP ; le reste → 500
+function sendError(res, error, fallback) {
+  if (error.status) {
+    return res.status(error.status).json({ success: false, code: error.code, message: error.message, line: error.line, remaining: error.remaining });
+  }
+  console.error(fallback, error);
+  return res.status(500).json({ success: false, message: fallback, error: error.message });
+}
+
 class GoodsReceiptController {
 
   async create(req, res) {
     try {
-      const { poId, grnItems = [], observations, taskId } = req.body;
+      const { poId, grnItems = [], observations, taskId, warehouseId } = req.body;
       const receivedBy = req.body.receivedBy || req.user?.id;
 
       if (!poId) {
@@ -22,7 +31,7 @@ class GoodsReceiptController {
         return res.status(404).json({ success: false, message: 'Commande introuvable' });
       }
 
-      const result = await grnModel.create({ poId, receivedBy, grnItems, observations });
+      const result = await grnModel.create({ poId, receivedBy, grnItems, observations, warehouseId }, { userId: req.user.id });
 
       // Complete Camunda Activity_GoodsReceipt task
       let camundaTaskCompleted = false;
@@ -74,8 +83,7 @@ class GoodsReceiptController {
         message: 'Bon de réception créé avec succès'
       });
     } catch (error) {
-      console.error('Error creating GRN:', error);
-      res.status(500).json({ success: false, message: 'Erreur lors de la création du GRN', error: error.message });
+      return sendError(res, error, 'Erreur lors de la création du GRN');
     }
   }
 
@@ -141,10 +149,30 @@ class GoodsReceiptController {
       const { id } = req.params;
       const { status } = req.body;
       if (!status) return res.status(400).json({ success: false, message: 'status requis' });
+      const current = await grnModel.findById(id);
+      if (!current) return res.status(404).json({ success: false, message: 'GRN non trouvé' });
+      if (current.status === 'CANCELLED') {
+        return res.status(409).json({ success: false, code: 'ALREADY_CANCELLED', message: 'GRN annulé : statut figé' });
+      }
+      // Annulation : écritures de stock inverses (jamais un simple changement de statut)
+      if (status === 'CANCELLED') {
+        const result = await grnModel.cancel(id, { userId: req.user.id, reason: req.body.reason });
+        return res.json({ success: true, data: result, message: 'GRN annulé' });
+      }
       await grnModel.updateStatus(id, status);
       res.json({ success: true, message: 'Statut mis à jour' });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Erreur mise à jour statut', error: error.message });
+      return sendError(res, error, 'Erreur mise à jour statut');
+    }
+  }
+
+  /** POST /goods-receipts/:id/cancel { reason } — annule la réception et ses entrées en stock */
+  async cancel(req, res) {
+    try {
+      const result = await grnModel.cancel(req.params.id, { userId: req.user.id, reason: req.body?.reason });
+      res.json({ success: true, data: result, message: 'GRN annulé' });
+    } catch (error) {
+      return sendError(res, error, 'Erreur lors de l\'annulation du GRN');
     }
   }
 }

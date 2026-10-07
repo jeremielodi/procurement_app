@@ -1,7 +1,8 @@
 // src/components/Admin/UserList.jsx
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Ban, CheckCircle, Key, Search, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Ban, CheckCircle, Key, Search, Filter, Laptop } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import Modal from '../Common/Modal';
 import UserForm from './UserForm';
@@ -15,6 +16,8 @@ export default function UserList() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showResetModal, setShowResetModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+  // Départ : équipements encore détenus (409 HOLDS_EQUIPMENT) → récupérer ou désactiver quand même
+  const [heldEquipment, setHeldEquipment] = useState(null); // { user, units }
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', filters],
@@ -22,10 +25,16 @@ export default function UserList() {
   });
 
   const toggleActiveMutation = useMutation({
-    mutationFn: ({ id, isActive }) => api.patch(`/users/${id}/toggle-active`, { isActive }),
+    mutationFn: ({ id, isActive, force }) => api.patch(`/users/${id}/toggle-active`, { isActive, force }, { skipErrorToast: true }),
     onSuccess: () => {
       queryClient.invalidateQueries(['users']);
+      setHeldEquipment(null);
       toast.success(t('users.statusChanged'));
+    },
+    onError: (error, variables) => {
+      const data = error.response?.data;
+      if (data?.code === 'HOLDS_EQUIPMENT') setHeldEquipment({ user: variables.user, units: data.data || [] });
+      else toast.error(data?.message || t('common.errorOccurred'));
     }
   });
 
@@ -152,7 +161,7 @@ export default function UserList() {
                     <Key size={18} />
                   </button>
                   <button
-                    onClick={() => toggleActiveMutation.mutate({ id: user.id, isActive: !user.is_active })}
+                    onClick={() => toggleActiveMutation.mutate({ id: user.id, isActive: !user.is_active, user })}
                     className={user.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}
                     title={user.is_active ? t('users.block') : t('users.unblock')}
                   >
@@ -221,6 +230,31 @@ export default function UserList() {
             placeholder={t('users.min6')}
           />
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!heldEquipment}
+        onClose={() => setHeldEquipment(null)}
+        title={t('users.holdsEquipmentTitle', { name: heldEquipment ? `${heldEquipment.user?.first_name || ''} ${heldEquipment.user?.last_name || ''}` : '' })}
+        type="warning"
+        confirmText={t('users.deactivateAnyway')}
+        onConfirm={() => toggleActiveMutation.mutate({ id: heldEquipment.user.id, isActive: false, force: true, user: heldEquipment.user })}
+        isLoading={toggleActiveMutation.isPending}
+      >
+        {heldEquipment && (
+          <div className="space-y-3 text-sm text-gray-700">
+            <p>{t('users.holdsEquipmentText', { count: heldEquipment.units.length })}</p>
+            <ul className="max-h-48 overflow-auto rounded-lg border border-gray-200 divide-y">
+              {heldEquipment.units.map(u => (
+                <li key={u.id} className="flex items-center gap-2 px-3 py-1.5"><Laptop size={14} className="text-gray-400" /> {u.item_name} <span className="font-mono text-xs text-gray-500">{u.serial_number}</span></li>
+              ))}
+            </ul>
+            <Link to={`/stock/returns/new?userId=${heldEquipment.user.id}`} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+              {t('users.recoverEquipment')}
+            </Link>
+            <p className="text-xs text-gray-500">{t('users.deactivateAnywayHint')}</p>
+          </div>
+        )}
       </Modal>
     </div>
   );

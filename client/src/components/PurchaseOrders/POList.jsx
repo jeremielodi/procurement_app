@@ -9,6 +9,7 @@ import StatusBadge from '../Common/StatusBadge'
 import LoadingSpinner from '../Common/LoadingSpinner'
 import toast from 'react-hot-toast'
 import { t } from '../../i18n'
+import { DeliveryStatusBadge } from './PODeliveryTracking'
 
 export default function POList() {
   const queryClient = useQueryClient()
@@ -169,6 +170,7 @@ export default function POList() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={po.status} />
+                      {po.delivery_status && po.delivery_status !== 'NOT_DELIVERED' && <DeliveryStatusBadge status={po.delivery_status} className="ml-1" />}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex gap-2">

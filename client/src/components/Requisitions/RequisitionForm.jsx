@@ -14,6 +14,7 @@ import { enterpriseService } from '../../services/enterpriseService'
 import BudgetLineSearchModal from './BudgetLineSearchModal'
 import ImportItemsModal from './ImportItemsModal'
 import FileUpload from '../Common/FileUpload'
+import CatalogAutocomplete from '../Stock/CatalogAutocomplete'
 import { t, getLocale } from '../../i18n'
 
 const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
@@ -50,7 +51,8 @@ export default function RequisitionForm() {
         frequency: 1,
         unitPrice: 0,
         budgetLineId: '',
-        budgetLineInfo: null
+        budgetLineInfo: null,
+        stockItem: null
       }],
       projectId: '',
       departmentId: '',
@@ -177,7 +179,9 @@ export default function RequisitionForm() {
         frequency: item.frequency,
         unitPrice: item.unitPrice,
         budgetLineId: item.budgetLineId,
-        specifications: item.specifications || null
+        specifications: item.specifications || null,
+        // Article du catalogue (gestion de stock) ; absent = texte libre
+        stockItemId: item.stockItem?.id || null
       }))
 
       await createMutation.mutateAsync({
@@ -532,10 +536,15 @@ export default function RequisitionForm() {
                         {status.icon}
                       </td>
                       <td className="px-3 py-2">
-                        <input
-                          {...register(`items.${index}.description`, {
+                        <CatalogAutocomplete
+                          inputProps={register(`items.${index}.description`, {
                             required: t('reqForm.descriptionRequired'),
                           })}
+                          linked={item?.stockItem || null}
+                          onLink={(stockItem) => {
+                            setValue(`items.${index}.stockItem`, stockItem)
+                            if (stockItem) setValue(`items.${index}.description`, stockItem.name, { shouldValidate: true })
+                          }}
                           placeholder={t('reqForm.itemDescription')}
                           className={`w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 ${!item?.description ? 'border-red-400 bg-red-50' : 'border-gray-300'
                             }`}
@@ -544,10 +553,10 @@ export default function RequisitionForm() {
                       <td className="px-2 py-2">
                         <input
                           type="number"
-                          step="1"
+                          step="any"
                           {...register(`items.${index}.quantity`, {
                             required: t('reqForm.quantityRequired'),
-                            min: 1,
+                            validate: (v) => v > 0 || t('reqForm.quantityRequired'),
                             valueAsNumber: true
                           })}
                           className={`w-full px-2 py-1 border rounded text-center focus:ring-2 focus:ring-blue-500 ${!item?.quantity || item.quantity <= 0 ? 'border-red-400 bg-red-50' : 'border-gray-300'

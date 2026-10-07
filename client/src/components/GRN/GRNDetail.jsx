@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Package, CheckCircle, AlertTriangle, Clock, Eye, Download } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle, AlertTriangle, Clock, Eye, Download, Ban, Warehouse } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { grnService } from '../../services/grnService';
 import BlobPdfViewer from '../Common/BlobPdfViewer';
+import Modal from '../Common/Modal';
+import { usePermissions } from '../../hooks/usePermissions';
 import { t, withLabel, getLocale } from '../../i18n';
 
 const STATUS_CONFIG = withLabel('grnStatus', {
@@ -11,7 +13,10 @@ const STATUS_CONFIG = withLabel('grnStatus', {
   PARTIAL:  { icon: AlertTriangle, cls: 'text-orange-600 bg-orange-50 border-orange-200' },
   PENDING:  { icon: Clock, cls: 'text-yellow-600 bg-yellow-50 border-yellow-200' },
   DRAFT:    { icon: Clock, cls: 'text-gray-600 bg-gray-50 border-gray-200' },
+  CANCELLED: { icon: Ban, cls: 'text-gray-500 bg-gray-100 border-gray-300' },
 });
+
+const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 
 export default function GRNDetail() {
   const { id } = useParams();
@@ -19,13 +24,34 @@ export default function GRNDetail() {
   const [grn, setGrn] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPdf, setShowPdf] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  const { hasPermission } = usePermissions();
 
-  useEffect(() => {
-    grnService.getById(id)
-      .then(r => setGrn(r.data))
-      .catch(() => toast.error(t('grn.notFound')))
-      .finally(() => setLoading(false));
-  }, [id]);
+  const load = () => grnService.getById(id)
+    .then(r => setGrn(r.data))
+    .catch(() => toast.error(t('grn.notFound')))
+    .finally(() => setLoading(false));
+  useEffect(() => { load(); }, [id]);
+
+  // Annulation : écritures de stock inverses (refusée si une partie du stock reçu a déjà été sortie)
+  const confirmCancel = async () => {
+    if (!cancelReason.trim()) { toast.error(t('grn.cancelReasonRequired')); return; }
+    setCancelling(true);
+    try {
+      const res = await grnService.cancel(id, cancelReason.trim());
+      toast.success(t('grn.cancelled', { count: res.data?.reversedMovements || 0 }));
+      setShowCancel(false);
+      setCancelReason('');
+      await load();
+    } catch (err) {
+      const data = err.response?.data || {};
+      toast.error(data.code === 'STOCK_INSUFFICIENT' ? t('grn.cancelStockUsed') : (data.message || t('common.errorOccurred')));
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (loading) {
     return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
@@ -36,8 +62,9 @@ export default function GRNDetail() {
 
   const status = STATUS_CONFIG[grn.status] || STATUS_CONFIG.DRAFT;
   const StatusIcon = status.icon;
-  const totalReceived = (grn.items || []).reduce((s, i) => s + (i.quantity_received || 0), 0);
-  const totalRejected = (grn.items || []).reduce((s, i) => s + (i.quantity_rejected || 0), 0);
+  const totalReceived = (grn.items || []).reduce((s, i) => s + (Number(i.quantity_received) || 0), 0);
+  const totalRejected = (grn.items || []).reduce((s, i) => s + (Number(i.quantity_rejected) || 0), 0);
+  const canCancel = grn.status !== 'CANCELLED' && hasPermission('APPROVE_PURCHASE_ORDERS');
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -46,6 +73,12 @@ export default function GRNDetail() {
           <ArrowLeft size={16} /> {t('common.back')}
         </button>
         <div className="flex gap-2">
+          {canCancel && (
+            <button onClick={() => setShowCancel(true)}
+              className="flex items-center gap-2 px-3 py-1.5 border border-red-300 text-red-700 rounded-lg text-sm hover:bg-red-50">
+              <Ban size={16} /> {t('grn.cancel')}
+            </button>
+          )}
           <button onClick={() => setShowPdf(true)}
             className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
             <Eye size={16} /> {t('grn.pdfPreview')}
@@ -71,6 +104,25 @@ export default function GRNDetail() {
         />
       )}
 
+      <Modal
+        isOpen={showCancel}
+        onClose={() => !cancelling && setShowCancel(false)}
+        title={t('grn.cancelTitle', { number: grn.grn_number })}
+        type="danger"
+        size="sm"
+        confirmText={t('grn.cancel')}
+        onConfirm={confirmCancel}
+        isLoading={cancelling}
+      >
+        <div className="space-y-3 text-sm text-gray-700">
+          <p>{t('grn.cancelText')}</p>
+          {(grn.items || []).some(i => i.movement_number) && <p className="font-medium">{t('grn.cancelStockText')}</p>}
+          <textarea rows={2} value={cancelReason} onChange={e => setCancelReason(e.target.value)}
+            placeholder={t('grn.cancelReason')} aria-label={t('grn.cancelReason')}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400" />
+        </div>
+      </Modal>
+
       {/* Header */}
       <div className={`flex items-center justify-between p-4 rounded-xl border mb-6 ${status.cls}`}>
         <div className="flex items-center gap-3">
@@ -93,8 +145,8 @@ export default function GRNDetail() {
         {[
           { label: t('grn.receiptDate'), value: grn.receipt_date ? new Date(grn.receipt_date).toLocaleDateString(getLocale()) : '—' },
           { label: t('grn.receivedBy'), value: grn.received_by_name || '—' },
-          { label: t('grn.totalReceived'), value: totalReceived },
-          { label: t('grn.rejectedQty'), value: totalRejected, warn: totalRejected > 0 },
+          { label: t('grn.totalReceived'), value: fmtQty(totalReceived) },
+          { label: t('grn.rejectedQty'), value: fmtQty(totalRejected), warn: totalRejected > 0 },
         ].map(({ label, value, warn }) => (
           <div key={label} className="bg-white border border-gray-200 rounded-lg p-3">
             <p className="text-xs text-gray-500 mb-1">{label}</p>
@@ -102,6 +154,14 @@ export default function GRNDetail() {
           </div>
         ))}
       </div>
+
+      {grn.warehouse_name && (
+        <div className="mb-6 flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-3 text-sm">
+          <Warehouse size={16} className="text-gray-500" />
+          <span className="text-gray-500">{t('grn.warehouse')} :</span>
+          <b>{grn.warehouse_name}</b> <span className="text-gray-500">({grn.warehouse_location})</span>
+        </div>
+      )}
 
       {/* Items */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
@@ -117,16 +177,29 @@ export default function GRNDetail() {
                 {t('grn.detailCols', { returnObjects: true }).map(h => (
                   <th key={h} className="text-left px-4 py-2 font-medium text-gray-600">{h}</th>
                 ))}
+                <th className="text-left px-4 py-2 font-medium text-gray-600">{t('grn.stockCol')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {grn.items.map(item => (
-                <tr key={item.id} className={item.quantity_rejected > 0 ? 'bg-red-50' : ''}>
-                  <td className="px-4 py-2 text-gray-900">{item.item_description}</td>
-                  <td className="px-4 py-2 text-center">{item.quantity_received}</td>
-                  <td className="px-4 py-2 text-center text-green-700 font-medium">{item.quantity_accepted}</td>
-                  <td className="px-4 py-2 text-center text-red-600 font-medium">{item.quantity_rejected || 0}</td>
+                <tr key={item.id} className={Number(item.quantity_rejected) > 0 ? 'bg-red-50' : ''}>
+                  <td className="px-4 py-2 text-gray-900">
+                    {item.item_code && <span className="mr-1 rounded bg-indigo-50 px-1 text-xs font-semibold text-indigo-700">{item.item_code}</span>}
+                    {item.item_description}
+                    {item.serials?.length > 0 && <div className="font-mono text-xs text-gray-500">{item.serials.join(', ')}</div>}
+                    {item.lot_number && (
+                      <div className="text-xs text-gray-500">{t('grn.lotLabel', { lot: item.lot_number })}{item.expiry_date && ` · ${t('grn.expiryLabel', { date: new Date(item.expiry_date).toLocaleDateString(getLocale()) })}`}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-center">{fmtQty(item.quantity_received)}</td>
+                  <td className="px-4 py-2 text-center text-green-700 font-medium">{fmtQty(item.quantity_accepted)}</td>
+                  <td className="px-4 py-2 text-center text-red-600 font-medium">{fmtQty(item.quantity_rejected)}</td>
                   <td className="px-4 py-2 text-gray-500 italic">{item.rejection_reason || '—'}</td>
+                  <td className="px-4 py-2 text-xs">
+                    {item.movement_number
+                      ? <span className="text-green-700" title={t('grn.movementHint')}>{item.movement_number}</span>
+                      : <span className="text-gray-400">{item.stock_item_id ? (item.is_stockable ? '—' : t('stock.notStockable')) : t('grn.notLinked')}</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>

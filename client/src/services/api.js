@@ -49,6 +49,9 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
     
+    // L'appelant affiche lui-même un message adapté (ex. erreurs métier traduites du bon de réception)
+    if (error.config?.skipErrorToast) return Promise.reject(error)
+
     const message = error.response?.data?.message || t('common.errorOccurred')
     toast.error(message)
     return Promise.reject(error)

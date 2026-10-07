@@ -101,7 +101,7 @@ class RequisitionTimelineService {
     const [grns, sans, invoices] = poIds.length ? await Promise.all([
       db.select('SELECT id, grn_number, status, receipt_date, created_at FROM goods_receipt_notes WHERE po_id = ANY($1) ORDER BY id', [poIds]),
       db.select('SELECT id, san_number, status, acceptance_date, created_at FROM service_acceptance_notes WHERE po_id = ANY($1) ORDER BY id', [poIds]),
-      db.select('SELECT id, invoice_number, status, match_status, created_at FROM invoices WHERE po_id = ANY($1) ORDER BY id', [poIds]),
+      db.select('SELECT id, po_id, invoice_number, status, match_status, created_at FROM invoices WHERE po_id = ANY($1) ORDER BY id', [poIds]),
     ]) : [[], [], []];
     // Les paiements sont liés à la facture (po_id souvent vide)
     const invoiceIds = invoices.map(i => i.id);
@@ -260,7 +260,10 @@ class RequisitionTimelineService {
     // Même règle que la colonne « Avancement » (RequisitionModel) : la fin du processus GoFlow fait foi
     const endedAt = (endEvent) => rows.some(r => r.action === 'TASK_COMPLETED' && (r.comments || '').includes(`"next_element":"${endEvent}"`));
     const processCompleted = endedAt('Event_Completed');
-    const finished = req.status === 'COMPLETED' || processCompleted || (!req.process_instance_id && paid);
+    // Hors workflow : terminée quand TOUS les PO actifs ont une facture payée (même règle que la colonne « Avancement »)
+    const allPosPaid = activePos.length > 0
+      && activePos.every(po => invoices.some(i => String(i.po_id) === String(po.id) && i.status === 'PAID'));
+    const finished = req.status === 'COMPLETED' || processCompleted || (!req.process_instance_id && allPosPaid);
     const links = (list, numberKey, base) => list.map(d => ({ label: d[numberKey], to: `${base}/${d.id}` }));
 
     const steps = [

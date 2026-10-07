@@ -1,6 +1,7 @@
 // backend/src/controllers/UserController.js
 const userModel = require('../models/UserModel');
 const { audit, AUDIT } = require('../utils/auditLog');
+const equipmentModel = require('../models/StockEquipmentModel');
 
 // Profils non attribuables par un administrateur d'entreprise
 const RESERVED_PROFILES = ['prof_superadmin', 'prof_supplier'];
@@ -152,10 +153,24 @@ class UserController {
       if (!existing) {
         return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
       }
+
+      // Départ : l'employé doit d'abord rendre ses équipements (ou désactivation forcée, tracée dans l'audit)
+      if (!isActive && existing.isActive !== false) {
+        const held = await equipmentModel.heldUnits(id);
+        if (held.length && req.body.force !== true) {
+          return res.status(409).json({
+            success: false, code: 'HOLDS_EQUIPMENT',
+            message: `${held.length} équipement(s) encore détenu(s) : enregistrez leur retour avant de désactiver le compte`,
+            data: held,
+          });
+        }
+        if (held.length) req.forcedWithEquipment = held.map(u => u.serial_number);
+      }
       
       await userModel.toggleActive(id, isActive);
       await audit(req, isActive ? AUDIT.USER_ACTIVATED : AUDIT.USER_DEACTIVATED, {
         target: { id, email: existing.email, enterprise_id: existing.enterpriseId },
+        details: req.forcedWithEquipment ? { forcedWithEquipment: req.forcedWithEquipment } : undefined,
       });
       
       res.json({

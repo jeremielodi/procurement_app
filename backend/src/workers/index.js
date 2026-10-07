@@ -593,7 +593,9 @@ async function processGoodsReceipt(task) {
   const grnModel = require('../models/GoodsReceiptModel');
   let grnId = null;
   try {
-    const grnResult = await grnModel.create({ poId, receivedBy, grnItems, observations });
+    // Hors requête HTTP : dépôt fourni par les variables du processus (obligatoire pour les articles stockables)
+    const warehouseId = getVariableValue(task.variables, 'warehouseId') || null;
+    const grnResult = await grnModel.create({ poId, receivedBy, grnItems, observations, warehouseId });
     grnId = grnResult.id;
     logSuccess('GRN %s created in DB (id=%s)', grnResult.grnNumber, grnId);
   } catch (dbErr) {

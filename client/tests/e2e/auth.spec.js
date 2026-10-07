@@ -14,7 +14,7 @@ test.describe('🔐 Authentification', () => {
 
   test('Login avec identifiants valides → redirect /dashboard', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('h1')).toContainText('Procurement System');
+    await expect(page.locator('h1')).toContainText('procureApp'); // nom de la plateforme (anciennement « Procurement System »)
 
     await page.fill('input[name="email"]',    EMAIL);
     await page.fill('input[name="password"]', PASSWORD);

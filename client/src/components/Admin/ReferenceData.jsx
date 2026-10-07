@@ -21,6 +21,7 @@ const TABS = {
     intro: 'refs.categoriesIntro',
     extra: { key: 'description', label: 'common.description' },
     translated: true,
+    stockable: true,
   },
 };
 
@@ -30,7 +31,7 @@ export default function ReferenceData() {
   const [tab, setTab] = useState('locations');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState({ name: '', extra: '', tr: {} });
+  const [draft, setDraft] = useState({ name: '', code: '', extra: '', tr: {} });
   const [editing, setEditing] = useState(null); // { id, name, extra }
   const cfg = TABS[tab];
 
@@ -42,7 +43,7 @@ export default function ReferenceData() {
       setLoading(false);
     }
   };
-  useEffect(() => { setEditing(null); setDraft({ name: '', extra: '', tr: {} }); load(); }, [tab]);
+  useEffect(() => { setEditing(null); setDraft({ name: '', code: '', extra: '', tr: {} }); load(); }, [tab]);
 
   // { en: 'Office supplies' } → { en: { name: 'Office supplies' } }
   const translationsPayload = (tr) => cfg.translated
@@ -53,17 +54,25 @@ export default function ReferenceData() {
     e.preventDefault();
     if (!draft.name.trim()) return;
     try {
-      await cfg.service.create({ name: draft.name, [cfg.extra.key]: draft.extra, ...translationsPayload(draft.tr) });
+      await cfg.service.create({ name: draft.name, code: draft.code || undefined, [cfg.extra.key]: draft.extra, ...translationsPayload(draft.tr) });
       toast.success(t('refs.added', { name: draft.name }));
-      setDraft({ name: '', extra: '', tr: {} });
+      setDraft({ name: '', code: '', extra: '', tr: {} });
       load();
     } catch (_) { /* toast */ }
   };
 
   const saveEdit = async () => {
     try {
-      await cfg.service.update(editing.id, { name: editing.name, [cfg.extra.key]: editing.extra, ...translationsPayload(editing.tr) });
+      await cfg.service.update(editing.id, { name: editing.name, code: editing.code, [cfg.extra.key]: editing.extra, ...translationsPayload(editing.tr) });
       setEditing(null);
+      load();
+    } catch (_) { /* toast */ }
+  };
+
+  // Catégorie stockable : les articles de cette catégorie sont stockables par défaut (gestion de stock)
+  const toggleStockable = async (row) => {
+    try {
+      await cfg.service.update(row.id, { is_stockable: !row.is_stockable });
       load();
     } catch (_) { /* toast */ }
   };
@@ -102,6 +111,8 @@ export default function ReferenceData() {
       <p className="text-sm text-gray-600">{t(cfg.intro)}{cfg.translated && <span className="block text-gray-500">{t('refs.translationHint')}</span>}</p>
 
       <form onSubmit={add} className="flex flex-wrap gap-2 bg-white border border-gray-200 rounded-lg p-3">
+        <input className={`${inputCls} w-36 font-mono uppercase`} placeholder={t('refs.codeAuto')} value={draft.code} maxLength={50}
+          onChange={e => setDraft(d => ({ ...d, code: e.target.value.toUpperCase() }))} title={t('refs.codeHint')} />
         <input className={`${inputCls} flex-1 min-w-[200px]`} placeholder={t('refs.name')} value={draft.name}
           onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} data-testid="ref-name" />
         {cfg.translated && OTHER_LANGS.map(l => (
@@ -123,9 +134,11 @@ export default function ReferenceData() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-600 text-left">
               <tr>
+                <th className="px-4 py-2">{t('refs.code')}</th>
                 <th className="px-4 py-2">{t('refs.name')}</th>
                 {cfg.translated && OTHER_LANGS.map(l => <th key={l} className="px-4 py-2">{t('refs.nameIn', { lang: l.toUpperCase() })}</th>)}
                 <th className="px-4 py-2">{t(cfg.extra.label)}</th>
+                {cfg.stockable && <th className="px-4 py-2">{t('refs.stockable')}</th>}
                 <th className="px-4 py-2 text-right">{t('refs.suppliers')}</th>
                 <th className="px-4 py-2">{t('common.status')}</th>
                 <th className="px-4 py-2 text-right">{t('common.actions')}</th>
@@ -134,11 +147,13 @@ export default function ReferenceData() {
             <tbody className="divide-y">
               {rows.map(row => editing?.id === row.id ? (
                 <tr key={row.id} className="bg-blue-50">
+                  <td className="px-4 py-2"><input className={`${inputCls} font-mono uppercase`} value={editing.code} onChange={e => setEditing(x => ({ ...x, code: e.target.value.toUpperCase() }))} /></td>
                   <td className="px-4 py-2"><input className={inputCls} value={editing.name} onChange={e => setEditing(x => ({ ...x, name: e.target.value }))} /></td>
                   {cfg.translated && OTHER_LANGS.map(l => (
                     <td key={l} className="px-4 py-2"><input className={inputCls} value={editing.tr[l] || ''} onChange={e => setEditing(x => ({ ...x, tr: { ...x.tr, [l]: e.target.value } }))} /></td>
                   ))}
                   <td className="px-4 py-2"><input className={inputCls} value={editing.extra} onChange={e => setEditing(x => ({ ...x, extra: e.target.value }))} /></td>
+                  {cfg.stockable && <td />}
                   <td className="px-4 py-2 text-right">{row.supplier_count}</td>
                   <td />
                   <td className="px-4 py-2 text-right whitespace-nowrap">
@@ -148,9 +163,15 @@ export default function ReferenceData() {
                 </tr>
               ) : (
                 <tr key={row.id} className={row.is_active ? '' : 'text-gray-400'}>
+                  <td className="px-4 py-2 font-mono text-xs">{row.code}</td>
                   <td className="px-4 py-2 font-medium">{row.name}</td>
                   {cfg.translated && OTHER_LANGS.map(l => <td key={l} className="px-4 py-2">{trName(row, l) || <span className="text-amber-600 text-xs">—</span>}</td>)}
                   <td className="px-4 py-2">{row[cfg.extra.key] || '—'}</td>
+                  {cfg.stockable && (
+                    <td className="px-4 py-2">
+                      <input type="checkbox" checked={!!row.is_stockable} onChange={() => toggleStockable(row)} aria-label={t('refs.stockable')} title={t('refs.stockableHint')} />
+                    </td>
+                  )}
                   <td className="px-4 py-2 text-right">{row.supplier_count}</td>
                   <td className="px-4 py-2">
                     <button onClick={() => toggle(row)}
@@ -160,14 +181,14 @@ export default function ReferenceData() {
                     </button>
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
-                    <button onClick={() => setEditing({ id: row.id, name: row.name, extra: row[cfg.extra.key] || '', tr: Object.fromEntries(OTHER_LANGS.map(l => [l, trName(row, l)])) })}
+                    <button onClick={() => setEditing({ id: row.id, code: row.code || '', name: row.name, extra: row[cfg.extra.key] || '', tr: Object.fromEntries(OTHER_LANGS.map(l => [l, trName(row, l)])) })}
                       className="p-1.5 text-gray-600 hover:bg-gray-100 rounded" title={t('common.edit')}><Pencil size={16} /></button>
                     <button onClick={() => remove(row)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"
                       title={t('refs.deleteHint')}><Trash2 size={16} /></button>
                   </td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={5 + (cfg.translated ? OTHER_LANGS.length : 0)} className="px-4 py-6 text-center text-gray-500">{t('refs.none')}</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={6 + (cfg.translated ? OTHER_LANGS.length : 0) + (cfg.stockable ? 1 : 0)} className="px-4 py-6 text-center text-gray-500">{t('refs.none')}</td></tr>}
             </tbody>
           </table>
         )}

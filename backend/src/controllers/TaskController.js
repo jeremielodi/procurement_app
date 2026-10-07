@@ -352,8 +352,9 @@ async function completeTask(req, res) {
               poId,
               receivedBy: userId,
               grnItems: Array.isArray(grnItems) ? grnItems : JSON.parse(grnItems || '[]'),
-              observations
-            });
+              observations,
+              warehouseId: variables.warehouseId || null
+            }, { userId });
             // Inject grnCompliant into the Camunda variables (already completed above,
             // so we just store the result in workflow history)
             await db.insert('workflow_history', {

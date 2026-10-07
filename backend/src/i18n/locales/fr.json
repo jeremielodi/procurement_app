@@ -289,6 +289,18 @@
       "updatedSubmission": "Soumission modifiée",
       "submitted": "{supplier} a soumis son offre pour {number}",
       "resubmitted": "{supplier} a modifié son offre pour {number}"
+    },
+    "stockIssue": {
+      "issuedTitle": "Articles remis : {number}",
+      "issuedMessage": "Des articles vous ont été remis ({number}). Confirmez leur réception dans « Mes articles reçus ».",
+      "acknowledgedTitle": "Réception confirmée : {number}",
+      "acknowledgedMessage": "{name} a confirmé la réception des articles du bon {number}.",
+      "cancelledTitle": "Sortie annulée : {number}",
+      "cancelledMessage": "Le bon de sortie {number} a été annulé : les articles sont revenus en stock."
+    },
+    "stockReturn": {
+      "title": "Retour enregistré : {number}",
+      "message": "Le retour {number} de {count} article(s) a été enregistré par la logistique."
     }
   },
   "pdf": {
@@ -367,14 +379,17 @@
       "signature": "Signature :",
       "deliverer": "Livreur (fournisseur)",
       "nameSignature": "Nom et signature :",
-      "warehouse": "Visa logistique / magasin",
+      "warehouse": "Dépôt :",
       "signatureStamp": "Signature et cachet :",
       "status": {
         "DRAFT": "Brouillon",
         "PENDING": "En attente",
         "PARTIAL": "Partielle",
-        "COMPLETE": "Complète"
-      }
+        "COMPLETE": "Complète",
+        "CANCELLED": "Annulé"
+      },
+      "lot": "Lot",
+      "expiry": "péremption"
     },
     "payment": {
       "title": "Reçu de Paiement",
@@ -448,6 +463,46 @@
       "date": "Date",
       "empty": "Aucune réquisition trouvée",
       "footer": "{enterprise} — document généré automatiquement par {app}"
+    },
+    "stockIssue": {
+      "title": "BON DE SORTIE",
+      "date": "Date",
+      "cancelled": "ANNULÉ",
+      "recipient": "Bénéficiaire",
+      "name": "Nom",
+      "email": "Email",
+      "project": "Projet",
+      "warehouse": "Dépôt",
+      "location": "Localisation",
+      "issuedBy": "Remis par",
+      "purpose": "Motif / usage",
+      "no": "N°",
+      "code": "Code",
+      "item": "Article",
+      "lot": "Lot",
+      "quantity": "Quantité",
+      "unit": "Unité",
+      "expiry": "péremption",
+      "storekeeper": "Magasinier",
+      "recipientSignature": "Bénéficiaire (reçu conforme)",
+      "signature": "Date et signature :",
+      "acknowledgedOn": "Réception confirmée dans procureApp par {name} le {date}",
+      "cancelledOn": "Bon annulé par {name} le {date} — motif : {reason}. Les articles ont été remis en stock."
     }
+  },
+  "stockExport": {
+    "sheetDetail": "Stock par lot",
+    "sheetSummary": "Par article",
+    "code": "Code",
+    "item": "Article",
+    "category": "Catégorie",
+    "location": "Localisation",
+    "warehouse": "Dépôt",
+    "lot": "Lot",
+    "expiry": "Péremption",
+    "quantity": "Quantité",
+    "unit": "Unité",
+    "minimum": "Stock minimum",
+    "warehouses": "Dépôts"
   }
 }

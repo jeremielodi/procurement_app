@@ -34,6 +34,9 @@ const supplierPortalController = require('../controllers/SupplierPortalControlle
 const tenderController = require('../controllers/TenderController');
 const requisitionImport = require('../controllers/requisition/importItems');
 const referenceController = require('../controllers/ReferenceController');
+const stockController = require('../controllers/StockController');
+const stockIssueController = require('../controllers/StockIssueController');
+const equipmentController = require('../controllers/StockEquipmentController');
 const { singleDocumentMiddleware } = require('../utils/supplierDocuments');
 const requisitionTimeline = require('../services/RequisitionTimelineService');
 const i18n = require('../i18n');
@@ -259,6 +262,12 @@ router.get('/purchase-orders/stats',
   authenticate,
   hasPermission('VIEW_DASHBOARD'),
   purchaseOrderController.getStats
+);
+
+router.get('/purchase-orders/:id/delivery',
+  authenticate,
+  hasPermission('VIEW_PURCHASE_ORDERS'),
+  purchaseOrderController.getDelivery.bind(purchaseOrderController)
 );
 
 router.get('/purchase-orders/:id',
@@ -523,6 +532,56 @@ router.patch('/goods-receipts/:id/status',
   authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
   grnController.updateStatus.bind(grnController)
 );
+// Annulation : écritures de stock inverses (refusée si le stock reçu a déjà été sorti)
+router.post('/goods-receipts/:id/cancel',
+  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  grnController.cancel.bind(grnController)
+);
+
+// ============================================
+// GESTION DE STOCK : dépôts, catalogue, soldes, mouvements
+// ============================================
+const { warehouses: wh, items: si, stock: st } = stockController;
+// Dépôts où l'utilisateur peut réceptionner (formulaire GRN) — avant /warehouses/:id
+router.get('/warehouses/mine', authenticate, hasPermission('VIEW_PURCHASE_ORDERS'), wh.mine);
+router.get('/warehouses', authenticate, hasPermission('VIEW_STOCK'), wh.list);
+router.get('/warehouses/:id', authenticate, hasPermission('VIEW_STOCK'), wh.get);
+router.post('/warehouses', authenticate, hasPermission('MANAGE_WAREHOUSES'), wh.create);
+router.put('/warehouses/:id', authenticate, hasPermission('MANAGE_WAREHOUSES'), wh.update);
+router.put('/warehouses/:id/users', authenticate, hasPermission('MANAGE_WAREHOUSES'), wh.setUsers);
+
+// Autocomplétion d'articles (réquisition, réception) : tout utilisateur de l'entreprise — avant /stock-items/:id
+router.get('/stock-items/search', authenticate, si.search);
+router.get('/stock-items', authenticate, hasPermission('VIEW_STOCK'), si.list);
+router.get('/stock-items/:id', authenticate, hasPermission('VIEW_STOCK'), si.get);
+router.post('/stock-items', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), si.create);
+router.put('/stock-items/:id', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), si.update);
+
+router.get('/stock/summary', authenticate, hasPermission('VIEW_STOCK'), st.summary);
+router.get('/stock/balances/export', authenticate, hasPermission('VIEW_STOCK'), st.exportBalances);
+router.get('/stock/balances', authenticate, hasPermission('VIEW_STOCK'), st.balances);
+router.get('/stock/movements', authenticate, hasPermission('VIEW_STOCK'), st.movements);
+
+// Sorties de stock vers un utilisateur (bons de sortie)
+// Consultation : VIEW_STOCK, ou le bénéficiaire pour ses propres bons (contrôlé dans le contrôleur)
+router.get('/stock-issues/recipients', authenticate, hasPermission('ISSUE_STOCK'), stockIssueController.recipients);
+router.get('/stock-issues', authenticate, stockIssueController.list);
+router.get('/stock-issues/:id/pdf', authenticate, stockIssueController.pdf);
+router.get('/stock-issues/:id', authenticate, stockIssueController.get);
+router.post('/stock-issues', authenticate, hasPermission('ISSUE_STOCK'), stockIssueController.create);
+router.post('/stock-issues/:id/acknowledge', authenticate, stockIssueController.acknowledge);
+router.post('/stock-issues/:id/cancel', authenticate, hasPermission('ISSUE_STOCK'), stockIssueController.cancel);
+
+// Équipements (n° de série), détentions et retours en stock
+router.get('/stock-holdings/mine', authenticate, equipmentController.myHoldings);
+router.get('/stock-holdings', authenticate, hasPermission('VIEW_STOCK'), equipmentController.holdings);
+router.get('/stock-returns', authenticate, hasPermission('VIEW_STOCK'), equipmentController.listReturns);
+router.get('/stock-returns/:id', authenticate, hasPermission('VIEW_STOCK'), equipmentController.getReturn);
+router.post('/stock-returns', authenticate, hasPermission('ISSUE_STOCK'), equipmentController.createReturn);
+router.get('/stock-units', authenticate, hasPermission('VIEW_STOCK'), equipmentController.units);
+router.post('/stock-units/register', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), equipmentController.registerUnits);
+router.get('/stock-units/:id', authenticate, hasPermission('VIEW_STOCK'), equipmentController.getUnit);
+router.put('/stock-units/:id', authenticate, hasPermission('ISSUE_STOCK'), equipmentController.updateUnit);
 
 // ============================================
 // ROUTES DES NOTES D'ACCEPTATION DE SERVICE (SAN)

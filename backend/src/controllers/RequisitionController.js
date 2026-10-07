@@ -163,7 +163,8 @@ async create(req, res) {
         budgetLineId: item.budgetLineId,        // ← AJOUTÉ : ID de la ligne budgétaire
         budgetLineCode: budgetLineCode,
         budgetLineDescription: budgetLineDescription,
-        specifications: item.specifications || null
+        specifications: item.specifications || null,
+        stockItemId: item.stockItemId || null
       };
     }));
 

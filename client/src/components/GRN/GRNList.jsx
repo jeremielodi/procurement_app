@@ -10,6 +10,7 @@ const STATUS_LABELS = withLabel('grnStatus', {
   PENDING: { cls: 'bg-yellow-100 text-yellow-700' },
   PARTIAL: { cls: 'bg-orange-100 text-orange-700' },
   COMPLETE: { cls: 'bg-green-100 text-green-700' },
+  CANCELLED: { cls: 'bg-gray-200 text-gray-500 line-through' },
 });
 
 export default function GRNList() {

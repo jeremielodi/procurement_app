@@ -21,6 +21,7 @@ const AUDIT = {
   USER_ACTIVATED: 'USER_ACTIVATED',
   USER_DEACTIVATED: 'USER_DEACTIVATED',
   USER_DELETED: 'USER_DELETED',
+  WAREHOUSE_ACCESS_CHANGED: 'WAREHOUSE_ACCESS_CHANGED',
 };
 
 // Adresse locale / privée : la requête arrive par un reverse proxy (Caddy, Nginx, Docker)

@@ -62,6 +62,8 @@ export default function ImportItemsModal({ isOpen, onClose, onImport, formatCurr
       unitPrice: i.unitPrice,
       budgetLineId: '',
       budgetLineInfo: null,
+      // Colonne « Code article » reconnue : ligne liée à l'article du catalogue
+      stockItem: i.stockItemId ? { id: i.stockItemId, code: i.itemCode, name: i.itemName, unit: i.unit } : null,
     })), { replace });
     toast.success(t('importItems.imported', { count: preview.items.length }));
     close();
@@ -150,7 +152,7 @@ export default function ImportItemsModal({ isOpen, onClose, onImport, formatCurr
                       {preview.items.map(i => (
                         <tr key={i.line}>
                           <td className="px-2 py-1 text-gray-400">{i.line}</td>
-                          <td className="px-2 py-1">{i.description}</td>
+                          <td className="px-2 py-1">{i.itemCode && <span className="mr-1 rounded bg-indigo-50 px-1 text-xs font-semibold text-indigo-700">{i.itemCode}</span>}{i.description}</td>
                           <td className="px-2 py-1 text-right">{i.quantity}</td>
                           <td className="px-2 py-1 text-right">{i.frequency}</td>
                           <td className="px-2 py-1 text-right">{formatCurrency(i.unitPrice)}</td>

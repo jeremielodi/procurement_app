@@ -103,6 +103,17 @@ class PurchaseOrderController {
     }
   }
 
+  /** GET /purchase-orders/:id/delivery — suivi des livraisons (commandé / reçu / accepté / reste) */
+  async getDelivery(req, res) {
+    try {
+      const delivery = await purchaseOrderModel.getDelivery(req.params.id);
+      if (!delivery) return res.status(404).json({ success: false, message: 'Commande non trouvée' });
+      res.json({ success: true, data: delivery });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Erreur récupération du suivi des livraisons', error: error.message });
+    }
+  }
+
   async update(req, res) {
     try {
       const { id } = req.params;

@@ -28,6 +28,17 @@ import TaskList from './components/Task/TaskList';
 import GRNList from './components/GRN/GRNList';
 import GRNForm from './components/GRN/GRNForm';
 import GRNDetail from './components/GRN/GRNDetail';
+import StockOverview from './components/Stock/StockOverview';
+import StockItemList from './components/Stock/StockItemList';
+import StockItemDetail from './components/Stock/StockItemDetail';
+import StockMovements from './components/Stock/StockMovements';
+import WarehouseList from './components/Stock/WarehouseList';
+import StockIssueList from './components/Stock/StockIssueList';
+import StockIssueForm from './components/Stock/StockIssueForm';
+import StockIssueDetail from './components/Stock/StockIssueDetail';
+import StockReturnForm from './components/Stock/StockReturnForm';
+import { StockReturnList, StockReturnDetail } from './components/Stock/StockReturns';
+import EquipmentList from './components/Stock/EquipmentList';
 import SANList from './components/SAN/SANList';
 import SANForm from './components/SAN/SANForm';
 import SANDetail from './components/SAN/SANDetail';
@@ -270,6 +281,23 @@ function App() {
         <Route path="/goods-receipts" element={<ProtectedRoute><Layout><GRNList /></Layout></ProtectedRoute>} />
         <Route path="/goods-receipts/new" element={<ProtectedRoute><Layout><GRNForm /></Layout></ProtectedRoute>} />
         <Route path="/goods-receipts/:id" element={<ProtectedRoute><Layout><GRNDetail /></Layout></ProtectedRoute>} />
+
+        {/* Gestion de stock */}
+        <Route path="/stock" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockOverview /></Layout></ProtectedRoute>} />
+        <Route path="/stock/items" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockItemList /></Layout></ProtectedRoute>} />
+        <Route path="/stock/items/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockItemDetail /></Layout></ProtectedRoute>} />
+        <Route path="/stock/movements" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockMovements /></Layout></ProtectedRoute>} />
+        <Route path="/stock/warehouses" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><WarehouseList /></Layout></ProtectedRoute>} />
+        <Route path="/stock/issues" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockIssueList /></Layout></ProtectedRoute>} />
+        <Route path="/stock/issues/new" element={<ProtectedRoute requiredPermission="ISSUE_STOCK"><Layout><StockIssueForm /></Layout></ProtectedRoute>} />
+        <Route path="/stock/issues/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockIssueDetail /></Layout></ProtectedRoute>} />
+        <Route path="/stock/equipment" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><EquipmentList /></Layout></ProtectedRoute>} />
+        <Route path="/stock/returns" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockReturnList /></Layout></ProtectedRoute>} />
+        <Route path="/stock/returns/new" element={<ProtectedRoute requiredPermission="ISSUE_STOCK"><Layout><StockReturnForm /></Layout></ProtectedRoute>} />
+        <Route path="/stock/returns/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockReturnDetail /></Layout></ProtectedRoute>} />
+        {/* Articles remis à l'utilisateur connecté (tout utilisateur d'entreprise) */}
+        <Route path="/my-items" element={<ProtectedRoute><Layout><StockIssueList mine /></Layout></ProtectedRoute>} />
+        <Route path="/my-items/:id" element={<ProtectedRoute><Layout><StockIssueDetail /></Layout></ProtectedRoute>} />
 
         {/* SAN — Notes d'acceptation de service */}
         <Route path="/service-acceptance-notes" element={<ProtectedRoute><Layout><SANList /></Layout></ProtectedRoute>} />

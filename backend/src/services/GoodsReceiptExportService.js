@@ -39,22 +39,33 @@ class GoodsReceiptExportService {
               s.name AS supplier_name, s.supplier_code, s.phone AS supplier_phone,
               s.email AS supplier_email, s.address AS supplier_address,
               u.first_name || ' ' || u.last_name AS received_by_name,
+              w.name AS warehouse_name, wl.name AS warehouse_location,
               COALESCE(e.name, (SELECT name FROM enterprise ORDER BY created_at LIMIT 1)) AS enterprise_name
        FROM goods_receipt_notes grn
        LEFT JOIN purchase_orders po ON po.id = grn.po_id
        LEFT JOIN requisitions r     ON r.id = po.requisition_id
        LEFT JOIN suppliers s        ON s.id = po.supplier_id
        LEFT JOIN users u            ON u.id = grn.received_by
+       LEFT JOIN warehouses w       ON w.id = grn.warehouse_id
+       LEFT JOIN locations wl       ON wl.id = w.location_id
        LEFT JOIN enterprise e       ON e.id = u.enterprise_id
        WHERE grn.id = $1`,
       [id]
     );
     if (!grn) return null;
-    const items = await db.select('SELECT * FROM goods_receipt_items WHERE grn_id = $1 ORDER BY id', [id]);
+    const items = await db.select(
+      `SELECT gi.*, gi.quantity_received::float8 AS quantity_received, gi.quantity_accepted::float8 AS quantity_accepted,
+              gi.quantity_rejected::float8 AS quantity_rejected, si.code AS item_code, si.unit, lt.lot_number, lt.expiry_date
+       FROM goods_receipt_items gi
+       LEFT JOIN stock_items si ON si.id = gi.stock_item_id
+       LEFT JOIN stock_lots lt ON lt.id = gi.lot_id
+       WHERE gi.grn_id = $1 ORDER BY gi.id`,
+      [id]
+    );
     const totals = items.reduce((t, i) => ({
-      received: t.received + (parseInt(i.quantity_received) || 0),
-      accepted: t.accepted + (parseInt(i.quantity_accepted) || 0),
-      rejected: t.rejected + (parseInt(i.quantity_rejected) || 0),
+      received: t.received + (parseFloat(i.quantity_received) || 0),
+      accepted: t.accepted + (parseFloat(i.quantity_accepted) || 0),
+      rejected: t.rejected + (parseFloat(i.quantity_rejected) || 0),
     }), { received: 0, accepted: 0, rejected: 0 });
     return { ...grn, items, totals };
   }
@@ -100,6 +111,7 @@ class GoodsReceiptExportService {
       <span class="badge" style="color:{{grn_statusColor grn.status}};background:{{grn_statusBg grn.status}}">{{grn_statusLabel grn.status}}</span><br>
       {{L.receiptDate}} <b>{{grn_formatDate grn.receipt_date}}</b><br>
       {{L.order}} <b>{{grn.po_number}}</b><br>
+      {{#if grn.warehouse_name}}{{L.warehouse}} <b>{{grn.warehouse_name}}</b> ({{grn.warehouse_location}})<br>{{/if}}
       {{#if grn.requisition_number}}{{L.requisition}} {{grn.requisition_number}}{{/if}}
     </div>
   </div>
@@ -128,7 +140,7 @@ class GoodsReceiptExportService {
       {{#each items}}
       <tr>
         <td>{{grn_index1 @index}}</td>
-        <td>{{this.item_description}}{{#if this.rejection_reason}}<div class="reason">{{@root.L.rejectionReason}} {{this.rejection_reason}}</div>{{/if}}</td>
+        <td>{{#if this.item_code}}<b>{{this.item_code}}</b> — {{/if}}{{this.item_description}}{{#if this.lot_number}}<div style="color:#4B5563;font-size:9px">{{@root.L.lot}} {{this.lot_number}}{{#if this.expiry_date}} · {{@root.L.expiry}} {{grn_formatDate this.expiry_date}}{{/if}}</div>{{/if}}{{#if this.rejection_reason}}<div class="reason">{{@root.L.rejectionReason}} {{this.rejection_reason}}</div>{{/if}}</td>
         <td class="n">{{grn_num this.quantity_received}}</td>
         <td class="n">{{grn_num this.quantity_accepted}}</td>
         <td class="n {{#if this.quantity_rejected}}rej{{/if}}">{{grn_num this.quantity_rejected}}</td>

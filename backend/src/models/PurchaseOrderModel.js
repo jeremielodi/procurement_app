@@ -3,6 +3,30 @@ const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 
+// Statut de livraison d'un PO (suivi des réceptions, vue v_po_item_delivery) :
+// DELIVERED = tout accepté, PARTIALLY_DELIVERED = au moins une quantité acceptée, NOT_DELIVERED sinon
+const DELIVERY_STATUS_SQL = (alias) => `(
+  SELECT CASE
+    WHEN COUNT(*) = 0 THEN NULL
+    WHEN BOOL_AND(d.quantity_remaining <= 0) THEN 'DELIVERED'
+    WHEN BOOL_OR(d.quantity_accepted > 0) THEN 'PARTIALLY_DELIVERED'
+    ELSE 'NOT_DELIVERED' END
+  FROM v_po_item_delivery d WHERE d.purchase_order_id = ${alias}.id)`;
+
+// Lignes du PO avec article et suivi des livraisons (quantités en nombres : DECIMAL → float8)
+const PO_ITEMS_SQL = `
+  SELECT pi.id, pi.purchase_order_id, pi.item_description, pi.quantity::float8 AS quantity, pi.unit_price,
+         pi.total_amount, pi.specifications, pi.created_at, pi.stock_item_id, pi.requisition_item_id,
+         d.quantity_received::float8 AS delivered_received, d.quantity_accepted::float8 AS delivered_accepted,
+         d.quantity_rejected::float8 AS delivered_rejected, d.quantity_remaining::float8 AS quantity_remaining,
+         d.receipt_count::int AS receipt_count, d.last_receipt_date,
+         si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable, si.track_lots, si.track_expiry, si.track_serials
+  FROM purchase_order_items pi
+  JOIN v_po_item_delivery d ON d.po_item_id = pi.id
+  LEFT JOIN stock_items si ON si.id = pi.stock_item_id
+  WHERE pi.purchase_order_id = $1
+  ORDER BY pi.id`;
+
 class PurchaseOrderModel {
   /**
    * Créer une commande d'achat
@@ -47,7 +71,10 @@ class PurchaseOrderModel {
           quantity: item.quantity,
           unit_price: item.unitPrice,
           total_amount: item.quantity * item.unitPrice,
-          specifications: item.specifications || null
+          specifications: item.specifications || null,
+          // Article du catalogue et ligne de réquisition d'origine (gestion de stock, traçabilité)
+          stock_item_id: item.stockItemId || null,
+          requisition_item_id: item.requisitionItemId || null
         });
       }
       await itemTransaction.execute();
@@ -57,6 +84,35 @@ class PurchaseOrderModel {
       id: poId,
       poNumber,
       success: true
+    };
+  }
+
+  /**
+   * Suivi des livraisons d'un PO : lignes (commandé / reçu / accepté / rejeté / reste) et réceptions
+   */
+  async getDelivery(id) {
+    const po = await db.one(`SELECT po.id, po.po_number, ${DELIVERY_STATUS_SQL('po')} AS delivery_status FROM purchase_orders po WHERE po.id = $1`, [id]);
+    if (!po) return null;
+    const items = await db.select(PO_ITEMS_SQL, [id]);
+    const receipts = await db.select(
+      `SELECT g.id, g.grn_number, g.receipt_date, g.status, w.name AS warehouse_name,
+              TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS received_by_name,
+              COALESCE(SUM(gi.quantity_accepted), 0)::float8 AS quantity_accepted,
+              COALESCE(SUM(gi.quantity_rejected), 0)::float8 AS quantity_rejected
+       FROM goods_receipt_notes g
+       LEFT JOIN goods_receipt_items gi ON gi.grn_id = g.id
+       LEFT JOIN warehouses w ON w.id = g.warehouse_id
+       LEFT JOIN users u ON u.id = g.received_by
+       WHERE g.po_id = $1
+       GROUP BY g.id, w.name, u.first_name, u.last_name
+       ORDER BY g.created_at`,
+      [id]
+    );
+    const sum = (k) => items.reduce((s, i) => s + (Number(i[k]) || 0), 0);
+    return {
+      poId: po.id, poNumber: po.po_number, deliveryStatus: po.delivery_status,
+      totals: { ordered: sum('quantity'), accepted: sum('delivered_accepted'), rejected: sum('delivered_rejected'), remaining: sum('quantity_remaining') },
+      items, receipts,
     };
   }
 
@@ -100,7 +156,8 @@ class PurchaseOrderModel {
         su.language as supplier_language,
         u.first_name as created_by_name,
         u.email as created_by_email,
-        c.format_key as currency
+        c.format_key as currency,
+        ${DELIVERY_STATUS_SQL('po')} AS delivery_status
       FROM purchase_orders po
       LEFT JOIN requisitions r ON po.requisition_id = r.id
       LEFT JOIN suppliers s ON po.supplier_id = s.id
@@ -112,10 +169,7 @@ class PurchaseOrderModel {
     
     if (!po) return null;
     
-    const items = await db.select(`
-      SELECT * FROM purchase_order_items 
-      WHERE purchase_order_id = $1
-    `, [id]);
+    const items = await db.select(PO_ITEMS_SQL, [id]);
     
     const deliveries = await db.select(`
       SELECT * FROM deliveries 
@@ -156,7 +210,8 @@ class PurchaseOrderModel {
         s.name as supplier_name,
         s.supplier_code,
         r.requisition_number,
-        c.format_key as currency
+        c.format_key as currency,
+        ${DELIVERY_STATUS_SQL('po')} AS delivery_status
       FROM purchase_orders po
       LEFT JOIN suppliers s ON po.supplier_id = s.id
       LEFT JOIN requisitions r ON po.requisition_id = r.id

@@ -4,6 +4,7 @@
 const ExcelJS = require('exceljs');
 const multer = require('multer');
 const path = require('path');
+const stockItemModel = require('../../models/StockItemModel');
 
 const MAX_ROWS = 500;
 
@@ -13,6 +14,8 @@ const COLUMNS = {
   quantity: ['quantite', 'qte', 'quantity', 'qty'],
   frequency: ['frequence', 'frequency', 'freq', 'frequence (x/mois)'],
   unitPrice: ['prix unitaire', 'pu', 'prix', 'unit price', 'unit_price', 'prix unitaire (usd)'],
+  // Facultative : article du catalogue (gestion de stock) ; vide = texte libre
+  itemCode: ['code article', 'code', 'item code', 'article code', 'code produit', 'sku'],
 };
 
 const upload = multer({
@@ -142,6 +145,13 @@ async function importItems(req, res) {
       });
     }
 
+    // Codes article cités → articles actifs de l'entreprise (une seule requête)
+    const catalog = new Map();
+    if (col.itemCode !== undefined) {
+      const codes = rows.slice(1).map(r => cellText(r[col.itemCode]).trim()).filter(Boolean);
+      for (const it of await stockItemModel.findByCodes(codes)) catalog.set(it.code.toUpperCase(), it);
+    }
+
     const items = [];
     const errors = [];
     rows.slice(1).forEach((r, i) => {
@@ -153,13 +163,21 @@ async function importItems(req, res) {
       const frequency = String(freqRaw ?? '').trim() === '' ? 1 : parseNumber(freqRaw);
       const unitPrice = parseNumber(r[col.unitPrice]);
 
+      const itemCode = col.itemCode !== undefined ? cellText(r[col.itemCode]).trim() : '';
+      const article = itemCode ? catalog.get(itemCode.toUpperCase()) : null;
+
       const problems = [];
-      if (!description) problems.push('description vide');
+      if (itemCode && !article) problems.push(`code article ${itemCode} inconnu`);
+      else if (article && !article.is_active) problems.push(`article ${itemCode} désactivé`);
+      if (!description && !article) problems.push('description vide');
       if (!(quantity > 0)) problems.push('quantité invalide');
       if (!(frequency > 0)) problems.push('fréquence invalide');
       if (!(unitPrice >= 0)) problems.push('prix unitaire invalide');
       if (problems.length) errors.push({ line, message: problems.join(', ') });
-      else items.push({ line, description, quantity, frequency, unitPrice });
+      else items.push({
+        line, description: description || article?.name, quantity, frequency, unitPrice,
+        ...(article ? { stockItemId: article.id, itemCode: article.code, itemName: article.name, unit: article.unit } : {}),
+      });
     });
 
     if (items.length > MAX_ROWS) {

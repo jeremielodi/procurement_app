@@ -198,6 +198,33 @@ delete(tableName, idKey, idValue, options = {}) {
     return rows.length > 0 ? rows[0] : null;
   }
 
+  /**
+   * Vraie transaction sur une connexion DÉDIÉE du pool (les autres méthodes partagent une seule
+   * connexion : un BEGIN dessus engloberait les requêtes concurrentes des autres utilisateurs).
+   * fn(tx) reçoit { select, one, exec } ; COMMIT si fn réussit, ROLLBACK sinon (erreur relancée).
+   * Usage : await db.withTransaction(async (tx) => { await tx.one('INSERT … RETURNING id', [...]); });
+   */
+  async withTransaction(fn) {
+    const client = await this.pool.connect();
+    const run = async (sql, params) => (await client.query(this.formatQuery(sql, params)[0], params)).rows;
+    const tx = {
+      exec: run,
+      select: run,
+      one: async (sql, params) => (await run(sql, params))[0] || null,
+    };
+    try {
+      await client.query('BEGIN');
+      const result = await fn(tx);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   release() {
     this.client.release(true);
   }

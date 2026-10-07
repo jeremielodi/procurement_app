@@ -95,6 +95,12 @@ const PATH_RESOURCES = [
   { re: new RegExp(`^/users/(${UUID})(/|$)`), table: 'users' },
   { re: /^\/workflow\/process\/([^/]+)/, table: 'requisitions', column: 'process_instance_id' },
   { re: /^\/tasks\/process\/([^/]+)/, table: 'requisitions', column: 'process_instance_id' },
+  // Gestion de stock
+  { re: new RegExp(`^/warehouses/(${UUID})(/|$)`), table: 'warehouses' },
+  { re: new RegExp(`^/stock-items/(${UUID})(/|$)`), table: 'stock_items' },
+  { re: new RegExp(`^/stock-issues/(${UUID})(/|$)`), table: 'stock_issues' },
+  { re: new RegExp(`^/stock-returns/(${UUID})(/|$)`), table: 'stock_returns' },
+  { re: new RegExp(`^/stock-units/(${UUID})(/|$)`), table: 'stock_units' },
 ];
 
 // Clés de query / body → table
@@ -108,6 +114,11 @@ const KEY_TABLES = {
   budgetLineId: 'budget_allocations', budget_line_id: 'budget_allocations', budgetId: 'budget_allocations',
   managerId: 'users', manager_id: 'users', projectManagerId: 'users', project_manager_id: 'users',
   userId: 'users', user_id: 'users', requesterId: 'users',
+  // Gestion de stock (UUID : pas de collision avec les identifiants entiers des autres tables)
+  warehouseId: 'warehouses', warehouse_id: 'warehouses',
+  stockItemId: 'stock_items', stock_item_id: 'stock_items',
+  lotId: 'stock_lots', lot_id: 'stock_lots',
+  recipientId: 'users', recipient_id: 'users', returnedBy: 'users', holderId: 'users',
 };
 
 // Pièces jointes : type d'entité → table

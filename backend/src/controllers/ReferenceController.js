@@ -8,6 +8,16 @@ const LABELS = {
   market_categories: { one: 'Catégorie', nameRequired: 'Nom de la catégorie requis' },
 };
 
+/** Code saisi : format et unicité (le code identifie la donnée dans toutes les bases) */
+async function checkCode(table, body, exceptId = null) {
+  const code = body.code === undefined || body.code === null ? '' : String(body.code).trim().toUpperCase();
+  if (!code) return null;
+  if (!/^[A-Z0-9_-]{1,50}$/.test(code)) return { status: 400, message: 'Code invalide (lettres, chiffres, - et _)' };
+  if (await referenceModel.findByCode(table, code, exceptId)) return { status: 409, message: `Le code ${code} est déjà utilisé` };
+  body.code = code;
+  return null;
+}
+
 function controllerFor(table) {
   const label = LABELS[table];
   return {
@@ -28,6 +38,8 @@ function controllerFor(table) {
         if (await referenceModel.findByName(table, name)) {
           return res.status(409).json({ success: false, message: `${label.one} « ${name} » existe déjà` });
         }
+        const codeError = await checkCode(table, req.body);
+        if (codeError) return res.status(codeError.status).json({ success: false, message: codeError.message });
         const row = await referenceModel.create(table, { ...req.body, name });
         res.status(201).json({ success: true, data: row, message: `${label.one} créée` });
       } catch (error) {
@@ -48,6 +60,11 @@ function controllerFor(table) {
             return res.status(409).json({ success: false, message: `${label.one} « ${name} » existe déjà` });
           }
           req.body.name = name;
+        }
+        if (req.body.code !== undefined) {
+          const codeError = await checkCode(table, req.body, id);
+          if (codeError) return res.status(codeError.status).json({ success: false, message: codeError.message });
+          if (!req.body.code) delete req.body.code; // code vide : inchangé
         }
         res.json({ success: true, data: await referenceModel.update(table, id, req.body), message: `${label.one} mise à jour` });
       } catch (error) {

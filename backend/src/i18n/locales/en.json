@@ -289,6 +289,18 @@
       "updatedSubmission": "Submission updated",
       "submitted": "{supplier} submitted a bid for {number}",
       "resubmitted": "{supplier} updated their bid for {number}"
+    },
+    "stockIssue": {
+      "issuedTitle": "Items handed over: {number}",
+      "issuedMessage": "Items have been handed over to you ({number}). Confirm receipt in \"My received items\".",
+      "acknowledgedTitle": "Receipt confirmed: {number}",
+      "acknowledgedMessage": "{name} confirmed receipt of the items of note {number}.",
+      "cancelledTitle": "Issue cancelled: {number}",
+      "cancelledMessage": "Stock issue note {number} was cancelled: the items are back in stock."
+    },
+    "stockReturn": {
+      "title": "Return recorded: {number}",
+      "message": "Return {number} of {count} item(s) was recorded by logistics."
     }
   },
   "pdf": {
@@ -367,14 +379,17 @@
       "signature": "Signature:",
       "deliverer": "Delivery person (supplier)",
       "nameSignature": "Name and signature:",
-      "warehouse": "Logistics / warehouse approval",
+      "warehouse": "Warehouse:",
       "signatureStamp": "Signature and stamp:",
       "status": {
         "DRAFT": "Draft",
         "PENDING": "Pending",
         "PARTIAL": "Partial",
-        "COMPLETE": "Complete"
-      }
+        "COMPLETE": "Complete",
+        "CANCELLED": "Cancelled"
+      },
+      "lot": "Lot",
+      "expiry": "expiry"
     },
     "payment": {
       "title": "Payment Receipt",
@@ -448,6 +463,46 @@
       "date": "Date",
       "empty": "No requisitions found",
       "footer": "{enterprise} — document generated automatically by {app}"
+    },
+    "stockIssue": {
+      "title": "STOCK ISSUE NOTE",
+      "date": "Date",
+      "cancelled": "CANCELLED",
+      "recipient": "Recipient",
+      "name": "Name",
+      "email": "Email",
+      "project": "Project",
+      "warehouse": "Warehouse",
+      "location": "Location",
+      "issuedBy": "Issued by",
+      "purpose": "Purpose",
+      "no": "No.",
+      "code": "Code",
+      "item": "Item",
+      "lot": "Lot",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "expiry": "expiry",
+      "storekeeper": "Storekeeper",
+      "recipientSignature": "Recipient (received in good order)",
+      "signature": "Date and signature:",
+      "acknowledgedOn": "Receipt confirmed in procureApp by {name} on {date}",
+      "cancelledOn": "Note cancelled by {name} on {date} — reason: {reason}. The items were returned to stock."
     }
+  },
+  "stockExport": {
+    "sheetDetail": "Stock by lot",
+    "sheetSummary": "By item",
+    "code": "Code",
+    "item": "Item",
+    "category": "Category",
+    "location": "Location",
+    "warehouse": "Warehouse",
+    "lot": "Lot",
+    "expiry": "Expiry",
+    "quantity": "Quantity",
+    "unit": "Unit",
+    "minimum": "Minimum stock",
+    "warehouses": "Warehouses"
   }
 }

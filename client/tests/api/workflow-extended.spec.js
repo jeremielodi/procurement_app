@@ -7,7 +7,7 @@
  *   1. Approbation N2 Finance (50 000 XAF)
  *   2. Approbation N3 DG      (150 000 XAF)
  *   3. Rejet N1               (10 000 XAF, approved: false → REJECTED)
- *   4. Rejet PO               (PO_PENDING → reject → PO_REJECTED)
+ *   4. Rejet PO               (créé en PO_PENDING → reject → PO_REJECTED)
  *   5. Budget insuffisant     (item sans budgetLineId → BUDGET_INSUFFICIENT)
  *   6. GRN partielle          (5/10 items → PARTIAL + grnCompliant: false)
  *   7. Facture désaccord 3-way (totalAmount 5% > PO → UNMATCHED)
@@ -56,6 +56,41 @@ async function waitForTask(request, token, processInstanceId, taskKey, timeout =
     await new Promise(r => setTimeout(r, POLL_INTERVAL));
   }
   return null;
+}
+
+/**
+ * Le processus GoFlow est démarré juste après la création : relit la réquisition jusqu'à obtenir
+ * son process_instance_id (10 s max). Renvoie la réquisition à jour.
+ */
+async function refreshProcess(request, token, req, timeout = 10_000) {
+  const start = Date.now();
+  let current = req;
+  while (Date.now() - start < timeout) {
+    current = (await (await request.get(`/api/requisitions/${req.id}`, { headers: auth(token) })).json()).data || current;
+    if (current.process_instance_id) return current;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  return current;
+}
+
+/**
+ * Attend une tâche GoFlow OU l'arrêt du circuit (budget insuffisant, rejet).
+ * Retourne { task } ou { stopped: statut } ou {} (délai dépassé).
+ */
+async function waitForTaskOrStop(request, token, req, taskKey, timeout = POLL_TIMEOUT) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const tasksRes = await request.get(`/api/tasks/process/${req.process_instance_id}`, { headers: auth(token) });
+    if (tasksRes.ok()) {
+      const body = await tasksRes.json();
+      const task = (body.data || body.tasks || []).find(t => t.taskDefinitionKey === taskKey && t.status !== 'COMPLETED');
+      if (task) return { task };
+    }
+    const status = (await (await request.get(`/api/requisitions/${req.id}`, { headers: auth(token) })).json()).data?.status;
+    if (['BUDGET_INSUFFICIENT', 'BUDGET_ADJUSTMENT', 'REJECTED', 'CANCELLED'].includes(status)) return { stopped: status };
+    await new Promise(r => setTimeout(r, POLL_INTERVAL));
+  }
+  return {};
 }
 
 /**
@@ -141,17 +176,13 @@ async function createPO(request, token, { requisitionId, supplierId, amount }) {
 }
 
 /**
- * Soumet un PO au statut PO_PENDING puis l'approuve.
+ * Approuve un PO (créé directement en PO_PENDING : pas d'étape brouillon).
  * Retourne le PO mis à jour (statut PO_APPROVED).
  */
 async function submitAndApprovePO(request, token, poId) {
-  // DRAFT → PO_PENDING
-  const pendRes = await request.put(`/api/purchase-orders/${poId}`, {
-    headers: auth(token),
-    data: { status: 'PO_PENDING' },
-  });
-  if (!pendRes.ok()) {
-    throw new Error(`PO submit to PO_PENDING failed (${pendRes.status()})`);
+  const current = (await (await request.get(`/api/purchase-orders/${poId}`, { headers: auth(token) })).json()).data;
+  if (current?.status !== 'PO_PENDING') {
+    throw new Error(`PO attendu en PO_PENDING, statut : ${current?.status}`);
   }
 
   // PO_PENDING → PO_APPROVED
@@ -218,17 +249,19 @@ test.beforeAll(async ({ request }) => {
     }
   }
 
-  // Charger ou créer une ligne budgétaire suffisante
+  // Ligne budgétaire NEUVE à chaque passage : chaque exécution consomme du budget, une ligne réutilisée
+  // finirait « insuffisante » et le circuit d'approbation ne démarrerait plus
   if (sharedProject) {
     const budgetRes = await request.get(`/api/budget/by-project/${sharedProject.id}`, { headers: auth(sharedToken) });
     const budgetBody = budgetRes.ok() ? await budgetRes.json() : { data: [] };
-    sharedBudgetLine = budgetBody.data?.[0] ?? null;
+    sharedBudgetLine = null;
+    const fallbackLine = budgetBody.data?.[0] ?? null;
 
     if (!sharedBudgetLine) {
       const createBudget = await request.post('/api/budget', {
         headers: auth(sharedToken),
         data: {
-          entityCode:      'TEST-BL-EXT',
+          entityCode:      `TEST-BL-EXT-${Date.now().toString(36)}`,
           description:     'Ligne budget test Playwright Extended',
           allocatedAmount: 5_000_000,
           projectId:       sharedProject.id,
@@ -239,7 +272,8 @@ test.beforeAll(async ({ request }) => {
         sharedBudgetLine = bb.data ?? null;
         console.log(`✅ Ligne budgétaire créée: ${sharedBudgetLine?.id}`);
       } else {
-        console.warn('⚠️  Impossible de créer une ligne budgétaire');
+        sharedBudgetLine = fallbackLine;
+        console.warn('⚠️  Impossible de créer une ligne budgétaire — ligne existante utilisée');
       }
     } else {
       console.log(`✅ Ligne budgétaire existante: ${sharedBudgetLine.id}`);
@@ -254,6 +288,7 @@ test.beforeAll(async ({ request }) => {
 
 test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () => {
   const AMOUNT = 50_000;  // 25 000 ≤ 50 000 < 100 000 → Finance N2
+  test.setTimeout(120_000); // circuit GoFlow réel (attente de tâche jusqu'à 30 s)
 
   let req          = null;
   let approvalTask = null;
@@ -289,6 +324,7 @@ test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () =
   });
 
   test('S1-3 · [Camunda] Attendre la tâche Activity_ValidationN2_Finance', async ({ request }) => {
+    if (req && !req.process_instance_id) req = await refreshProcess(request, sharedToken, req);
     if (!req?.process_instance_id) {
       test.skip('Camunda non disponible (process_instance_id absent)');
       return;
@@ -298,15 +334,13 @@ test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () =
       return;
     }
 
-    approvalTask = await waitForTask(
-      request,
-      sharedToken,
-      req.process_instance_id,
-      'Activity_ValidationN2_Finance'
-    );
+    // Aiguillage BPMN selon le montant : 25 000 ≤ montant < 100 000 → directement Finance N2
+    const r = await waitForTaskOrStop(request, sharedToken, req, 'Activity_ValidationN2_Finance');
+    if (r.stopped) { test.skip(`Circuit arrêté : ${r.stopped}`); return; }
+    approvalTask = r.task || null;
 
     if (!approvalTask) {
-      test.skip('Tâche Activity_ValidationN2_Finance non apparue dans le délai — Camunda peut être lent');
+      test.skip('Tâche Activity_ValidationN2_Finance non apparue dans le délai — GoFlow peut être lent');
       return;
     }
 
@@ -349,6 +383,7 @@ test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () =
 
 test.describe.serial('Scénario 2 — Approbation N3 DG (150 000 XAF)', () => {
   const AMOUNT = 150_000;  // ≥ 100 000 → DG N3
+  test.setTimeout(120_000); // circuit GoFlow réel (attente de tâche jusqu'à 30 s)
 
   let req          = null;
   let approvalTask = null;
@@ -383,6 +418,7 @@ test.describe.serial('Scénario 2 — Approbation N3 DG (150 000 XAF)', () => {
   });
 
   test('S2-3 · [Camunda] Attendre la tâche Activity_ValidationN3_DG', async ({ request }) => {
+    if (req && !req.process_instance_id) req = await refreshProcess(request, sharedToken, req);
     if (!req?.process_instance_id) {
       test.skip('Camunda non disponible (process_instance_id absent)');
       return;
@@ -392,12 +428,10 @@ test.describe.serial('Scénario 2 — Approbation N3 DG (150 000 XAF)', () => {
       return;
     }
 
-    approvalTask = await waitForTask(
-      request,
-      sharedToken,
-      req.process_instance_id,
-      'Activity_ValidationN3_DG'
-    );
+    // Aiguillage BPMN selon le montant : ≥ 100 000 → directement DG N3
+    const r = await waitForTaskOrStop(request, sharedToken, req, 'Activity_ValidationN3_DG');
+    if (r.stopped) { test.skip(`Circuit arrêté : ${r.stopped}`); return; }
+    approvalTask = r.task || null;
 
     if (!approvalTask) {
       test.skip('Tâche Activity_ValidationN3_DG non apparue dans le délai — Camunda peut être lent');
@@ -443,6 +477,7 @@ test.describe.serial('Scénario 2 — Approbation N3 DG (150 000 XAF)', () => {
 
 test.describe.serial('Scénario 3 — Rejet N1 Manager (10 000 XAF)', () => {
   const AMOUNT = 10_000;  // < 25 000 → Manager N1
+  test.setTimeout(120_000);
 
   let req         = null;
   let rejectTask  = null;
@@ -463,6 +498,7 @@ test.describe.serial('Scénario 3 — Rejet N1 Manager (10 000 XAF)', () => {
   });
 
   test('S3-2 · [Camunda] Attendre la tâche Activity_ValidationN1_Manager', async ({ request }) => {
+    if (req && !req.process_instance_id) req = await refreshProcess(request, sharedToken, req);
     if (!req?.process_instance_id) {
       test.skip('Camunda non disponible (process_instance_id absent)');
       return;
@@ -472,12 +508,9 @@ test.describe.serial('Scénario 3 — Rejet N1 Manager (10 000 XAF)', () => {
       return;
     }
 
-    rejectTask = await waitForTask(
-      request,
-      sharedToken,
-      req.process_instance_id,
-      'Activity_ValidationN1_Manager'
-    );
+    const r = await waitForTaskOrStop(request, sharedToken, req, 'Activity_ValidationN1_Manager');
+    if (r.stopped) { test.skip(`Circuit arrêté : ${r.stopped}`); return; }
+    rejectTask = r.task || null;
 
     if (!rejectTask) {
       test.skip('Tâche Activity_ValidationN1_Manager non apparue dans le délai');
@@ -595,17 +628,12 @@ test.describe.serial('Scénario 4 — Rejet PO (PO_PENDING → PO_REJECTED)', ()
     expect(po.id).toBeTruthy();
   });
 
-  test('S4-4 · Soumettre le PO (DRAFT → PO_PENDING)', async ({ request }) => {
+  test('S4-4 · PO créé directement en attente d\'approbation (PO_PENDING)', async ({ request }) => {
     if (!po) test.skip('PO S4 non créé');
 
-    const res  = await request.put(`/api/purchase-orders/${po.id}`, {
-      headers: auth(sharedToken),
-      data: { status: 'PO_PENDING' },
-    });
-    const body = await res.json();
-
-    expect([200, 201]).toContain(res.status());
-    console.log(`✅ S4: PO soumis — statut: ${body.data?.status ?? 'PO_PENDING'}`);
+    const body = await (await request.get(`/api/purchase-orders/${po.id}`, { headers: auth(sharedToken) })).json();
+    expect(body.data?.status).toBe('PO_PENDING');
+    console.log('✅ S4: PO en attente d\'approbation');
   });
 
   test('S4-5 · Rejeter le PO (POST /reject → PO_REJECTED)', async ({ request }) => {

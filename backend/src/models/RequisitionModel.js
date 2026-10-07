@@ -16,11 +16,12 @@ const PROGRESS_STATUS_SQL = `
   CASE
     WHEN r.status = 'CANCELLED' THEN 'CANCELLED'
     WHEN r.status = 'REJECTED' THEN 'REJECTED'
-    WHEN r.status = 'DRAFT' THEN 'DRAFT'
     WHEN r.status = 'COMPLETED' THEN 'COMPLETED'
     WHEN ${processEndedAt('Event_Completed')} THEN 'COMPLETED'
     WHEN ${processEndedAt('Event_Rejected')} THEN 'REJECTED'
     WHEN r.process_instance_id IS NOT NULL THEN 'IN_PROGRESS'
+    -- Hors workflow (aucun processus GoFlow) : terminée quand tous les PO actifs ont une facture payée,
+    -- même si la réquisition est restée en brouillon (même règle que RequisitionTimelineService)
     WHEN EXISTS (
            SELECT 1 FROM purchase_orders po
            WHERE po.requisition_id = r.id AND po.status NOT IN ('PO_REJECTED', 'REJECTED', 'CANCELLED'))
@@ -29,6 +30,7 @@ const PROGRESS_STATUS_SQL = `
            WHERE po.requisition_id = r.id AND po.status NOT IN ('PO_REJECTED', 'REJECTED', 'CANCELLED')
              AND NOT EXISTS (SELECT 1 FROM invoices i WHERE i.po_id = po.id AND i.status = 'PAID'))
     THEN 'COMPLETED'
+    WHEN r.status = 'DRAFT' THEN 'DRAFT'
     ELSE 'IN_PROGRESS'
   END`;
 
@@ -95,7 +97,9 @@ class RequisitionModel {
           total_amount: itemTotal,
           specifications: item.specifications || null,
           budget_line_id: item.budgetLineId || null,
-          budget_line_code: budgetLineCode
+          budget_line_code: budgetLineCode,
+          // Article du catalogue (facultatif : texte libre sinon) — repris dans le PO puis la réception
+          stock_item_id: item.stockItemId || null
         });
       }
       
@@ -314,10 +318,13 @@ class RequisitionModel {
     const items = await db.select(
       `SELECT ri.*, 
               b.entity_code as budget_line_code, 
-              b.description as budget_line_description
+              b.description as budget_line_description,
+              si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable
        FROM requisition_items ri
        LEFT JOIN budget_allocations b ON ri.budget_line_id = b.id
-       WHERE ri.requisition_id = $1`,
+       LEFT JOIN stock_items si ON si.id = ri.stock_item_id
+       WHERE ri.requisition_id = $1
+       ORDER BY ri.id`,
       [id]
     );
     

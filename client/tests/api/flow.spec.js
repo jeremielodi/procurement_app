@@ -264,19 +264,22 @@ test.describe.serial('🔄 BPMN Procurement Flow — end to end', () => {
     console.log(`✅  PO ${purchaseOrder.poNumber || purchaseOrder.po_number} créé`);
   });
 
-  // ── 6. Soumettre le PO pour approbation (DRAFT → PO_PENDING) ─────────────
-  test('6 · Soumettre le PO pour approbation (DRAFT → PO_PENDING)', async ({ request }) => {
+  // ── 6. Le PO part directement en approbation (créé en PO_PENDING) ─────────
+  test('6 · PO créé directement en attente d\'approbation (PO_PENDING)', async ({ request }) => {
     if (!purchaseOrder) test.skip('PO non créé');
 
-    // Le PO est créé en DRAFT — il faut le passer en PO_PENDING avant approbation
-    const res  = await request.put(`/api/purchase-orders/${purchaseOrder.id}`, {
-      headers: auth(token),
-      data: { status: 'PO_PENDING' }
-    });
-    const body = await res.json();
+    // Pas d'étape brouillon : le PO créé par les achats est aussitôt soumis à l'approbation (Activity_POApproval)
+    const poRes  = await request.get(`/api/purchase-orders/${purchaseOrder.id}`, { headers: auth(token) });
+    const poBody = await poRes.json();
+    expect(poBody.data?.status).toBe('PO_PENDING');
 
-    expect([200, 201]).toContain(res.status());
-    console.log(`✅  PO soumis — statut: ${body.data?.status ?? 'PO_PENDING'}`);
+    // Un PO en cours d'approbation n'est plus modifiable
+    const res = await request.put(`/api/purchase-orders/${purchaseOrder.id}`, {
+      headers: auth(token),
+      data: { status: 'PO_APPROVED' }
+    });
+    expect(res.status()).toBe(400);
+    console.log('✅  PO en attente d\'approbation (PO_PENDING)');
   });
 
   // ── 7. Approuver le bon de commande (PO_PENDING → PO_APPROVED) ────────────

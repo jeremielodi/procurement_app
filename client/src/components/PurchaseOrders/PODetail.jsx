@@ -28,6 +28,7 @@ import {
   Info
 } from 'lucide-react'
 import { purchaseOrderService } from '../../services/purchaseOrderService'
+import PODeliveryTracking, { DeliveryStatusBadge } from './PODeliveryTracking'
 import { supplierService } from '../../services/supplierService'
 import requisitionService from '../../services/requisitionService'
 import { grnService } from '../../services/grnService'
@@ -290,6 +291,7 @@ export default function PODetail() {
                   {po.items?.map((item, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm text-gray-800">
+                        {item.item_code && <span className="mr-1 rounded bg-indigo-50 px-1 text-xs font-semibold text-indigo-700">{item.item_code}</span>}
                         {item.description || item.item_description}
                         {item.specifications && (
                           <p className="text-xs text-gray-500 mt-1">{item.specifications}</p>
@@ -320,6 +322,9 @@ export default function PODetail() {
               </table>
             </div>
           </div>
+
+          {/* Suivi des livraisons (réceptions GRN par ligne) */}
+          <PODeliveryTracking poId={po.id} />
 
           {/* Historique des livraisons */}
           {po.deliveries && po.deliveries.length > 0 && (

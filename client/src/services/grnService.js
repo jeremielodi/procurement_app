@@ -14,8 +14,14 @@ export const grnService = {
     const response = await api.get(`/purchase-orders/${poId}/goods-receipts`);
     return response.data;
   },
+  // Erreurs métier (sur-livraison, dépôt, lot…) affichées par le formulaire : pas de toast automatique
   create: async (data) => {
-    const response = await api.post('/goods-receipts', data);
+    const response = await api.post('/goods-receipts', data, { skipErrorToast: true });
+    return response.data;
+  },
+  // Annulation : écritures de stock inverses (refusée si le stock reçu a déjà été sorti)
+  cancel: async (id, reason) => {
+    const response = await api.post(`/goods-receipts/${id}/cancel`, { reason }, { skipErrorToast: true });
     return response.data;
   },
   getPDF: async (id) => {

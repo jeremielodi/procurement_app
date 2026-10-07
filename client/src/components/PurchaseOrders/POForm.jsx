@@ -7,6 +7,7 @@ import requisitionService from '../../services/requisitionService';
 import { supplierService } from '../../services/supplierService';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { t, getLocale } from '../../i18n';
+import CatalogAutocomplete from '../Stock/CatalogAutocomplete';
 
 export default function POForm() {
   const { requisitionId, taskId } = useParams();
@@ -44,7 +45,10 @@ export default function POForm() {
           description: it.item_description || it.description || '',
           quantity: Number(it.quantity) || 1,
           unitPrice: Number(it.unit_price) || 0,
-          specifications: it.specifications || ''
+          specifications: it.specifications || '',
+          // Traçabilité : ligne de réquisition d'origine + article du catalogue (gestion de stock)
+          requisitionItemId: it.id,
+          stockItem: it.stock_item_id ? { id: it.stock_item_id, code: it.item_code, name: it.item_name, unit: it.unit, is_stockable: it.is_stockable } : null
         }));
         setItems(reqItems.length ? reqItems : [emptyItem()]);
       })
@@ -53,7 +57,7 @@ export default function POForm() {
   }, [requisitionId]);
 
   function emptyItem() {
-    return { description: '', quantity: 1, unitPrice: 0, specifications: '' };
+    return { description: '', quantity: 1, unitPrice: 0, specifications: '', stockItem: null, requisitionItemId: null };
   }
 
   function updateItem(i, field, value) {
@@ -87,7 +91,7 @@ export default function POForm() {
         notes,
         currency: currency.code,
         totalAmount,
-        items
+        items: items.map(({ stockItem, ...it }) => ({ ...it, stockItemId: stockItem?.id || null }))
       });
 
       if (res.success) {
@@ -241,18 +245,23 @@ export default function POForm() {
                 {items.map((item, i) => (
                   <tr key={i}>
                     <td className="px-3 py-2">
-                      <input
-                        required
+                      <CatalogAutocomplete
+                        inputProps={{ required: true, value: item.description }}
+                        onTextChange={v => updateItem(i, 'description', v)}
+                        linked={item.stockItem}
+                        onLink={stockItem => setItems(prev => {
+                          const next = [...prev];
+                          next[i] = { ...next[i], stockItem, ...(stockItem ? { description: stockItem.name } : {}) };
+                          return next;
+                        })}
                         className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
                         placeholder={t('po.itemDescription')}
-                        value={item.description}
-                        onChange={e => updateItem(i, 'description', e.target.value)}
                       />
                     </td>
                     <td className="px-3 py-2">
                       <input
-                        type="number" min="1" required
-                        className="w-20 border border-gray-200 rounded px-2 py-1 text-sm text-center"
+                        type="number" min="0.0001" step="any" required
+                        className="w-24 border border-gray-200 rounded px-2 py-1 text-sm text-center"
                         value={item.quantity}
                         onChange={e => updateItem(i, 'quantity', e.target.value)}
                       />

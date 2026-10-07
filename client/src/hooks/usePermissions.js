@@ -9,7 +9,6 @@ export const usePermissions = () => {
     // L'admin a toutes les permissions (via le profil prof_admin)
     if (user.profiles?.some(p => p.id === 'prof_admin')) return true;
     // Vérifier si l'utilisateur a la permission
-    console.log(user.permissions, permissionName);
     return user.permissions?.includes(permissionName) || false;
   };
   

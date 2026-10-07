@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import {
   ShoppingCart, CheckCircle2, Building2, ShieldCheck, Truck, Receipt, CreditCard,
   Workflow, BarChart3, Bell, Lock, FileSpreadsheet, Gavel, ArrowRight, Menu, X,
-  ClipboardCheck, PackageCheck, LogIn, Store, FileText,
+  ClipboardCheck, PackageCheck, LogIn, Store, FileText, Warehouse, Layers, Laptop, History, Sparkles,
 } from 'lucide-react';
 import { t as tr, useTranslation } from '../../i18n';
 import LanguageSwitcher from '../Common/LanguageSwitcher';
@@ -16,6 +16,7 @@ const OWNER = 'Digitales Solutions';
 // Icônes des listes (dans l'ordre des tableaux de landing.* dans src/locales/*.json)
 const FEATURE_ICONS = [ShoppingCart, Workflow, Gavel, FileText, Receipt, BarChart3, Bell, FileSpreadsheet];
 const STEP_ICONS = [ClipboardCheck, CheckCircle2, Gavel, FileText, PackageCheck, Receipt, CreditCard];
+const STOCK_ICONS = [Warehouse, PackageCheck, Truck, Layers, Laptop, History];
 const SECURITY_ICONS = [Building2, Lock, ShieldCheck];
 
 // Textes de la page (landing.*) mis en forme pour le rendu
@@ -25,11 +26,13 @@ function landingText() {
   const features = get('features');
   const cycle = get('cycle');
   const security = get('security');
+  const stock = get('stock');
   return {
     nav: get('nav'),
     hero: { ...hero, stats: hero.stats.map(s => [s.value, s.label]) },
     features: { ...features, items: features.items.map((it, i) => [FEATURE_ICONS[i], it.title, it.desc]) },
     cycle: { ...cycle, steps: cycle.steps.map((label, i) => [STEP_ICONS[i], label]) },
+    stock: { ...stock, items: stock.items.map((it, i) => [STOCK_ICONS[i], it.title, it.desc]) },
     suppliers: get('suppliers'),
     security: { ...security, items: security.items.map((it, i) => [SECURITY_ICONS[i], it.title, it.desc]) },
     contact: get('contact'),
@@ -50,6 +53,7 @@ export default function LandingPage() {
   const navLinks = [
     ['#features', t.nav.features],
     ['#cycle', t.nav.cycle],
+    ['#stock', t.nav.stock],
     ['#suppliers', t.nav.suppliers],
     ['#security', t.nav.security],
     ['#contact', t.nav.contact],
@@ -195,6 +199,30 @@ export default function LandingPage() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      {/* Gestion de stock */}
+      <section id="stock" className="py-20 bg-[#090f23] text-white scroll-mt-16">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center max-w-2xl mx-auto">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 px-3 py-1 text-xs font-semibold text-emerald-300">
+              <Sparkles className="w-3.5 h-3.5" /> {t.stock.badge}
+            </span>
+            <h2 className="mt-4 text-3xl font-bold">{t.stock.title}</h2>
+            <p className="mt-3 text-blue-100/90 leading-relaxed">{t.stock.subtitle}</p>
+          </div>
+          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {t.stock.items.map(([Icon, title, desc]) => (
+              <div key={title} className="rounded-xl bg-white/5 border border-white/10 p-6 hover:bg-white/10 transition">
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-500/20 text-blue-200">
+                  <Icon className="w-5 h-5" />
+                </div>
+                <h3 className="mt-4 font-semibold">{title}</h3>
+                <p className="mt-2 text-sm text-blue-100/80 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

@@ -381,6 +381,7 @@
     "nav": {
       "features": "Fonctionnalités",
       "cycle": "Cycle d'achat",
+      "stock": "Stock",
       "suppliers": "Fournisseurs",
       "security": "Sécurité",
       "contact": "Contact",
@@ -390,7 +391,7 @@
     "hero": {
       "badge": "Plateforme e-procurement multi-entreprise",
       "title": "Vos achats, de la réquisition au paiement.",
-      "subtitle": "procureApp digitalise tout le cycle procure-to-pay : demandes, approbations, appels d'offres, bons de commande, réceptions, factures et paiements — dans un seul outil traçable.",
+      "subtitle": "procureApp digitalise tout le cycle procure-to-pay : demandes, approbations, appels d'offres, bons de commande, réceptions, stock, factures et paiements — dans un seul outil traçable.",
       "cta": "Accéder à mon espace",
       "ctaSupplier": "Inscription fournisseur",
       "stats": [
@@ -410,7 +411,7 @@
     },
     "features": {
       "title": "Tout ce qu'il faut pour piloter vos achats",
-      "subtitle": "Des outils pensés pour les équipes achats, finance, logistique et direction.",
+      "subtitle": "Des outils pensés pour les équipes achats, finance, logistique, magasin et direction.",
       "items": [
         {
           "title": "Réquisitions",
@@ -454,9 +455,40 @@
         "Approbation",
         "Sélection fournisseur",
         "Bon de commande",
-        "Réception",
+        "Réception et stock",
         "Facture",
         "Paiement"
+      ]
+    },
+    "stock": {
+      "badge": "Nouveau",
+      "title": "Une gestion de stock reliée à vos achats",
+      "subtitle": "Ce qui est commandé et reçu entre directement en stock : plus de double saisie entre les achats et le magasin, et une visibilité complète sur ce qui reste à livrer.",
+      "items": [
+        {
+          "title": "Dépôts par localisation",
+          "desc": "Plusieurs dépôts par ville, avec des accès par utilisateur : chaque magasinier ne travaille que sur ses dépôts."
+        },
+        {
+          "title": "Réception → entrée en stock",
+          "desc": "La quantité acceptée au bon de réception entre en stock dans le dépôt choisi ; les sur-livraisons sont refusées."
+        },
+        {
+          "title": "Suivi des livraisons",
+          "desc": "Commandé, reçu, accepté, rejeté et reste à livrer, ligne par ligne, pour chaque bon de commande."
+        },
+        {
+          "title": "Lots et péremption",
+          "desc": "Suivi par lot, dates de péremption, alertes avant expiration et sorties « premier périmé, premier sorti »."
+        },
+        {
+          "title": "Sorties et équipements",
+          "desc": "Remise d'articles aux employés avec accusé de réception ; ordinateurs et matériel suivis par n° de série et récupérés au départ."
+        },
+        {
+          "title": "Journal infalsifiable",
+          "desc": "Chaque mouvement est tracé et ne peut être modifié ; le stock ne peut jamais devenir négatif. Export Excel."
+        }
       ]
     },
     "suppliers": {

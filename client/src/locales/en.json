@@ -381,6 +381,7 @@
     "nav": {
       "features": "Features",
       "cycle": "Procurement cycle",
+      "stock": "Stock",
       "suppliers": "Suppliers",
       "security": "Security",
       "contact": "Contact",
@@ -390,7 +391,7 @@
     "hero": {
       "badge": "Multi-company e-procurement platform",
       "title": "Your purchasing, from requisition to payment.",
-      "subtitle": "procureApp digitizes the entire procure-to-pay cycle: requests, approvals, tenders, purchase orders, receipts, invoices and payments — in one fully traceable tool.",
+      "subtitle": "procureApp digitises the whole procure-to-pay cycle: requests, approvals, calls for tenders, purchase orders, receipts, stock, invoices and payments — in a single traceable tool.",
       "cta": "Go to my workspace",
       "ctaSupplier": "Supplier registration",
       "stats": [
@@ -410,7 +411,7 @@
     },
     "features": {
       "title": "Everything you need to run procurement",
-      "subtitle": "Built for procurement, finance, logistics and management teams.",
+      "subtitle": "Tools designed for procurement, finance, logistics, warehouse and management teams.",
       "items": [
         {
           "title": "Requisitions",
@@ -454,9 +455,40 @@
         "Approval",
         "Supplier selection",
         "Purchase order",
-        "Goods receipt",
+        "Receipt & stock",
         "Invoice",
         "Payment"
+      ]
+    },
+    "stock": {
+      "badge": "New",
+      "title": "Stock management connected to your purchasing",
+      "subtitle": "What is ordered and received goes straight into stock: no more double entry between procurement and the warehouse, and full visibility of what is still to be delivered.",
+      "items": [
+        {
+          "title": "Warehouses by location",
+          "desc": "Several warehouses per city, with per-user access: each storekeeper only works on their own warehouses."
+        },
+        {
+          "title": "Receipt → stock entry",
+          "desc": "The quantity accepted on the goods receipt enters stock in the chosen warehouse; over-deliveries are refused."
+        },
+        {
+          "title": "Delivery tracking",
+          "desc": "Ordered, received, accepted, rejected and remaining quantities, line by line, for every purchase order."
+        },
+        {
+          "title": "Lots and expiry",
+          "desc": "Lot tracking, expiry dates, alerts before expiry and \"first expired, first out\" issues."
+        },
+        {
+          "title": "Issues and equipment",
+          "desc": "Items handed over to employees with acknowledgement of receipt; laptops and equipment tracked by serial number and recovered on departure."
+        },
+        {
+          "title": "Tamper-proof ledger",
+          "desc": "Every movement is recorded and cannot be altered; stock can never go negative. Excel export."
+        }
       ]
     },
     "suppliers": {

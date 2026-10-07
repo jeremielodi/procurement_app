@@ -221,7 +221,7 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 ## Site vitrine (FR / EN)
 
 - `client/src/components/Landing/LandingPage.jsx` : page unique publique sur `/` (visiteur non connecté ; connecté → `HomeRedirect`, via `Home` dans `App.jsx`). Éditeur : **Digitales Solutions**
-- Textes dans `landing.*` des fichiers de langue (voir « Interface multilingue ») ; listes = tableaux JSON, icônes dans le composant (`FEATURE_ICONS`…, même ordre). Liens : `/login`, `/supplier-register`
+- Textes dans `landing.*` des fichiers de langue (voir « Interface multilingue ») ; listes = tableaux JSON, icônes dans le composant (`FEATURE_ICONS`, `STOCK_ICONS`…, même ordre). Sections : fonctionnalités, cycle, **stock** (`#stock`, badge « Nouveau », 6 cartes `landing.stock.items`), fournisseurs, sécurité, contact. Liens : `/login`, `/supplier-register`
 - **Formulaire de contact** (`Landing/ContactForm.jsx`, aucune adresse ni téléphone affichés) → `POST /public/contact { name, email, company?, phone?, message, website }` (`ContactController`) : email à **`CONTACT_EMAIL`** (`backend/.env`, défaut jeremielodi@gmail.com) via le SMTP de l'app, **Reply-To = visiteur** (`sendEmail(..., { replyTo })`). Validation (erreurs par champ en codes `required`/`invalid`/`tooShort`/`tooLong`, traduites côté client), champ piège `website` (robot → succès sans envoi), 5 messages / IP / heure (429), 502 si l'email n'est pas parti. Tests : `tests/api/contact.spec.js` (n'envoie jamais d'email réel)
 
 ## Interface multilingue (FR / EN)

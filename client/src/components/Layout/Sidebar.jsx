@@ -305,7 +305,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     // Ouvrir le groupe du module actif si trouvé
     const currentPath = window.location.pathname
     for (const group of menuGroups) {
-      if (group.items.some(item => item.path === currentPath)) {
+      if (group.items.some(item => currentPath === item.path || currentPath.startsWith(item.path + '/'))) {
         initial[group.id] = true
         break
       }
@@ -324,7 +324,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     let groupToOpen = null
     
     for (const group of menuGroups) {
-      if (group.items.some(item => item.path === currentPath)) {
+      if (group.items.some(item => currentPath === item.path || currentPath.startsWith(item.path + '/'))) {
         groupToOpen = group.id
         break
       }
@@ -409,156 +409,172 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     navigate('/login', { replace: true })
   }
 
-  // Vérifier si un lien est actif
-  const isLinkActive = (path) => {
-    return location.pathname === path
-  }
+  // Lien actif : le chemin du menu le plus long qui préfixe l'URL (ex. /purchase-orders/12 → « Bons de commande »,
+  // /stock/items → « Articles » et non « État du stock »)
+  const allPaths = menuGroups.flatMap(g => g.items.map(i => i.path))
+  const activePath = allPaths
+    .filter(p => location.pathname === p || location.pathname.startsWith(p + '/'))
+    .sort((a, b) => b.length - a.length)[0]
+  const isLinkActive = (path) => path === activePath
+
+  const roleLabel = getMainRole()
 
   return (
-    <div
-      className={`fixed left-0 top-0 h-full bg-white shadow-lg transition-all duration-300 z-20 flex flex-col
+    <aside
+      className={`fixed left-0 top-0 z-20 flex h-full flex-col bg-gradient-to-b from-[#0d1838] via-[#0a1330] to-[#070d22] text-slate-300 shadow-xl transition-all duration-300
         ${isOpen ? 'w-64' : 'w-20'}`}
     >
-      {/* Logo */}
-      <div className="flex items-center justify-between p-4 border-b">
+      {/* Marque : logo et nom de l'entreprise de l'utilisateur ; procureApp sinon (super admin, fournisseur) */}
+      <div className={`flex h-16 items-center border-b border-white/10 ${isOpen ? 'justify-between px-4' : 'justify-center px-2'}`}>
         {isOpen && (
-          <>
-            {/* Logo et nom de l'entreprise de l'utilisateur ; procureApp sinon (super admin, fournisseur) */}
-            <img src={enterpriseLogo || '/images/procureapp-logo.svg'} alt="" style={{ height: 30, maxWidth: 40, objectFit: 'contain' }} />
-            <div className="flex-1 min-w-0 ml-2" data-testid="sidebar-brand">
-              <div className="text-base font-bold text-blue-600 truncate" title={enterprise?.name || 'procureApp'}>{enterprise?.name || 'procureApp'}</div>
-              {enterprise && <div className="text-[10px] text-gray-400 leading-none">procureApp</div>}
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white p-1 shadow-sm">
+              <img src={enterpriseLogo || '/images/procureapp-logo.svg'} alt="" className="max-h-full max-w-full object-contain" />
+            </span>
+            <div className="min-w-0" data-testid="sidebar-brand">
+              <div className="truncate text-sm font-semibold text-white" title={enterprise?.name || 'procureApp'}>{enterprise?.name || 'procureApp'}</div>
+              {enterprise && <div className="text-[10px] uppercase tracking-wider text-blue-300/70">procureApp</div>}
             </div>
-          </>
-         
+          </div>
         )}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-1 rounded-lg hover:bg-gray-100"
+          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+          aria-label={isOpen ? t('nav.collapse') : t('nav.expand')}
         >
-          {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+          {isOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
         </button>
       </div>
 
-    
-
-      {/* Navigation principale avec groupes extensibles */}
-      <nav className="flex-1 overflow-y-auto py-4">
+      {/* Navigation : groupes repliables */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 [scrollbar-color:rgba(255,255,255,.15)_transparent] [scrollbar-width:thin]">
         {menuGroups.filter(isGroupVisible).map((group) => {
           const visibleItems = group.items.filter(canSeeMenuItem)
           if (visibleItems.length === 0) return null
-          
-          const isGroupOpen = openGroups[group.id]
+
+          const isGroupOpen = openGroups[group.id] || !isOpen
           const GroupIcon = group.icon
-          
+          const hasActive = visibleItems.some(item => isLinkActive(item.path))
+
           return (
-            <div key={group.id} className="mb-2">
-              {/* En-tête du groupe - cliquable pour ouvrir/fermer */}
-              <div
-                onClick={() => isOpen && toggleGroup(group.id)}
-                className={`flex items-center justify-between px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors ${
-                  !isOpen ? 'justify-center' : ''
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <GroupIcon size={16} />
-                  {isOpen && <span>{t(group.label)}</span>}
-                </div>
-                {isOpen && (
-                  <button className="p-1">
-                    {isGroupOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
-                )}
-              </div>
-              
-              {/* Items du groupe - affichés seulement si ouvert */}
-              {(isGroupOpen || !isOpen) && (
-                <div className="space-y-1">
-                  {visibleItems.map((item) => {
-                    const isActive = isLinkActive(item.path)
-                    const Icon = item.icon
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        className={`flex items-center px-4 py-3 transition-colors group
-                          ${isActive 
-                            ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' 
-                            : 'text-gray-600 hover:bg-gray-50'
-                          }`}
-                        title={!isOpen ? t(item.label) : ''}
-                      >
-                        <Icon size={20} />
-                        {isOpen && <span className="ml-3 text-sm">{t(item.label)}</span>}
-                      </Link>
-                    )
-                  })}
-                </div>
+            <div key={group.id} className="mb-1">
+              {/* En-tête du groupe (barre repliée : simple séparateur) */}
+              {isOpen ? (
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  className={`flex w-full items-center justify-between px-5 py-2 text-[11px] font-semibold uppercase tracking-wider transition-colors
+                    ${hasActive ? 'text-blue-300' : 'text-slate-500 hover:text-slate-300'}`}
+                  aria-expanded={!!openGroups[group.id]}
+                >
+                  <span className="flex items-center gap-2">
+                    <GroupIcon size={14} />
+                    {t(group.label)}
+                  </span>
+                  <ChevronDown size={14} className={`transition-transform duration-200 ${openGroups[group.id] ? 'rotate-180' : ''}`} />
+                </button>
+              ) : (
+                <div className="mx-5 my-2 border-t border-white/10" />
               )}
+
+              {/* Éléments du groupe : ouverture animée */}
+              <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${isGroupOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                <div className="overflow-hidden">
+                  <div className="space-y-0.5 pb-1">
+                    {visibleItems.map((item) => {
+                      const isActive = isLinkActive(item.path)
+                      const Icon = item.icon
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          tabIndex={isGroupOpen ? 0 : -1}
+                          className={`relative mx-3 flex items-center rounded-lg py-2 text-sm transition-all duration-150
+                            ${isOpen ? 'px-3' : 'justify-center px-0'}
+                            ${isActive
+                              ? 'bg-gradient-to-r from-blue-500/25 to-blue-500/5 font-medium text-white shadow-inner'
+                              : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}
+                          title={!isOpen ? t(item.label) : undefined}
+                          aria-current={isActive ? 'page' : undefined}
+                        >
+                          {isActive && <span className="absolute -left-3 top-1.5 bottom-1.5 w-1 rounded-r-full bg-blue-400" aria-hidden="true" />}
+                          <Icon size={18} className={`shrink-0 ${isActive ? 'text-blue-300' : 'text-slate-400'}`} />
+                          {isOpen && <span className="ml-3 truncate">{t(item.label)}</span>}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
           )
         })}
 
         {/* Profils BPMN de l'utilisateur */}
         {userProfiles.length > 0 && isOpen && !isSupplier && !isSuperAdmin && (
-          <div className="mt-6 px-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              {t('nav.myBpmnProfiles')}
-            </p>
-            <div className="space-y-1">
+          <div className="mx-5 mt-5 border-t border-white/10 pt-4">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{t('nav.myBpmnProfiles')}</p>
+            <div className="flex flex-wrap gap-1.5">
               {userProfiles.map((profile) => (
-                <div key={profile.id} className="flex items-center gap-2 px-2 py-1">
-                  <Shield size={12} className="text-blue-500" />
-                  <span className="text-xs text-gray-600">{profile.name}</span>
-                </div>
+                <span key={profile.id} className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 px-2 py-0.5 text-[11px] text-blue-200 ring-1 ring-blue-400/20">
+                  <Shield size={10} /> {profile.name}
+                </span>
               ))}
             </div>
           </div>
         )}
       </nav>
 
-      {/* Footer avec actions */}
-      <div className="border-t p-4">
-        <button
-          onClick={() => setShowProfileMenu(!showProfileMenu)}
-          className="w-full flex items-center gap-3 text-gray-600 hover:text-gray-800"
-        >
-          <User size={20} />
-          {isOpen && (
-            <div className="flex-1 text-left">
-              <span className="text-sm">{t('nav.myAccount')}</span>
-            </div>
-          )}
-          {isOpen && (showProfileMenu ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
-        </button>
-        
-        {showProfileMenu && isOpen && (
-          <div className="mt-2 space-y-2">
+      {/* Compte : carte utilisateur, menu au-dessus */}
+      <div className="relative border-t border-white/10 p-3">
+        {showProfileMenu && (
+          <div className={`absolute bottom-full z-30 mb-2 rounded-xl bg-[#121d42] p-1.5 shadow-2xl ring-1 ring-white/10
+            ${isOpen ? 'left-3 right-3' : 'left-3 w-52'}`}>
             <Link
               to={isSupplier ? '/supplier/profile' : '/profile'}
-              className="flex items-center gap-3 px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg"
+              onClick={() => setShowProfileMenu(false)}
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-200 hover:bg-white/10"
             >
-              <User size={16} />
-              <span>{t('nav.myProfile')}</span>
+              <User size={16} /> <span>{t('nav.myProfile')}</span>
             </Link>
-            {!isSupplier && <Link
-              to="/settings"
-              className="flex items-center gap-3 px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg"
-            >
-              <Settings size={16} />
-              <span>{t('nav.settings')}</span>
-            </Link>}
-            <hr className="my-1" />
+            {!isSupplier && (
+              <Link
+                to="/settings"
+                onClick={() => setShowProfileMenu(false)}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-200 hover:bg-white/10"
+              >
+                <Settings size={16} /> <span>{t('nav.settings')}</span>
+              </Link>
+            )}
+            <div className="my-1 border-t border-white/10" />
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-2 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-red-300 hover:bg-red-500/15 hover:text-red-200"
             >
-              <LogOut size={16} />
-              <span>{t('nav.logout')}</span>
+              <LogOut size={16} /> <span>{t('nav.logout')}</span>
             </button>
           </div>
         )}
+        <button
+          onClick={() => setShowProfileMenu(!showProfileMenu)}
+          className={`flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-white/5 ${showProfileMenu ? 'bg-white/5' : ''} ${!isOpen ? 'justify-center' : ''}`}
+          aria-expanded={showProfileMenu}
+          title={!isOpen ? getFullName() : undefined}
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-semibold text-white ring-2 ring-white/10">
+            {getInitials()}
+          </span>
+          {isOpen && (
+            <>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-white">{getFullName()}</span>
+                <span className="block truncate text-xs text-slate-400">{t('nav.myAccount')} · {roleLabel}</span>
+              </span>
+              <ChevronUp size={16} className={`shrink-0 text-slate-400 transition-transform duration-200 ${showProfileMenu ? '' : 'rotate-180'}`} />
+            </>
+          )}
+        </button>
       </div>
-    </div>
+    </aside>
   )
 }

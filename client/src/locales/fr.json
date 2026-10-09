@@ -140,7 +140,9 @@
     "stockCounts": "Inventaires",
     "stockAdjustments": "Ajustements",
     "stockValuation": "Valorisation",
-    "auditLog": "Journal d'audit"
+    "auditLog": "Journal d'audit",
+    "collapse": "Réduire le menu",
+    "expand": "Agrandir le menu"
   },
   "header": {
     "toggleSidebar": "Afficher / masquer le menu",

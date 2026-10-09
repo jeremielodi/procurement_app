@@ -140,7 +140,9 @@
     "stockCounts": "Stock counts",
     "stockAdjustments": "Adjustments",
     "stockValuation": "Valuation",
-    "auditLog": "Audit log"
+    "auditLog": "Audit log",
+    "collapse": "Collapse menu",
+    "expand": "Expand menu"
   },
   "header": {
     "toggleSidebar": "Show / hide menu",

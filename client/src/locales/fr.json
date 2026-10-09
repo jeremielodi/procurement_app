@@ -394,7 +394,8 @@
       "security": "Sécurité",
       "contact": "Contact",
       "login": "Se connecter",
-      "menu": "Menu"
+      "menu": "Menu",
+      "audit": "Audit & contrôle"
     },
     "hero": {
       "badge": "Plateforme e-procurement multi-entreprise",
@@ -426,8 +427,8 @@
           "desc": "Création des demandes avec articles, lignes budgétaires et import Excel/CSV."
         },
         {
-          "title": "Circuits d'approbation",
-          "desc": "Validation multi-niveaux selon le montant : manager, finance, direction générale."
+          "title": "Budget et approbations",
+          "desc": "Budget vérifié automatiquement ; en cas de manque, ajustement puis nouvelle vérification sans ressaisie. Validation multi-niveaux selon le montant."
         },
         {
           "title": "Appels d'offres",
@@ -435,15 +436,15 @@
         },
         {
           "title": "Bons de commande",
-          "desc": "PO générés, approuvés et envoyés automatiquement au fournisseur en PDF."
+          "desc": "PO approuvés, envoyés en PDF au fournisseur, qui confirme la commande et la date de livraison en ligne."
         },
         {
           "title": "Rapprochement 3 voies",
           "desc": "Contrôle automatique bon de commande + réception + facture avant paiement."
         },
         {
-          "title": "Tableaux de bord",
-          "desc": "Suivi budgétaire, avancement des demandes et tâches en attente par profil."
+          "title": "Tableaux de bord et recherche",
+          "desc": "Tâches en attente par profil (« qui bloque ? »), alertes, et recherche instantanée de tout document depuis l'en-tête."
         },
         {
           "title": "Notifications temps réel",
@@ -471,7 +472,7 @@
     "stock": {
       "badge": "Nouveau",
       "title": "Une gestion de stock reliée à vos achats",
-      "subtitle": "Ce qui est commandé et reçu entre directement en stock : plus de double saisie entre les achats et le magasin, et une visibilité complète sur ce qui reste à livrer.",
+      "subtitle": "Ce qui est commandé et reçu entre directement en stock : plus de double saisie entre les achats et le magasin, une valeur de stock toujours à jour et des inventaires qui justifient chaque écart.",
       "items": [
         {
           "title": "Dépôts par localisation",
@@ -491,11 +492,23 @@
         },
         {
           "title": "Sorties et équipements",
-          "desc": "Remise d'articles aux employés avec accusé de réception ; ordinateurs et matériel suivis par n° de série et récupérés au départ."
+          "desc": "Sorties vers un employé ou un département avec accusé de réception ; ordinateurs et matériel suivis par n° de série et récupérés au départ."
         },
         {
           "title": "Journal infalsifiable",
           "desc": "Chaque mouvement est tracé et ne peut être modifié ; le stock ne peut jamais devenir négatif. Export Excel."
+        },
+        {
+          "title": "Transferts entre dépôts",
+          "desc": "Marchandise « en transit » jusqu'à sa réception au dépôt de destination ; les quantités manquantes sont enregistrées comme pertes en transit."
+        },
+        {
+          "title": "Inventaires et ajustements",
+          "desc": "Comptage à l'aveugle, écarts validés par l'administrateur, ajustements motivés (casse, perte, vol, péremption) et réapprovisionnement en un clic."
+        },
+        {
+          "title": "Valorisation au coût moyen",
+          "desc": "Valeur du stock au coût moyen pondéré (CMUP), par dépôt ou pour toute l'entreprise, à n'importe quelle date — idéal pour la clôture."
         }
       ]
     },
@@ -510,6 +523,45 @@
       ],
       "cta": "Devenir fournisseur"
     },
+    "audit": {
+      "badge": "Pour les auditeurs et le contrôle interne",
+      "title": "Une piste d’audit complète, sans reconstitution",
+      "subtitle": "Chaque achat laisse une trace vérifiable, de la demande au paiement. L'auditeur interne ou externe retrouve en quelques clics qui a demandé, qui a approuvé, sur quelle base le fournisseur a été choisi, ce qui a été reçu et ce qui a été payé — avec les documents à l'appui.",
+      "items": [
+        {
+          "title": "Historique de chaque dossier",
+          "desc": "Le suivi du workflow date chaque étape : auteur, décision, commentaire et délai de traitement. Rien ne se fait hors circuit."
+        },
+        {
+          "title": "Séparation des tâches",
+          "desc": "Demandeur, approbateur, acheteur, magasinier et finance sont des profils distincts ; le workflow impose l'ordre des étapes : aucun paiement sans réception ni facture rapprochée."
+        },
+        {
+          "title": "Contrôle budgétaire et 3 voies",
+          "desc": "Aucune demande ne part sans ligne budgétaire suffisante ; chaque facture est rapprochée du bon de commande et de la réception, les écarts sont signalés avant paiement."
+        },
+        {
+          "title": "Mise en concurrence traçable",
+          "desc": "Offres scellées jusqu'à la clôture, comparatif des offres, justification des sources uniques, préqualification des fournisseurs avec documents vérifiés."
+        },
+        {
+          "title": "Stock vérifiable",
+          "desc": "Journal des mouvements non modifiable, inventaires avec écarts justifiés, ajustements motivés, valorisation à la date de votre choix."
+        },
+        {
+          "title": "Journal d'audit des accès",
+          "desc": "Connexions, échecs et blocages, mots de passe, création et désactivation de comptes, droits sur les dépôts : avec l'auteur, la date et l'adresse IP."
+        }
+      ],
+      "checklistTitle": "Ce que l'auditeur obtient",
+      "checklist": [
+        "Exports Excel des listes, comparatifs, stocks, valorisation et journal d'audit",
+        "Documents officiels en PDF : réquisition, bon de commande, réception, bons de sortie, de transfert et de retour, paiement",
+        "Valorisation du stock à une date passée (clôture d'exercice)",
+        "Écarts de rapprochement, pertes en transit et écarts d'inventaire identifiés et motivés",
+        "Données cloisonnées par entreprise, fichiers versionnés, sauvegardes quotidiennes"
+      ]
+    },
     "security": {
       "title": "Multi-entreprise et sécurisé",
       "items": [
@@ -519,11 +571,11 @@
         },
         {
           "title": "Contrôle des accès",
-          "desc": "Profils et permissions par rôle ; chaque action est historisée."
+          "desc": "Profils et permissions par rôle, protection contre les tentatives de connexion répétées ; connexions et actions sensibles consignées dans le journal d'audit."
         },
         {
           "title": "Fichiers protégés",
-          "desc": "Documents stockés de façon privée et versionnée, jamais exposés publiquement."
+          "desc": "Documents stockés de façon privée et versionnée, jamais exposés publiquement ; base et fichiers sauvegardés chaque jour."
         }
       ]
     },

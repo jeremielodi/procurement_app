@@ -394,7 +394,8 @@
       "security": "Security",
       "contact": "Contact",
       "login": "Sign in",
-      "menu": "Menu"
+      "menu": "Menu",
+      "audit": "Audit & control"
     },
     "hero": {
       "badge": "Multi-company e-procurement platform",
@@ -426,8 +427,8 @@
           "desc": "Create requests with items, budget lines and Excel/CSV import."
         },
         {
-          "title": "Approval workflows",
-          "desc": "Multi-level approval based on amount: manager, finance, general management."
+          "title": "Budget and approvals",
+          "desc": "Budget checked automatically; if it falls short, adjust and re-check without re-entering anything. Multi-level approval based on the amount."
         },
         {
           "title": "Tenders",
@@ -435,15 +436,15 @@
         },
         {
           "title": "Purchase orders",
-          "desc": "POs generated, approved and automatically sent to suppliers as PDF."
+          "desc": "Approved POs sent as PDF to the supplier, who confirms the order and delivery date online."
         },
         {
           "title": "3-way matching",
           "desc": "Automatic check of purchase order + goods receipt + invoice before payment."
         },
         {
-          "title": "Dashboards",
-          "desc": "Budget tracking, request progress and pending tasks by role."
+          "title": "Dashboards and search",
+          "desc": "Pending tasks by profile (\"who is blocking?\"), alerts, and instant search for any document from the header."
         },
         {
           "title": "Real-time notifications",
@@ -471,7 +472,7 @@
     "stock": {
       "badge": "New",
       "title": "Stock management connected to your purchasing",
-      "subtitle": "What is ordered and received goes straight into stock: no more double entry between procurement and the warehouse, and full visibility of what is still to be delivered.",
+      "subtitle": "What is ordered and received goes straight into stock: no more double entry between purchasing and the warehouse, an always up-to-date stock value and stock counts that justify every difference.",
       "items": [
         {
           "title": "Warehouses by location",
@@ -491,11 +492,23 @@
         },
         {
           "title": "Issues and equipment",
-          "desc": "Items handed over to employees with acknowledgement of receipt; laptops and equipment tracked by serial number and recovered on departure."
+          "desc": "Issues to an employee or a department with acknowledgement of receipt; computers and equipment tracked by serial number and recovered on departure."
         },
         {
           "title": "Tamper-proof ledger",
           "desc": "Every movement is recorded and cannot be altered; stock can never go negative. Excel export."
+        },
+        {
+          "title": "Transfers between warehouses",
+          "desc": "Goods stay \"in transit\" until received at the destination warehouse; missing quantities are recorded as losses in transit."
+        },
+        {
+          "title": "Stock counts and adjustments",
+          "desc": "Blind counts, differences validated by the administrator, justified adjustments (damage, loss, theft, expiry) and one-click restocking."
+        },
+        {
+          "title": "Weighted average cost valuation",
+          "desc": "Stock value at weighted average cost, per warehouse or for the whole company, at any date — ideal for closing."
         }
       ]
     },
@@ -510,6 +523,45 @@
       ],
       "cta": "Become a supplier"
     },
+    "audit": {
+      "badge": "For auditors and internal control",
+      "title": "A complete audit trail, no reconstruction needed",
+      "subtitle": "Every purchase leaves a verifiable trail, from request to payment. Internal or external auditors find in a few clicks who requested, who approved, on what basis the supplier was chosen, what was received and what was paid — with the supporting documents.",
+      "items": [
+        {
+          "title": "History of every file",
+          "desc": "The workflow tracking dates every step: author, decision, comment and processing time. Nothing happens outside the circuit."
+        },
+        {
+          "title": "Segregation of duties",
+          "desc": "Requester, approver, buyer, storekeeper and finance are separate profiles; the workflow enforces the order of steps: no payment without receipt and a matched invoice."
+        },
+        {
+          "title": "Budget control and 3-way match",
+          "desc": "No request goes ahead without a sufficient budget line; every invoice is matched against the purchase order and the receipt, and discrepancies are flagged before payment."
+        },
+        {
+          "title": "Traceable competition",
+          "desc": "Sealed bids until closing, bid comparison, sole-source justifications, supplier prequalification with verified documents."
+        },
+        {
+          "title": "Verifiable stock",
+          "desc": "Tamper-proof movement log, stock counts with justified differences, reasoned adjustments, valuation at the date of your choice."
+        },
+        {
+          "title": "Access audit log",
+          "desc": "Sign-ins, failures and blocks, passwords, account creation and deactivation, warehouse rights: with author, date and IP address."
+        }
+      ],
+      "checklistTitle": "What the auditor gets",
+      "checklist": [
+        "Excel exports of lists, bid comparisons, stock, valuation and the audit log",
+        "Official PDF documents: requisition, purchase order, goods receipt, issue, transfer and return notes, payment",
+        "Stock valuation at a past date (year-end closing)",
+        "Matching discrepancies, losses in transit and count differences identified and justified",
+        "Data isolated per company, versioned files, daily backups"
+      ]
+    },
     "security": {
       "title": "Multi-company and secure",
       "items": [
@@ -519,11 +571,11 @@
         },
         {
           "title": "Access control",
-          "desc": "Role-based profiles and permissions; every action is logged."
+          "desc": "Role-based profiles and permissions, protection against repeated sign-in attempts; sign-ins and sensitive actions recorded in the audit log."
         },
         {
           "title": "Protected files",
-          "desc": "Documents stored privately with versioning, never publicly exposed."
+          "desc": "Documents stored privately with versioning, never publicly exposed; database and files backed up daily."
         }
       ]
     },

@@ -6,6 +6,7 @@ import {
   ShoppingCart, CheckCircle2, Building2, ShieldCheck, Truck, Receipt, CreditCard,
   Workflow, BarChart3, Bell, Lock, FileSpreadsheet, Gavel, ArrowRight, Menu, X,
   ClipboardCheck, PackageCheck, LogIn, Store, FileText, Warehouse, Layers, Laptop, History, Sparkles,
+  ArrowLeftRight, ClipboardList, Coins, Users, Scale, ScrollText, FileSearch,
 } from 'lucide-react';
 import { t as tr, useTranslation } from '../../i18n';
 import LanguageSwitcher from '../Common/LanguageSwitcher';
@@ -16,7 +17,8 @@ const OWNER = 'Digitales Solutions';
 // Icônes des listes (dans l'ordre des tableaux de landing.* dans src/locales/*.json)
 const FEATURE_ICONS = [ShoppingCart, Workflow, Gavel, FileText, Receipt, BarChart3, Bell, FileSpreadsheet];
 const STEP_ICONS = [ClipboardCheck, CheckCircle2, Gavel, FileText, PackageCheck, Receipt, CreditCard];
-const STOCK_ICONS = [Warehouse, PackageCheck, Truck, Layers, Laptop, History];
+const STOCK_ICONS = [Warehouse, PackageCheck, Truck, Layers, Laptop, History, ArrowLeftRight, ClipboardList, Coins];
+const AUDIT_ICONS = [History, Users, Scale, Gavel, ClipboardCheck, ScrollText];
 const SECURITY_ICONS = [Building2, Lock, ShieldCheck];
 
 // Textes de la page (landing.*) mis en forme pour le rendu
@@ -27,12 +29,14 @@ function landingText() {
   const cycle = get('cycle');
   const security = get('security');
   const stock = get('stock');
+  const audit = get('audit');
   return {
     nav: get('nav'),
     hero: { ...hero, stats: hero.stats.map(s => [s.value, s.label]) },
     features: { ...features, items: features.items.map((it, i) => [FEATURE_ICONS[i], it.title, it.desc]) },
     cycle: { ...cycle, steps: cycle.steps.map((label, i) => [STEP_ICONS[i], label]) },
     stock: { ...stock, items: stock.items.map((it, i) => [STOCK_ICONS[i], it.title, it.desc]) },
+    audit: { ...audit, items: audit.items.map((it, i) => [AUDIT_ICONS[i], it.title, it.desc]) },
     suppliers: get('suppliers'),
     security: { ...security, items: security.items.map((it, i) => [SECURITY_ICONS[i], it.title, it.desc]) },
     contact: get('contact'),
@@ -54,6 +58,7 @@ export default function LandingPage() {
     ['#features', t.nav.features],
     ['#cycle', t.nav.cycle],
     ['#stock', t.nav.stock],
+    ['#audit', t.nav.audit],
     ['#suppliers', t.nav.suppliers],
     ['#security', t.nav.security],
     ['#contact', t.nav.contact],
@@ -69,13 +74,13 @@ export default function LandingPage() {
             <span className="text-lg font-bold text-white">procureApp</span>
           </a>
 
-          <nav className="hidden md:flex items-center gap-7 text-sm text-blue-100">
+          <nav className="hidden lg:flex items-center gap-6 text-sm text-blue-100">
             {navLinks.map(([href, label]) => (
               <a key={href} href={href} className="hover:text-white">{label}</a>
             ))}
           </nav>
 
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
             <LanguageSwitcher dark />
             <Link to="/login" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
               <LogIn className="w-4 h-4" /> {t.nav.login}
@@ -84,7 +89,7 @@ export default function LandingPage() {
 
           <button
             type="button"
-            className="md:hidden text-white p-2"
+            className="lg:hidden text-white p-2"
             onClick={() => setMenuOpen(o => !o)}
             aria-label={t.nav.menu}
             aria-expanded={menuOpen}
@@ -94,7 +99,7 @@ export default function LandingPage() {
         </div>
 
         {menuOpen && (
-          <div className="md:hidden border-t border-white/10 px-4 py-4 space-y-3">
+          <div className="lg:hidden border-t border-white/10 px-4 py-4 space-y-3">
             {navLinks.map(([href, label]) => (
               <a key={href} href={href} onClick={() => setMenuOpen(false)} className="block text-blue-100 hover:text-white">{label}</a>
             ))}
@@ -222,6 +227,41 @@ export default function LandingPage() {
                 <p className="mt-2 text-sm text-blue-100/80 leading-relaxed">{desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Audit & contrôle interne */}
+      <section id="audit" className="py-20 scroll-mt-16">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-700">
+              <FileSearch className="w-3.5 h-3.5" /> {t.audit.badge}
+            </span>
+            <h2 className="mt-4 text-3xl font-bold text-slate-900">{t.audit.title}</h2>
+            <p className="mt-3 text-slate-600 leading-relaxed">{t.audit.subtitle}</p>
+          </div>
+          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {t.audit.items.map(([Icon, title, desc]) => (
+              <div key={title} className="rounded-xl border border-slate-200 p-6 hover:shadow-md transition">
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-600 text-white">
+                  <Icon className="w-5 h-5" />
+                </div>
+                <h3 className="mt-4 font-semibold text-slate-900">{title}</h3>
+                <p className="mt-2 text-sm text-slate-600 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 rounded-2xl bg-blue-50 border border-blue-100 p-6 md:p-8">
+            <h3 className="font-semibold text-slate-900">{t.audit.checklistTitle}</h3>
+            <ul className="mt-4 grid md:grid-cols-2 gap-x-8 gap-y-3">
+              {t.audit.checklist.map(p => (
+                <li key={p} className="flex gap-3 text-sm text-slate-700">
+                  <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
+                  <span>{p}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>

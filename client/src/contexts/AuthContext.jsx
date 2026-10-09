@@ -55,7 +55,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
+      // Erreurs affichées par l'écran de connexion (dont 429 : trop de tentatives)
+      const response = await api.post('/auth/login', { email, password }, { skipErrorToast: true });
       const { token, user: userData } = response.data.data;
       
       // Une fois connecté, l'interface passe dans la langue du compte
@@ -69,9 +70,12 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true, user: userData };
     } catch (error) {
-      return { 
-        success: false, 
-        message: error.response?.data?.message || t('services.loginError') 
+      const body = error.response?.data || {};
+      return {
+        success: false,
+        code: body.code,
+        retryAfter: body.retryAfter,
+        message: body.message || t('services.loginError'),
       };
     }
   };

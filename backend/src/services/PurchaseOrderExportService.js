@@ -1,8 +1,7 @@
 // backend/src/services/PurchaseOrderExportService.js
-const puppeteer = require('puppeteer');
 const Handlebars = require('handlebars');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
-const { getBrowserOptions } = require('../config/puppeteer');
+const { renderPdf } = require('../utils/pdfRenderer');
 const { getBranding } = require('../utils/enterpriseBranding');
 const { pdfContext, rootLocale, rootLabels } = require('../utils/pdfI18n');
 
@@ -41,7 +40,7 @@ class PurchaseOrderExportService {
       const map = {
         DRAFT: '#6B7280', PENDING: '#D97706', PO_PENDING: '#D97706',
         PO_APPROVED: '#059669', PO_REJECTED: '#DC2626',
-        PO_SENT: '#2563EB', PO_RECEIVED: '#7C3AED', PO_COMPLETE: '#065F46'
+        PO_SENT: '#2563EB', PO_CONFIRMED: '#0F766E', PO_RECEIVED: '#7C3AED', PO_COMPLETE: '#065F46'
       };
       return map[status] || '#6B7280';
     });
@@ -50,7 +49,7 @@ class PurchaseOrderExportService {
       const map = {
         DRAFT: '#F3F4F6', PENDING: '#FEF3C7', PO_PENDING: '#FEF3C7',
         PO_APPROVED: '#ECFDF5', PO_REJECTED: '#FEF2F2',
-        PO_SENT: '#EFF6FF', PO_RECEIVED: '#F5F3FF', PO_COMPLETE: '#F0FDF4'
+        PO_SENT: '#EFF6FF', PO_CONFIRMED: '#F0FDFA', PO_RECEIVED: '#F5F3FF', PO_COMPLETE: '#F0FDF4'
       };
       return map[status] || '#F3F4F6';
     });
@@ -445,24 +444,17 @@ class PurchaseOrderExportService {
       },
     });
 
-    const browser = await puppeteer.launch(getBrowserOptions());
-    try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      return await page.pdf({
-        format:          'A4',
-        printBackground: true,
-        displayHeaderFooter: true,
-        headerTemplate: '<span></span>',
-        footerTemplate: `
-          <div style="width:100%;font-size:9px;color:#9CA3AF;padding:0 15mm;display:flex;justify-content:flex-end">
-            ${ctx.L.page} <span class="pageNumber" style="margin:0 3px"></span> / <span class="totalPages"></span>
-          </div>`,
-        margin: { top: '15mm', bottom: '18mm', left: '15mm', right: '15mm' },
-      });
-    } finally {
-      await browser.close();
-    }
+    return await renderPdf(html, {
+      format:          'A4',
+      printBackground: true,
+      displayHeaderFooter: true,
+      headerTemplate: '<span></span>',
+      footerTemplate: `
+        <div style="width:100%;font-size:9px;color:#9CA3AF;padding:0 15mm;display:flex;justify-content:flex-end">
+          ${ctx.L.page} <span class="pageNumber" style="margin:0 3px"></span> / <span class="totalPages"></span>
+        </div>`,
+      margin: { top: '15mm', bottom: '18mm', left: '15mm', right: '15mm' },
+    });
   }
 }
 

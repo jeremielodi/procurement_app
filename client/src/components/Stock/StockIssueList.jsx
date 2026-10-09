@@ -33,6 +33,7 @@ export default function StockIssueList({ mine = false }) {
     setLoading(true);
     try {
       const clean = Object.fromEntries(Object.entries(debounced).filter(([, v]) => v));
+      if (clean.status === 'IN_TRANSIT') { delete clean.status; clean.inTransit = 1; }
       const res = await stockIssueService.list({ ...clean, ...(mine ? { mine: 1 } : {}), page, limit: 30 });
       setRows(res.data || []);
       setPagination(res.pagination || {});
@@ -101,6 +102,7 @@ export default function StockIssueList({ mine = false }) {
         <SearchSelect value={filters.status} onChange={set('status')} className={inputCls} aria-label={t('common.status')}>
           <option value="">{t('stock.issue.allStatuses')}</option>
           <option value="ISSUED">{t('stock.issue.status.ISSUED')}</option>
+          <option value="IN_TRANSIT">{t('stock.issue.status.IN_TRANSIT')}</option>
           <option value="CANCELLED">{t('stock.issue.status.CANCELLED')}</option>
         </SearchSelect>
       </div>

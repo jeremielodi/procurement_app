@@ -149,6 +149,14 @@ const statusConfig = {
     icon: Send,
     iconColor: 'text-purple-500'
   },
+  PO_CONFIRMED: {
+    color: 'teal',
+    bgColor: 'bg-teal-100',
+    textColor: 'text-teal-800',
+    borderColor: 'border-teal-200',
+    icon: ThumbsUp,
+    iconColor: 'text-teal-500'
+  },
 
   // Statuts des fournisseurs
   SUPPLIER_ACTIVE: {

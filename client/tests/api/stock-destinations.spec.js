@@ -81,7 +81,7 @@ test.describe.serial('API › Types de sortie de stock (transfert, département)
     expect((await json(await send({ destinationType: 'USER' }))).body.code).toBe('RECIPIENT_REQUIRED');
   });
 
-  test('Transfert : TRANSFER_OUT / TRANSFER_IN, équipement déplacé (même endommagé), dépôt destination prévenu', async ({ request }) => {
+  test('Transfert : expédition (en transit) puis réception au dépôt de destination ; équipement endommagé accepté', async ({ request }) => {
     // Un ordinateur endommagé peut partir en transfert (ex. réparation), pas en remise
     expect((await request.put(`/api/stock-units/${units[0].id}`, { headers: auth(tokens.log), data: { condition: 'DAMAGED' } })).status()).toBe(200);
     const res = await json(await post(request, tokens.log, '/api/stock-issues', {
@@ -91,6 +91,25 @@ test.describe.serial('API › Types de sortie de stock (transfert, département)
     expect(res.status, JSON.stringify(res.body)).toBe(201);
     transfer = res.body.data;
     expect(transfer.destinationType).toBe('WAREHOUSE');
+    // En transit : sorti du dépôt A, pas encore entré au dépôt B
+    expect([await balance(request, whA.id, fuel.id), await balance(request, whB.id, fuel.id)]).toEqual([60, 0]);
+    expect([await balance(request, whA.id, laptop.id), await balance(request, whB.id, laptop.id)]).toEqual([1, 0]);
+    const inTransit = (await (await request.get(`/api/stock-units/${units[0].id}`, { headers: auth(admin) })).json()).data;
+    expect([inTransit.status, inTransit.warehouse_id]).toEqual(['IN_TRANSIT', null]);
+    const transitList = (await (await request.get(`/api/stock-issues?inTransit=1&warehouseId=${whB.id}`, { headers: auth(admin) })).json()).data;
+    expect(transitList.map(i => i.id)).toEqual([transfer.id]);
+
+    // Le magasinier du dépôt B est prévenu, voit le bon (sans être bénéficiaire) et le réceptionne
+    const notes = (await (await request.get(`/api/notifications/${ids.kep}`, { headers: auth(tokens.kep) })).json()).data;
+    expect(notes.some(n => n.title.includes(transfer.issueNumber))).toBe(true);
+    // Le logisticien du dépôt A ne peut pas réceptionner à la place du dépôt B
+    expect((await json(await post(request, tokens.log, `/api/stock-issues/${transfer.id}/acknowledge`, {}))).body.code).toBe('NOT_RECIPIENT');
+    const view = (await (await request.get(`/api/stock-issues/${transfer.id}`, { headers: auth(tokens.kep) })).json()).data;
+    expect([view.destination_type, view.destination_warehouse_name, view.can_acknowledge]).toEqual(['WAREHOUSE', whB.name, true]);
+    expect((await post(request, tokens.kep, `/api/stock-issues/${transfer.id}/acknowledge`, { comment: 'Bien arrivé' })).status()).toBe(200);
+    const acked = (await (await request.get(`/api/stock-issues/${transfer.id}`, { headers: auth(tokens.kep) })).json()).data;
+    expect(acked.acknowledged_by).toBe(ids.kep);
+    expect(acked.lines.every(l => l.received_quantity === l.quantity)).toBe(true);
     expect([await balance(request, whA.id, fuel.id), await balance(request, whB.id, fuel.id)]).toEqual([60, 40]);
     expect([await balance(request, whA.id, laptop.id), await balance(request, whB.id, laptop.id)]).toEqual([1, 2]);
 
@@ -103,17 +122,6 @@ test.describe.serial('API › Types de sortie de stock (transfert, département)
       [['TRANSFER_IN', 40, whB.id], ['TRANSFER_OUT', -40, whA.id]].sort());
     expect(ofTransfer.find(m => m.movement_type === 'TRANSFER_OUT').recipient_name).toBe(whB.name);
     expect(ofTransfer.find(m => m.movement_type === 'TRANSFER_IN').recipient_name).toBe(whA.name);
-
-    // Le magasinier du dépôt B est prévenu, voit le bon (sans être bénéficiaire) et confirme l'arrivée
-    const notes = (await (await request.get(`/api/notifications/${ids.kep}`, { headers: auth(tokens.kep) })).json()).data;
-    expect(notes.some(n => n.title.includes(transfer.issueNumber))).toBe(true);
-    // Le logisticien du dépôt A ne peut pas confirmer à la place du dépôt B
-    expect((await json(await post(request, tokens.log, `/api/stock-issues/${transfer.id}/acknowledge`, {}))).body.code).toBe('NOT_RECIPIENT');
-    const view = (await (await request.get(`/api/stock-issues/${transfer.id}`, { headers: auth(tokens.kep) })).json()).data;
-    expect([view.destination_type, view.destination_warehouse_name, view.can_acknowledge]).toEqual(['WAREHOUSE', whB.name, true]);
-    expect((await post(request, tokens.kep, `/api/stock-issues/${transfer.id}/acknowledge`, { comment: 'Bien arrivé' })).status()).toBe(200);
-    const acked = (await (await request.get(`/api/stock-issues/${transfer.id}`, { headers: auth(tokens.kep) })).json()).data;
-    expect(acked.acknowledged_by).toBe(ids.kep);
 
     // Liste filtrée par type et par dépôt (transferts reçus compris)
     const list = (await (await request.get(`/api/stock-issues?destinationType=WAREHOUSE&warehouseId=${whB.id}`, { headers: auth(admin) })).json()).data;
@@ -204,4 +212,43 @@ test.describe.serial('API › Types de sortie de stock (transfert, département)
     expect((await json(await post(request, tokens.mgr, `/api/stock-issues/${res.body.data.id}/acknowledge`, {}))).body.code).toBe('NOT_RECIPIENT');
     expect((await post(request, tokens.kep, `/api/stock-issues/${res.body.data.id}/acknowledge`, {})).status()).toBe(200);
   });
+  test('Transfert en transit : réception partielle (perte en transit), équipement non reçu → perdu', async ({ request }) => {
+    const a0 = await balance(request, whA.id, fuel.id);
+    const res = await json(await post(request, tokens.log, '/api/stock-issues', {
+      destinationType: 'WAREHOUSE', warehouseId: whA.id, destinationWarehouseId: whB.id,
+      lines: [{ stockItemId: fuel.id, quantity: 30 }, { stockItemId: laptop.id, unitIds: [units[0].id] }],
+    }));
+    expect(res.status).toBe(201);
+    const issue = (await (await request.get(`/api/stock-issues/${res.body.data.id}`, { headers: auth(tokens.kep) })).json()).data;
+    const fuelLine = issue.lines.find(l => l.stock_item_id === fuel.id);
+    const unitLine = issue.lines.find(l => l.unit_id);
+    const bad = await json(await post(request, tokens.kep, `/api/stock-issues/${issue.id}/receive`, { lines: [{ lineId: fuelLine.id, receivedQuantity: 31 }] }));
+    expect([bad.status, bad.body.code]).toEqual([400, 'INVALID_RECEIVED_QUANTITY']);
+    const ok = await json(await post(request, tokens.kep, `/api/stock-issues/${issue.id}/receive`, {
+      comment: 'Fût percé, ordinateur manquant', lines: [{ lineId: fuelLine.id, receivedQuantity: 27.5 }, { lineId: unitLine.id, receivedQuantity: 0 }],
+    }));
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    expect(ok.body.data.linesWithLoss).toBe(2);
+    expect([await balance(request, whA.id, fuel.id), await balance(request, whB.id, fuel.id)]).toEqual([a0 - 30, 27.5]);
+    const lost = (await (await request.get(`/api/stock-units/${units[0].id}`, { headers: auth(admin) })).json()).data;
+    expect(lost.status).toBe('LOST');
+    expect((await json(await post(request, tokens.kep, `/api/stock-issues/${issue.id}/receive`, {}))).body.code).toBe('ALREADY_ACKNOWLEDGED');
+    // Annulation après réception partielle : seule la quantité reçue repart vers le dépôt d'origine
+    expect((await post(request, tokens.log, `/api/stock-issues/${issue.id}/cancel`, { reason: 'Retour au dépôt A' })).status()).toBe(200);
+    expect([await balance(request, whA.id, fuel.id), await balance(request, whB.id, fuel.id)]).toEqual([a0 - 2.5, 0]);
+  });
+
+  test("Transfert annulé avant réception : tout revient au dépôt d'origine", async ({ request }) => {
+    const res = await json(await post(request, tokens.log, '/api/stock-issues', {
+      destinationType: 'WAREHOUSE', warehouseId: whA.id, destinationWarehouseId: whB.id,
+      lines: [{ stockItemId: fuel.id, quantity: 20 }, { stockItemId: laptop.id, unitIds: [units[1].id] }],
+    }));
+    const a0 = await balance(request, whA.id, fuel.id) + 20;
+    expect(res.status).toBe(201);
+    expect((await post(request, tokens.log, `/api/stock-issues/${res.body.data.id}/cancel`, { reason: 'Camion indisponible' })).status()).toBe(200);
+    expect([await balance(request, whA.id, fuel.id), await balance(request, whB.id, fuel.id)]).toEqual([a0, 0]);
+    const unit = (await (await request.get(`/api/stock-units/${units[1].id}`, { headers: auth(admin) })).json()).data;
+    expect([unit.status, unit.warehouse_id]).toEqual(['IN_STOCK', whA.id]);
+  });
+
 });

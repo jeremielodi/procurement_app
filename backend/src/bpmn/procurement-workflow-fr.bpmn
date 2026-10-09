@@ -5,6 +5,7 @@
       <bpmn:lane id="Lane_Requester" name="Demandeur">
         <bpmn:flowNodeRef>StartEvent_NewRequisition</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_BudgetAdjustment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_BudgetAdjustmentDecision</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Event_Rejected</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Event_POCancelled</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_ServiceAcceptance</bpmn:flowNodeRef>
@@ -54,6 +55,7 @@
     </bpmn:startEvent>
     <bpmn:serviceTask id="Task_CheckBudget" name="Vérifier la disponibilité budgétaire" camunda:type="external" camunda:topic="check_budget">
       <bpmn:incoming>Flow_Start_CheckBudget</bpmn:incoming>
+      <bpmn:incoming>Flow_BudgetAdjusted</bpmn:incoming>
       <bpmn:outgoing>Flow_CheckBudget_Gateway</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:exclusiveGateway id="Gateway_BudgetDecision" name="Budget disponible ?">
@@ -63,8 +65,13 @@
     </bpmn:exclusiveGateway>
     <bpmn:userTask id="Activity_BudgetAdjustment" name="Ajustement budgétaire" camunda:assignee="${requester}" camunda:candidateGroups="requester">
       <bpmn:incoming>Flow_Budget_KO</bpmn:incoming>
-      <bpmn:outgoing>Flow_BudgetAdjustment_Reject</bpmn:outgoing>
+      <bpmn:outgoing>Flow_BudgetAdjustment_Decision</bpmn:outgoing>
     </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_BudgetAdjustmentDecision" name="Budget ajusté ?">
+      <bpmn:incoming>Flow_BudgetAdjustment_Decision</bpmn:incoming>
+      <bpmn:outgoing>Flow_BudgetAdjusted</bpmn:outgoing>
+      <bpmn:outgoing>Flow_BudgetAdjustment_Reject</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
     <bpmn:endEvent id="Event_Rejected" name="Processus rejeté">
       <bpmn:incoming>Flow_BudgetAdjustment_Reject</bpmn:incoming>
       <bpmn:incoming>Flow_Approval_Rejected</bpmn:incoming>
@@ -211,7 +218,13 @@
     <bpmn:sequenceFlow id="Flow_Budget_KO" sourceRef="Gateway_BudgetDecision" targetRef="Activity_BudgetAdjustment">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${budgetAvailable == false}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_BudgetAdjustment_Reject" sourceRef="Activity_BudgetAdjustment" targetRef="Event_Rejected" />
+    <bpmn:sequenceFlow id="Flow_BudgetAdjustment_Decision" sourceRef="Activity_BudgetAdjustment" targetRef="Gateway_BudgetAdjustmentDecision" />
+    <bpmn:sequenceFlow id="Flow_BudgetAdjusted" sourceRef="Gateway_BudgetAdjustmentDecision" targetRef="Task_CheckBudget">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${budgetAdjusted == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_BudgetAdjustment_Reject" sourceRef="Gateway_BudgetAdjustmentDecision" targetRef="Event_Rejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${budgetAdjusted == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Amount_N1" sourceRef="Gateway_AmountDecision" targetRef="Activity_ValidationN1_Manager">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${estimatedAmount &lt; 25000}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
@@ -324,6 +337,12 @@
       <bpmndi:BPMNShape id="Activity_BudgetAdjustment_di" bpmnElement="Activity_BudgetAdjustment">
         <dc:Bounds x="610" y="75" width="100" height="80" />
         <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_BudgetAdjustmentDecision_di" bpmnElement="Gateway_BudgetAdjustmentDecision" isMarkerVisible="true">
+        <dc:Bounds x="835" y="90" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="818" y="60" width="84" height="14" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_Rejected_di" bpmnElement="Event_Rejected">
         <dc:Bounds x="1202" y="97" width="36" height="36" />
@@ -498,9 +517,19 @@
         <di:waypoint x="500" y="115" />
         <di:waypoint x="610" y="115" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_BudgetAdjustment_Reject_di" bpmnElement="Flow_BudgetAdjustment_Reject">
+      <bpmndi:BPMNEdge id="Flow_BudgetAdjustment_Decision_di" bpmnElement="Flow_BudgetAdjustment_Decision">
         <di:waypoint x="710" y="115" />
+        <di:waypoint x="835" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_BudgetAdjustment_Reject_di" bpmnElement="Flow_BudgetAdjustment_Reject">
+        <di:waypoint x="885" y="115" />
         <di:waypoint x="1202" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_BudgetAdjusted_di" bpmnElement="Flow_BudgetAdjusted">
+        <di:waypoint x="860" y="140" />
+        <di:waypoint x="860" y="330" />
+        <di:waypoint x="340" y="330" />
+        <di:waypoint x="340" y="300" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Amount_N1_di" bpmnElement="Flow_Amount_N1">
         <di:waypoint x="665" y="435" />

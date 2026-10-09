@@ -14,7 +14,7 @@ const SELECT = () => `
 const COLUMNS = [
   ['code', 'code'], ['name', 'name'], ['description', 'description'], ['unit', 'unit'], ['categoryId', 'category_id'],
   ['isStockable', 'is_stockable'], ['trackLots', 'track_lots'], ['trackExpiry', 'track_expiry'], ['trackSerials', 'track_serials'],
-  ['minQuantity', 'min_quantity'], ['isActive', 'is_active'],
+  ['minQuantity', 'min_quantity'], ['reorderQuantity', 'reorder_quantity'], ['isActive', 'is_active'],
 ];
 
 class StockItemModel {

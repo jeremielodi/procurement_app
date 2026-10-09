@@ -39,6 +39,10 @@ import StockIssueDetail from './components/Stock/StockIssueDetail';
 import StockReturnForm from './components/Stock/StockReturnForm';
 import { StockReturnList, StockReturnDetail } from './components/Stock/StockReturns';
 import EquipmentList from './components/Stock/EquipmentList';
+import StockCountList from './components/Stock/StockCountList';
+import StockCountDetail from './components/Stock/StockCountDetail';
+import StockAdjustments from './components/Stock/StockAdjustments';
+import StockValuation from './components/Stock/StockValuation';
 import SANList from './components/SAN/SANList';
 import SANForm from './components/SAN/SANForm';
 import SANDetail from './components/SAN/SANDetail';
@@ -56,12 +60,15 @@ import TenderForm from './components/Tenders/TenderForm';
 import TenderDetail from './components/Tenders/TenderDetail';
 import SupplierTenderList from './components/SupplierPortal/SupplierTenderList';
 import SupplierTenderDetail from './components/SupplierPortal/SupplierTenderDetail';
+import SupplierOrderList from './components/SupplierPortal/SupplierOrderList';
+import SupplierOrderDetail from './components/SupplierPortal/SupplierOrderDetail';
 import SupplierProfile from './components/SupplierPortal/SupplierProfile';
 import SupplierDashboard from './components/SupplierPortal/SupplierDashboard';
 import { useAuth } from './hooks/useAuth';
 import { homePathFor } from './utils/accountType';
 import EnterpriseList from './components/Enterprises/EnterpriseList';
 import ReferenceData from './components/Admin/ReferenceData';
+import AuditLogList from './components/Admin/AuditLogList';
 import PrequalifiedSupplierList from './components/Suppliers/PrequalifiedSupplierList';
 import EnterpriseDetail from './components/Enterprises/EnterpriseDetail';
 import EnterpriseSettings from './components/Enterprises/EnterpriseSettings';
@@ -291,6 +298,10 @@ function App() {
         <Route path="/stock/issues" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockIssueList /></Layout></ProtectedRoute>} />
         <Route path="/stock/issues/new" element={<ProtectedRoute requiredPermission="ISSUE_STOCK"><Layout><StockIssueForm /></Layout></ProtectedRoute>} />
         <Route path="/stock/issues/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockIssueDetail /></Layout></ProtectedRoute>} />
+        <Route path="/stock/valuation" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockValuation /></Layout></ProtectedRoute>} />
+        <Route path="/stock/counts" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockCountList /></Layout></ProtectedRoute>} />
+        <Route path="/stock/counts/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockCountDetail /></Layout></ProtectedRoute>} />
+        <Route path="/stock/adjustments" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockAdjustments /></Layout></ProtectedRoute>} />
         <Route path="/stock/equipment" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><EquipmentList /></Layout></ProtectedRoute>} />
         <Route path="/stock/returns" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockReturnList /></Layout></ProtectedRoute>} />
         <Route path="/stock/returns/new" element={<ProtectedRoute requiredPermission="ISSUE_STOCK"><Layout><StockReturnForm /></Layout></ProtectedRoute>} />
@@ -317,6 +328,7 @@ function App() {
         {/* Plateforme (super admin) et paramètres d'entreprise */}
         <Route path="/admin/enterprises" element={<ProtectedRoute superAdminOnly><Layout><EnterpriseList /></Layout></ProtectedRoute>} />
         <Route path="/admin/references" element={<ProtectedRoute superAdminOnly><Layout><ReferenceData /></Layout></ProtectedRoute>} />
+        <Route path="/admin/audit" element={<ProtectedRoute requiredPermission="VIEW_AUDIT_LOGS"><Layout><AuditLogList /></Layout></ProtectedRoute>} />
         <Route path="/admin/enterprises/:id" element={<ProtectedRoute superAdminOnly><Layout><EnterpriseDetail /></Layout></ProtectedRoute>} />
         <Route path="/settings/enterprise" element={<ProtectedRoute requiredPermission="MANAGE_USERS"><Layout><EnterpriseSettings /></Layout></ProtectedRoute>} />
 
@@ -324,6 +336,8 @@ function App() {
         <Route path="/supplier/dashboard" element={<ProtectedRoute requiredPermission="SUPPLIER_PORTAL"><Layout><SupplierDashboard /></Layout></ProtectedRoute>} />
         <Route path="/supplier/tenders" element={<ProtectedRoute requiredPermission="SUPPLIER_PORTAL"><Layout><SupplierTenderList /></Layout></ProtectedRoute>} />
         <Route path="/supplier/tenders/:id" element={<ProtectedRoute requiredPermission="SUPPLIER_PORTAL"><Layout><SupplierTenderDetail /></Layout></ProtectedRoute>} />
+        <Route path="/supplier/orders" element={<ProtectedRoute requiredPermission="SUPPLIER_PORTAL"><Layout><SupplierOrderList /></Layout></ProtectedRoute>} />
+        <Route path="/supplier/orders/:id" element={<ProtectedRoute requiredPermission="SUPPLIER_PORTAL"><Layout><SupplierOrderDetail /></Layout></ProtectedRoute>} />
         <Route path="/supplier/profile" element={<ProtectedRoute requiredPermission="SUPPLIER_PORTAL"><Layout><SupplierProfile /></Layout></ProtectedRoute>} />
 
         {/* Paiements */}

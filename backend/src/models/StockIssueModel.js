@@ -198,16 +198,14 @@ class StockIssueModel {
           sourceType: 'ISSUE', sourceId: issue.id, sourceLineId: line.id, performedBy: userId,
         };
         if (isTransfer) {
+          // Expédition : sortie du dépôt source ; l'entrée au dépôt de destination se fait à sa réception (receiveTransfer)
           const out = await stockModel.addMovement(tx, {
             ...base, warehouseId: warehouse.id, type: 'TRANSFER_OUT', quantity: -a.quantity, comment: `${issue.issue_number} → ${destination.name}`,
           });
-          const inn = await stockModel.addMovement(tx, {
-            ...base, warehouseId: destination.id, type: 'TRANSFER_IN', quantity: a.quantity, comment: `${issue.issue_number} ← ${warehouse.name}`,
-          });
           if (a.unitId) {
-            await tx.exec('UPDATE stock_units SET warehouse_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [a.unitId, destination.id]);
+            await tx.exec(`UPDATE stock_units SET status = 'IN_TRANSIT', warehouse_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [a.unitId]);
           }
-          await tx.exec('UPDATE stock_issue_lines SET stock_movement_id = $1, transfer_in_movement_id = $2 WHERE id = $3', [out.id, inn.id, line.id]);
+          await tx.exec('UPDATE stock_issue_lines SET stock_movement_id = $1 WHERE id = $2', [out.id, line.id]);
           continue;
         }
         if (a.unitId) {
@@ -257,7 +255,7 @@ class StockIssueModel {
     return false;
   }
 
-  async list({ warehouseId, recipientId, departmentId, destinationType, status, search, fromDate, toDate, mine, userId, limit = 50, offset = 0 } = {}) {
+  async list({ warehouseId, recipientId, departmentId, destinationType, status, inTransit, search, fromDate, toDate, mine, userId, limit = 50, offset = 0 } = {}) {
     const params = [];
     let where = `WHERE 1=1${tenant.filter('si.enterprise_id', params)}`;
     if (mine) { params.push(userId); where += ` AND si.recipient_id = $${params.length}`; }
@@ -268,7 +266,9 @@ class StockIssueModel {
     if (destinationType && DESTINATIONS.includes(String(destinationType).toUpperCase())) {
       params.push(String(destinationType).toUpperCase()); where += ` AND si.destination_type = $${params.length}`;
     }
-    if (status) { params.push(status); where += ` AND si.status = $${params.length}`; }
+    if (status) { params.push(status); where += ` AND si.status = ${params.length}`; }
+    // Transferts expédiés, pas encore réceptionnés
+    if (['1', 'true', true].includes(inTransit)) where += ` AND si.destination_type = 'WAREHOUSE' AND si.status = 'ISSUED' AND si.acknowledged_at IS NULL`;
     if (fromDate) { params.push(fromDate); where += ` AND si.issued_at >= $${params.length}::date`; }
     if (toDate) { params.push(toDate); where += ` AND si.issued_at < ($${params.length}::date + 1)`; }
     if (search) {
@@ -310,7 +310,8 @@ class StockIssueModel {
     const issue = await db.one(`${HEADER_SQL} WHERE si.id = $1`, [id]);
     if (!issue) return null;
     issue.lines = await db.select(
-      `SELECT il.id, il.quantity::float8 AS quantity, il.returned_quantity::float8 AS returned_quantity, il.stock_item_id, il.lot_id, il.unit_id,
+      `SELECT il.id, il.quantity::float8 AS quantity, il.returned_quantity::float8 AS returned_quantity, il.received_quantity::float8 AS received_quantity,
+              il.stock_item_id, il.lot_id, il.unit_id,
               un.serial_number, un.asset_tag, un.status AS unit_status, it.track_serials,
               it.code AS item_code, it.name AS item_name, it.unit,
               lt.lot_number, lt.expiry_date, m.movement_number, rm.movement_number AS reversal_movement_number,
@@ -334,6 +335,7 @@ class StockIssueModel {
   async acknowledge(id, { userId, comment }) {
     const current = await this.getById(id);
     if (!current) throw fail(404, 'NOT_FOUND', 'Bon de sortie introuvable');
+    if (current.destination_type === 'WAREHOUSE') return this.receiveTransfer(id, { userId, comment }); // tout reçu
     if (!(await this.canAcknowledge(current, userId))) {
       throw fail(403, 'NOT_RECIPIENT', current.destination_type === 'WAREHOUSE'
         ? 'Seul un utilisateur ayant accès au dépôt de destination peut confirmer la réception'
@@ -351,12 +353,62 @@ class StockIssueModel {
     });
   }
 
-  /** Annulation : écritures inverses (ISSUE_REVERSAL ; transfert : TRANSFER_OUT au dépôt de destination + TRANSFER_IN au dépôt source) */
+  /**
+   * Réception d'un transfert au dépôt de destination (utilisateur ayant accès à ce dépôt).
+   * lines : [{ lineId, receivedQuantity }] — absent = tout reçu ; équipement : 0 ou 1. Reçu → TRANSFER_IN (même lot,
+   * même n° de série, équipement « en stock » au dépôt de destination) ; manque = perte en transit (équipement « perdu »).
+   */
+  async receiveTransfer(id, { userId, comment, lines: received = [] }) {
+    const current = await this.getById(id);
+    if (!current) throw fail(404, 'NOT_FOUND', 'Bon de sortie introuvable');
+    if (current.destination_type !== 'WAREHOUSE') throw fail(400, 'NOT_A_TRANSFER', "Ce bon n'est pas un transfert");
+    if (!(await warehouseModel.canOperate(userId, current.destination_warehouse_id))) {
+      throw fail(403, 'NOT_RECIPIENT', 'Seul un utilisateur ayant accès au dépôt de destination peut réceptionner le transfert');
+    }
+    const byLine = new Map((Array.isArray(received) ? received : []).map(r => [String(r.lineId), r.receivedQuantity]));
+    return db.withTransaction(async (tx) => {
+      const issue = await tx.one('SELECT id, issue_number, status, acknowledged_at, enterprise_id, warehouse_id, destination_warehouse_id FROM stock_issues WHERE id = $1 FOR UPDATE', [id]);
+      if (issue.status !== 'ISSUED') throw fail(409, 'CANCELLED', 'Transfert annulé');
+      if (issue.acknowledged_at) throw fail(409, 'ALREADY_ACKNOWLEDGED', 'Transfert déjà réceptionné');
+      const lines = await tx.select('SELECT id, stock_item_id, lot_id, unit_id, quantity FROM stock_issue_lines WHERE issue_id = $1 FOR UPDATE', [id]);
+      let lost = 0;
+      for (const [index, l] of lines.entries()) {
+        const sent = num(l.quantity);
+        const qty = byLine.has(String(l.id)) ? num(byLine.get(String(l.id))) : sent;
+        if (qty < 0 || qty - sent > EPS || (l.unit_id && ![0, 1].includes(qty))) throw fail(400, 'INVALID_RECEIVED_QUANTITY', 'Quantité reçue invalide', { line: index });
+        let inn = null;
+        if (qty > EPS) {
+          inn = await stockModel.addMovement(tx, {
+            enterpriseId: issue.enterprise_id, stockItemId: l.stock_item_id, warehouseId: issue.destination_warehouse_id, lotId: l.lot_id, unitId: l.unit_id,
+            type: 'TRANSFER_IN', quantity: qty, sourceType: 'ISSUE', sourceId: issue.id, sourceLineId: l.id, performedBy: userId,
+            comment: `${issue.issue_number} ← ${current.warehouse_name}${qty < sent - EPS ? ` (${qty} / ${sent})` : ''}`,
+          });
+        }
+        if (l.unit_id) {
+          if (qty > 0) {
+            await tx.exec(`UPDATE stock_units SET status = 'IN_STOCK', warehouse_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [l.unit_id, issue.destination_warehouse_id]);
+          } else {
+            await tx.exec(`UPDATE stock_units SET status = 'LOST', warehouse_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [l.unit_id]);
+          }
+        }
+        if (qty < sent - EPS) lost++;
+        await tx.exec('UPDATE stock_issue_lines SET received_quantity = $2, transfer_in_movement_id = $3 WHERE id = $1', [l.id, qty, inn?.id || null]);
+      }
+      await tx.exec(
+        'UPDATE stock_issues SET acknowledged_at = CURRENT_TIMESTAMP, acknowledged_by = $2, acknowledgement_comment = $3 WHERE id = $1',
+        [id, userId, comment ? String(comment).slice(0, 1000) : null]
+      );
+      return { id, linesWithLoss: lost };
+    });
+  }
+
+  /** Annulation : écritures inverses (ISSUE_REVERSAL ; transfert en transit : retour au dépôt source ; transfert réceptionné :
+   *  TRANSFER_OUT au dépôt de destination + TRANSFER_IN au dépôt source, pour la quantité reçue) */
   async cancel(id, { userId, reason }) {
     return db.withTransaction(async (tx) => {
       const issue = await tx.one(
         `SELECT si.id, si.issue_number, si.status, si.enterprise_id, si.warehouse_id, si.recipient_id, si.destination_type,
-                si.destination_warehouse_id, si.department_id, w.name AS warehouse_name, dw.name AS destination_warehouse_name
+                si.destination_warehouse_id, si.department_id, si.acknowledged_at, w.name AS warehouse_name, dw.name AS destination_warehouse_name
          FROM stock_issues si JOIN warehouses w ON w.id = si.warehouse_id LEFT JOIN warehouses dw ON dw.id = si.destination_warehouse_id
          WHERE si.id = $1 FOR UPDATE OF si`,
         [id]
@@ -365,15 +417,37 @@ class StockIssueModel {
       if (issue.status === 'CANCELLED') throw fail(409, 'ALREADY_CANCELLED', 'Bon de sortie déjà annulé');
       if (!(await warehouseModel.canOperate(userId, issue.warehouse_id))) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès au dépôt de cette sortie');
       const lines = await tx.select(
-        `SELECT il.id, il.stock_item_id, il.lot_id, il.quantity, il.unit_id, il.returned_quantity FROM stock_issue_lines il WHERE il.issue_id = $1`,
+        `SELECT il.id, il.stock_item_id, il.lot_id, il.quantity, il.unit_id, il.returned_quantity, il.received_quantity FROM stock_issue_lines il WHERE il.issue_id = $1`,
         [id]
       );
       if (lines.some(l => num(l.returned_quantity) > 0)) {
         throw fail(409, 'HAS_RETURNS', 'Des articles de ce bon ont déjà été rendus : enregistrez un retour pour le reste au lieu d\'annuler');
       }
       const note = `Annulation ${issue.issue_number}${reason ? ` — ${reason}` : ''}`;
+      if (issue.destination_type === 'WAREHOUSE' && !issue.acknowledged_at) {
+        // En transit : tout revient au dépôt source
+        for (const line of lines) {
+          const back = await stockModel.addMovement(tx, {
+            enterpriseId: issue.enterprise_id, stockItemId: line.stock_item_id, lotId: line.lot_id, unitId: line.unit_id,
+            warehouseId: issue.warehouse_id, type: 'TRANSFER_IN', quantity: Math.abs(num(line.quantity)),
+            sourceType: 'ISSUE', sourceId: issue.id, sourceLineId: line.id, comment: note, performedBy: userId,
+          });
+          if (line.unit_id) {
+            await tx.exec(`UPDATE stock_units SET status = 'IN_STOCK', warehouse_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'IN_TRANSIT'`, [line.unit_id, issue.warehouse_id]);
+          }
+          await tx.exec('UPDATE stock_issue_lines SET reversal_movement_id = $1 WHERE id = $2', [back.id, line.id]);
+        }
+        await tx.exec(
+          `UPDATE stock_issues SET status = 'CANCELLED', cancelled_by = $2, cancelled_at = CURRENT_TIMESTAMP, cancel_reason = $3 WHERE id = $1`,
+          [id, userId, reason ? String(reason).slice(0, 1000) : null]
+        );
+        return { id: issue.id, issueNumber: issue.issue_number, destinationType: issue.destination_type, recipientId: null, reversedMovements: lines.length };
+      }
       if (issue.destination_type === 'WAREHOUSE') {
         for (const line of lines) {
+          // Seule la quantité reçue est reprise (la perte en transit reste perdue ; équipement non reçu : « perdu »)
+          const qty = line.received_quantity === null ? Math.abs(num(line.quantity)) : num(line.received_quantity);
+          if (qty <= EPS) continue;
           const base = {
             enterpriseId: issue.enterprise_id, stockItemId: line.stock_item_id, lotId: line.lot_id, unitId: line.unit_id,
             sourceType: 'ISSUE', sourceId: issue.id, sourceLineId: line.id, comment: note, performedBy: userId,
@@ -387,7 +461,7 @@ class StockIssueModel {
           let out;
           try {
             out = await stockModel.addMovement(tx, {
-              ...base, warehouseId: issue.destination_warehouse_id, type: 'TRANSFER_OUT', quantity: -Math.abs(num(line.quantity)),
+              ...base, warehouseId: issue.destination_warehouse_id, type: 'TRANSFER_OUT', quantity: -qty,
             });
           } catch (error) {
             if (/STOCK_INSUFFICIENT/.test(error.message)) {
@@ -396,7 +470,7 @@ class StockIssueModel {
             throw error;
           }
           const back = await stockModel.addMovement(tx, {
-            ...base, warehouseId: issue.warehouse_id, type: 'TRANSFER_IN', quantity: Math.abs(num(line.quantity)),
+            ...base, warehouseId: issue.warehouse_id, type: 'TRANSFER_IN', quantity: qty,
           });
           if (line.unit_id) {
             await tx.exec('UPDATE stock_units SET warehouse_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [line.unit_id, issue.warehouse_id]);

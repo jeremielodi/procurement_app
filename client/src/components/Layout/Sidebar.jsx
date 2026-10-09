@@ -26,6 +26,9 @@ import {
   FileText,
   CreditCard,
   ClipboardCheck,
+  ClipboardList,
+  SlidersHorizontal,
+  Coins,
   Gavel,
   Briefcase,
   MapPin,
@@ -36,7 +39,8 @@ import {
   PackageMinus,
   Inbox,
   Laptop,
-  Undo2
+  Undo2,
+  ScrollText
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -54,7 +58,8 @@ const menuGroups = [
     items: [
       { path: '/admin/enterprises', icon: Building2, label: 'nav.enterprises', permission: null },
       { path: '/admin/references', icon: MapPin, label: 'nav.references', permission: null },
-      { path: '/admin/profiles', icon: Shield, label: 'nav.rolesPermissions', permission: null }
+      { path: '/admin/profiles', icon: Shield, label: 'nav.rolesPermissions', permission: null },
+      { path: '/admin/audit', icon: ScrollText, label: 'nav.auditLog', permission: null }
     ]
   },
   {
@@ -152,6 +157,12 @@ const menuGroups = [
         permission: 'SUPPLIER_PORTAL'
       },
       {
+        path: '/supplier/orders',
+        icon: ClipboardList,
+        label: 'nav.supplierOrders',
+        permission: 'SUPPLIER_PORTAL'
+      },
+      {
         path: '/supplier/profile',
         icon: Building2,
         label: 'nav.myCompany',
@@ -169,6 +180,9 @@ const menuGroups = [
       { path: '/stock/issues', icon: PackageMinus, label: 'nav.stockIssues', permission: 'VIEW_STOCK' },
       { path: '/stock/returns', icon: Undo2, label: 'nav.stockReturns', permission: 'VIEW_STOCK' },
       { path: '/stock/equipment', icon: Laptop, label: 'nav.equipment', permission: 'VIEW_STOCK' },
+      { path: '/stock/valuation', icon: Coins, label: 'nav.stockValuation', permission: 'VIEW_STOCK' },
+      { path: '/stock/counts', icon: ClipboardCheck, label: 'nav.stockCounts', permission: 'VIEW_STOCK' },
+      { path: '/stock/adjustments', icon: SlidersHorizontal, label: 'nav.stockAdjustments', permission: 'VIEW_STOCK' },
       { path: '/stock/movements', icon: History, label: 'nav.stockMovements', permission: 'VIEW_STOCK' },
       { path: '/stock/warehouses', icon: Warehouse, label: 'nav.warehouses', permission: 'VIEW_STOCK' }
     ]
@@ -234,6 +248,12 @@ const menuGroups = [
         icon: Building2,
         label: 'nav.myCompany',
         permission: 'MANAGE_USERS'
+      },
+      {
+        path: '/admin/audit',
+        icon: ScrollText,
+        label: 'nav.auditLog',
+        permission: 'VIEW_AUDIT_LOGS'
       }
     ]
   },

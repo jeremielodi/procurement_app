@@ -135,6 +135,18 @@ module.exports = {
     } catch (error) { return sendError(res, error, 'Erreur lors de la confirmation'); }
   },
 
+  /** POST /stock-issues/:id/receive { lines: [{ lineId, receivedQuantity }], comment } — réception d'un transfert (quantités reçues) */
+  async receive(req, res) {
+    try {
+      const result = await stockIssueModel.receiveTransfer(req.params.id, { userId: req.user.id, comment: req.body?.comment, lines: req.body?.lines });
+      const issue = await stockIssueModel.getById(req.params.id);
+      if (issue.issued_by && String(issue.issued_by) !== String(req.user.id)) {
+        await notify(req, issue.issued_by, 'acknowledged', { number: issue.issue_number, name: issue.acknowledged_by_name }, `/stock/issues/${issue.id}`);
+      }
+      res.json({ success: true, data: { ...result, issue }, message: 'Transfert réceptionné' });
+    } catch (error) { return sendError(res, error, 'Erreur lors de la réception du transfert'); }
+  },
+
   /** POST /stock-issues/:id/cancel { reason } — écritures inverses (retour en stock / retour au dépôt source) */
   async cancel(req, res) {
     try {

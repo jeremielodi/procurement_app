@@ -28,6 +28,9 @@ export const stockService = {
   summary: () => api.get('/stock/summary').then(data),
   balances: (params = {}) => api.get('/stock/balances', { params }).then(data),
   movements: (params = {}) => api.get('/stock/movements', { params }).then(data),
+  // Valorisation au CMUP (asOf, warehouseId, categoryId) et export Excel
+  valuation: (params = {}) => api.get('/stock/valuation', { params }).then(data),
+  exportValuation: (params = {}) => api.get('/stock/valuation/export', { params: { ...params, lang: getLang() }, responseType: 'blob' }).then(data),
   exportBalances: (params = {}) =>
     api.get('/stock/balances/export', { params: { ...params, lang: getLang() }, responseType: 'blob' }).then(data),
 };
@@ -48,6 +51,7 @@ export const stockIssueService = {
   // Erreurs métier (stock insuffisant, dépôt…) affichées par le formulaire
   create: (payload) => api.post('/stock-issues', payload, { skipErrorToast: true }).then(data),
   acknowledge: (id, comment) => api.post(`/stock-issues/${id}/acknowledge`, { comment }).then(data),
+  receive: (id, payload) => api.post(`/stock-issues/${id}/receive`, payload).then(data),
   cancel: (id, reason) => api.post(`/stock-issues/${id}/cancel`, { reason }).then(data),
   pdf: (id) => api.get(`/stock-issues/${id}/pdf`, { params: { lang: getLang() }, responseType: 'blob' }).then(data),
 };
@@ -69,4 +73,22 @@ export const stockReturnService = {
   list: (params = {}) => api.get('/stock-returns', { params }).then(data),
   get: (id) => api.get(`/stock-returns/${id}`).then(data),
   create: (payload) => api.post('/stock-returns', payload, { skipErrorToast: true }).then(data),
+  pdf: (id) => api.get(`/stock-returns/${id}/pdf`, { params: { lang: getLang() }, responseType: 'blob' }).then(data),
+};
+
+// Inventaires physiques (COUNT_STOCK / ADJUST_STOCK) — erreurs métier affichées et traduites par les écrans
+export const stockCountService = {
+  list: (params = {}) => api.get('/stock-counts', { params }).then(data),
+  get: (id) => api.get(`/stock-counts/${id}`).then(data),
+  open: (payload) => api.post('/stock-counts', payload, { skipErrorToast: true }).then(data),
+  record: (id, entries) => api.put(`/stock-counts/${id}/lines`, { entries }, { skipErrorToast: true }).then(data),
+  addLine: (id, payload) => api.post(`/stock-counts/${id}/lines`, payload, { skipErrorToast: true }).then(data),
+  validate: (id) => api.post(`/stock-counts/${id}/validate`, {}, { skipErrorToast: true }).then(data),
+  cancel: (id, reason) => api.post(`/stock-counts/${id}/cancel`, { reason }, { skipErrorToast: true }).then(data),
+};
+
+// Ajustements ponctuels (ADJUST_STOCK)
+export const stockAdjustmentService = {
+  list: (params = {}) => api.get('/stock-adjustments', { params }).then(data),
+  create: (payload) => api.post('/stock-adjustments', payload, { skipErrorToast: true }).then(data),
 };

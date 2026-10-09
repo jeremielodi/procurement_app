@@ -102,7 +102,7 @@ export default function POList() {
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">{t('requisitions.allStatuses')}</option>
-            {['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'COMPLETED'].map(s => (
+            {['PO_PENDING', 'PO_APPROVED', 'PO_SENT', 'PO_CONFIRMED', 'PO_REJECTED'].map(s => (
               <option key={s} value={s}>{t(`badge.${s}`)}</option>
             ))}
           </SearchSelect>

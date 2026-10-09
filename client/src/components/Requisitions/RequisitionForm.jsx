@@ -1,6 +1,6 @@
 // src/components/Requisitions/RequisitionForm.jsx
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, Save, X, Search, AlertCircle, CheckCircle, Paperclip, Upload, Tag } from 'lucide-react'
@@ -23,6 +23,8 @@ const priorityLabel = (p) => t(`priority.${p}`)
 
 export default function RequisitionForm() {
   const navigate = useNavigate()
+  // Pré-remplissage (ex. réapprovisionnement depuis le stock : articles du catalogue sous le seuil minimum)
+  const prefill = useLocation().state?.prefill || null
   const queryClient = useQueryClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showBudgetModal, setShowBudgetModal] = useState(false)
@@ -46,19 +48,25 @@ export default function RequisitionForm() {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      items: [{
-        description: '',
-        quantity: 1,
-        frequency: 1,
-        unitPrice: 0,
-        budgetLineId: '',
-        budgetLineInfo: null,
-        stockItem: null
-      }],
+      items: prefill?.items?.length
+        ? prefill.items.map(it => ({
+          description: it.stockItem?.name || it.description || '', quantity: it.quantity || 1, frequency: 1, unitPrice: it.unitPrice || 0,
+          budgetLineId: '', budgetLineInfo: null, stockItem: it.stockItem || null,
+        }))
+        : [{
+          description: '',
+          quantity: 1,
+          frequency: 1,
+          unitPrice: 0,
+          budgetLineId: '',
+          budgetLineInfo: null,
+          stockItem: null
+        }],
+      title: prefill?.title || '',
       projectId: '',
       departmentId: '',
       priority: 'MEDIUM',
-      justification: ''
+      justification: prefill?.justification || ''
     },
   })
 

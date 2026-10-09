@@ -183,7 +183,15 @@
     "waitingInfo": "En attente{task} — {who}",
     "approvalInfo": "{task} : {decision}",
     "released": "{task} — libérée (remise à disposition du groupe)",
-    "releasedFrom": "Était prise en charge par {name}"
+    "releasedFrom": "Était prise en charge par {name}",
+    "supplierConfirmed": "Commande {number} confirmée par le fournisseur",
+    "supplierDeclined": "Commande {number} déclinée par le fournisseur",
+    "viaPortal": "Depuis le portail fournisseur",
+    "viaProcurement": "Enregistré par les achats (réponse reçue hors portail)",
+    "promisedDelivery": "Livraison prévue : {date}",
+    "supplierReference": "Référence fournisseur : {value}",
+    "budgetRecheck": "Budget ajusté : nouvelle vérification demandée",
+    "budgetAbandoned": "Réquisition abandonnée après budget insuffisant"
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -253,7 +261,9 @@
       "orderDate": "Date de commande",
       "deliveryDate": "Date de livraison",
       "total": "Montant total",
-      "thanks": "Merci pour votre collaboration."
+      "thanks": "Merci pour votre collaboration.",
+      "confirmPortal": "Merci de confirmer cette commande (date de livraison prévue) ou de nous signaler un empêchement depuis votre espace fournisseur : {link}",
+      "confirmReply": "Merci de confirmer la réception de cette commande et la date de livraison prévue en répondant à cet email."
     },
     "passwordRequest": {
       "subject": "procureApp — Confirmez la réinitialisation de votre mot de passe",
@@ -307,6 +317,12 @@
     "stockReturn": {
       "title": "Retour enregistré : {number}",
       "message": "Le retour {number} de {count} article(s) a été enregistré par la logistique."
+    },
+    "supplierConfirmation": {
+      "confirmedTitle": "Commande confirmée : {number}",
+      "confirmedMessage": "{supplier} a confirmé la commande {number}. Livraison prévue : {date}.",
+      "declinedTitle": "Commande refusée par le fournisseur : {number}",
+      "declinedMessage": "{supplier} a décliné la commande {number} — motif : {reason}. Décidez de la suite (nouvelle négociation, autre fournisseur…)."
     }
   },
   "pdf": {
@@ -359,7 +375,8 @@
         "PO_REJECTED": "Rejeté",
         "PO_SENT": "Envoyé au fournisseur",
         "PO_RECEIVED": "Reçu",
-        "PO_COMPLETE": "Terminé"
+        "PO_COMPLETE": "Terminé",
+        "PO_CONFIRMED": "Confirmé par le fournisseur"
       }
     },
     "grn": {
@@ -506,6 +523,30 @@
       "collectedBy": "Retiré par",
       "receiverSignature": "Réceptionnaire (reçu conforme)",
       "transferCancelledOn": "Transfert annulé par {name} le {date} — motif : {reason}. Les articles sont revenus au dépôt d'origine."
+    },
+    "stockReturn": {
+      "title": "BON DE RETOUR",
+      "date": "Date",
+      "returnedBy": "Rendu par",
+      "name": "Nom",
+      "email": "Email",
+      "department": "Département",
+      "warehouse": "Dépôt de retour",
+      "receivedBy": "Réceptionné par",
+      "comment": "Commentaire",
+      "no": "N°",
+      "code": "Code",
+      "item": "Article",
+      "lotOrSerial": "Lot / n° de série",
+      "issue": "Bon de sortie",
+      "quantity": "Quantité",
+      "condition": "État",
+      "conditionGOOD": "Bon état",
+      "conditionDAMAGED": "Endommagé",
+      "conditionLOST": "Perdu",
+      "storekeeper": "Magasinier",
+      "returnerSignature": "Rendu par",
+      "signature": "Date et signature :"
     }
   },
   "stockExport": {
@@ -521,6 +562,51 @@
     "quantity": "Quantité",
     "unit": "Unité",
     "minimum": "Stock minimum",
-    "warehouses": "Dépôts"
+    "warehouses": "Dépôts",
+    "sheetValuation": "Valorisation",
+    "averageCost": "Coût moyen (CMUP)",
+    "value": "Valeur",
+    "currency": "Devise",
+    "valuationStatus": "Valorisation",
+    "totalValue": "Valeur totale du stock",
+    "valuation": {
+      "VALUED": "Valorisé",
+      "NO_COST": "Non valorisé (aucun coût connu)",
+      "MIXED_CURRENCY": "Non valorisé (plusieurs devises)"
+    }
+  },
+  "auditActions": {
+    "LOGIN_SUCCESS": "Connexion réussie",
+    "LOGIN_FAILED": "Échec de connexion",
+    "LOGIN_BLOCKED": "Connexion bloquée (trop d'échecs)",
+    "LOGOUT": "Déconnexion",
+    "PASSWORD_CHANGED": "Mot de passe modifié",
+    "PASSWORD_CHANGE_FAILED": "Échec du changement de mot de passe",
+    "PASSWORD_RESET_REQUESTED": "Mot de passe oublié : lien demandé",
+    "PASSWORD_RESET_CONFIRMED": "Mot de passe réinitialisé (lien confirmé)",
+    "PASSWORD_RESET_INVALID_LINK": "Lien de réinitialisation invalide",
+    "PASSWORD_RESET_BY_ADMIN": "Mot de passe réinitialisé par un admin",
+    "SUPPLIER_REGISTERED": "Inscription fournisseur",
+    "USER_CREATED": "Utilisateur créé",
+    "USER_UPDATED": "Utilisateur modifié",
+    "USER_ACTIVATED": "Utilisateur activé",
+    "USER_DEACTIVATED": "Utilisateur désactivé",
+    "USER_DELETED": "Utilisateur supprimé",
+    "WAREHOUSE_ACCESS_CHANGED": "Accès à un dépôt modifiés",
+    "AUDIT_LOG_EXPORTED": "Journal d'audit exporté"
+  },
+  "auditExport": {
+    "sheet": "Journal d'audit",
+    "col": {
+      "date": "Date",
+      "action": "Action",
+      "enterprise": "Entreprise",
+      "actor": "Auteur",
+      "target": "Compte concerné",
+      "details": "Détails",
+      "before": "Avant modification",
+      "ip": "Adresse IP",
+      "userAgent": "Navigateur"
+    }
   }
 }

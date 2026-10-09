@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Gavel, Send, Trophy, CalendarClock, Building2, AlertCircle, CheckCircle, Clock, XCircle, Hourglass, ChevronRight
-} from 'lucide-react';
+  Gavel, Send, Trophy, CalendarClock, Building2, AlertCircle, CheckCircle, Clock, XCircle, Hourglass, ChevronRight, ClipboardList } from 'lucide-react';
 import { supplierPortalService, supplierLogoUrl } from '../../services/supplierPortalService';
 import { fmtDateTime, fmtMoney, timeLeft } from '../../utils/tenderStatus';
 import { t, withLabel, useTranslation } from '../../i18n';
@@ -66,6 +65,13 @@ export default function SupplierDashboard() {
             <AlertCircle size={16} /> {t('portal.incomplete', { list: missingProfile.join(', ') })}
           </span>
           <Link to="/supplier/profile" className="font-medium underline whitespace-nowrap">{t('portal.complete')}</Link>
+        </div>
+      )}
+
+      {stats.ordersToConfirm > 0 && (
+        <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900 flex items-center justify-between gap-4" data-testid="orders-to-confirm">
+          <span className="flex items-center gap-2"><ClipboardList size={16} /> {t('portal.orders.toConfirm', { count: stats.ordersToConfirm })}</span>
+          <Link to="/supplier/orders" className="font-medium underline whitespace-nowrap">{t('portal.orders.view')}</Link>
         </div>
       )}
 

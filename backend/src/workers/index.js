@@ -15,8 +15,8 @@ const logSocket = debug('worker:socket');
 const requisitionModel = require('../models/RequisitionModel');
 const purchaseOrderModel = require('../models/PurchaseOrderModel');
 const i18n = require('../i18n');
+const { appLink } = require('../utils/appUrl');
 const notificationService = require('../services/NotificationService');
-const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
 const EmailNotificationService = require('../services/EmailNotificationService');
 
@@ -215,7 +215,18 @@ async function processCheckBudget(task) {
   const projectName = getVariableValue(task.variables, 'projectName');
   const items = getVariableValue(task.variables, 'items');
 
-  const requisitionItems = parseJsonVariable(items);
+  // Articles lus en base (lignes budgétaires à jour : le demandeur a pu en changer pendant l'ajustement budgétaire,
+  // la vérification est alors relancée) ; à défaut, ceux des variables du processus
+  const dbItems = await db.select(
+    `SELECT ri.budget_line_id AS "budgetLineId", ba.entity_code AS "budgetLineCode", ba.description AS "budgetLineDescription",
+            ri.quantity::float8 AS quantity, COALESCE(ri.frequency, 1)::float8 AS frequency, ri.unit_price::float8 AS "unitPrice",
+            COALESCE(ri.total_amount, ri.quantity * COALESCE(ri.frequency, 1) * ri.unit_price)::float8 AS total
+     FROM requisition_items ri LEFT JOIN budget_allocations ba ON ba.id = ri.budget_line_id
+     WHERE ri.requisition_id = $1 ORDER BY ri.id`,
+    [requisitionId]
+  ).catch(() => []);
+  const requisitionItems = dbItems.length ? dbItems : parseJsonVariable(items);
+  const isRecheck = (await db.one('SELECT status FROM requisitions WHERE id = $1', [requisitionId]))?.status === 'BUDGET_INSUFFICIENT';
 
   // Group items by budget line and check each
   const budgetGroups = new Map();
@@ -307,17 +318,22 @@ async function processCheckBudget(task) {
         'ERROR', '/budget');
     }
 
-    await camundaService.terminateProcess(processInstanceId, {
-      budgetAvailable: false,
-      terminationReason: 'BUDGET_INSUFFICIENT'
-    });
-
+    // Le processus continue vers « Ajustement budgétaire » (demandeur) : il peut changer de ligne budgétaire ou faire
+    // augmenter le budget puis relancer la vérification (budgetAdjusted = true), ou abandonner (false → rejet)
     return {
       budgetAvailable: false,
       allBudgetsAvailable: false,
-      insufficientBudgets,
-      processTerminated: true
+      insufficientBudgets: JSON.stringify(insufficientBudgets)
     };
+  }
+
+  // Budget disponible après un ajustement : la réquisition reprend son cours
+  if (isRecheck) {
+    await db.exec(
+      `UPDATE requisitions SET status = 'IN_PROGRESS', rejected_reason = NULL, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND status = 'BUDGET_INSUFFICIENT'`,
+      [requisitionId]
+    );
   }
 
   return {
@@ -470,6 +486,9 @@ async function processSendPONotification(task) {
          <li>${T('email.po.deliveryDate')} : ${fmtDay(po.delivery_date)}</li>
          <li>${T('email.po.total')} : ${total} ${esc(po.currency)}</li>
        </ul>
+       <p>${po.supplier_user_id
+         ? T('email.po.confirmPortal', { link: `<a href="${appLink(`/supplier/orders/${po.id}`)}">${appLink(`/supplier/orders/${po.id}`)}</a>` })
+         : T('email.po.confirmReply')}</p>
        <p>${T('email.po.thanks')}</p>`
       );
       if (emailResult.success) logSuccess('Email sent to supplier %s', po.supplier_email);
@@ -483,6 +502,12 @@ async function processSendPONotification(task) {
       'Send PO Notification', 'Sent', `PO ${po.po_number} sent to supplier`
     );
 
+    // Bon envoyé : statut en base (la confirmation du fournisseur le fera passer à PO_CONFIRMED)
+    await db.exec(
+      `UPDATE purchase_orders SET status = 'PO_SENT', sent_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND status = 'PO_APPROVED'`,
+      [poId]
+    );
     emitPurchaseOrderUpdate(poId, { status: 'PO_SENT', po_number: po.po_number });
 
     // Notify the original requester (from the linked requisition, not the PO creator)

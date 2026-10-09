@@ -24,7 +24,8 @@ test.describe('API › Auth', () => {
 
   test('POST /api/auth/login — unknown email returns 401', async ({ request }) => {
     const res = await request.post('/api/auth/login', {
-      data: { email: 'nobody@nowhere.com', password: 'test' },
+      // Email unique : un email fixe finirait bloqué (429) après 5 passages en 15 min (anti force brute)
+      data: { email: `nobody.${Date.now()}@nowhere.com`, password: 'test' },
     });
 
     expect(res.status()).toBe(401);

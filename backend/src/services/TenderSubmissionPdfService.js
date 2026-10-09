@@ -1,8 +1,7 @@
 // backend/src/services/TenderSubmissionPdfService.js
 // PDF de l'offre d'un fournisseur (à imprimer, cacheter, signer et renvoyer)
-const puppeteer = require('puppeteer');
 const Handlebars = require('handlebars');
-const { getBrowserOptions } = require('../config/puppeteer');
+const { renderPdf } = require('../utils/pdfRenderer');
 const { logoDataUri } = require('../utils/logoUpload');
 const { pdfContext, rootLocale } = require('../utils/pdfI18n');
 
@@ -161,25 +160,18 @@ class TenderSubmissionPdfService {
       logo: await logoDataUri(supplier.logo_path) // data URI : pas de requête réseau depuis Chromium
     });
 
-    const browser = await puppeteer.launch(getBrowserOptions());
-    try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      return await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        displayHeaderFooter: true,
-        headerTemplate: '<span></span>',
-        footerTemplate: `
-          <div style="width:100%;font-size:9px;color:#9CA3AF;padding:0 15mm;display:flex;justify-content:space-between">
-            <span>${tender.tender_number} — ${String(supplier.name).replace(/[<>&]/g, '')}</span>
-            <span>${ctx.L.page} <span class="pageNumber"></span> / <span class="totalPages"></span></span>
-          </div>`,
-        margin: { top: '15mm', bottom: '18mm', left: '15mm', right: '15mm' },
-      });
-    } finally {
-      await browser.close();
-    }
+    return await renderPdf(html, {
+      format: 'A4',
+      printBackground: true,
+      displayHeaderFooter: true,
+      headerTemplate: '<span></span>',
+      footerTemplate: `
+        <div style="width:100%;font-size:9px;color:#9CA3AF;padding:0 15mm;display:flex;justify-content:space-between">
+          <span>${tender.tender_number} — ${String(supplier.name).replace(/[<>&]/g, '')}</span>
+          <span>${ctx.L.page} <span class="pageNumber"></span> / <span class="totalPages"></span></span>
+        </div>`,
+      margin: { top: '15mm', bottom: '18mm', left: '15mm', right: '15mm' },
+    });
   }
 }
 

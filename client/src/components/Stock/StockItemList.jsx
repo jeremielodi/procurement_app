@@ -1,9 +1,10 @@
 // src/components/Stock/StockItemList.jsx
 // Catalogue d'articles de l'entreprise : code, désignation, unité, catégorie, stockable, suivi par lot / péremption,
-// stock minimum. Création / modification : MANAGE_STOCK_ITEMS (logistique, achats, admin).
+// stock minimum et quantité de réapprovisionnement. Création / modification : MANAGE_STOCK_ITEMS (logistique, achats, admin).
+// « Réapprovisionner » : articles sous le minimum → formulaire de réquisition pré-rempli (articles du catalogue).
 import React, { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Boxes, Plus, Pencil, RefreshCw, Search, AlertTriangle } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Boxes, Plus, Pencil, RefreshCw, Search, AlertTriangle, ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
 import { stockItemService } from '../../services/stockService';
@@ -15,13 +16,35 @@ import SearchSelect from '../Common/SearchSelect';
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const UNITS = ['pce', 'boîte', 'carton', 'paquet', 'rame', 'L', 'kg', 't', 'm', 'm²', 'm³', 'sac', 'lot', 'kit', 'paire'];
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
-const EMPTY = { code: '', name: '', description: '', unit: 'pce', categoryId: '', isStockable: true, trackLots: false, trackExpiry: false, trackSerials: false, minQuantity: '' };
+/** Quantité proposée : quantité de réapprovisionnement de l'article, sinon de quoi remonter à 2 × le minimum */
+export const suggestedRestock = (it) => {
+  const stock = Number(it.stock_quantity) || 0;
+  const min = Number(it.min_quantity) || 0;
+  const qty = it.reorder_quantity ? Number(it.reorder_quantity) : Math.max(2 * min - stock, min - stock);
+  return Math.max(1, Math.ceil(qty));
+};
+
+const EMPTY = { code: '', name: '', description: '', unit: 'pce', categoryId: '', isStockable: true, trackLots: false, trackExpiry: false, trackSerials: false, minQuantity: '', reorderQuantity: '' };
 
 export default function StockItemList() {
   const { lang } = useTranslation();
   const { hasPermission } = usePermissions();
   const canManage = hasPermission('MANAGE_STOCK_ITEMS');
+  const navigate = useNavigate();
   const [rows, setRows] = useState([]);
+  const belowMinRows = rows.filter(it => it.is_active && it.is_stockable && it.min_quantity !== null && Number(it.stock_quantity) < Number(it.min_quantity));
+  const restock = async () => {
+    try {
+      const res = await stockItemService.list({ belowMin: 1, limit: 200 });
+      const items = (res.data || []).filter(it => it.is_active && it.is_stockable);
+      if (!items.length) { toast(t('stock.items.nothingToRestock')); return; }
+      navigate('/requisitions/new', { state: { prefill: {
+        title: t('stock.items.restockTitle', { date: new Date().toLocaleDateString(getLocale()) }),
+        justification: t('stock.items.restockJustification', { list: items.map(it => `${it.code} (${fmtQty(it.stock_quantity)} / ${fmtQty(it.min_quantity)} ${it.unit})`).join(', ') }),
+        items: items.map(it => ({ quantity: suggestedRestock(it), stockItem: { id: it.id, code: it.code, name: it.name, unit: it.unit, is_stockable: it.is_stockable, track_lots: it.track_lots, track_serials: it.track_serials } })),
+      } } });
+    } catch { /* toast api */ }
+  };
   const [pagination, setPagination] = useState({});
   const [categories, setCategories] = useState([]);
   const [params] = useSearchParams();
@@ -55,6 +78,7 @@ export default function StockItemList() {
     id: it.id, code: it.code, name: it.name, description: it.description || '', unit: it.unit, categoryId: it.category_id ? String(it.category_id) : '',
     isStockable: it.is_stockable, trackLots: it.track_lots, trackExpiry: it.track_expiry, trackSerials: it.track_serials,
     minQuantity: it.min_quantity !== null && it.min_quantity !== undefined ? String(Number(it.min_quantity)) : '',
+    reorderQuantity: it.reorder_quantity !== null && it.reorder_quantity !== undefined ? String(Number(it.reorder_quantity)) : '',
     isActive: it.is_active, hasStock: Number(it.stock_quantity) > 0,
   });
 
@@ -75,6 +99,7 @@ export default function StockItemList() {
         trackExpiry: editing.isStockable && editing.trackLots && editing.trackExpiry,
         trackSerials: editing.isStockable && !editing.trackLots && editing.trackSerials,
         minQuantity: editing.minQuantity === '' ? null : Number(editing.minQuantity),
+        reorderQuantity: editing.reorderQuantity === '' ? null : Number(editing.reorderQuantity),
         ...(editing.id ? { isActive: editing.isActive } : {}),
       };
       if (editing.id) await stockItemService.update(editing.id, payload);
@@ -94,6 +119,11 @@ export default function StockItemList() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Boxes /> {t('stock.items.title')}</h1>
           <p className="text-sm text-gray-500">{t('stock.items.subtitle')}</p>
         </div>
+        {belowMinRows.length > 0 && (
+          <button onClick={restock} className="flex items-center gap-2 border border-orange-300 text-orange-800 bg-orange-50 hover:bg-orange-100 px-4 py-2 rounded-lg text-sm" data-testid="restock">
+            <ShoppingCart size={16} /> {t('stock.items.restock', { count: belowMinRows.length })}
+          </button>
+        )}
         {canManage && (
           <button onClick={() => setEditing({ ...EMPTY })} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm" data-testid="item-new">
             <Plus size={16} /> {t('stock.items.new')}
@@ -201,6 +231,10 @@ export default function StockItemList() {
             <label className="text-sm">
               <span className="mb-1 block font-medium text-gray-700">{t('stock.minimum')}</span>
               <input type="number" min="0" step="any" className={inputCls} value={editing.minQuantity} onChange={e => setEditing({ ...editing, minQuantity: e.target.value })} placeholder={t('stock.items.minHint')} />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block font-medium text-gray-700">{t('stock.items.reorderQuantity')}</span>
+              <input type="number" min="0" step="any" className={inputCls} value={editing.reorderQuantity} onChange={e => setEditing({ ...editing, reorderQuantity: e.target.value })} placeholder={t('stock.items.reorderHint')} />
             </label>
             <fieldset className="sm:col-span-2 rounded-lg border border-gray-200 p-3 text-sm space-y-2" disabled={editing.hasStock}>
               <legend className="px-1 font-medium text-gray-700">{t('stock.items.tracking')}</legend>

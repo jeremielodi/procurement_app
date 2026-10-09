@@ -13,7 +13,7 @@ import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
-const STATUS_CLS = { IN_STOCK: 'bg-green-100 text-green-800', ASSIGNED: 'bg-blue-100 text-blue-800', LOST: 'bg-red-100 text-red-700', RETIRED: 'bg-gray-200 text-gray-600' };
+const STATUS_CLS = { IN_STOCK: 'bg-green-100 text-green-800', ASSIGNED: 'bg-blue-100 text-blue-800', IN_TRANSIT: 'bg-violet-100 text-violet-800', LOST: 'bg-red-100 text-red-700', RETIRED: 'bg-gray-200 text-gray-600' };
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(getLocale()) : '—');
 
 export function UnitStatusBadge({ status }) {
@@ -98,7 +98,7 @@ export default function EquipmentList() {
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs">
-        {['IN_STOCK', 'ASSIGNED', 'LOST', 'RETIRED'].map(s => (
+        {['IN_STOCK', 'ASSIGNED', 'IN_TRANSIT', 'LOST', 'RETIRED'].map(s => (
           <button key={s} onClick={() => setFilters(f => ({ ...f, status: f.status === s ? '' : s }))}
             className={`rounded-full px-3 py-1 ${filters.status === s ? 'ring-2 ring-blue-400 ' : ''}${STATUS_CLS[s]}`}>
             {t(`stock.equipment.status.${s}`)}{!filters.status && counts[s] ? ` · ${counts[s]}` : ''}

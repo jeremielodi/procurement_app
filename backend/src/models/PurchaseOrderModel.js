@@ -154,6 +154,7 @@ class PurchaseOrderModel {
         s.phone as supplier_phone,
         s.address as supplier_address,
         su.language as supplier_language,
+        s.user_id as supplier_user_id,
         u.first_name as created_by_name,
         u.email as created_by_email,
         c.format_key as currency,

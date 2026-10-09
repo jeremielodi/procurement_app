@@ -135,7 +135,12 @@
     "stockIssues": "Issues",
     "myItems": "My received items",
     "stockReturns": "Returns",
-    "equipment": "Equipment"
+    "equipment": "Equipment",
+    "supplierOrders": "My orders",
+    "stockCounts": "Stock counts",
+    "stockAdjustments": "Adjustments",
+    "stockValuation": "Valuation",
+    "auditLog": "Audit log"
   },
   "header": {
     "toggleSidebar": "Show / hide menu",
@@ -182,7 +187,8 @@
     "ACTIVE": "Active",
     "INACTIVE": "Inactive",
     "LOCKED": "Locked",
-    "ARCHIVED": "Archived"
+    "ARCHIVED": "Archived",
+    "PO_CONFIRMED": "Confirmed"
   },
   "requisitionStatus": {
     "DRAFT": "Draft",
@@ -630,7 +636,9 @@
       "newRequest": "Make a new request",
       "emailFailed": "The email could not be sent: your password has not been changed. Please try again later.",
       "missingToken": "Incomplete link: open the link you received by email."
-    }
+    },
+    "tooManyAttempts_one": "Too many failed login attempts. Try again in {{count}} minute, or use \"Forgot password\".",
+    "tooManyAttempts_other": "Too many failed login attempts. Try again in {{count}} minutes, or use \"Forgot password\"."
   },
   "supplierFields": {
     "companyName": "Company name",
@@ -1312,7 +1320,41 @@
     "viewerSupplier": "Supplier:",
     "viewerAmount": "Amount:",
     "viewerDate": "Date:",
-    "pdfTitle": "Purchase order PDF"
+    "pdfTitle": "Purchase order PDF",
+    "supplierConfirmation": {
+      "title": "Supplier confirmation",
+      "awaiting": "Waiting for the supplier's confirmation",
+      "confirmed": "Order confirmed by the supplier",
+      "declined": "Order declined by the supplier",
+      "sentOn": "Sent to the supplier on {{date}}",
+      "viaPortal": "via the supplier portal",
+      "viaProcurement": "recorded by procurement",
+      "promisedDelivery": "Planned delivery",
+      "reference": "Supplier reference",
+      "reasonLabel": "Reason",
+      "commentLabel": "Comment",
+      "reasonPlaceholder": "E.g. out of stock, deadline impossible…",
+      "commentPlaceholder": "E.g. confirmed by phone by Mr …",
+      "record": "Record the supplier's answer",
+      "recordTitle": "Supplier answer — {{number}}",
+      "responses": {
+        "CONFIRMED": "Confirms the order",
+        "DECLINED": "Declines the order"
+      },
+      "confirmEffect": "The order becomes \"Confirmed\" and the GoFlow \"Supplier confirmation\" step is completed: receiving can start.",
+      "declineEffect": "The step stays open: follow up or renegotiate with the supplier, then record their confirmation (or cancel the order).",
+      "hint": "The supplier can answer from their portal (if they have an account); otherwise record here the answer received by phone or email.",
+      "recorded": "Confirmation recorded",
+      "recordedTask": "Confirmation recorded: the GoFlow step is completed",
+      "declinedRecorded": "Refusal recorded",
+      "err": {
+        "ALREADY_CONFIRMED": "This order is already confirmed",
+        "NOT_RESPONDABLE": "This order is not waiting for confirmation",
+        "REASON_REQUIRED": "Enter the reason for the refusal",
+        "INVALID_DATE": "Invalid delivery date",
+        "DATE_IN_PAST": "The planned delivery date is already past"
+      }
+    }
   },
   "grnStatus": {
     "DRAFT": "Draft",
@@ -1872,7 +1914,46 @@
     "changeLogo": "Change logo",
     "logoHint": "Shown on your PDF bids. PNG, JPG or WEBP — 2 MB max.",
     "categoriesHint": "Each company prequalifies you category by category",
-    "docsHint": "A new file replaces the previous one when saved — 5 MB max."
+    "docsHint": "A new file replaces the previous one when saved — 5 MB max.",
+    "orders": {
+      "title": "My orders",
+      "subtitle": "Purchase orders received from companies: confirm them or report an issue",
+      "none": "No purchase orders yet",
+      "notFound": "Purchase order not found",
+      "toConfirm_one": "{{count}} purchase order is waiting for your confirmation.",
+      "toConfirm_other": "{{count}} purchase orders are waiting for your confirmation.",
+      "view": "View my orders",
+      "number": "Order no.",
+      "buyer": "Buyer",
+      "orderDate": "Order date",
+      "requestedDelivery": "Requested delivery",
+      "amount": "Total amount",
+      "shippingAddress": "Delivery address",
+      "item": "Item",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price",
+      "total": "Total",
+      "pdf": "Purchase order (PDF)",
+      "fromBuyer": "Order from {{buyer}} dated {{date}}",
+      "pleaseConfirm": "This order is waiting for your answer: confirm it with the planned delivery date, or decline it explaining why.",
+      "declinedCanConfirm": "You declined this order. If things have changed (after talking with the buyer), you can still confirm it.",
+      "confirm": "Confirm the order",
+      "decline": "Decline",
+      "sendDecline": "Send the refusal",
+      "confirmTitle": "Confirm the order",
+      "declineTitle": "Decline the order",
+      "yourReference": "Your reference (optional)",
+      "declinePlaceholder": "E.g. out of stock, deadline impossible, price to review…",
+      "confirmedToast": "Order confirmed: the buyer has been notified",
+      "declinedToast": "Refusal sent to the buyer",
+      "confirmedOn": "You confirmed this order on {{date}} — planned delivery: {{delivery}}",
+      "declinedOn": "You declined this order on {{date}}",
+      "status": {
+        "TO_CONFIRM": "To confirm",
+        "CONFIRMED": "Confirmed",
+        "DECLINED": "Declined"
+      }
+    }
   },
   "docReview": {
     "VERIFIED": "Verified",
@@ -2484,7 +2565,14 @@
       "lastMovements": "Latest movements",
       "allMovements": "All movements",
       "serials": "Serial numbers",
-      "trackSerialsLabel": "Equipment tracked by serial number (assigned then recovered: laptop, phone, GPS…)"
+      "trackSerialsLabel": "Equipment tracked by serial number (assigned then recovered: laptop, phone, GPS…)",
+      "restock_one": "Restock ({{count}} item)",
+      "restock_other": "Restock ({{count}} items)",
+      "nothingToRestock": "No items below minimum stock",
+      "restockTitle": "Stock replenishment — {{date}}",
+      "restockJustification": "Items below minimum stock (stock / minimum): {{list}}",
+      "reorderQuantity": "Reorder quantity",
+      "reorderHint": "Optional: quantity proposed below the minimum"
     },
     "mv": {
       "title": "Stock movements",
@@ -2594,7 +2682,10 @@
         "ISSUED": "Issued",
         "ACKNOWLEDGED": "Receipt confirmed",
         "PENDING_ACK": "Awaiting confirmation",
-        "CANCELLED": "Cancelled"
+        "CANCELLED": "Cancelled",
+        "IN_TRANSIT": "In transit",
+        "RECEIVED": "Received",
+        "RECEIVED_SHORT": "Received short"
       },
       "err": {
         "warehouse": "Choose the warehouse",
@@ -2652,13 +2743,27 @@
       "transferHint": "Transfer: lots (even expired ones, if you choose them) and damaged equipment move as they are.",
       "saveTransfer": "Save the transfer",
       "pdfTransfer": "Transfer note (PDF)",
-      "ackTransferText": "You confirm that the items have arrived at warehouse {{name}}.",
-      "ackTransferPrompt": "Transfer to a warehouse you have access to: check the items, then confirm their arrival.",
+      "ackTransferText": "Enter the quantities that actually arrived at warehouse \"{{name}}\".",
+      "ackTransferPrompt": "Transfer in transit to a warehouse you have access to: count the items that arrived, then receive them. Stock only enters this warehouse once received.",
       "ackDeptPrompt": "Issue for your department: check the items, then confirm receipt.",
       "cancelTransfer": "Cancel the transfer",
-      "cancelTransferText": "The items will go back from the destination warehouse to the source warehouse (reversing entries). Not possible if part of them has already been used at the destination.",
+      "cancelTransferText": "Items in transit will return to the source warehouse. If the transfer was already received, the received quantities will leave the destination warehouse (not possible if they were used there).",
       "transferCancelled": "Transfer cancelled: items back in the source warehouse",
-      "transferMovements": "Out / in"
+      "transferMovements": "Out / in",
+      "receive": "Receive",
+      "received": "Transfer received",
+      "receivedShort_one": "Transfer received — {{count}} line short (lost in transit)",
+      "receivedShort_other": "Transfer received — {{count}} lines short (lost in transit)",
+      "receivedQty": "Received",
+      "sentQty": "Shipped",
+      "inTransitShort": "in transit",
+      "transitLoss": "{{qty}} short",
+      "unitReceived": "Received",
+      "unitMissing": "Not received (lost)",
+      "receiveInvalid": "Invalid received quantity: between 0 and the shipped quantity",
+      "receiveShortWarning_one": "{{count}} line received short: the difference will be recorded as lost in transit (equipment not received = \"lost\").",
+      "receiveShortWarning_other": "{{count}} lines received short: the difference will be recorded as lost in transit (equipment not received = \"lost\").",
+      "cancelReceivedTransferText": "The received quantities will move back from the destination warehouse to the source warehouse (reversing entries); losses in transit stay recorded. Not possible if part of it was already used at the destination."
     },
     "return": {
       "title": "Stock returns",
@@ -2713,7 +2818,8 @@
         "USER": "An employee",
         "DEPARTMENT": "A department"
       },
-      "chooseDepartment": "Choose the department"
+      "chooseDepartment": "Choose the department",
+      "pdf": "Return note (PDF)"
     },
     "equipment": {
       "title": "Equipment",
@@ -2734,7 +2840,8 @@
         "IN_STOCK": "In stock",
         "ASSIGNED": "Assigned",
         "LOST": "Lost",
-        "RETIRED": "Retired"
+        "RETIRED": "Retired",
+        "IN_TRANSIT": "In transit"
       },
       "condition": {
         "GOOD": "Good",
@@ -2755,6 +2862,139 @@
       "updated": "Equipment updated",
       "truncated": "{{shown}} shown out of {{total}}: refine the search",
       "departmentHolder": "Department {{name}}"
+    },
+    "count": {
+      "title": "Stock counts",
+      "subtitle": "Physical counts of the warehouses and adjustment of differences",
+      "new": "New stock count",
+      "openAction": "Open the count",
+      "none": "No stock counts",
+      "number": "Count no.",
+      "scope": "Scope",
+      "wholeWarehouse": "Whole warehouse",
+      "progress": "Counting",
+      "differences": "Differences",
+      "commentPlaceholder": "E.g. annual count, quarterly check…",
+      "openHint": "Expected stock is captured when the count is opened. Count soon after, keeping movements to a minimum during the count; only one count can be open per warehouse.",
+      "opened_one": "Count {{number}} opened: {{count}} line to count",
+      "opened_other": "Count {{number}} opened: {{count}} lines to count",
+      "notFound": "Stock count not found",
+      "openedBy": "opened by {{name}} on {{date}}",
+      "validatedOn": "Validated by {{name}} on {{date}}: differences were posted as stock adjustments.",
+      "cancelledOn": "Cancelled by {{name}} on {{date}} — reason: {{reason}}",
+      "unsaved": "Unsaved changes",
+      "filter": "Filter (code, item, lot, serial number)…",
+      "blind": "Blind count",
+      "showExpected": "Show expected",
+      "fillExpected": "Copy expected",
+      "fillExpectedHint": "Fills uncounted lines with the expected quantity (check line by line)",
+      "addFound": "Stock found",
+      "addFoundHint": "Item present in the warehouse but missing from the list (unrecorded lot, forgotten receipt…). Equipment found is registered with its serial number (Equipment → Register existing equipment).",
+      "foundBadge": "found",
+      "save": "Save the count",
+      "saved_one": "{{count}} line saved",
+      "saved_other": "{{count}} lines saved",
+      "lineAdded": "Line added",
+      "lotOrSerial": "Lot / serial number",
+      "expected": "Expected",
+      "counted": "Counted",
+      "difference": "Difference",
+      "note": "Note",
+      "present": "Present",
+      "missing": "Missing",
+      "noLines": "No lines",
+      "validate": "Validate the count",
+      "validateTitle": "Validate the count?",
+      "validateText_one": "{{count}} difference will be posted as a stock adjustment. Missing equipment will be declared lost. This cannot be undone.",
+      "validateText_other": "{{count}} differences will be posted as stock adjustments. Missing equipment will be declared lost. This cannot be undone.",
+      "validated_one": "Count validated: {{count}} adjustment",
+      "validated_other": "Count validated: {{count}} adjustments",
+      "saveFirst": "Save the count first",
+      "validationByAdmin": "Validating differences is reserved for the administrator.",
+      "cancel": "Cancel the count",
+      "cancelTitle": "Cancel the count?",
+      "cancelText": "No adjustment will be posted. A new count can be opened.",
+      "cancelled": "Count cancelled",
+      "status": {
+        "OPEN": "In progress",
+        "VALIDATED": "Validated",
+        "CANCELLED": "Cancelled"
+      },
+      "err": {
+        "COUNT_ALREADY_OPEN": "A count is already in progress in this warehouse",
+        "NOT_COMPLETE_one": "{{count}} line has not been counted yet",
+        "NOT_COMPLETE_other": "{{count}} lines have not been counted yet",
+        "NOT_COMPLETE": "All lines must be counted",
+        "BALANCE_CHANGED": "Stock has changed since the count was opened",
+        "COUNT_CLOSED": "Count already validated or cancelled",
+        "LINE_EXISTS": "This item (and lot) is already in the count",
+        "SERIAL_ITEM": "Equipment: register it with its serial number",
+        "EXPIRY_REQUIRED": "Expiry date required",
+        "LOT_REQUIRED": "Lot number required",
+        "INVALID_QUANTITY": "Invalid quantity",
+        "INVALID_UNIT_COUNT": "Equipment: present or missing",
+        "WAREHOUSE_FORBIDDEN": "You do not have access to this warehouse",
+        "ITEM_NOT_STOCKABLE": "Item not stocked",
+        "chooseItem": "Choose the item"
+      }
+    },
+    "adjust": {
+      "title": "Stock adjustments",
+      "subtitle": "One-off justified corrections: breakage, loss, theft, expiry, stock found…",
+      "new": "New adjustment",
+      "none": "No adjustments",
+      "number": "Adjustment no.",
+      "reason": "Reason",
+      "by": "By",
+      "unit": "Equipment",
+      "chooseUnit": "Choose the equipment (serial number)",
+      "chooseLot": "Choose the lot",
+      "direction": {
+        "OUT": "Out (−)",
+        "IN": "In (+)"
+      },
+      "reasons": {
+        "DAMAGE": "Breakage / damage",
+        "LOSS": "Loss",
+        "THEFT": "Theft",
+        "EXPIRED": "Expired",
+        "FOUND": "Stock found",
+        "CORRECTION": "Entry correction",
+        "OTHER": "Other"
+      },
+      "commentPlaceholder": "Explanation (required)",
+      "hint": "Each adjustment creates a traced stock movement; for differences across a whole warehouse, prefer a stock count.",
+      "serialHint": "The equipment leaves stock: declared lost (loss, theft) or retired (other reasons). Extra equipment is registered via Equipment.",
+      "created": "Adjustment {{number}} recorded",
+      "err": {
+        "STOCK_INSUFFICIENT": "Insufficient stock",
+        "COMMENT_REQUIRED": "Explain the adjustment",
+        "INVALID_REASON": "Invalid reason",
+        "LOT_REQUIRED": "Choose the lot",
+        "UNIT_REQUIRED": "Choose the equipment",
+        "UNIT_UNAVAILABLE": "Equipment not found in this warehouse",
+        "INVALID_QUANTITY": "Invalid quantity",
+        "WAREHOUSE_FORBIDDEN": "You do not have access to this warehouse",
+        "ITEM_NOT_STOCKABLE": "Item not stocked"
+      }
+    },
+    "valuation": {
+      "title": "Stock valuation",
+      "subtitle": "Stock value at weighted average cost (WAC)",
+      "asOf": "As of",
+      "allWarehouses": "Whole company",
+      "total": "Total value",
+      "items": "Items in stock",
+      "notValued": "Items not valued",
+      "averageCost": "Average cost (WAC)",
+      "value": "Value",
+      "none": "No items in stock",
+      "status": {
+        "NO_COST": "Not valued: no known cost",
+        "MIXED_CURRENCY": "Not valued: several currencies",
+        "VALUED": "Valued"
+      },
+      "method": "WAC recomputed from the movement log: each receipt (at the purchase order price) updates the average cost; issues go out at the average cost; transfers between warehouses have no effect. An item received in several currencies, or without any known cost (opening stock, adjustment), is not valued."
     }
   },
   "help": {
@@ -2794,7 +3034,7 @@
             "type": "steps",
             "items": [
               "Requisition (REQ-YYYY-NNNN): the requester describes what to buy, quantities, estimated prices and the budget line to charge.",
-              "Budget check: automatic. If a budget line does not have enough available funds, the process stops (\"Insufficient budget\").",
+              "Budget check: automatic. If a budget line does not have enough available funds, the requisition becomes \"Insufficient budget\": the requester changes the line or has the budget increased, then restarts the check (or abandons the requisition).",
               "Approval: a single level, chosen according to the amount — Manager (N1), Finance (N2) or General Management (N3).",
               "Purchasing method: determined automatically from the amount (direct purchase, multiple quotations, call for tenders) or a justified sole source.",
               "Supplier selection: quotations, a call for tenders published on the supplier portal, or a single supplier.",
@@ -2828,6 +3068,10 @@
           {
             "type": "p",
             "text": "procureApp is a multi-company platform: each company only sees its own data (requisitions, orders, stock, budget, users). Suppliers, however, are shared across the platform and see the calls for tenders of every company that invites them."
+          },
+          {
+            "type": "tip",
+            "text": "The search bar at the top of the screen finds a requisition, purchase order, goods receipt, invoice, supplier, call for tenders or stock item from a few letters (number, description, supplier…). Only items you are allowed to see are shown."
           },
           {
             "type": "tip",
@@ -3069,7 +3313,19 @@
           },
           {
             "type": "p",
-            "text": "On submission, every budget line used is checked: its available amount must cover the total of the items charged to it. If a single line is insufficient, the requisition moves to \"Insufficient budget\" and the requester receives the \"Budget adjustment\" task: processing it closes the requisition (\"Rejected\" status). Have Finance adjust the budget (or choose another line), then submit a new requisition."
+            "text": "On submission, every budget line used is checked: its available amount must cover the total of the items charged to it. If a single line is insufficient, the requisition moves to \"Insufficient budget\" and the requester receives the \"Budget adjustment\" task. The requisition page then shows, line by line, the requested amount, the available amount and the shortfall."
+          },
+          {
+            "type": "h",
+            "text": "Insufficient budget: adjust, then restart"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Change the budget line of the items concerned (\"Change line\") or ask Finance to increase the line's budget, then reload the page.",
+              "Once every line is sufficient, click \"Run the budget check again\": the same requisition goes back into the approval circuit, without re-entering anything.",
+              "If the purchase is no longer needed, \"Abandon the requisition\" cancels it permanently."
+            ]
           },
           {
             "type": "h",
@@ -3261,6 +3517,18 @@
               "From the \"Create purchase order\" task, choose the supplier (prequalified), dates and delivery address. The requisition items are copied with their catalogue item; you can adjust quantities and prices.",
               "The purchase order is created directly as \"Pending approval\": management receives the approval task.",
               "Once approved, it is sent automatically by email to the supplier (in the language of their account), with the PDF."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Supplier confirmation"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Once sent, the order waits for the supplier's confirmation (GoFlow step \"Supplier confirmation\"). A registered supplier answers from their portal (\"My orders\"): they confirm with the planned delivery date, or decline and explain why.",
+              "If the supplier answers by phone or email, procurement records their answer on the purchase order page: \"Record the supplier's answer\".",
+              "Confirmed: the order becomes \"Confirmed\" and receiving can start. Declined: the step stays open; follow up or renegotiate, then record the confirmation (or cancel the order)."
             ]
           },
           {
@@ -3463,7 +3731,7 @@
               ],
               [
                 "Minimum stock",
-                "Alert when total stock falls below it."
+                "Alert when total stock falls below it. With a \"Reorder quantity\", the item is suggested for restocking."
               ]
             ]
           },
@@ -3484,6 +3752,50 @@
             ]
           },
           {
+            "type": "h",
+            "text": "Physical inventory"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Stock → Stock counts → \"New stock count\": choose the warehouse (whole warehouse or one category). Expected quantities are frozen when it opens; one inventory at a time per warehouse.",
+              "Count: by default counting is \"blind\" (expected quantities are hidden so as not to influence). Enter the counted quantity of each line; for equipment, tick \"Present\" or \"Missing\". \"Stock found\" adds an item or lot that was not expected.",
+              "\"Save the count\" as often as needed, then the administrator clicks \"Validate the count\": each difference becomes a stock adjustment, missing equipment is declared lost."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "Validation is refused if stock moved since the inventory was opened (receipt, issue): cancel the count and open a new one, or avoid movements during the count."
+          },
+          {
+            "type": "h",
+            "text": "One-off adjustments"
+          },
+          {
+            "type": "p",
+            "text": "Stock → Adjustments → \"New adjustment\" (administrator): stock in or out for a quantity, a lot or a specific piece of equipment, with a mandatory reason (damage, loss, theft, expired, stock found, data-entry correction, other). Each adjustment is numbered (AJU-YYYY-NNNNN) and visible in the movement log."
+          },
+          {
+            "type": "h",
+            "text": "Restocking"
+          },
+          {
+            "type": "p",
+            "text": "In the item list, the \"Restock\" button appears when items are below their minimum stock: it opens a new requisition pre-filled with these items (reorder quantity, otherwise enough to get back to the minimum) and a justification. Complete the project, budget lines and prices, then submit."
+          },
+          {
+            "type": "h",
+            "text": "Valuation (weighted average cost)"
+          },
+          {
+            "type": "p",
+            "text": "Stock → Valuation gives the stock value at weighted average unit cost: each receipt at the purchase order price recalculates the item's average cost; issues, transfers and adjustments use this average cost. Value at a past date, per warehouse or for the whole company, Excel export. An item with no known cost (opening stock, adjustments) or received in several currencies is flagged \"Not valued\"."
+          },
+          {
+            "type": "tip",
+            "text": "Stock in transit between two warehouses still counts in the company value, but in no warehouse until it is received."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -3501,6 +3813,18 @@
               {
                 "to": "/stock/warehouses",
                 "label": "Warehouses"
+              },
+              {
+                "to": "/stock/counts",
+                "label": "Stock counts"
+              },
+              {
+                "to": "/stock/adjustments",
+                "label": "Adjustments"
+              },
+              {
+                "to": "/stock/valuation",
+                "label": "Valuation"
               }
             ]
           }
@@ -3527,12 +3851,24 @@
               ],
               [
                 "To a warehouse (transfer)",
-                "Stock moves from the source warehouse to the destination warehouse (out + in), with the same lots and serial numbers. Users of the destination warehouse are notified and one of them confirms arrival. Transfer note PDF."
+                "Items leave the source warehouse and are \"In transit\" until they are received at the destination warehouse (same lots and serial numbers). Users of the destination warehouse are notified; one of them receives the transfer by entering the quantities that arrived. Transfer note PDF."
               ],
               [
                 "To a department",
                 "Items issued to a department (consumption or department equipment). Enter the person collecting them if needed: they confirm receipt; otherwise the department manager does. Equipment is assigned to the department."
               ]
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Receiving a transfer"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Open the note (notification, or issue list filtered on \"In transit\") and click \"Receive\".",
+              "Shipped quantities are proposed: correct those that arrived short; for equipment, untick it if it did not arrive.",
+              "On validation, only what was received enters the warehouse. The shortfall is recorded as lost in transit (the note becomes \"Received short\") and equipment not received is declared lost."
             ]
           },
           {
@@ -3560,12 +3896,12 @@
             "type": "list",
             "items": [
               "Handover (employee, department): \"Cancel / return to stock\" puts everything back in stock with reversing entries, with a mandatory reason. Not possible if part has already been returned: record a return instead.",
-              "Transfer: \"Cancel the transfer\" sends the items back to the source warehouse. Refused if part of the transferred stock has already been used at the destination."
+              "Transfer: \"Cancel the transfer\". In transit, everything returns to the source warehouse. Already received, the received quantities leave the destination warehouse (losses in transit stay recorded) — refused if part of it was already used at the destination."
             ]
           },
           {
             "type": "p",
-            "text": "The issue list can be filtered by type, warehouse (exits and received transfers) and status. In the movement log, an arrow shows the destination (→) or the source warehouse of a received transfer (←)."
+            "text": "The issue list can be filtered by type, warehouse (issues and received transfers) and status, including \"In transit\". In the movement log, an arrow shows the destination (→) or the source warehouse of a received transfer (←)."
           },
           {
             "type": "links",
@@ -3612,7 +3948,7 @@
           },
           {
             "type": "p",
-            "text": "Stock → Returns → \"New return\" (or \"Recover\" from the Equipment screen): choose \"An employee\" or \"A department\", then the person or the department; everything they hold is displayed, across all issues. Tick what is returned (\"Recover everything\" for a departure), indicate the condition and the return warehouse. Returns also work for unused consumables, in partial quantities."
+            "text": "Stock → Returns → \"New return\" (or \"Recover\" from the Equipment screen): choose \"An employee\" or \"A department\", then the person or the department; everything they hold is displayed, across all issues. Tick what is returned (\"Recover everything\" for a departure), indicate the condition and the return warehouse. Returns also work for unused consumables, in partial quantities. Each return (RET-YYYY-NNNNN) has its \"Return note (PDF)\" to be signed by the person returning the equipment and by the storekeeper."
           },
           {
             "type": "table",
@@ -3741,8 +4077,20 @@
             ]
           },
           {
-            "type": "tip",
-            "text": "Sensitive actions (logins, passwords, user management, warehouse access) are recorded in the audit trail."
+            "type": "h",
+            "text": "Audit log"
+          },
+          {
+            "type": "p",
+            "text": "Administration → Audit log (company administrator: their company; super administrator: the whole platform, filterable by company): who did what, when and from which IP address."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Tabs: sign-ins, passwords, user accounts, access and exports, \"Failures and blocks\" (refused or blocked sign-ins, invalid links…).",
+              "Filters by action, period and search (email, name, IP address); clicking a row shows the details: values before / after a change, browser.",
+              "\"Export (Excel)\" downloads the filtered events (20,000 at most). The export itself is recorded in the log."
+            ]
           },
           {
             "type": "links",
@@ -3758,6 +4106,10 @@
               {
                 "to": "/settings/enterprise",
                 "label": "My company"
+              },
+              {
+                "to": "/admin/audit",
+                "label": "Audit log"
               }
             ]
           }
@@ -3799,7 +4151,7 @@
         "faq": [
           {
             "q": "My requisition is \"Insufficient budget\".",
-            "a": "A budget line did not have enough available funds. Process the \"Budget adjustment\" task (the requisition is closed), contact Finance to adjust the budget, or choose another line, then submit a new requisition."
+            "a": "A budget line did not have enough available funds. Open the requisition: change the line of the items concerned or have Finance increase the budget, then \"Run the budget check again\". If the purchase is no longer useful, \"Abandon the requisition\"."
           },
           {
             "q": "Nobody receives the approval task.",
@@ -3836,6 +4188,18 @@
           {
             "q": "A menu described here does not appear for me.",
             "a": "Your profile does not allow it. Ask your administrator for the permission, then log in again."
+          },
+          {
+            "q": "The supplier does not confirm the order.",
+            "a": "Until they answer, the order stays \"Sent\" and receiving cannot start. Follow up; if they answer by phone or email, record their answer on the purchase order page (\"Record the supplier's answer\")."
+          },
+          {
+            "q": "A transfer does not appear in the destination warehouse stock.",
+            "a": "It is \"In transit\": stock only enters the destination warehouse when it is received. A user of that warehouse must open the note and click \"Receive\"."
+          },
+          {
+            "q": "Valuation shows \"Not valued\" for an item.",
+            "a": "No cost is known for this item (opening stock or adjustments only, never received at a purchase order price), or it was received in several currencies. Its quantity is counted, not its value."
           }
         ]
       },
@@ -3870,6 +4234,18 @@
             ]
           },
           {
+            "type": "h",
+            "text": "Your orders"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "When a company awards you an order, you receive an email and it appears in \"My orders\" (the dashboard flags those awaiting your answer).",
+              "Open the order: items, quantities, prices, requested delivery address and date, purchase order PDF.",
+              "\"Confirm the order\" with the planned delivery date (and your reference if you wish), or \"Decline\" with a reason. The buyer is notified immediately. A declined order can still be confirmed if things change."
+            ]
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -3883,11 +4259,132 @@
               {
                 "to": "/supplier/profile",
                 "label": "My profile"
+              },
+              {
+                "to": "/supplier/orders",
+                "label": "My orders"
               }
             ]
           }
         ]
       }
     }
+  },
+  "budgetAdjust": {
+    "title": "Insufficient budget: adjustment needed",
+    "intro": "One or more budget lines do not have enough available funds. Assign other lines to the items concerned (or have Finance increase the budget), then run the check again: the same requisition goes back into the process.",
+    "introReadOnly": "One or more budget lines do not have enough available funds. The requester must adjust the budget or abandon the requisition.",
+    "line": "Budget line",
+    "requested": "Requested",
+    "available": "Available",
+    "noLine": "No budget line",
+    "enough": "Enough",
+    "missing": "{{amount}} missing",
+    "item": "Item",
+    "amount": "Amount",
+    "changeLine": "Change line",
+    "lineChanged": "Budget line changed",
+    "financeHint": "If no line fits, ask Finance to increase the line's budget, then reload the page.",
+    "retry": "Run the budget check again",
+    "abandon": "Abandon the requisition",
+    "retryDisabled": "Every line must have enough available funds to run the check again.",
+    "retryTitle": "Run the budget check again?",
+    "retryText": "The budget check runs again on this requisition; if it passes, the approval process resumes normally.",
+    "abandonTitle": "Abandon the requisition?",
+    "abandonText": "The requisition will be cancelled and the process stopped. This cannot be undone.",
+    "commentPlaceholder": "Comment (optional)",
+    "retried": "Budget check restarted",
+    "abandoned": "Requisition abandoned",
+    "err": {
+      "STILL_INSUFFICIENT": "The budget is still insufficient on at least one line",
+      "TASK_NOT_FOUND": "\"Budget adjustment\" step not found in GoFlow (engine unreachable or process ended)",
+      "NOT_BUDGET_INSUFFICIENT": "This requisition is not waiting for a budget adjustment",
+      "BUDGET_LINE_INVALID": "Invalid budget line (inactive or from another project)",
+      "FORBIDDEN": "Only the requester (or Finance / an administrator) can adjust the budget",
+      "GOFLOW_ERROR": "GoFlow did not accept the decision"
+    }
+  },
+  "search": {
+    "none": "No results for \"{{q}}\"",
+    "groups": {
+      "requisitions": "Requisitions",
+      "purchaseOrders": "Purchase orders",
+      "goodsReceipts": "Goods receipts",
+      "invoices": "Invoices",
+      "suppliers": "Suppliers",
+      "tenders": "Calls for tenders",
+      "stockItems": "Stock items"
+    }
+  },
+  "audit": {
+    "title": "Audit log",
+    "subtitle": "Sign-ins, passwords, account and access management: who did what, when and from which address.",
+    "subtitleSuper": "Whole platform: sign-ins, passwords, accounts and access of every company.",
+    "actions": {
+      "LOGIN_SUCCESS": "Successful sign-in",
+      "LOGIN_FAILED": "Failed sign-in",
+      "LOGIN_BLOCKED": "Sign-in blocked (too many failures)",
+      "LOGOUT": "Sign-out",
+      "PASSWORD_CHANGED": "Password changed",
+      "PASSWORD_CHANGE_FAILED": "Failed password change",
+      "PASSWORD_RESET_REQUESTED": "Forgot password: link requested",
+      "PASSWORD_RESET_CONFIRMED": "Password reset (link confirmed)",
+      "PASSWORD_RESET_INVALID_LINK": "Invalid reset link",
+      "PASSWORD_RESET_BY_ADMIN": "Password reset by an admin",
+      "SUPPLIER_REGISTERED": "Supplier registration",
+      "USER_CREATED": "User created",
+      "USER_UPDATED": "User updated",
+      "USER_ACTIVATED": "User activated",
+      "USER_DEACTIVATED": "User deactivated",
+      "USER_DELETED": "User deleted",
+      "WAREHOUSE_ACCESS_CHANGED": "Warehouse access changed",
+      "AUDIT_LOG_EXPORTED": "Audit log exported"
+    },
+    "groups": {
+      "all": "All events",
+      "auth": "Sign-ins",
+      "password": "Passwords",
+      "users": "User accounts",
+      "access": "Access and exports",
+      "failures": "Failures and blocks"
+    },
+    "search": "Email, name or IP address…",
+    "from": "From",
+    "to": "To",
+    "allActions": "All actions",
+    "allEnterprises": "All companies",
+    "noEnterprise": "No company (visitors, suppliers)",
+    "export": "Export (Excel)",
+    "exported": "Export downloaded",
+    "reset": "Reset",
+    "col": {
+      "date": "Date",
+      "action": "Action",
+      "actor": "Author",
+      "target": "Account concerned",
+      "ip": "IP address",
+      "enterprise": "Company"
+    },
+    "visitor": "Unidentified visitor",
+    "details": "Details",
+    "before": "Before",
+    "after": "After",
+    "userAgent": "Browser",
+    "empty": "No event for these filters.",
+    "total_one": "{{count}} event",
+    "total_other": "{{count}} events",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "reason": {
+      "UNKNOWN_EMAIL": "unknown email",
+      "WRONG_PASSWORD": "wrong password",
+      "INACTIVE_ACCOUNT": "disabled account",
+      "WRONG_OLD_PASSWORD": "wrong current password"
+    },
+    "scope": {
+      "ACCOUNT": "account",
+      "IP": "IP address"
+    },
+    "exportLimit": "The export is limited to the 20,000 most recent events matching the filters."
   }
 }

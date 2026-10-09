@@ -50,6 +50,7 @@ import WorkflowTrackerModal from './WorkflowTrackerModal'
 import { tenderService } from '../../services/tenderService'
 import { usePermissions } from '../../hooks/usePermissions'
 import { t } from '../../i18n'
+import BudgetAdjustmentPanel from './BudgetAdjustmentPanel'
 
 export default function RequisitionDetail() {
   const { id } = useParams()
@@ -406,6 +407,9 @@ const handleGeneratePDF = async () => {
           )}
         </div>
       </div>
+
+      {/* Budget insuffisant : ajustement puis nouvelle vérification (ou abandon) */}
+      <BudgetAdjustmentPanel requisition={requisition} onChanged={() => refetch()} />
 
       {/* Alertes - Message sur les tâches en attente */}
       {hasActiveProcess && (

@@ -225,7 +225,9 @@ class DashboardController {
   }
 
   /**
-   * Récupérer toutes les données du tableau de bord en une seule requête
+   * Récupérer toutes les données du tableau de bord en une seule requête.
+   * Les graphiques (chartData) ne sont plus calculés ici : la section « Analyse des données » a été retirée du
+   * tableau de bord ; ils restent disponibles via GET /dashboard/charts.
    */
   async getDashboardData(req, res) {
     try {
@@ -234,7 +236,6 @@ class DashboardController {
       // Récupérer toutes les données en parallèle
       const [
         stats,
-        chartData,
         recentRequisitions,
         recentActivities,
         kpis,
@@ -244,7 +245,6 @@ class DashboardController {
         projectStats
       ] = await Promise.all([
         dashboardModel.getStats(),
-        dashboardModel.getChartData(period, await budgetOpts(req)),
         dashboardModel.getRecentRequisitions(10),
         dashboardModel.getRecentActivities(10),
         dashboardModel.getKPIs(),
@@ -258,7 +258,6 @@ class DashboardController {
         success: true,
         data: {
           stats,
-          chartData,
           recentRequisitions,
           recentActivities,
           kpis,

@@ -183,7 +183,15 @@
     "waitingInfo": "Pending{task} — {who}",
     "approvalInfo": "{task}: {decision}",
     "released": "{task} — released (back to the group)",
-    "releasedFrom": "Was claimed by {name}"
+    "releasedFrom": "Was claimed by {name}",
+    "supplierConfirmed": "Order {number} confirmed by the supplier",
+    "supplierDeclined": "Order {number} declined by the supplier",
+    "viaPortal": "From the supplier portal",
+    "viaProcurement": "Recorded by procurement (answer received outside the portal)",
+    "promisedDelivery": "Planned delivery: {date}",
+    "supplierReference": "Supplier reference: {value}",
+    "budgetRecheck": "Budget adjusted: new check requested",
+    "budgetAbandoned": "Requisition abandoned after insufficient budget"
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -253,7 +261,9 @@
       "orderDate": "Order date",
       "deliveryDate": "Delivery date",
       "total": "Total amount",
-      "thanks": "Thank you for your business."
+      "thanks": "Thank you for your business.",
+      "confirmPortal": "Please confirm this order (planned delivery date) or let us know of any issue from your supplier area: {link}",
+      "confirmReply": "Please confirm receipt of this order and the planned delivery date by replying to this email."
     },
     "passwordRequest": {
       "subject": "procureApp — Confirm your password reset",
@@ -307,6 +317,12 @@
     "stockReturn": {
       "title": "Return recorded: {number}",
       "message": "Return {number} of {count} item(s) was recorded by logistics."
+    },
+    "supplierConfirmation": {
+      "confirmedTitle": "Order confirmed: {number}",
+      "confirmedMessage": "{supplier} confirmed order {number}. Planned delivery: {date}.",
+      "declinedTitle": "Order declined by the supplier: {number}",
+      "declinedMessage": "{supplier} declined order {number} — reason: {reason}. Decide what to do next (renegotiation, another supplier…)."
     }
   },
   "pdf": {
@@ -359,7 +375,8 @@
         "PO_REJECTED": "Rejected",
         "PO_SENT": "Sent to supplier",
         "PO_RECEIVED": "Received",
-        "PO_COMPLETE": "Completed"
+        "PO_COMPLETE": "Completed",
+        "PO_CONFIRMED": "Confirmed by supplier"
       }
     },
     "grn": {
@@ -506,6 +523,30 @@
       "collectedBy": "Collected by",
       "receiverSignature": "Receiver (received in good order)",
       "transferCancelledOn": "Transfer cancelled by {name} on {date} — reason: {reason}. The items went back to the source warehouse."
+    },
+    "stockReturn": {
+      "title": "RETURN NOTE",
+      "date": "Date",
+      "returnedBy": "Returned by",
+      "name": "Name",
+      "email": "Email",
+      "department": "Department",
+      "warehouse": "Return warehouse",
+      "receivedBy": "Received by",
+      "comment": "Comment",
+      "no": "No.",
+      "code": "Code",
+      "item": "Item",
+      "lotOrSerial": "Lot / serial number",
+      "issue": "Issue note",
+      "quantity": "Quantity",
+      "condition": "Condition",
+      "conditionGOOD": "Good",
+      "conditionDAMAGED": "Damaged",
+      "conditionLOST": "Lost",
+      "storekeeper": "Storekeeper",
+      "returnerSignature": "Returned by",
+      "signature": "Date and signature:"
     }
   },
   "stockExport": {
@@ -521,6 +562,51 @@
     "quantity": "Quantity",
     "unit": "Unit",
     "minimum": "Minimum stock",
-    "warehouses": "Warehouses"
+    "warehouses": "Warehouses",
+    "sheetValuation": "Valuation",
+    "averageCost": "Average cost (WAC)",
+    "value": "Value",
+    "currency": "Currency",
+    "valuationStatus": "Valuation",
+    "totalValue": "Total stock value",
+    "valuation": {
+      "VALUED": "Valued",
+      "NO_COST": "Not valued (no known cost)",
+      "MIXED_CURRENCY": "Not valued (several currencies)"
+    }
+  },
+  "auditActions": {
+    "LOGIN_SUCCESS": "Successful sign-in",
+    "LOGIN_FAILED": "Failed sign-in",
+    "LOGIN_BLOCKED": "Sign-in blocked (too many failures)",
+    "LOGOUT": "Sign-out",
+    "PASSWORD_CHANGED": "Password changed",
+    "PASSWORD_CHANGE_FAILED": "Failed password change",
+    "PASSWORD_RESET_REQUESTED": "Forgot password: link requested",
+    "PASSWORD_RESET_CONFIRMED": "Password reset (link confirmed)",
+    "PASSWORD_RESET_INVALID_LINK": "Invalid reset link",
+    "PASSWORD_RESET_BY_ADMIN": "Password reset by an admin",
+    "SUPPLIER_REGISTERED": "Supplier registration",
+    "USER_CREATED": "User created",
+    "USER_UPDATED": "User updated",
+    "USER_ACTIVATED": "User activated",
+    "USER_DEACTIVATED": "User deactivated",
+    "USER_DELETED": "User deleted",
+    "WAREHOUSE_ACCESS_CHANGED": "Warehouse access changed",
+    "AUDIT_LOG_EXPORTED": "Audit log exported"
+  },
+  "auditExport": {
+    "sheet": "Audit log",
+    "col": {
+      "date": "Date",
+      "action": "Action",
+      "enterprise": "Company",
+      "actor": "Author",
+      "target": "Account concerned",
+      "details": "Details",
+      "before": "Before change",
+      "ip": "IP address",
+      "userAgent": "Browser"
+    }
   }
 }

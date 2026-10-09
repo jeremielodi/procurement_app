@@ -135,7 +135,12 @@
     "stockIssues": "Sorties",
     "myItems": "Mes articles reçus",
     "stockReturns": "Retours",
-    "equipment": "Équipements"
+    "equipment": "Équipements",
+    "supplierOrders": "Mes commandes",
+    "stockCounts": "Inventaires",
+    "stockAdjustments": "Ajustements",
+    "stockValuation": "Valorisation",
+    "auditLog": "Journal d'audit"
   },
   "header": {
     "toggleSidebar": "Afficher / masquer le menu",
@@ -182,7 +187,8 @@
     "ACTIVE": "Actif",
     "INACTIVE": "Inactif",
     "LOCKED": "Verrouillé",
-    "ARCHIVED": "Archivé"
+    "ARCHIVED": "Archivé",
+    "PO_CONFIRMED": "Confirmée"
   },
   "requisitionStatus": {
     "DRAFT": "Brouillon",
@@ -630,7 +636,9 @@
       "newRequest": "Faire une nouvelle demande",
       "emailFailed": "L'email n'a pas pu être envoyé : votre mot de passe n'a pas été modifié. Réessayez plus tard.",
       "missingToken": "Lien incomplet : ouvrez le lien reçu par email."
-    }
+    },
+    "tooManyAttempts_one": "Trop de tentatives de connexion échouées. Réessayez dans {{count}} minute, ou utilisez « Mot de passe oublié ».",
+    "tooManyAttempts_other": "Trop de tentatives de connexion échouées. Réessayez dans {{count}} minutes, ou utilisez « Mot de passe oublié »."
   },
   "supplierFields": {
     "companyName": "Raison sociale",
@@ -1312,7 +1320,41 @@
     "viewerSupplier": "Fournisseur :",
     "viewerAmount": "Montant :",
     "viewerDate": "Date :",
-    "pdfTitle": "Bon de commande PDF"
+    "pdfTitle": "Bon de commande PDF",
+    "supplierConfirmation": {
+      "title": "Confirmation du fournisseur",
+      "awaiting": "En attente de la confirmation du fournisseur",
+      "confirmed": "Commande confirmée par le fournisseur",
+      "declined": "Commande déclinée par le fournisseur",
+      "sentOn": "Envoyée au fournisseur le {{date}}",
+      "viaPortal": "via le portail fournisseur",
+      "viaProcurement": "saisie par les achats",
+      "promisedDelivery": "Livraison prévue",
+      "reference": "Référence fournisseur",
+      "reasonLabel": "Motif",
+      "commentLabel": "Commentaire",
+      "reasonPlaceholder": "Ex. rupture de stock, délai impossible…",
+      "commentPlaceholder": "Ex. confirmé par téléphone par M. …",
+      "record": "Enregistrer la réponse du fournisseur",
+      "recordTitle": "Réponse du fournisseur — {{number}}",
+      "responses": {
+        "CONFIRMED": "Confirme la commande",
+        "DECLINED": "Décline la commande"
+      },
+      "confirmEffect": "La commande passe à « Confirmée » et l'étape GoFlow « Confirmation fournisseur » est terminée : la réception peut commencer.",
+      "declineEffect": "L'étape reste ouverte : relancez ou renégociez avec le fournisseur, puis enregistrez sa confirmation (ou annulez la commande).",
+      "hint": "Le fournisseur peut répondre lui-même depuis son portail (s'il a un compte) ; sinon, enregistrez ici la réponse reçue par téléphone ou email.",
+      "recorded": "Confirmation enregistrée",
+      "recordedTask": "Confirmation enregistrée : l'étape GoFlow est terminée",
+      "declinedRecorded": "Refus enregistré",
+      "err": {
+        "ALREADY_CONFIRMED": "Cette commande est déjà confirmée",
+        "NOT_RESPONDABLE": "Cette commande n'attend pas de confirmation",
+        "REASON_REQUIRED": "Indiquez le motif du refus",
+        "INVALID_DATE": "Date de livraison invalide",
+        "DATE_IN_PAST": "La date de livraison prévue est déjà passée"
+      }
+    }
   },
   "grnStatus": {
     "DRAFT": "Brouillon",
@@ -1872,7 +1914,46 @@
     "changeLogo": "Changer le logo",
     "logoHint": "Affiché sur vos offres PDF. PNG, JPG ou WEBP — 2 Mo max.",
     "categoriesHint": "Chaque entreprise vous préqualifie catégorie par catégorie",
-    "docsHint": "Un nouveau fichier remplace le précédent à l'enregistrement — 5 Mo max."
+    "docsHint": "Un nouveau fichier remplace le précédent à l'enregistrement — 5 Mo max.",
+    "orders": {
+      "title": "Mes commandes",
+      "subtitle": "Bons de commande reçus des entreprises : confirmez-les ou signalez un empêchement",
+      "none": "Aucun bon de commande pour le moment",
+      "notFound": "Bon de commande introuvable",
+      "toConfirm_one": "{{count}} bon de commande attend votre confirmation.",
+      "toConfirm_other": "{{count}} bons de commande attendent votre confirmation.",
+      "view": "Voir mes commandes",
+      "number": "N° de commande",
+      "buyer": "Acheteur",
+      "orderDate": "Date de commande",
+      "requestedDelivery": "Livraison demandée",
+      "amount": "Montant total",
+      "shippingAddress": "Adresse de livraison",
+      "item": "Article",
+      "quantity": "Quantité",
+      "unitPrice": "Prix unitaire",
+      "total": "Total",
+      "pdf": "Bon de commande (PDF)",
+      "fromBuyer": "Commande de {{buyer}} du {{date}}",
+      "pleaseConfirm": "Cette commande attend votre réponse : confirmez-la en indiquant la date de livraison prévue, ou déclinez-la en expliquant pourquoi.",
+      "declinedCanConfirm": "Vous avez décliné cette commande. Si la situation a changé (après échange avec l'acheteur), vous pouvez encore la confirmer.",
+      "confirm": "Confirmer la commande",
+      "decline": "Décliner",
+      "sendDecline": "Envoyer le refus",
+      "confirmTitle": "Confirmer la commande",
+      "declineTitle": "Décliner la commande",
+      "yourReference": "Votre référence (facultatif)",
+      "declinePlaceholder": "Ex. rupture de stock, délai impossible, prix à revoir…",
+      "confirmedToast": "Commande confirmée : l'acheteur est prévenu",
+      "declinedToast": "Refus transmis à l'acheteur",
+      "confirmedOn": "Vous avez confirmé cette commande le {{date}} — livraison prévue : {{delivery}}",
+      "declinedOn": "Vous avez décliné cette commande le {{date}}",
+      "status": {
+        "TO_CONFIRM": "À confirmer",
+        "CONFIRMED": "Confirmée",
+        "DECLINED": "Déclinée"
+      }
+    }
   },
   "docReview": {
     "VERIFIED": "Vérifié",
@@ -2484,7 +2565,14 @@
       "lastMovements": "Derniers mouvements",
       "allMovements": "Tous les mouvements",
       "serials": "N° de série",
-      "trackSerialsLabel": "Équipement suivi par n° de série (affecté puis récupéré : ordinateur, téléphone, GPS…)"
+      "trackSerialsLabel": "Équipement suivi par n° de série (affecté puis récupéré : ordinateur, téléphone, GPS…)",
+      "restock_one": "Réapprovisionner ({{count}} article)",
+      "restock_other": "Réapprovisionner ({{count}} articles)",
+      "nothingToRestock": "Aucun article sous le stock minimum",
+      "restockTitle": "Réapprovisionnement du stock — {{date}}",
+      "restockJustification": "Articles sous le stock minimum (stock / minimum) : {{list}}",
+      "reorderQuantity": "Quantité de réapprovisionnement",
+      "reorderHint": "Facultatif : quantité proposée sous le minimum"
     },
     "mv": {
       "title": "Mouvements de stock",
@@ -2594,7 +2682,10 @@
         "ISSUED": "Remis",
         "ACKNOWLEDGED": "Réception confirmée",
         "PENDING_ACK": "En attente de confirmation",
-        "CANCELLED": "Annulé"
+        "CANCELLED": "Annulé",
+        "IN_TRANSIT": "En transit",
+        "RECEIVED": "Réceptionné",
+        "RECEIVED_SHORT": "Réceptionné avec manque"
       },
       "err": {
         "warehouse": "Choisissez le dépôt",
@@ -2652,13 +2743,27 @@
       "transferHint": "Transfert : les lots (même périmés, si vous les choisissez) et le matériel endommagé partent tels quels.",
       "saveTransfer": "Enregistrer le transfert",
       "pdfTransfer": "Bon de transfert (PDF)",
-      "ackTransferText": "Vous confirmez que les articles sont bien arrivés au dépôt {{name}}.",
-      "ackTransferPrompt": "Transfert vers un dépôt auquel vous avez accès : vérifiez les articles puis confirmez leur arrivée.",
+      "ackTransferText": "Saisissez les quantités effectivement arrivées au dépôt « {{name}} ».",
+      "ackTransferPrompt": "Transfert en transit vers un dépôt auquel vous avez accès : comptez les articles arrivés puis réceptionnez-les. Le stock n'entre dans ce dépôt qu'à la réception.",
       "ackDeptPrompt": "Sortie pour votre département : vérifiez les articles puis confirmez leur réception.",
       "cancelTransfer": "Annuler le transfert",
-      "cancelTransferText": "Les articles repartiront du dépôt de destination vers le dépôt d'origine (écritures inverses). Impossible si une partie a déjà été utilisée au dépôt de destination.",
+      "cancelTransferText": "Les articles en transit reviendront au dépôt d'origine. Si le transfert a déjà été réceptionné, les quantités reçues repartiront du dépôt de destination (impossible si elles y ont été utilisées).",
       "transferCancelled": "Transfert annulé : articles revenus au dépôt d'origine",
-      "transferMovements": "Sortie / entrée"
+      "transferMovements": "Sortie / entrée",
+      "receive": "Réceptionner",
+      "received": "Transfert réceptionné",
+      "receivedShort_one": "Transfert réceptionné — {{count}} ligne avec manque (perte en transit)",
+      "receivedShort_other": "Transfert réceptionné — {{count}} lignes avec manque (perte en transit)",
+      "receivedQty": "Reçu",
+      "sentQty": "Expédié",
+      "inTransitShort": "en transit",
+      "transitLoss": "manque {{qty}}",
+      "unitReceived": "Reçu",
+      "unitMissing": "Non reçu (perdu)",
+      "receiveInvalid": "Quantité reçue invalide : entre 0 et la quantité expédiée",
+      "receiveShortWarning_one": "{{count}} ligne reçue en quantité inférieure : la différence sera enregistrée comme perte en transit (équipement non reçu = « perdu »).",
+      "receiveShortWarning_other": "{{count}} lignes reçues en quantité inférieure : la différence sera enregistrée comme perte en transit (équipement non reçu = « perdu »).",
+      "cancelReceivedTransferText": "Les quantités reçues repartiront du dépôt de destination vers le dépôt d'origine (écritures inverses) ; les pertes en transit restent enregistrées. Impossible si une partie a déjà été utilisée au dépôt de destination."
     },
     "return": {
       "title": "Retours en stock",
@@ -2713,7 +2818,8 @@
         "USER": "Un employé",
         "DEPARTMENT": "Un département"
       },
-      "chooseDepartment": "Choisir le département"
+      "chooseDepartment": "Choisir le département",
+      "pdf": "Bon de retour (PDF)"
     },
     "equipment": {
       "title": "Équipements",
@@ -2734,7 +2840,8 @@
         "IN_STOCK": "En stock",
         "ASSIGNED": "Affecté",
         "LOST": "Perdu",
-        "RETIRED": "Réformé"
+        "RETIRED": "Réformé",
+        "IN_TRANSIT": "En transit"
       },
       "condition": {
         "GOOD": "Bon état",
@@ -2755,6 +2862,139 @@
       "updated": "Équipement mis à jour",
       "truncated": "{{shown}} affichés sur {{total}} : affinez la recherche",
       "departmentHolder": "Département {{name}}"
+    },
+    "count": {
+      "title": "Inventaires",
+      "subtitle": "Comptage physique des dépôts et ajustement des écarts",
+      "new": "Nouvel inventaire",
+      "openAction": "Ouvrir l'inventaire",
+      "none": "Aucun inventaire",
+      "number": "N° d'inventaire",
+      "scope": "Périmètre",
+      "wholeWarehouse": "Tout le dépôt",
+      "progress": "Comptage",
+      "differences": "Écarts",
+      "commentPlaceholder": "Ex. inventaire annuel, contrôle trimestriel…",
+      "openHint": "Le stock attendu est photographié à l'ouverture. Comptez de préférence juste après, en limitant les mouvements pendant le comptage ; un seul inventaire peut être ouvert par dépôt.",
+      "opened_one": "Inventaire {{number}} ouvert : {{count}} ligne à compter",
+      "opened_other": "Inventaire {{number}} ouvert : {{count}} lignes à compter",
+      "notFound": "Inventaire introuvable",
+      "openedBy": "ouvert par {{name}} le {{date}}",
+      "validatedOn": "Validé par {{name}} le {{date}} : les écarts ont été passés en ajustements de stock.",
+      "cancelledOn": "Annulé par {{name}} le {{date}} — motif : {{reason}}",
+      "unsaved": "Modifications non enregistrées",
+      "filter": "Filtrer (code, article, lot, n° de série)…",
+      "blind": "Comptage à l'aveugle",
+      "showExpected": "Afficher l'attendu",
+      "fillExpected": "Reporter l'attendu",
+      "fillExpectedHint": "Remplit les lignes non comptées avec la quantité attendue (à vérifier ligne par ligne)",
+      "addFound": "Stock trouvé",
+      "addFoundHint": "Article présent dans le dépôt mais absent de la liste (lot non enregistré, entrée oubliée…). Les équipements trouvés s'enregistrent avec leur n° de série (Équipements → Enregistrer le parc existant).",
+      "foundBadge": "trouvé",
+      "save": "Enregistrer le comptage",
+      "saved_one": "{{count}} ligne enregistrée",
+      "saved_other": "{{count}} lignes enregistrées",
+      "lineAdded": "Ligne ajoutée",
+      "lotOrSerial": "Lot / n° de série",
+      "expected": "Attendu",
+      "counted": "Compté",
+      "difference": "Écart",
+      "note": "Remarque",
+      "present": "Présent",
+      "missing": "Absent",
+      "noLines": "Aucune ligne",
+      "validate": "Valider l'inventaire",
+      "validateTitle": "Valider l'inventaire ?",
+      "validateText_one": "{{count}} écart sera passé en ajustement de stock. Les équipements absents seront déclarés perdus. Cette action est définitive.",
+      "validateText_other": "{{count}} écarts seront passés en ajustements de stock. Les équipements absents seront déclarés perdus. Cette action est définitive.",
+      "validated_one": "Inventaire validé : {{count}} ajustement",
+      "validated_other": "Inventaire validé : {{count}} ajustements",
+      "saveFirst": "Enregistrez d'abord le comptage",
+      "validationByAdmin": "La validation des écarts est réservée à l'administrateur.",
+      "cancel": "Annuler l'inventaire",
+      "cancelTitle": "Annuler l'inventaire ?",
+      "cancelText": "Aucun ajustement ne sera passé. Un nouvel inventaire pourra être ouvert.",
+      "cancelled": "Inventaire annulé",
+      "status": {
+        "OPEN": "En cours",
+        "VALIDATED": "Validé",
+        "CANCELLED": "Annulé"
+      },
+      "err": {
+        "COUNT_ALREADY_OPEN": "Un inventaire est déjà en cours dans ce dépôt",
+        "NOT_COMPLETE_one": "{{count}} ligne n'est pas encore comptée",
+        "NOT_COMPLETE_other": "{{count}} lignes ne sont pas encore comptées",
+        "NOT_COMPLETE": "Toutes les lignes doivent être comptées",
+        "BALANCE_CHANGED": "Le stock a changé depuis l'ouverture",
+        "COUNT_CLOSED": "Inventaire déjà validé ou annulé",
+        "LINE_EXISTS": "Cet article (et ce lot) est déjà dans l'inventaire",
+        "SERIAL_ITEM": "Équipement : enregistrez-le avec son n° de série",
+        "EXPIRY_REQUIRED": "Date de péremption obligatoire",
+        "LOT_REQUIRED": "N° de lot obligatoire",
+        "INVALID_QUANTITY": "Quantité invalide",
+        "INVALID_UNIT_COUNT": "Équipement : présent ou absent",
+        "WAREHOUSE_FORBIDDEN": "Vous n'avez pas accès à ce dépôt",
+        "ITEM_NOT_STOCKABLE": "Article non stocké",
+        "chooseItem": "Choisissez l'article"
+      }
+    },
+    "adjust": {
+      "title": "Ajustements de stock",
+      "subtitle": "Corrections ponctuelles motivées : casse, perte, vol, péremption, stock trouvé…",
+      "new": "Nouvel ajustement",
+      "none": "Aucun ajustement",
+      "number": "N° d'ajustement",
+      "reason": "Motif",
+      "by": "Par",
+      "unit": "Équipement",
+      "chooseUnit": "Choisir l'équipement (n° de série)",
+      "chooseLot": "Choisir le lot",
+      "direction": {
+        "OUT": "Sortie (−)",
+        "IN": "Entrée (+)"
+      },
+      "reasons": {
+        "DAMAGE": "Casse / détérioration",
+        "LOSS": "Perte",
+        "THEFT": "Vol",
+        "EXPIRED": "Périmé",
+        "FOUND": "Stock trouvé",
+        "CORRECTION": "Correction de saisie",
+        "OTHER": "Autre"
+      },
+      "commentPlaceholder": "Explication (obligatoire)",
+      "hint": "Chaque ajustement crée un mouvement de stock tracé ; pour un écart constaté sur tout un dépôt, préférez un inventaire.",
+      "serialHint": "L'équipement sort du stock : déclaré perdu (perte, vol) ou réformé (autres motifs). Un équipement en plus s'enregistre via Équipements.",
+      "created": "Ajustement {{number}} enregistré",
+      "err": {
+        "STOCK_INSUFFICIENT": "Stock insuffisant",
+        "COMMENT_REQUIRED": "Expliquez l'ajustement",
+        "INVALID_REASON": "Motif invalide",
+        "LOT_REQUIRED": "Choisissez le lot",
+        "UNIT_REQUIRED": "Choisissez l'équipement",
+        "UNIT_UNAVAILABLE": "Équipement introuvable dans ce dépôt",
+        "INVALID_QUANTITY": "Quantité invalide",
+        "WAREHOUSE_FORBIDDEN": "Vous n'avez pas accès à ce dépôt",
+        "ITEM_NOT_STOCKABLE": "Article non stocké"
+      }
+    },
+    "valuation": {
+      "title": "Valorisation du stock",
+      "subtitle": "Valeur du stock au coût moyen unitaire pondéré (CMUP)",
+      "asOf": "À la date du",
+      "allWarehouses": "Toute l'entreprise",
+      "total": "Valeur totale",
+      "items": "Articles en stock",
+      "notValued": "Articles non valorisés",
+      "averageCost": "Coût moyen (CMUP)",
+      "value": "Valeur",
+      "none": "Aucun article en stock",
+      "status": {
+        "NO_COST": "Non valorisé : aucun coût connu",
+        "MIXED_CURRENCY": "Non valorisé : plusieurs devises",
+        "VALUED": "Valorisé"
+      },
+      "method": "CMUP recalculé à partir du journal des mouvements : chaque réception (au prix du bon de commande) met à jour le coût moyen ; les sorties partent au coût moyen ; les transferts entre dépôts sont sans effet. Un article reçu dans plusieurs devises, ou sans aucun coût connu (stock initial, ajustement), n'est pas valorisé."
     }
   },
   "help": {
@@ -2794,7 +3034,7 @@
             "type": "steps",
             "items": [
               "Réquisition (REQ-AAAA-NNNN) : le demandeur décrit ce qu'il faut acheter, les quantités, les prix estimés et la ligne budgétaire à imputer.",
-              "Vérification du budget : automatique. Si une ligne budgétaire n'a pas assez de disponible, le circuit s'arrête (« Budget insuffisant »).",
+              "Vérification du budget : automatique. Si une ligne budgétaire n'a pas assez de disponible, la réquisition passe « Budget insuffisant » : le demandeur change de ligne ou fait augmenter le budget, puis relance la vérification (ou abandonne la réquisition).",
               "Approbation : un seul niveau, choisi selon le montant — Manager (N1), Finance (N2) ou Direction générale (N3).",
               "Méthode d'achat : déterminée automatiquement selon le montant (achat direct, devis multiples, appel d'offres) ou source unique justifiée.",
               "Choix du fournisseur : devis, appel d'offres publié sur le portail fournisseurs, ou fournisseur unique.",
@@ -2828,6 +3068,10 @@
           {
             "type": "p",
             "text": "procureApp est une plateforme multi-entreprise : chaque entreprise ne voit que ses propres données (réquisitions, commandes, stock, budget, utilisateurs). Les fournisseurs, eux, sont communs à toute la plateforme et voient les appels d'offres de toutes les entreprises qui les y invitent."
+          },
+          {
+            "type": "tip",
+            "text": "La barre de recherche en haut de l'écran retrouve en quelques lettres une réquisition, un bon de commande, une réception, une facture, un fournisseur, un appel d'offres ou un article du stock (n°, désignation, fournisseur…). Seuls les éléments que vous avez le droit de consulter apparaissent."
           },
           {
             "type": "tip",
@@ -3069,7 +3313,19 @@
           },
           {
             "type": "p",
-            "text": "Dès la soumission, chaque ligne budgétaire utilisée est contrôlée : son disponible doit couvrir le total des articles qui lui sont imputés. Si une seule ligne est insuffisante, la réquisition passe au statut « Budget insuffisant » et le demandeur reçoit la tâche « Ajustement budgétaire » : la traiter clôt la réquisition (statut « Rejeté »). Faites ajuster le budget par la Finance (ou choisissez une autre ligne), puis soumettez une nouvelle réquisition."
+            "text": "Dès la soumission, chaque ligne budgétaire utilisée est contrôlée : son disponible doit couvrir le total des articles qui lui sont imputés. Si une seule ligne est insuffisante, la réquisition passe au statut « Budget insuffisant » et le demandeur reçoit la tâche « Ajustement budgétaire ». La fiche de la réquisition affiche alors, ligne par ligne, le demandé, le disponible et le manque."
+          },
+          {
+            "type": "h",
+            "text": "Budget insuffisant : ajuster puis relancer"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Changez la ligne budgétaire des articles concernés (« Changer de ligne ») ou demandez à la Finance d'augmenter le budget de la ligne, puis rechargez la page.",
+              "Quand toutes les lignes sont suffisantes, cliquez sur « Relancer la vérification du budget » : la même réquisition repart dans le circuit d'approbation, sans ressaisie.",
+              "Si l'achat n'est plus nécessaire, « Abandonner la réquisition » l'annule définitivement."
+            ]
           },
           {
             "type": "h",
@@ -3261,6 +3517,18 @@
               "Depuis la tâche « Créer le bon de commande », choisissez le fournisseur (préqualifié), les dates et l'adresse de livraison. Les articles de la réquisition sont repris avec leur article du catalogue ; vous pouvez ajuster quantités et prix.",
               "Le bon de commande est créé directement « En attente d'approbation » : la direction reçoit la tâche d'approbation.",
               "Une fois approuvé, il est envoyé automatiquement par email au fournisseur (dans la langue de son compte), avec le PDF."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Confirmation du fournisseur"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Après l'envoi, la commande attend la confirmation du fournisseur (étape GoFlow « Confirmation fournisseur »). Un fournisseur inscrit répond lui-même depuis son portail (« Mes commandes ») : il confirme en indiquant la date de livraison prévue, ou décline en expliquant pourquoi.",
+              "Si le fournisseur répond par téléphone ou par email, les achats enregistrent sa réponse sur la fiche du bon de commande : « Enregistrer la réponse du fournisseur ».",
+              "Confirmée : la commande passe « Confirmée » et la réception peut commencer. Déclinée : l'étape reste ouverte ; relancez ou renégociez, puis enregistrez la confirmation (ou annulez la commande)."
             ]
           },
           {
@@ -3463,7 +3731,7 @@
               ],
               [
                 "Stock minimum",
-                "Alerte quand le stock total passe en dessous."
+                "Alerte quand le stock total passe en dessous. Avec une « Quantité de réapprovisionnement », l'article est proposé au réapprovisionnement."
               ]
             ]
           },
@@ -3484,6 +3752,50 @@
             ]
           },
           {
+            "type": "h",
+            "text": "Inventaire physique"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Stock → Inventaires → « Nouvel inventaire » : choisissez le dépôt (tout le dépôt ou une catégorie). Les quantités attendues sont figées à l'ouverture ; un seul inventaire à la fois par dépôt.",
+              "Comptez : par défaut le comptage est « à l'aveugle » (l'attendu est masqué pour ne pas influencer). Saisissez la quantité comptée de chaque ligne ; pour un équipement, cochez « Présent » ou « Absent ». « Stock trouvé » ajoute un article ou un lot qui n'était pas prévu.",
+              "« Enregistrer le comptage » autant de fois que nécessaire, puis l'administrateur « Valider l'inventaire » : chaque écart devient un ajustement de stock, les équipements absents sont déclarés perdus."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "La validation est refusée si le stock a bougé depuis l'ouverture (réception, sortie) : annulez l'inventaire et ouvrez-en un nouveau, ou évitez les mouvements pendant le comptage."
+          },
+          {
+            "type": "h",
+            "text": "Ajustements ponctuels"
+          },
+          {
+            "type": "p",
+            "text": "Stock → Ajustements → « Nouvel ajustement » (administrateur) : entrée ou sortie d'une quantité, d'un lot ou d'un équipement précis, avec un motif obligatoire (casse, perte, vol, périmé, stock trouvé, correction de saisie, autre). Chaque ajustement est numéroté (AJU-AAAA-NNNNN) et visible dans le journal des mouvements."
+          },
+          {
+            "type": "h",
+            "text": "Réapprovisionnement"
+          },
+          {
+            "type": "p",
+            "text": "Dans la liste des articles, le bouton « Réapprovisionner » apparaît quand des articles sont sous leur stock minimum : il ouvre une nouvelle réquisition pré-remplie avec ces articles (quantité de réapprovisionnement, sinon de quoi revenir au minimum) et une justification. Complétez le projet, les lignes budgétaires et les prix, puis soumettez."
+          },
+          {
+            "type": "h",
+            "text": "Valorisation (CMUP)"
+          },
+          {
+            "type": "p",
+            "text": "Stock → Valorisation donne la valeur du stock au coût moyen unitaire pondéré : chaque réception au prix du bon de commande recalcule le coût moyen de l'article ; les sorties, transferts et ajustements se font à ce coût moyen. Valeur à une date passée, par dépôt ou pour toute l'entreprise, export Excel. Un article sans aucun coût connu (stock initial, ajustements) ou reçu dans plusieurs devises est signalé « Non valorisé »."
+          },
+          {
+            "type": "tip",
+            "text": "Le stock en transit entre deux dépôts reste compté dans la valeur de l'entreprise, mais dans aucun dépôt tant qu'il n'est pas réceptionné."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -3501,6 +3813,18 @@
               {
                 "to": "/stock/warehouses",
                 "label": "Dépôts"
+              },
+              {
+                "to": "/stock/counts",
+                "label": "Inventaires"
+              },
+              {
+                "to": "/stock/adjustments",
+                "label": "Ajustements"
+              },
+              {
+                "to": "/stock/valuation",
+                "label": "Valorisation"
               }
             ]
           }
@@ -3527,12 +3851,24 @@
               ],
               [
                 "Vers un dépôt (transfert)",
-                "Le stock passe du dépôt source au dépôt de destination (sortie + entrée), avec les mêmes lots et n° de série. Les utilisateurs du dépôt de destination sont prévenus et l'un d'eux confirme l'arrivée. Bon de transfert PDF."
+                "Les articles quittent le dépôt source et sont « En transit » jusqu'à leur réception au dépôt de destination (mêmes lots et n° de série). Les utilisateurs du dépôt de destination sont prévenus ; l'un d'eux réceptionne en saisissant les quantités arrivées. Bon de transfert PDF."
               ],
               [
                 "Vers un département",
                 "Articles sortis pour un service (consommation ou matériel du service). Indiquez si besoin la personne qui les retire : elle confirme la réception ; sinon, c'est le responsable du département. Un équipement est affecté au département."
               ]
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Recevoir un transfert"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Ouvrez le bon (notification, ou liste des sorties filtrée sur « En transit ») et cliquez sur « Réceptionner ».",
+              "Les quantités expédiées sont proposées : corrigez celles qui sont arrivées en moins ; pour un équipement, décochez s'il n'est pas arrivé.",
+              "À la validation, seul le reçu entre dans le dépôt. Le manque est enregistré comme perte en transit (le bon passe « Réceptionné avec manque ») et un équipement non reçu est déclaré perdu."
             ]
           },
           {
@@ -3560,12 +3896,12 @@
             "type": "list",
             "items": [
               "Remise (employé, département) : « Annuler / retour en stock » remet tout en stock par des écritures inverses, avec un motif obligatoire. Impossible si une partie a déjà été rendue : enregistrez un retour.",
-              "Transfert : « Annuler le transfert » renvoie les articles au dépôt d'origine. Refusé si une partie du stock transféré a déjà été utilisée au dépôt de destination."
+              "Transfert : « Annuler le transfert ». En transit, tout revient au dépôt d'origine. Déjà réceptionné, les quantités reçues repartent du dépôt de destination (les pertes en transit restent enregistrées) — refusé si une partie a déjà été utilisée au dépôt de destination."
             ]
           },
           {
             "type": "p",
-            "text": "La liste des sorties se filtre par type, dépôt (sorties et transferts reçus) et statut. Dans le journal des mouvements, une flèche indique la destination (→) ou le dépôt d'origine d'un transfert reçu (←)."
+            "text": "La liste des sorties se filtre par type, dépôt (sorties et transferts reçus) et statut, dont « En transit ». Dans le journal des mouvements, une flèche indique la destination (→) ou le dépôt d'origine d'un transfert reçu (←)."
           },
           {
             "type": "links",
@@ -3612,7 +3948,7 @@
           },
           {
             "type": "p",
-            "text": "Stock → Retours → « Nouveau retour » (ou « Récupérer » depuis l'écran Équipements) : choisissez « Un employé » ou « Un département », puis la personne ou le service ; tout ce qu'il détient s'affiche, toutes sorties confondues. Cochez ce qui est rendu (« Tout récupérer » pour un départ), indiquez l'état et le dépôt de retour. Le retour fonctionne aussi pour des consommables non utilisés, en quantité partielle."
+            "text": "Stock → Retours → « Nouveau retour » (ou « Récupérer » depuis l'écran Équipements) : choisissez « Un employé » ou « Un département », puis la personne ou le service ; tout ce qu'il détient s'affiche, toutes sorties confondues. Cochez ce qui est rendu (« Tout récupérer » pour un départ), indiquez l'état et le dépôt de retour. Le retour fonctionne aussi pour des consommables non utilisés, en quantité partielle. Chaque retour (RET-AAAA-NNNNN) a son « Bon de retour (PDF) » à faire signer par la personne qui rend le matériel et par le magasinier."
           },
           {
             "type": "table",
@@ -3741,8 +4077,20 @@
             ]
           },
           {
-            "type": "tip",
-            "text": "Les actions sensibles (connexions, mots de passe, gestion des utilisateurs, accès aux dépôts) sont enregistrées dans le journal d'audit."
+            "type": "h",
+            "text": "Journal d'audit"
+          },
+          {
+            "type": "p",
+            "text": "Administration → Journal d'audit (administrateur d'entreprise : son entreprise ; super administrateur : toute la plateforme, filtrable par entreprise) : qui a fait quoi, quand et depuis quelle adresse IP."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Onglets : connexions, mots de passe, comptes utilisateurs, accès et exports, « Échecs et blocages » (connexions refusées ou bloquées, liens invalides…).",
+              "Filtres par action, période et recherche (email, nom, adresse IP) ; un clic sur une ligne affiche le détail : valeurs avant / après une modification, navigateur.",
+              "« Exporter (Excel) » télécharge les événements filtrés (20 000 au plus). L'export est lui-même enregistré dans le journal."
+            ]
           },
           {
             "type": "links",
@@ -3758,6 +4106,10 @@
               {
                 "to": "/settings/enterprise",
                 "label": "Mon entreprise"
+              },
+              {
+                "to": "/admin/audit",
+                "label": "Journal d'audit"
               }
             ]
           }
@@ -3799,7 +4151,7 @@
         "faq": [
           {
             "q": "Ma réquisition est « Budget insuffisant ».",
-            "a": "Une ligne budgétaire n'avait pas assez de disponible. Traitez la tâche « Ajustement budgétaire » (la réquisition est clôturée), contactez la Finance pour ajuster le budget ou choisissez une autre ligne, puis soumettez une nouvelle réquisition."
+            "a": "Une ligne budgétaire n'avait pas assez de disponible. Ouvrez la réquisition : changez la ligne des articles concernés ou faites augmenter le budget par la Finance, puis « Relancer la vérification du budget ». Si l'achat n'est plus utile, « Abandonner la réquisition »."
           },
           {
             "q": "Personne ne reçoit la tâche d'approbation.",
@@ -3836,6 +4188,18 @@
           {
             "q": "Un menu décrit ici n'apparaît pas chez moi.",
             "a": "Votre profil ne le permet pas. Demandez la permission à votre administrateur puis reconnectez-vous."
+          },
+          {
+            "q": "Le fournisseur ne confirme pas la commande.",
+            "a": "Tant qu'il n'a pas répondu, la commande reste « Envoyée » et la réception ne peut pas commencer. Relancez-le ; s'il répond par téléphone ou par email, enregistrez sa réponse sur la fiche du bon de commande (« Enregistrer la réponse du fournisseur »)."
+          },
+          {
+            "q": "Un transfert n'apparaît pas dans le stock du dépôt de destination.",
+            "a": "Il est « En transit » : le stock n'entre dans le dépôt de destination qu'à la réception. Un utilisateur de ce dépôt doit ouvrir le bon et cliquer sur « Réceptionner »."
+          },
+          {
+            "q": "La valorisation indique « Non valorisé » pour un article.",
+            "a": "Aucun coût n'est connu pour cet article (stock initial ou ajustements uniquement, sans réception au prix d'un bon de commande), ou il a été reçu dans plusieurs devises. Sa quantité est comptée, pas sa valeur."
           }
         ]
       },
@@ -3870,6 +4234,18 @@
             ]
           },
           {
+            "type": "h",
+            "text": "Vos commandes"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Quand une entreprise vous attribue une commande, vous recevez un email et elle apparaît dans « Mes commandes » (le tableau de bord signale celles qui attendent votre réponse).",
+              "Ouvrez la commande : articles, quantités, prix, adresse et date de livraison demandées, bon de commande PDF.",
+              "« Confirmer la commande » en indiquant la date de livraison prévue (et votre référence si vous le souhaitez), ou « Décliner » en expliquant le motif. L'acheteur est prévenu immédiatement. Une commande déclinée peut encore être confirmée si la situation change."
+            ]
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -3883,11 +4259,132 @@
               {
                 "to": "/supplier/profile",
                 "label": "Mon profil"
+              },
+              {
+                "to": "/supplier/orders",
+                "label": "Mes commandes"
               }
             ]
           }
         ]
       }
     }
+  },
+  "budgetAdjust": {
+    "title": "Budget insuffisant : ajustement nécessaire",
+    "intro": "Une ou plusieurs lignes budgétaires n'ont pas assez de disponible. Affectez d'autres lignes aux articles concernés (ou faites augmenter le budget par la Finance), puis relancez la vérification : la même réquisition repart dans le circuit.",
+    "introReadOnly": "Une ou plusieurs lignes budgétaires n'ont pas assez de disponible. Le demandeur doit ajuster le budget ou abandonner la réquisition.",
+    "line": "Ligne budgétaire",
+    "requested": "Demandé",
+    "available": "Disponible",
+    "noLine": "Aucune ligne budgétaire",
+    "enough": "Suffisant",
+    "missing": "Manque {{amount}}",
+    "item": "Article",
+    "amount": "Montant",
+    "changeLine": "Changer de ligne",
+    "lineChanged": "Ligne budgétaire modifiée",
+    "financeHint": "Si aucune ligne ne convient, demandez à la Finance d'augmenter le budget de la ligne, puis rechargez la page.",
+    "retry": "Relancer la vérification du budget",
+    "abandon": "Abandonner la réquisition",
+    "retryDisabled": "Toutes les lignes doivent avoir un disponible suffisant pour relancer la vérification.",
+    "retryTitle": "Relancer la vérification du budget ?",
+    "retryText": "La vérification du budget est relancée sur cette réquisition ; si elle passe, le circuit d'approbation reprend normalement.",
+    "abandonTitle": "Abandonner la réquisition ?",
+    "abandonText": "La réquisition sera annulée et le circuit arrêté. Cette action est définitive.",
+    "commentPlaceholder": "Commentaire (facultatif)",
+    "retried": "Vérification du budget relancée",
+    "abandoned": "Réquisition abandonnée",
+    "err": {
+      "STILL_INSUFFICIENT": "Le budget est encore insuffisant sur au moins une ligne",
+      "TASK_NOT_FOUND": "Étape « Ajustement budgétaire » introuvable dans GoFlow (moteur injoignable ou processus terminé)",
+      "NOT_BUDGET_INSUFFICIENT": "Cette réquisition n'attend pas d'ajustement budgétaire",
+      "BUDGET_LINE_INVALID": "Ligne budgétaire invalide (inactive ou d'un autre projet)",
+      "FORBIDDEN": "Seul le demandeur (ou la Finance / un administrateur) peut ajuster le budget",
+      "GOFLOW_ERROR": "GoFlow n'a pas accepté la décision"
+    }
+  },
+  "search": {
+    "none": "Aucun résultat pour « {{q}} »",
+    "groups": {
+      "requisitions": "Réquisitions",
+      "purchaseOrders": "Bons de commande",
+      "goodsReceipts": "Réceptions",
+      "invoices": "Factures",
+      "suppliers": "Fournisseurs",
+      "tenders": "Appels d'offres",
+      "stockItems": "Articles du stock"
+    }
+  },
+  "audit": {
+    "title": "Journal d'audit",
+    "subtitle": "Connexions, mots de passe, gestion des comptes et des accès : qui a fait quoi, quand et depuis quelle adresse.",
+    "subtitleSuper": "Toute la plateforme : connexions, mots de passe, comptes et accès de toutes les entreprises.",
+    "actions": {
+      "LOGIN_SUCCESS": "Connexion réussie",
+      "LOGIN_FAILED": "Échec de connexion",
+      "LOGIN_BLOCKED": "Connexion bloquée (trop d'échecs)",
+      "LOGOUT": "Déconnexion",
+      "PASSWORD_CHANGED": "Mot de passe modifié",
+      "PASSWORD_CHANGE_FAILED": "Échec du changement de mot de passe",
+      "PASSWORD_RESET_REQUESTED": "Mot de passe oublié : lien demandé",
+      "PASSWORD_RESET_CONFIRMED": "Mot de passe réinitialisé (lien confirmé)",
+      "PASSWORD_RESET_INVALID_LINK": "Lien de réinitialisation invalide",
+      "PASSWORD_RESET_BY_ADMIN": "Mot de passe réinitialisé par un admin",
+      "SUPPLIER_REGISTERED": "Inscription fournisseur",
+      "USER_CREATED": "Utilisateur créé",
+      "USER_UPDATED": "Utilisateur modifié",
+      "USER_ACTIVATED": "Utilisateur activé",
+      "USER_DEACTIVATED": "Utilisateur désactivé",
+      "USER_DELETED": "Utilisateur supprimé",
+      "WAREHOUSE_ACCESS_CHANGED": "Accès à un dépôt modifiés",
+      "AUDIT_LOG_EXPORTED": "Journal d'audit exporté"
+    },
+    "groups": {
+      "all": "Tous les événements",
+      "auth": "Connexions",
+      "password": "Mots de passe",
+      "users": "Comptes utilisateurs",
+      "access": "Accès et exports",
+      "failures": "Échecs et blocages"
+    },
+    "search": "Email, nom ou adresse IP…",
+    "from": "Du",
+    "to": "Au",
+    "allActions": "Toutes les actions",
+    "allEnterprises": "Toutes les entreprises",
+    "noEnterprise": "Sans entreprise (visiteurs, fournisseurs)",
+    "export": "Exporter (Excel)",
+    "exported": "Export téléchargé",
+    "reset": "Réinitialiser",
+    "col": {
+      "date": "Date",
+      "action": "Action",
+      "actor": "Auteur",
+      "target": "Compte concerné",
+      "ip": "Adresse IP",
+      "enterprise": "Entreprise"
+    },
+    "visitor": "Visiteur non identifié",
+    "details": "Détails",
+    "before": "Avant",
+    "after": "Après",
+    "userAgent": "Navigateur",
+    "empty": "Aucun événement pour ces filtres.",
+    "total_one": "{{count}} événement",
+    "total_other": "{{count}} événements",
+    "showDetails": "Voir le détail",
+    "hideDetails": "Masquer le détail",
+    "reason": {
+      "UNKNOWN_EMAIL": "email inconnu",
+      "WRONG_PASSWORD": "mot de passe incorrect",
+      "INACTIVE_ACCOUNT": "compte désactivé",
+      "WRONG_OLD_PASSWORD": "ancien mot de passe incorrect"
+    },
+    "scope": {
+      "ACCOUNT": "compte",
+      "IP": "adresse IP"
+    },
+    "exportLimit": "L'export est limité aux 20 000 événements les plus récents des filtres choisis."
   }
 }

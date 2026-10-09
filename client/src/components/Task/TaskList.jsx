@@ -195,6 +195,8 @@ const TaskList = () => {
   // Tâches qui ont un formulaire dédié → redirection au lieu de la modale
   const FORM_TASKS = {
     'Activity_POApproval':        (t) => `/purchase-orders/${t.variables?.poId || ''}?taskId=${t.id}`,
+    'Activity_BudgetAdjustment':  (t) => `/requisitions/${t.variables?.requisitionId || t.requisitionId || ''}`,
+    'Activity_SupplierConfirmation': (t) => `/purchase-orders/${t.variables?.poId || ''}?taskId=${t.id}&confirm=1`,
     'Activity_RFPProcess':        (t) => `/tenders/new?taskId=${t.id}&requisitionId=${t.variables?.requisitionId || ''}`,
     'Activity_GoodsReceipt':      (t) => `/goods-receipts/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
     'Activity_ServiceAcceptance': (t) => `/service-acceptance-notes/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,

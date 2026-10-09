@@ -87,6 +87,23 @@ class RequisitionService {
     const response = await api.delete(`/requisitions/${id}`)
     return response.data
   }
+  // Ajustement budgétaire (budget insuffisant) : synthèse par ligne, changement de lignes, décision RETRY / ABANDON
+  // (erreurs métier affichées et traduites par le panneau)
+  async getBudgetAdjustment(id) {
+    const response = await api.get(`/requisitions/${id}/budget-adjustment`)
+    return response.data
+  }
+
+  async changeBudgetLines(id, changes) {
+    const response = await api.patch(`/requisitions/${id}/budget-lines`, { changes }, { skipErrorToast: true })
+    return response.data
+  }
+
+  async decideBudgetAdjustment(id, decision, comment) {
+    const response = await api.post(`/requisitions/${id}/budget-adjustment`, { decision, comment }, { skipErrorToast: true })
+    return response.data
+  }
+
   // Suivi lisible du workflow (étapes + historique)
   async getTimeline(id) {
     const response = await api.get(`/requisitions/${id}/timeline`)

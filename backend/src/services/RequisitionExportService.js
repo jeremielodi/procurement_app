@@ -1,5 +1,4 @@
 // backend/src/services/RequisitionExportService.js
-const puppeteer = require('puppeteer');
 const Handlebars = require('handlebars');
 const path = require('path');
 const fs = require('fs');
@@ -7,7 +6,7 @@ const ExcelJS = require('exceljs');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { getBranding } = require('../utils/enterpriseBranding');
 const i18n = require('../i18n');
-const { getBrowserOptions } = require('../config/puppeteer');
+const { renderPdf } = require('../utils/pdfRenderer');
 const { pdfContext, labels, rootLocale } = require('../utils/pdfI18n');
 const db = require('../config/database');
 
@@ -443,33 +442,11 @@ class RequisitionExportService {
    */
   /** lang : langue du document ('fr' par défaut) ; title absent → titre traduit */
   async generatePDF(requisitions, title = null, { lang } = {}) {
-    let browser = null;
-    
     try {
-      // Lancer le navigateur
-      browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--disable-gpu'
-        ]
-      });
-
-      const page = await browser.newPage();
-
-      // Générer le HTML
       const html = this.generateHTML(requisitions, title, await getBranding(), { lang });
 
-      // Charger le HTML
-      await page.setContent(html, {
-        waitUntil: 'networkidle0'
-      });
-
-      // Générer le PDF
-      const pdfBuffer = await page.pdf({
+      // PDF via le navigateur partagé (utils/pdfRenderer)
+      const pdfBuffer = await renderPdf(html, {
         format: 'A4',
         printBackground: true,
         margin: {
@@ -488,10 +465,6 @@ class RequisitionExportService {
     } catch (error) {
       console.error('Error generating PDF:', error);
       throw error;
-    } finally {
-      if (browser) {
-        await browser.close();
-      }
     }
   }
 
@@ -569,12 +542,8 @@ class RequisitionExportService {
 
     const html = Handlebars.compile(REQUISITION_DETAIL_TEMPLATE)(data);
 
-    let browser = null;
     try {
-      browser = await puppeteer.launch(getBrowserOptions());
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      return await page.pdf({
+      return await renderPdf(html, {
         format: 'A4',
         printBackground: true,
         margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' },
@@ -582,10 +551,6 @@ class RequisitionExportService {
     } catch (error) {
       console.error('Error generating requisition detail PDF:', error);
       throw error;
-    } finally {
-      if (browser) {
-        await browser.close();
-      }
     }
   }
 

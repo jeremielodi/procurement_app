@@ -12,7 +12,7 @@ const userModel = require('../models/UserModel');
 const tenant = require('../utils/tenant');
 
 const SUPPLIER_PATHS = [/^\/auth\/profile$/, /^\/supplier-portal(\/|$)/, /^\/notifications(\/|$)/];
-const SUPERADMIN_PATHS = [/^\/auth\/profile$/, /^\/locations(\/|$)/, /^\/market-categories(\/|$)/,/^\/enterprises(\/|$)/, /^\/currencies(\/|$)/, /^\/notifications(\/|$)/, /^\/profiles(\/|$)/];
+const SUPERADMIN_PATHS = [/^\/auth\/profile$/, /^\/locations(\/|$)/, /^\/market-categories(\/|$)/,/^\/enterprises(\/|$)/, /^\/currencies(\/|$)/, /^\/notifications(\/|$)/, /^\/profiles(\/|$)/, /^\/audit-logs(\/|$)/];
 
 async function ownsNotification(notificationId, userId) {
   if (!/^\d+$/.test(String(notificationId))) return false;
@@ -101,6 +101,8 @@ const PATH_RESOURCES = [
   { re: new RegExp(`^/stock-issues/(${UUID})(/|$)`), table: 'stock_issues' },
   { re: new RegExp(`^/stock-returns/(${UUID})(/|$)`), table: 'stock_returns' },
   { re: new RegExp(`^/stock-units/(${UUID})(/|$)`), table: 'stock_units' },
+  { re: new RegExp(`^/stock-counts/(${UUID})(/|$)`), table: 'stock_counts' },
+  { re: new RegExp(`^/stock-adjustments/(${UUID})(/|$)`), table: 'stock_adjustments' },
 ];
 
 // Clés de query / body → table

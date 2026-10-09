@@ -148,6 +148,19 @@ Légende : **À changer** = valeur à personnaliser avant toute mise en producti
 | `SMTP_FROM` | **À changer** | `notifications@mondomaine.com` | Adresse d'expédition. Avec Gmail, elle doit être celle du compte (ou un alias vérifié). |
 | `CONTACT_EMAIL` | Optionnel | `jeremielodi@gmail.com` | Destinataire des messages du formulaire de contact du site vitrine (réponse directe au visiteur grâce au Reply-To). |
 
+### Sécurité de la connexion (anti force brute)
+
+Seules les tentatives **échouées** comptent ; une connexion réussie remet le compteur du compte à zéro. Au-delà du seuil, la connexion est refusée (429) pendant la fenêtre, et l'événement est écrit dans le journal d'audit (`LOGIN_BLOCKED`).
+
+| Variable | Statut | Défaut | Rôle |
+|---|---|---|---|
+| `LOGIN_WINDOW_MINUTES` | Optionnel | `15` | Durée de la fenêtre glissante (et du blocage). |
+| `LOGIN_MAX_FAILURES_PER_ACCOUNT` | Optionnel | `5` | Échecs pour un même compte depuis une même IP. |
+| `LOGIN_MAX_FAILURES_PER_IP` | Optionnel | `100` | Échecs depuis une même IP, tous comptes confondus (élevé : un bureau partage souvent une seule IP publique). |
+| `LOGIN_MAX_FAILURES_PER_ACCOUNT_GLOBAL` | Optionnel | `50` | Échecs sur un même compte, toutes IP confondues. |
+
+> Derrière un reverse proxy, celui-ci doit transmettre l'en-tête `X-Forwarded-For`, sinon tous les utilisateurs apparaissent avec l'IP du proxy (et partagent le même compteur par IP). Caddy le fait par défaut ; avec Nginx, ajouter `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`. L'en-tête n'est pris en compte que si la connexion vient d'une adresse locale ou privée (le proxy), jamais directement d'Internet.
+
 ### Workflow GoFlow (Camunda)
 
 | Variable | Statut | Exemple / défaut | Description |
@@ -220,16 +233,41 @@ docker compose up -d --build
 Les scripts SQL de `database/` ne sont exécutés automatiquement **qu'à la création de la base**. Sur une base existante, appliquer les nouvelles migrations à la main (elles sont idempotentes, on peut les relancer) :
 
 ```bash
-for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations 12_audit_logs 13_stock_management 14_stock_issues 15_stock_equipment 16_stock_issue_destinations; do
+for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations 12_audit_logs 13_stock_management 14_stock_issues 15_stock_equipment 16_stock_issue_destinations 17_supplier_order_confirmation 18_stock_counts 19_stock_transfers_in_transit 20_audit_log_access; do
   docker exec -i wwf_postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < database/$f.sql
 done
 ```
 
 > `08_supplier_prequalification.sql` et `09_tender_invitations.sql` ajoutent la préqualification des fournisseurs, la vérification des documents et les appels d'offres sur invitation : à appliquer **avant** de démarrer la nouvelle version de l'application.
+>
+> **Workflow GoFlow** : quand `backend/src/bpmn/procurement-workflow.bpmn` change (ex. boucle « ajustement du budget → nouvelle vérification »), le redéployer dans GoFlow (`POST /engine-rest/deployment/create`, champ `file`) : les nouvelles réquisitions utilisent la nouvelle version, les processus en cours gardent la leur.
 
 ---
 
 ## Sauvegarde et restauration
+
+### Sauvegarde automatique (recommandé)
+
+`deploy/backup.sh` sauvegarde la base (`pg_dump`, vérifié par `pg_restore --list`), les fichiers MinIO (volume `wwf_minio_data` : toutes les versions des fichiers) et l'ancien dossier d'uploads, écrit les empreintes `SHA256SUMS`, supprime les sauvegardes de plus de `BACKUP_RETENTION_DAYS` jours (14 par défaut) et peut copier le résultat hors du serveur. Il ne lit aucun mot de passe.
+
+```bash
+cp deploy/backup.env.example deploy/backup.env      # dossier, rétention, copie distante (facultatif)
+bash deploy/backup.sh                               # essai manuel → /var/backups/procureapp/AAAA-MM-JJ_HHMMSS/
+# Tous les jours à 2 h (crontab -e, en root ou avec un utilisateur du groupe docker) :
+0 2 * * * cd /opt/procureapp && bash deploy/backup.sh >> /var/log/procureapp-backup.log 2>&1
+```
+
+- **Copie hors serveur** : `BACKUP_REMOTE=user@nas:/chemin` (rsync, clé SSH) ou `BACKUP_REMOTE=mon-remote:procureapp` (rclone : S3, Backblaze, Google Drive…). Une sauvegarde restée sur le disque du serveur ne protège ni d'une panne du disque ni d'une perte du serveur
+- **Restauration** (écrase les données actuelles ; arrête l'application pendant l'opération, demande de taper `RESTAURER`) :
+
+```bash
+bash deploy/restore.sh /var/backups/procureapp/2026-10-09_020000              # base + fichiers
+bash deploy/restore.sh /var/backups/procureapp/2026-10-09_020000 --db-only    # base seulement
+```
+
+- **Tester régulièrement** une restauration (par exemple sur un serveur de recette) : une sauvegarde jamais restaurée n'est pas une sauvegarde vérifiée. Contrôle rapide sans toucher aux données : restaurer le dump dans une base temporaire (`createdb restore_check` puis `pg_restore -d restore_check`, puis `dropdb`)
+
+### Commandes manuelles
 
 **Base de données**
 

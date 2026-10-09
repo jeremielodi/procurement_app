@@ -2,7 +2,8 @@
 // Bons de retour : liste (/stock/returns) et fiche (/stock/returns/:id).
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Undo2, Plus, RefreshCw, Search, ArrowLeft } from 'lucide-react';
+import { Undo2, Plus, RefreshCw, Search, ArrowLeft, Eye } from 'lucide-react';
+import BlobPdfViewer from '../Common/BlobPdfViewer';
 import { stockReturnService } from '../../services/stockService';
 import { usePermissions } from '../../hooks/usePermissions';
 import { t, getLocale } from '../../i18n';
@@ -83,12 +84,17 @@ export function StockReturnDetail() {
   const navigate = useNavigate();
   const [ret, setRet] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showPdf, setShowPdf] = useState(false);
   useEffect(() => { stockReturnService.get(id).then(r => setRet(r.data)).catch(() => {}).finally(() => setLoading(false)); }, [id]);
   if (loading) return <div className="flex justify-center p-10"><RefreshCw className="animate-spin text-blue-500" /></div>;
   if (!ret) return <div className="p-6 text-gray-500">{t('stock.return.notFound')}</div>;
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"><ArrowLeft size={16} /> {t('common.back')}</button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"><ArrowLeft size={16} /> {t('common.back')}</button>
+        <button onClick={() => setShowPdf(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50" data-testid="return-pdf"><Eye size={16} /> {t('stock.return.pdf')}</button>
+      </div>
+      {showPdf && <BlobPdfViewer title={ret.return_number} fileName={`${ret.return_number}.pdf`} fetchPdf={() => stockReturnService.pdf(ret.id)} onClose={() => setShowPdf(false)} />}
       <div className="rounded-xl border border-gray-200 bg-white p-5">
         <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900"><Undo2 className="text-blue-600" /> {ret.return_number}</h1>
         <p className="mt-1 text-sm text-gray-500">{fmtDateTime(ret.received_at)} · {t('stock.return.receivedByLine', { name: ret.received_by_name || '—', warehouse: ret.warehouse_name })}</p>

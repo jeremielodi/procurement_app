@@ -500,6 +500,13 @@ class TenderController {
           result: t.effective_status === 'CLOSED' ? 'PENDING' : (t.is_awarded_to_me ? 'WON' : 'LOST')
         }));
 
+      // Bons de commande en attente de ma confirmation
+      const ordersToConfirm = (await db.one(
+        `SELECT COUNT(*)::int AS n FROM purchase_orders
+         WHERE supplier_id = $1 AND status IN ('PO_APPROVED', 'PO_SENT') AND COALESCE(supplier_response, '') = ''`,
+        [supplier.id]
+      )).n;
+
       // Dossier de préqualification : champs, documents, catégories et localisations manquants
       const full = await supplierModel.getFullProfile(supplier.id);
       // Libellés dans la langue de la requête (supplierProfile.* des locales)
@@ -527,7 +534,8 @@ class TenderController {
             upcomingTenders: upcoming.length,
             submissions: submitted.length,
             won: won.length,
-            winRate: decided.length ? Math.round((won.length / decided.length) * 100) : null
+            winRate: decided.length ? Math.round((won.length / decided.length) * 100) : null,
+            ordersToConfirm
           },
           toDo,
           upcoming: upcoming.map(t => ({ id: t.id, tender_number: t.tender_number, title: t.title, start_date: t.start_date, end_date: t.end_date })),

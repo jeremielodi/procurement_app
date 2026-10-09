@@ -663,7 +663,7 @@ async function deployProcess(bpmnXml, deploymentName) {
     const blob = Buffer.from(bpmnXml, 'utf-8');
 
     formData.append('deployment-name', deploymentName);
-    formData.append('data', blob, `${deploymentName}.bpmn`);
+    formData.append('file', blob, `${deploymentName}.bpmn`); // champ attendu par GoFlow (POST /deployment/create)
 
     const headers = {
       ...formData.getHeaders(),

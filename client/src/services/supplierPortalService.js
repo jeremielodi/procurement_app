@@ -34,6 +34,27 @@ export const supplierPortalService = {
     const response = await api.get('/supplier-portal/tenders');
     return response.data;
   },
+  // Bons de commande reçus : liste (status=TO_CONFIRM : à confirmer), détail, PDF, confirmation / refus
+  getOrders: async (params = {}) => {
+    const response = await api.get('/supplier-portal/orders', { params });
+    return response.data;
+  },
+  getOrder: async (id) => {
+    const response = await api.get(`/supplier-portal/orders/${id}`);
+    return response.data;
+  },
+  getOrderPdf: async (id) => {
+    const response = await api.get(`/supplier-portal/orders/${id}/pdf`, { params: { lang: getLang() }, responseType: 'blob' });
+    return response.data;
+  },
+  confirmOrder: async (id, payload) => {
+    const response = await api.post(`/supplier-portal/orders/${id}/confirm`, payload, { skipErrorToast: true });
+    return response.data;
+  },
+  declineOrder: async (id, comment) => {
+    const response = await api.post(`/supplier-portal/orders/${id}/decline`, { comment }, { skipErrorToast: true });
+    return response.data;
+  },
   getTender: async (id) => {
     const response = await api.get(`/supplier-portal/tenders/${id}`);
     return response.data;

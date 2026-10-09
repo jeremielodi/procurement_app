@@ -3,6 +3,7 @@
 // Toutes les données sont celles de l'entreprise courante (tenant) ; les routes /warehouses/:id,
 // /stock-items/:id sont contrôlées par tenantGuard (PATH_RESOURCES).
 const ExcelJS = require('exceljs');
+const valuationService = require('../services/StockValuationService');
 const warehouseModel = require('../models/WarehouseModel');
 const stockItemModel = require('../models/StockItemModel');
 const stockModel = require('../models/StockModel');
@@ -123,6 +124,7 @@ function itemFields(body) {
     trackExpiry: bool(body.trackExpiry),
     trackSerials: bool(body.trackSerials),
     minQuantity: numOrNull(body.minQuantity),
+    reorderQuantity: numOrNull(body.reorderQuantity),
     isActive: bool(body.isActive),
   };
 }
@@ -132,6 +134,7 @@ async function validateItem(req, fields, existing = null) {
   if (fields.name !== undefined && !fields.name) return 'Désignation requise';
   if (fields.unit !== undefined && !fields.unit) return 'Unité requise';
   if (fields.minQuantity !== undefined && fields.minQuantity !== null && !(fields.minQuantity >= 0)) return 'Stock minimum invalide';
+  if (fields.reorderQuantity !== undefined && fields.reorderQuantity !== null && !(fields.reorderQuantity > 0)) return 'Quantité de réapprovisionnement invalide';
   if (fields.categoryId) {
     const category = await referenceModel.getById('market_categories', fields.categoryId);
     if (!category) return 'Catégorie introuvable';
@@ -246,6 +249,49 @@ const stock = {
     try {
       res.json({ success: true, data: await stockModel.summary() });
     } catch (error) { return serverError(res, error, 'Erreur lors du chargement de la synthèse'); }
+  },
+
+  /** GET /stock/valuation?asOf=&categoryId=&warehouseId= — valorisation au CMUP */
+  async valuation(req, res) {
+    try {
+      const asOf = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.asOf || '')) ? req.query.asOf : undefined;
+      res.json({ success: true, data: await valuationService.valuation({ asOf, categoryId: req.query.categoryId, warehouseId: req.query.warehouseId }) });
+    } catch (error) { return serverError(res, error, 'Erreur lors de la valorisation du stock'); }
+  },
+
+  /** GET /stock/valuation/export — Excel de la valorisation */
+  async exportValuation(req, res) {
+    try {
+      const T = i18n.translator(i18n.fromRequest(req));
+      const asOf = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.asOf || '')) ? req.query.asOf : undefined;
+      const data = await valuationService.valuation({ asOf, categoryId: req.query.categoryId, warehouseId: req.query.warehouseId });
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'procureApp';
+      const ws = wb.addWorksheet(T('stockExport.sheetValuation'));
+      ws.columns = [
+        { header: T('stockExport.code'), key: 'code', width: 16 },
+        { header: T('stockExport.item'), key: 'name', width: 40 },
+        { header: T('stockExport.unit'), key: 'unit', width: 10 },
+        { header: T('stockExport.quantity'), key: 'quantity', width: 14, style: { numFmt: '#,##0.####' } },
+        { header: T('stockExport.averageCost'), key: 'average_cost', width: 16, style: { numFmt: '#,##0.0000' } },
+        { header: T('stockExport.value'), key: 'value', width: 18, style: { numFmt: '#,##0.00' } },
+        { header: T('stockExport.currency'), key: 'currency', width: 10 },
+        { header: T('stockExport.valuationStatus'), key: 'status', width: 30 },
+      ];
+      ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
+      ws.views = [{ state: 'frozen', ySplit: 1 }];
+      for (const r of data.items) ws.addRow({ ...r, status: T(`stockExport.valuation.${r.status}`) });
+      ws.addRow({});
+      for (const tot of data.totals) {
+        const row = ws.addRow({ name: T('stockExport.totalValue'), value: tot.value, currency: tot.currency });
+        row.font = { bold: true };
+      }
+      const name = `valorisation-stock-${asOf || new Date().toISOString().slice(0, 10)}.xlsx`;
+      res.set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': `attachment; filename="${name}"` });
+      await wb.xlsx.write(res);
+      res.end();
+    } catch (error) { return serverError(res, error, "Erreur lors de l'export de la valorisation"); }
   },
 
   /** GET /stock/balances/export — Excel (feuille « Stock » détaillée par lot + « Par article ») */

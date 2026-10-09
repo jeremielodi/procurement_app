@@ -1,9 +1,8 @@
 // backend/src/services/StockIssuePdfService.js
 // Bon de sortie de stock (PDF, FR/EN) : identité de l'entreprise, bénéficiaire, dépôt, articles / lots,
 // signatures (magasinier, bénéficiaire). Helpers Handlebars préfixés « sis_ ».
-const puppeteer = require('puppeteer');
 const Handlebars = require('handlebars');
-const { getBrowserOptions } = require('../config/puppeteer');
+const { renderPdf } = require('../utils/pdfRenderer');
 const { getBranding } = require('../utils/enterpriseBranding');
 const { pdfContext, rootLocale } = require('../utils/pdfI18n');
 const stockIssueModel = require('../models/StockIssueModel');
@@ -131,23 +130,16 @@ class StockIssuePdfService {
           { name: issue.cancelled_by_name || '—', date: dt(issue.cancelled_at), reason: issue.cancel_reason || '—' }) : '',
     };
     const html = Handlebars.compile(TEMPLATE)({ issue, brand, cancelled: issue.status === 'CANCELLED', transfer, department, T, ...ctx });
-    const browser = await puppeteer.launch(getBrowserOptions());
-    try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      const pdf = await page.pdf({
-        format: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>',
-        footerTemplate: `
-          <div style="width:100%;font-size:9px;color:#9CA3AF;padding:0 15mm;display:flex;justify-content:space-between">
-            <span>${String(issue.issue_number).replace(/[<>&]/g, '')} — ${String(brand.name).replace(/[<>&]/g, '')}</span>
-            <span>${ctx.L.page} <span class="pageNumber"></span> / <span class="totalPages"></span></span>
-          </div>`,
-        margin: { top: '15mm', bottom: '18mm', left: '15mm', right: '15mm' },
-      });
-      return { pdf, issue };
-    } finally {
-      await browser.close();
-    }
+    const pdf = await renderPdf(html, {
+      format: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>',
+      footerTemplate: `
+        <div style="width:100%;font-size:9px;color:#9CA3AF;padding:0 15mm;display:flex;justify-content:space-between">
+          <span>${String(issue.issue_number).replace(/[<>&]/g, '')} — ${String(brand.name).replace(/[<>&]/g, '')}</span>
+          <span>${ctx.L.page} <span class="pageNumber"></span> / <span class="totalPages"></span></span>
+        </div>`,
+      margin: { top: '15mm', bottom: '18mm', left: '15mm', right: '15mm' },
+    });
+    return { pdf, issue };
   }
 }
 

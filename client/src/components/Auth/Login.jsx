@@ -48,6 +48,8 @@ export default function Login() {
     if (result.success) {
       toast.success(t('auth.loginSuccess'));
       navigate(homePathFor(result.user));
+    } else if (result.code === 'TOO_MANY_ATTEMPTS') {
+      toast.error(t('auth.tooManyAttempts', { count: Math.max(1, Math.ceil((result.retryAfter || 60) / 60)) }), { duration: 8000 });
     } else {
       toast.error(result.message || t('auth.loginFailed'));
     }

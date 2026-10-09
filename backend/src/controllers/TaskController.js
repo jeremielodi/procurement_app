@@ -23,6 +23,7 @@ async function findEnterpriseTask(taskId) {
   return allowed.has(task.processInstanceId) ? task : null;
 }
 const grnModel     = require('../models/GoodsReceiptModel');
+const supplierConfirmationService = require('../services/SupplierConfirmationService');
 const invoiceModel = require('../models/InvoiceModel');
 const paymentModel = require('../models/PaymentModel');
 
@@ -298,6 +299,11 @@ async function completeTask(req, res) {
     // Build Camunda variables
     const taskVariables = { ...variables };
     if (comment) taskVariables.comment = comment;
+    // Ajustement budgétaire terminé sans décision explicite (ancienne fenêtre générique) : abandon, comme avant —
+    // la relance de la vérification passe par POST /requisitions/:id/budget-adjustment
+    if (taskDefinitionKey === 'Activity_BudgetAdjustment' && typeof taskVariables.budgetAdjusted !== 'boolean') {
+      taskVariables.budgetAdjusted = false;
+    }
 
     // 1. Complete the Camunda user task
     const result = await camundaService.completeTask(taskId, taskVariables);
@@ -449,6 +455,30 @@ async function completeTask(req, res) {
               performed_by: userId,
               performed_at: new Date()
             });
+          }
+        }
+
+        // --- Ajustement budgétaire abandonné depuis « Mes tâches » : réquisition annulée ---
+        if (taskDefinitionKey === 'Activity_BudgetAdjustment' && taskVariables.budgetAdjusted === false) {
+          await db.exec(
+            `UPDATE requisitions SET status = 'CANCELLED', rejected_reason = COALESCE($2, 'Abandonnée après budget insuffisant'),
+                    updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'BUDGET_INSUFFICIENT'`,
+            [requisitionId, comment ? `Abandonnée après budget insuffisant — ${String(comment).slice(0, 500)}` : null]
+          );
+        }
+
+        // --- Confirmation fournisseur (achats, depuis « Mes tâches ») : réponse enregistrée sur le bon ---
+        if (taskDefinitionKey === 'Activity_SupplierConfirmation') {
+          const po = await db.one(
+            `SELECT id, supplier_response FROM purchase_orders WHERE requisition_id = $1 AND status IN ('PO_APPROVED', 'PO_SENT')
+             ORDER BY created_at DESC LIMIT 1`,
+            [requisitionId]
+          );
+          if (po && po.supplier_response !== 'CONFIRMED') {
+            await supplierConfirmationService.respond(po.id, {
+              response: 'CONFIRMED', deliveryDate: variables.confirmedDeliveryDate || null,
+              reference: variables.supplierReference || null, comment: comment || variables.comment || null,
+            }, { userId, source: 'PROCUREMENT', io: req.io, skipTask: true });
           }
         }
 

@@ -6,6 +6,7 @@ const userModel = require('../models/UserModel');
 const stockModel = require('../models/StockModel');
 const i18n = require('../i18n');
 const db = require('../config/database');
+const stockReturnPdfService = require('../services/StockReturnPdfService');
 
 function sendError(res, error, fallback) {
   if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, line: error.line, remaining: error.remaining });
@@ -85,6 +86,17 @@ module.exports = {
       if (!ret) return res.status(404).json({ success: false, message: 'Bon de retour introuvable' });
       res.json({ success: true, data: ret });
     } catch (error) { return sendError(res, error, 'Erreur lors du chargement du retour'); }
+  },
+
+  /** GET /stock-returns/:id/pdf?lang= — bon de retour à imprimer et signer */
+  async returnPdf(req, res) {
+    try {
+      const result = await stockReturnPdfService.generate(req.params.id, { lang: i18n.fromRequest(req) });
+      if (!result) return res.status(404).json({ success: false, message: 'Bon de retour introuvable' });
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', `inline; filename="${String(result.ret.return_number).replace(/[^\w.-]+/g, '_')}.pdf"`);
+      res.end(result.pdf);
+    } catch (error) { return sendError(res, error, 'Erreur lors de la génération du PDF'); }
   },
 
   /** GET /stock-units?status=&stockItemId=&warehouseId=&holderId=&search= */

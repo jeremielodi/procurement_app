@@ -8,6 +8,7 @@ const db = require('../config/database');
 const AUDIT = {
   LOGIN_SUCCESS: 'LOGIN_SUCCESS',
   LOGIN_FAILED: 'LOGIN_FAILED',
+  LOGIN_BLOCKED: 'LOGIN_BLOCKED', // trop d'échecs (utils/loginThrottle) : mot de passe non vérifié
   LOGOUT: 'LOGOUT',
   PASSWORD_CHANGED: 'PASSWORD_CHANGED',
   PASSWORD_CHANGE_FAILED: 'PASSWORD_CHANGE_FAILED',
@@ -22,18 +23,21 @@ const AUDIT = {
   USER_DEACTIVATED: 'USER_DEACTIVATED',
   USER_DELETED: 'USER_DELETED',
   WAREHOUSE_ACCESS_CHANGED: 'WAREHOUSE_ACCESS_CHANGED',
+  AUDIT_LOG_EXPORTED: 'AUDIT_LOG_EXPORTED', // export Excel du journal (filtres, nombre de lignes)
 };
 
 // Adresse locale / privée : la requête arrive par un reverse proxy (Caddy, Nginx, Docker)
-const PRIVATE_IP = /^(::1$|127.|10.|192.168.|172.(1[6-9]|2d|3[01]).|fc|fd|::ffff:(127|10|192.168).)/i;
+const PRIVATE_IP = /^(?:::1$|fc|fd|(?:::ffff:)?(?:127\.|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.))/i;
 
 /**
- * Adresse IP du client. X-Forwarded-For n'est retenu que si la connexion vient d'un proxy local
- * (sinon n'importe quel client pourrait écrire une fausse IP dans le journal).
+ * Adresse IP du client. X-Forwarded-For n'est retenu que si la connexion vient d'un proxy local / privé
+ * (sinon n'importe quel client pourrait écrire une fausse IP). On prend la DERNIÈRE adresse de l'en-tête :
+ * c'est celle ajoutée par notre proxy ; les précédentes peuvent venir du client (Nginx
+ * $proxy_add_x_forwarded_for ajoute à l'en-tête reçu) et serviraient à contourner la limitation des connexions.
  */
 function clientIp(req) {
   const remote = req?.socket?.remoteAddress || req?.ip || '';
-  const forwarded = String(req?.headers?.['x-forwarded-for'] || '').split(',')[0].trim();
+  const forwarded = String(req?.headers?.['x-forwarded-for'] || '').split(',').map(s => s.trim()).filter(Boolean).pop();
   const ip = forwarded && PRIVATE_IP.test(remote) ? forwarded : remote;
   return ip.slice(0, 45) || null;
 }

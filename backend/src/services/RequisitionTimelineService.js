@@ -11,7 +11,7 @@ const {
 
 const APPROVAL_KEYS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
 const SOURCING_KEYS = ['Activity_DirectPurchase', 'Activity_RequestQuotations', 'Activity_RFPProcess', 'Activity_SoleSource'];
-const PO_APPROVED = ['PO_APPROVED', 'PO_SENT', 'PO_RECEIVED', 'PO_COMPLETE', 'APPROVED', 'SENT', 'COMPLETED'];
+const PO_APPROVED = ['PO_APPROVED', 'PO_SENT', 'PO_CONFIRMED', 'PO_RECEIVED', 'PO_COMPLETE', 'APPROVED', 'SENT', 'COMPLETED'];
 const PO_REJECTED = ['PO_REJECTED', 'REJECTED', 'CANCELLED'];
 
 // Tâche en attente → étape du workflow
@@ -91,7 +91,7 @@ class RequisitionTimelineService {
       ),
       db.select(`SELECT id, email, first_name || ' ' || last_name AS name FROM users`, []),
       db.select(
-        `SELECT id, po_number, status, approved_at, approved_by, created_at FROM purchase_orders WHERE requisition_id = $1 ORDER BY id`,
+        `SELECT id, po_number, status, approved_at, approved_by, created_at, supplier_response, supplier_responded_at FROM purchase_orders WHERE requisition_id = $1 ORDER BY id`,
         [req.id]
       ),
       db.one(`SELECT id, tender_number, status FROM tenders WHERE requisition_id = $1 AND status <> 'CANCELLED' ORDER BY id DESC LIMIT 1`, [req.id])
@@ -226,6 +226,26 @@ class RequisitionTimelineService {
           title: T('timeline.matching', { status: matchLabel(action, lang) }), actor: T('timeline.system'),
           details: row.comments ? [row.comments] : [], links: [],
         });
+      } else if (action === 'BUDGET_RECHECK_REQUESTED' || action === 'BUDGET_ADJUSTMENT_ABANDONED') {
+        const retry = action === 'BUDGET_RECHECK_REQUESTED';
+        events.push({
+          date: row.performed_at, kind: retry ? 'info' : 'danger',
+          title: T(retry ? 'timeline.budgetRecheck' : 'timeline.budgetAbandoned'), actor: who(row) || T('timeline.system'),
+          details: row.comments ? [T('timeline.comment', { value: row.comments })] : [], links: [],
+        });
+      } else if (action === 'SUPPLIER_CONFIRMED' || action === 'SUPPLIER_DECLINED') {
+        const confirmed = action === 'SUPPLIER_CONFIRMED';
+        const info = json || {};
+        const details = [T(info.source === 'PORTAL' ? 'timeline.viaPortal' : 'timeline.viaProcurement')];
+        if (info.deliveryDate) details.push(T('timeline.promisedDelivery', { date: new Date(info.deliveryDate).toLocaleDateString(i18n.locale(lang)) }));
+        if (info.reference) details.push(T('timeline.supplierReference', { value: info.reference }));
+        if (info.comment) details.push(confirmed ? T('timeline.comment', { value: info.comment }) : T('timeline.reason', { reason: info.comment }));
+        events.push({
+          date: row.performed_at, kind: confirmed ? 'success' : 'danger',
+          title: T(confirmed ? 'timeline.supplierConfirmed' : 'timeline.supplierDeclined', { number: info.poNumber || '' }),
+          actor: who(row) || T('timeline.system'), details,
+          links: info.poId ? [{ label: info.poNumber, to: `/purchase-orders/${info.poId}` }] : [],
+        });
       } else if (action === 'TENDER_PUBLISHED' || action === 'TENDER_AWARDED') {
         events.push({
           date: row.performed_at, kind: action === 'TENDER_AWARDED' ? 'success' : 'info',
@@ -288,7 +308,9 @@ class RequisitionTimelineService {
         date: activePos.find(p => p.approved_at)?.approved_at,
         info: nameById.get(activePos.find(p => p.approved_by)?.approved_by) ? T('timeline.approvedBy', { name: nameById.get(activePos.find(p => p.approved_by).approved_by) }) : null,
       },
-      { key: 'supplier_confirmation', label: T('timeline.steps.supplier_confirmation'), status: done('Activity_SupplierConfirmation') || grns.length ? 'done' : 'pending', date: done('Activity_SupplierConfirmation')?.completedAt },
+      { key: 'supplier_confirmation', label: T('timeline.steps.supplier_confirmation'), status: done('Activity_SupplierConfirmation') || grns.length || activePos.some(p => p.supplier_response === 'CONFIRMED') ? 'done'
+          : activePos.some(p => p.supplier_response === 'DECLINED') ? 'failed' : 'pending',
+        date: done('Activity_SupplierConfirmation')?.completedAt || activePos.find(p => p.supplier_response)?.supplier_responded_at },
       { key: 'grn', label: T('timeline.steps.grn'), status: grns.length ? 'done' : 'pending', date: grns[0]?.receipt_date || grns[0]?.created_at, links: links(grns, 'grn_number', '/goods-receipts') },
       { key: 'san', label: T('timeline.steps.san'), status: sans.length ? 'done' : 'pending', date: sans[0]?.acceptance_date || sans[0]?.created_at, links: links(sans, 'san_number', '/service-acceptance-notes') },
       {

@@ -54,6 +54,13 @@ export const purchaseOrderService = {
     return response.data
   },
 
+  // Réponse du fournisseur reçue hors portail : { response: 'CONFIRMED' | 'DECLINED', deliveryDate, reference, comment }
+  // (erreurs métier affichées par le panneau, traduites)
+  supplierResponse: async (id, payload) => {
+    const response = await api.post(`/purchase-orders/${id}/supplier-response`, payload, { skipErrorToast: true })
+    return response.data
+  },
+
   // Soumettre pour approbation (DRAFT → PO_PENDING)
   submit: async (id) => {
     const response = await api.post(`/purchase-orders/${id}/submit`)

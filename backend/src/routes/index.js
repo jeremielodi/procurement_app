@@ -31,6 +31,7 @@ const sanController = require('../controllers/ServiceAcceptanceController');
 const invoiceController = require('../controllers/InvoiceController');
 const paymentController = require('../controllers/PaymentController');
 const supplierPortalController = require('../controllers/SupplierPortalController');
+const supplierOrderController = require('../controllers/SupplierOrderController');
 const tenderController = require('../controllers/TenderController');
 const requisitionImport = require('../controllers/requisition/importItems');
 const referenceController = require('../controllers/ReferenceController');
@@ -141,6 +142,25 @@ router.post('/requisitions/import-items',
   requisitionImport.importItems
 );
 
+// Ajustement budgétaire (étape GoFlow Activity_BudgetAdjustment) : synthèse par ligne, changement de lignes,
+// décision (RETRY : nouvelle vérification du budget sur la même réquisition ; ABANDON : réquisition annulée)
+const budgetAdjustmentService = require('../services/BudgetAdjustmentService');
+const budgetAdjustmentError = (res, error) => (error.status
+  ? res.status(error.status).json({ success: false, code: error.code, message: error.message, line: error.line, lines: error.lines })
+  : (console.error('Ajustement budgétaire :', error), res.status(500).json({ success: false, message: 'Erreur lors de l\'ajustement budgétaire' })));
+router.get('/requisitions/:id/budget-adjustment', hasPermission('VIEW_REQUISITIONS'), async (req, res) => {
+  try { res.json({ success: true, data: await budgetAdjustmentService.summary(req.params.id, req.user.id) }); }
+  catch (error) { budgetAdjustmentError(res, error); }
+});
+router.patch('/requisitions/:id/budget-lines', hasPermission('VIEW_REQUISITIONS'), async (req, res) => {
+  try { res.json({ success: true, data: await budgetAdjustmentService.changeBudgetLines(req.params.id, req.body?.changes, req.user.id) }); }
+  catch (error) { budgetAdjustmentError(res, error); }
+});
+router.post('/requisitions/:id/budget-adjustment', hasPermission('VIEW_REQUISITIONS'), async (req, res) => {
+  try { res.json({ success: true, data: await budgetAdjustmentService.decide(req.params.id, req.body || {}, req.user.id) }); }
+  catch (error) { budgetAdjustmentError(res, error); }
+});
+
 // Suivi lisible du workflow (étapes + historique dans la langue de la requête : Accept-Language / ?lang=)
 router.get('/requisitions/:id/timeline',
   hasPermission('VIEW_REQUISITIONS'),
@@ -185,6 +205,19 @@ router.delete('/requisitions/:id',
 router.get('/requisitions/export/pdf', hasPermission('VIEW_REQUISITIONS'), requisitionController.exportPDF);
 router.get('/requisitions/export/excel', hasPermission('VIEW_REQUISITIONS'), requisitionController.exportExcel);
 router.get('/requisitions/:id/export/pdf', hasPermission('VIEW_REQUISITIONS'), requisitionController.exportRequisitionPDF);
+
+// ============================================
+// RECHERCHE GLOBALE (en-tête) : chaque groupe selon les permissions de l'utilisateur, cloisonné par entreprise
+// ============================================
+const globalSearchService = require('../services/GlobalSearchService');
+router.get('/search', authenticate, async (req, res) => {
+  try {
+    res.json({ success: true, data: await globalSearchService.search(req.query.q, req.user.id) });
+  } catch (error) {
+    console.error('Recherche globale :', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la recherche' });
+  }
+});
 
 // ============================================
 // ROUTES DES TÂCHES (protégées)
@@ -310,6 +343,13 @@ router.post('/purchase-orders/:id/send',
   authenticate,
   hasPermission('CREATE_PURCHASE_ORDERS'),
   purchaseOrderController.send
+);
+
+// Réponse du fournisseur reçue hors portail (téléphone, email) : confirmation / refus
+router.post('/purchase-orders/:id/supplier-response',
+  authenticate,
+  hasPermission('CREATE_PURCHASE_ORDERS'),
+  supplierOrderController.recordResponse
 );
 
 router.delete('/purchase-orders/:id',
@@ -559,6 +599,8 @@ router.put('/stock-items/:id', authenticate, hasPermission('MANAGE_STOCK_ITEMS')
 
 router.get('/stock/summary', authenticate, hasPermission('VIEW_STOCK'), st.summary);
 router.get('/stock/balances/export', authenticate, hasPermission('VIEW_STOCK'), st.exportBalances);
+router.get('/stock/valuation', authenticate, hasPermission('VIEW_STOCK'), st.valuation);
+router.get('/stock/valuation/export', authenticate, hasPermission('VIEW_STOCK'), st.exportValuation);
 router.get('/stock/balances', authenticate, hasPermission('VIEW_STOCK'), st.balances);
 router.get('/stock/movements', authenticate, hasPermission('VIEW_STOCK'), st.movements);
 
@@ -571,14 +613,28 @@ router.get('/stock-issues/:id/pdf', authenticate, stockIssueController.pdf);
 router.get('/stock-issues/:id', authenticate, stockIssueController.get);
 router.post('/stock-issues', authenticate, hasPermission('ISSUE_STOCK'), stockIssueController.create);
 router.post('/stock-issues/:id/acknowledge', authenticate, stockIssueController.acknowledge);
+router.post('/stock-issues/:id/receive', authenticate, stockIssueController.receive);
 router.post('/stock-issues/:id/cancel', authenticate, hasPermission('ISSUE_STOCK'), stockIssueController.cancel);
 
 // Équipements (n° de série), détentions et retours en stock
 router.get('/stock-holdings/mine', authenticate, equipmentController.myHoldings);
 router.get('/stock-holdings', authenticate, hasPermission('VIEW_STOCK'), equipmentController.holdings);
 router.get('/stock-returns', authenticate, hasPermission('VIEW_STOCK'), equipmentController.listReturns);
+router.get('/stock-returns/:id/pdf', authenticate, hasPermission('VIEW_STOCK'), equipmentController.returnPdf);
 router.get('/stock-returns/:id', authenticate, hasPermission('VIEW_STOCK'), equipmentController.getReturn);
 router.post('/stock-returns', authenticate, hasPermission('ISSUE_STOCK'), equipmentController.createReturn);
+
+// Inventaires physiques (COUNT_STOCK : compter ; ADJUST_STOCK : valider les écarts) et ajustements ponctuels
+const stockCountController = require('../controllers/StockCountController');
+router.get('/stock-counts', authenticate, hasPermission('VIEW_STOCK'), stockCountController.list);
+router.get('/stock-counts/:id', authenticate, hasPermission('VIEW_STOCK'), stockCountController.get);
+router.post('/stock-counts', authenticate, hasPermission('COUNT_STOCK'), stockCountController.open);
+router.put('/stock-counts/:id/lines', authenticate, hasPermission('COUNT_STOCK'), stockCountController.record);
+router.post('/stock-counts/:id/lines', authenticate, hasPermission('COUNT_STOCK'), stockCountController.addLine);
+router.post('/stock-counts/:id/validate', authenticate, hasPermission('ADJUST_STOCK'), stockCountController.validate);
+router.post('/stock-counts/:id/cancel', authenticate, hasPermission('COUNT_STOCK'), stockCountController.cancel);
+router.get('/stock-adjustments', authenticate, hasPermission('VIEW_STOCK'), stockCountController.listAdjustments);
+router.post('/stock-adjustments', authenticate, hasPermission('ADJUST_STOCK'), stockCountController.createAdjustment);
 router.get('/stock-units', authenticate, hasPermission('VIEW_STOCK'), equipmentController.units);
 router.post('/stock-units/register', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), equipmentController.registerUnits);
 router.get('/stock-units/:id', authenticate, hasPermission('VIEW_STOCK'), equipmentController.getUnit);
@@ -684,10 +740,21 @@ router.put('/supplier-portal/me', hasPermission('SUPPLIER_PORTAL'),
   supplierPortalController.handleFiles,
   supplierPortalController.updateMe.bind(supplierPortalController));
 router.get('/supplier-portal/me/documents/:documentId/file', hasPermission('SUPPLIER_PORTAL'), supplierPortalController.getMyDocument.bind(supplierPortalController));
+// Bons de commande du fournisseur : consultation, PDF, confirmation / refus (étape Activity_SupplierConfirmation)
+router.get('/supplier-portal/orders', hasPermission('SUPPLIER_PORTAL'), supplierOrderController.myOrders);
+router.get('/supplier-portal/orders/:id/pdf', hasPermission('SUPPLIER_PORTAL'), supplierOrderController.myOrderPdf);
+router.get('/supplier-portal/orders/:id', hasPermission('SUPPLIER_PORTAL'), supplierOrderController.myOrder);
+router.post('/supplier-portal/orders/:id/confirm', hasPermission('SUPPLIER_PORTAL'), supplierOrderController.confirm);
+router.post('/supplier-portal/orders/:id/decline', hasPermission('SUPPLIER_PORTAL'), supplierOrderController.decline);
 router.get('/supplier-portal/tenders', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierList.bind(tenderController));
 router.get('/supplier-portal/tenders/:id', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierGetOne.bind(tenderController));
 router.put('/supplier-portal/tenders/:id/submission', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierSubmit.bind(tenderController));
 router.get('/supplier-portal/tenders/:id/submission/pdf', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierSubmissionPdf.bind(tenderController));
 
 router.use('/upload',  uploadRoutes);
+// Journal d'audit (VIEW_AUDIT_LOGS : admin d'entreprise = son entreprise, super admin = toute la plateforme)
+const auditLogController = require('../controllers/AuditLogController');
+router.get('/audit-logs', authenticate, hasPermission('VIEW_AUDIT_LOGS'), auditLogController.list);
+router.get('/audit-logs/export', authenticate, hasPermission('VIEW_AUDIT_LOGS'), auditLogController.export);
+
 module.exports = router;

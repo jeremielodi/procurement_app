@@ -13,32 +13,30 @@ class Transaction {
 
   queries = [];
 
+  /**
+   * Exécute les requêtes accumulées dans UNE transaction, sur une connexion DÉDIÉE du pool.
+   * (Avant : BEGIN/COMMIT sur la connexion partagée de db.exec → la transaction englobait les requêtes
+   * concurrentes des autres utilisateurs, et un ROLLBACK pouvait annuler leurs écritures.)
+   * Résultat : tableau des lignes renvoyées par chaque requête, dans l'ordre. Erreur → ROLLBACK puis rejet.
+   */
   async execute() {
-    const deferred = q.defer();
+    const client = await this.db.pool.connect();
     try {
-      let results = [];
-      await this.db.exec('BEGIN');
-      for (let i = 0; i < this.queries.length; i++) {
-        const { sql, params, isRaw } = this.queries[i];
-        
-        // Si c'est une requête raw, exécuter sans préparation
-        if (isRaw) {
-          const resI = await this.db.exec(sql);
-          results.push(resI);
-        } else {
-          const resI = await this.db.exec(sql, params);
-          results.push(resI);
-        }
-        
-        this.sleep(200);
+      const results = [];
+      await client.query('BEGIN');
+      for (const { sql, params, isRaw } of this.queries) {
+        // Requête brute : envoyée telle quelle (sans paramètres)
+        const res = isRaw ? await client.query(sql) : await client.query(sql, params);
+        results.push(res.rows);
       }
-      await this.db.exec('COMMIT');
-      deferred.resolve(results);
+      await client.query('COMMIT');
+      return results;
     } catch (e) {
-      await this.db.exec('ROLLBACK');
-      deferred.reject(e);      
+      await client.query('ROLLBACK').catch(() => {});
+      throw e;
+    } finally {
+      client.release();
     }
-    return deferred.promise;
   }
 
   exec(sql, params) {

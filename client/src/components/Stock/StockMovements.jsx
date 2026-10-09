@@ -49,7 +49,11 @@ export function MovementTable({ rows, showItem = true }) {
                   ? <><Link to={`/stock/issues/${m.source_id}`} className="text-blue-600 hover:underline">{m.issue_number}</Link>{m.recipient_name && <span className="text-gray-400"> {Number(m.quantity) > 0 && m.movement_type === 'TRANSFER_IN' ? '←' : '→'} {m.recipient_name}</span>}</>
                   : m.source_type === 'RETURN' && m.return_number
                     ? <Link to={`/stock/returns/${m.source_id}`} className="text-blue-600 hover:underline">{m.return_number}</Link>
-                    : (m.comment || '—')}
+                    : m.source_type === 'COUNT' && m.count_number
+                      ? <Link to={`/stock/counts/${m.source_id}`} className="text-blue-600 hover:underline">{m.count_number}</Link>
+                      : m.source_type === 'ADJUSTMENT' && m.adjustment_number
+                        ? <><Link to="/stock/adjustments" className="text-blue-600 hover:underline">{m.adjustment_number}</Link>{m.adjustment_reason && <span className="text-gray-400"> · {t(`stock.adjust.reasons.${m.adjustment_reason}`)}</span>}</>
+                        : (m.comment || '—')}
             </td>
             <td className="px-4 py-2 text-xs text-gray-500">{m.performed_by_name || '—'}</td>
           </tr>

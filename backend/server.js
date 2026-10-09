@@ -231,6 +231,7 @@ startServer();
 // Gestion de l'arrêt propre
 process.on('SIGINT', () => {
   console.log('\n🛑 Shutting down gracefully...');
+  require('./src/utils/pdfRenderer').closeBrowser(); // navigateur partagé des PDF
   io.close(() => {
     console.log('WebSocket server closed');
     server.close(() => {
@@ -242,6 +243,7 @@ process.on('SIGINT', () => {
 
 process.on('SIGTERM', () => {
   console.log('\n🛑 Shutting down gracefully...');
+  require('./src/utils/pdfRenderer').closeBrowser(); // navigateur partagé des PDF
   io.close(() => {
     console.log('WebSocket server closed');
     server.close(() => {

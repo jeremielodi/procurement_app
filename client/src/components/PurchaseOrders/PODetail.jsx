@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { purchaseOrderService } from '../../services/purchaseOrderService'
 import PODeliveryTracking, { DeliveryStatusBadge } from './PODeliveryTracking'
+import SupplierConfirmationPanel from './SupplierConfirmationPanel'
 import { supplierService } from '../../services/supplierService'
 import requisitionService from '../../services/requisitionService'
 import { grnService } from '../../services/grnService'
@@ -57,7 +58,7 @@ export default function PODetail() {
   const canReject = rejectionReason.trim().length > 0
 
   // Récupérer les détails de la commande
-  const { data: poData, isLoading, error } = useQuery({
+  const { data: poData, isLoading, error, refetch: refetchPo } = useQuery({
     queryKey: ['purchase-order', id],
     queryFn: () => purchaseOrderService.getById(id),
     enabled: !!id
@@ -396,6 +397,9 @@ export default function PODetail() {
             </div>
           )}
 
+          {/* Confirmation du fournisseur (étape Activity_SupplierConfirmation) */}
+          <SupplierConfirmationPanel po={po} autoOpen={searchParams.get('confirm') === '1'} onChanged={refetchPo} />
+
           {/* Informations de livraison */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b border-gray-200">
@@ -447,7 +451,7 @@ export default function PODetail() {
           )}
 
           {/* Flux Procure-to-Pay */}
-          {['PO_APPROVED', 'PO_SENT', 'PO_RECEIVED', 'PO_COMPLETE'].includes(po.status) && (
+          {['PO_APPROVED', 'PO_SENT', 'PO_CONFIRMED', 'PO_RECEIVED', 'PO_COMPLETE'].includes(po.status) && (
             <div className="bg-white rounded-lg shadow">
               <div className="p-4 border-b border-gray-200">
                 <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">

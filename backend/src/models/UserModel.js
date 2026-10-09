@@ -2,6 +2,8 @@
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const bcrypt = require('bcrypt');
+// Empreinte fictive (mot de passe aléatoire) : un email inconnu coûte une comparaison bcrypt comme un vrai compte
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(require('crypto').randomBytes(24).toString('hex'), 10);
 const { v4: uuidv4 } = require('uuid');
 const i18n = require('../i18n');
 
@@ -494,24 +496,22 @@ class UserModel {
 
 
   /**
-   * Authentifier un utilisateur
+   * Authentifier un utilisateur.
+   * Échec : message UNIQUE et même durée de traitement (comparaison bcrypt fictive si le compte n'existe pas),
+   * pour ne pas révéler quels emails ont un compte (le motif précis est seulement écrit dans le journal d'audit).
    */
 async authenticate(email, password) {
   const user = await db.one(
-    `SELECT id, username, email, password_hash, first_name, last_name, 
+    `SELECT id, username, email, password_hash, first_name, last_name,
             department, position, is_active, enterprise_id, language
      FROM users WHERE email = $1 AND is_active = true`,
     [email]
   );
-  
-  if (!user) {
-    return { success: false, message: 'Utilisateur non trouvé' };
-  }
-  
-  const isValidPassword = await bcrypt.compare(password, user.password_hash);
-  
-  if (!isValidPassword) {
-    return { success: false, message: 'Mot de passe incorrect' };
+
+  const isValidPassword = await bcrypt.compare(String(password), user ? user.password_hash : DUMMY_PASSWORD_HASH);
+
+  if (!user || !isValidPassword) {
+    return { success: false, message: 'Email ou mot de passe incorrect' };
   }
   
   await this.updateLastLogin(user.id);

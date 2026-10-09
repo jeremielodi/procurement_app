@@ -2,7 +2,7 @@
 const paymentModel   = require('../models/PaymentModel');
 const camundaService = require('../services/CamundaService');
 const db             = require('../config/database');
-const puppeteer      = require('puppeteer');
+const { renderPdf } = require('../utils/pdfRenderer');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { getBranding } = require('../utils/enterpriseBranding');
 const i18n = require('../i18n');
@@ -149,7 +149,6 @@ class PaymentController {
   }
 
   async generatePDF(req, res) {
-    let browser = null;
     try {
       const pay = await paymentModel.findById(req.params.id);
       if (!pay) return res.status(404).json({ success: false, message: 'Paiement non trouvé' });
@@ -231,10 +230,7 @@ ${pay.notes ? `<div class="notes"><strong>${L.notes}</strong> ${esc(pay.notes)}<
 </div>
 </body></html>`;
 
-      browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] });
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      const pdfBuffer = await page.pdf({
+      const pdfBuffer = await renderPdf(html, {
         format: 'A4', printBackground: true,
         margin: { top: '15px', bottom: '30px', left: '10px', right: '10px' },
         displayHeaderFooter: false
@@ -249,8 +245,6 @@ ${pay.notes ? `<div class="notes"><strong>${L.notes}</strong> ${esc(pay.notes)}<
     } catch (error) {
       console.error('Error generating payment PDF:', error);
       return res.status(500).json({ success: false, message: 'Erreur génération PDF', error: error.message });
-    } finally {
-      if (browser) await browser.close();
     }
   }
 }

@@ -7,7 +7,8 @@ const emailService = require('../services/EmailNotificationService');
 const { generatePassword } = require('../utils/passwordGenerator');
 const { appLink } = require('../utils/appUrl');
 const i18n = require('../i18n');
-const { audit, AUDIT } = require('../utils/auditLog');
+const { audit, AUDIT, clientIp } = require('../utils/auditLog');
+const loginThrottle = require('../utils/loginThrottle');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -106,10 +107,25 @@ class AuthController {
       if (!email || !password) {
         return res.status(400).json({ success: false, message: 'Email et mot de passe requis' });
       }
-      
+
+      // Anti force brute : au-delà du seuil d'échecs, le mot de passe n'est même pas vérifié
+      const ip = clientIp(req) || 'unknown';
+      const lock = loginThrottle.check(email, ip);
+      if (lock.blocked) {
+        await audit(req, AUDIT.LOGIN_BLOCKED, {
+          actor: null, details: { email: String(email).slice(0, 255), scope: lock.scope, retryAfter: lock.retryAfter },
+        });
+        res.set('Retry-After', String(lock.retryAfter));
+        return res.status(429).json({
+          success: false, code: 'TOO_MANY_ATTEMPTS', retryAfter: lock.retryAfter,
+          message: `Trop de tentatives de connexion. Réessayez dans ${Math.ceil(lock.retryAfter / 60)} min.`,
+        });
+      }
+
       const result = await userModel.authenticate(email, password);
-      
+
       if (!result.success) {
+        loginThrottle.recordFailure(email, ip);
         // Motif précis dans le journal uniquement (la réponse ne change pas)
         const known = await userModel.findByEmail(email).catch(() => null);
         const reason = !known ? 'UNKNOWN_EMAIL' : known.isActive === false || known.is_active === false ? 'INACTIVE_ACCOUNT' : 'WRONG_PASSWORD';
@@ -132,6 +148,7 @@ class AuthController {
         { expiresIn: '24h' }
       );
       
+      loginThrottle.recordSuccess(email, ip);
       const loggedIn = { id: result.user.id, email: result.user.email, enterprise_id: result.user.enterpriseId };
       await audit(req, AUDIT.LOGIN_SUCCESS, { actor: loggedIn, target: loggedIn });
 

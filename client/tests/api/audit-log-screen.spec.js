@@ -70,7 +70,8 @@ test.describe.serial('API › Journal d\'audit (consultation)', () => {
     expect(none.data.every(r => r.enterprise_id === null)).toBe(true);
     const failures = await (await request.get('/api/audit-logs?failuresOnly=1&limit=10', { headers: auth(superToken) })).json();
     expect(failures.data.length).toBeGreaterThan(0);
-    expect(failures.data.every(r => ['LOGIN_FAILED', 'LOGIN_BLOCKED', 'PASSWORD_CHANGE_FAILED', 'PASSWORD_RESET_INVALID_LINK'].includes(r.action))).toBe(true);
+    expect(failures.data.every(r => ['LOGIN_FAILED', 'LOGIN_BLOCKED', 'PASSWORD_CHANGE_FAILED', 'PASSWORD_RESET_INVALID_LINK',
+      'SOD_VIOLATION_BLOCKED', 'TASK_COMPLETION_DENIED', 'PAYMENT_BLOCKED', 'INVOICE_DUPLICATE_BLOCKED'].includes(r.action))).toBe(true);
   });
 
   test('Export Excel : fichier xlsx, l\'export est lui-même tracé', async ({ request }) => {

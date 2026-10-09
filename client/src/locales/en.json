@@ -534,7 +534,7 @@
         },
         {
           "title": "Segregation of duties",
-          "desc": "Requester, approver, buyer, storekeeper and finance are separate profiles; the workflow enforces the order of steps: no payment without receipt and a matched invoice."
+          "desc": "Nobody approves their own request, purchase order, invoice or payment; the workflow enforces the order of steps: no payment without receipt and a matched invoice. Every refused attempt is logged."
         },
         {
           "title": "Budget control and 3-way match",
@@ -559,6 +559,9 @@
         "Official PDF documents: requisition, purchase order, goods receipt, issue, transfer and return notes, payment",
         "Stock valuation at a past date (year-end closing)",
         "Matching discrepancies, losses in transit and count differences identified and justified",
+        "Supplier bank detail changes: payments blocked until verified by call-back",
+        "Duplicate invoices refused (same supplier, same number)",
+        "Read-only Auditor profile: every file, the budget and the audit log, without any data entry rights",
         "Data isolated per company, versioned files, daily backups"
       ]
     },
@@ -801,7 +804,8 @@
     "unclaimConfirmText": "It will no longer be assigned to you and will be available again to all members of the group, who will be able to claim it.",
     "unclaimOtherAssignee": "Currently claimed by {{assignee}}.",
     "releasing": "Releasing…",
-    "unclaimConfirmTextOther": "It will no longer be assigned to that person and will be available again to all members of the group, who will be able to claim it."
+    "unclaimConfirmTextOther": "It will no longer be assigned to that person and will be available again to all members of the group, who will be able to claim it.",
+    "selfApproval": "Your own request: another member of the group must process it"
   },
   "notifications": {
     "unknownDate": "Unknown date",
@@ -1406,7 +1410,8 @@
         "INVALID_DATE": "Invalid delivery date",
         "DATE_IN_PAST": "The planned delivery date is already past"
       }
-    }
+    },
+    "selfApproval": "You created this order (or requested the purchase): another approver must validate it"
   },
   "grnStatus": {
     "DRAFT": "Draft",
@@ -1676,7 +1681,12 @@
       "Matching",
       "Status",
       ""
-    ]
+    ],
+    "supplierNumberRequired": "Enter the supplier's invoice number",
+    "supplierNumberPlaceholder": "Number printed on the invoice, e.g. F-2026-0153",
+    "supplierNumberHint": "Duplicate check: the same supplier invoice can only be entered once. The internal number INV-… is assigned automatically.",
+    "duplicate": "Invoice already recorded: number {{number}} from this supplier is {{existing}}.",
+    "supplierNumberShort": "Supplier no.: {{number}}"
   },
   "paymentStatus": {
     "PENDING": "Pending",
@@ -1751,7 +1761,13 @@
     "processing": "Processing…",
     "confirm": "Confirm payment",
     "confirmed": "Payment confirmed and recorded.",
-    "confirmedOn": " On {{date}}."
+    "confirmedOn": " On {{date}}.",
+    "selfApproval": "Entered by you: another person must confirm it",
+    "bankBlocked": "Payment blocked: the supplier's bank details have changed and must be verified.",
+    "err": {
+      "BANK_CHANGE_UNVERIFIED": "Payment blocked: the bank details of {{supplier}} have changed. Have them verified (supplier page › Bank details) before paying.",
+      "BANK_CHANGE_REJECTED": "Payment blocked: the new bank details of {{supplier}} were rejected."
+    }
   },
   "tenders": {
     "audience": {
@@ -3202,6 +3218,10 @@
               [
                 "Super administrator",
                 "Administers the platform: companies, reference data (locations, categories), roles. Has no access to purchasing."
+              ],
+              [
+                "Auditor",
+                "Views all purchasing files, stock, budget and the audit log, with exports. No data entry or approval."
               ]
             ]
           },
@@ -3409,6 +3429,10 @@
             "text": "Only one level is involved, the one matching the amount. The approver can approve or reject, with a comment that appears in the workflow tracking. A rejection stops the process (\"Rejected\" status) and the requester is notified."
           },
           {
+            "type": "warn",
+            "text": "You cannot approve your own requisition, even with an approver profile: another member of the group must process it."
+          },
+          {
             "type": "tip",
             "text": "Only approvers who are members of the requisition's project receive the task. If nobody receives it, check the project members (Organisation → Projects)."
           },
@@ -3545,6 +3569,14 @@
             "text": "Prequalification is done category by category and per company (\"Prequalification\" tab of the supplier record). It is only possible if the supplier is active, has declared the category and has a complete file: all documents uploaded and verified. A rejection requires a reason. Only prequalified suppliers can be invited to restricted calls for tenders and are offered in purchase orders."
           },
           {
+            "type": "h",
+            "text": "Bank details"
+          },
+          {
+            "type": "p",
+            "text": "The \"Bank details\" tab of the supplier page shows the current account, the change history and your company's decision. An unverified change blocks payments (see \"Internal control\")."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -3594,6 +3626,10 @@
           {
             "type": "warn",
             "text": "A purchase order under approval can no longer be modified. In case of error, the approver must reject it."
+          },
+          {
+            "type": "tip",
+            "text": "The purchase order is approved by someone other than the person who created it (and the requester of the requisition)."
           },
           {
             "type": "links",
@@ -3681,7 +3717,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "Finance records the invoice from the \"Enter invoice\" task: supplier number, date, amounts. The application automatically matches three documents: the order, the receipt and the invoice."
+            "text": "Finance enters the invoice from the \"Enter invoice\" task: supplier's invoice number (mandatory), date, amounts. The application automatically matches three documents: the order, the receipt and the invoice."
           },
           {
             "type": "table",
@@ -3713,6 +3749,10 @@
             "text": "A matched invoice moves to the payment step. A non-matching invoice is blocked: check the order and receipt, or ask the supplier for a credit note."
           },
           {
+            "type": "warn",
+            "text": "An invoice already recorded for the same supplier with the same number is refused (duplicate). An invoice is validated by someone other than the person who entered it."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -3730,6 +3770,13 @@
           {
             "type": "p",
             "text": "From the \"Payment\" task, Finance records the payment: amount, date, method (bank transfer, cheque, cash, Mobile Money), reference and account. The payment closes the cycle: the requisition becomes \"Completed\". A PDF payment receipt (French or English) is available."
+          },
+          {
+            "type": "list",
+            "items": [
+              "The payment is confirmed by someone other than the person who entered it.",
+              "If the supplier's bank details have changed, the payment is blocked until they are verified (supplier page › \"Bank details\")."
+            ]
           },
           {
             "type": "links",
@@ -4054,6 +4101,119 @@
           }
         ]
       },
+      "control": {
+        "title": "Internal control",
+        "summary": "Segregation of duties, bank details, duplicate invoices, Auditor profile and audit log.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "procureApp automatically enforces the internal control rules auditors expect. They apply to everyone, administrators included: a refused attempt is recorded in the audit log."
+          },
+          {
+            "type": "h",
+            "text": "Segregation of duties"
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Document",
+                "Cannot be approved by"
+              ],
+              [
+                "Requisition (N1, N2, N3)",
+                "Its requester"
+              ],
+              [
+                "Purchase order",
+                "The person who created it, and the requester of the requisition"
+              ],
+              [
+                "Invoice",
+                "The person who entered it"
+              ],
+              [
+                "Payment",
+                "The person who entered it"
+              ],
+              [
+                "Bank details change",
+                "The person who entered it"
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "In \"My tasks\", a request you cannot process shows \"Your own request: another member of the group must process it\". On a purchase order or payment, the approval button is replaced by an explanation. A GoFlow task can only be processed by a member of its group (or an administrator), and not if someone else has claimed it."
+          },
+          {
+            "type": "tip",
+            "text": "In a small team, plan at least two people per approval profile (e.g. two managers), otherwise an approver's own requests would have no possible approver."
+          },
+          {
+            "type": "h",
+            "text": "Supplier bank details"
+          },
+          {
+            "type": "p",
+            "text": "Any change of bank, account number, IBAN or SWIFT — by the supplier on their portal or by a buyer — is recorded and reported to Finance. Until your company has verified it, no payment to this supplier can be entered or approved."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Open the supplier page, \"Bank details\" tab: the old and new account are shown.",
+              "Call the supplier back on a number you already know (never the one given in the change request) to confirm.",
+              "Click \"Verified (call-back done)\", or \"Reject\" with a reason: payments then stay blocked and the supplier is notified."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Duplicate invoices"
+          },
+          {
+            "type": "p",
+            "text": "The supplier's invoice number is mandatory. The same invoice (same supplier, same number, ignoring case and spaces) can only be entered once; the existing invoice is shown. The internal number INV-… is assigned automatically."
+          },
+          {
+            "type": "h",
+            "text": "Auditor profile"
+          },
+          {
+            "type": "p",
+            "text": "The administrator can create accounts with the \"Auditor\" profile: read access to requisitions, orders, receipts, invoices, payments, suppliers, stock (including valuation), budget and the audit log, with exports. No data entry, no approval, no GoFlow task."
+          },
+          {
+            "type": "h",
+            "text": "What the audit log records"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Sign-ins, passwords, user accounts and warehouse access.",
+              "Internal control: refused attempts (segregation of duties, task outside one's group), blocked payments, duplicate invoices, bank changes and verifications.",
+              "Sensitive data (before / after): budget lines, roles and permissions, company information, suppliers, prequalification, document reviews.",
+              "Cancellations and payments: requisition or order deleted, order rejected, receipt cancelled, invoice rejected, payment approved or status changed, issue cancelled, stock adjustment, stock count validated."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/admin/audit",
+                "label": "Audit log"
+              },
+              {
+                "to": "/suppliers",
+                "label": "Suppliers"
+              },
+              {
+                "to": "/payments",
+                "label": "Payments"
+              }
+            ]
+          }
+        ]
+      },
       "dashboard": {
         "title": "Dashboard",
         "summary": "Indicators, alerts and \"Who is blocking?\".",
@@ -4139,9 +4299,10 @@
           {
             "type": "list",
             "items": [
-              "Tabs: sign-ins, passwords, user accounts, access and exports, \"Failures and blocks\" (refused or blocked sign-ins, invalid links…).",
+              "Tabs: sign-ins, passwords, user accounts, access and exports, internal control, sensitive data, cancellations and payments, \"Failures and blocks\" (refused sign-ins, invalid links, attempts blocked by controls).",
               "Filters by action, period and search (email, name, IP address); clicking a row shows the details: values before / after a change, browser.",
-              "\"Export (Excel)\" downloads the filtered events (20,000 at most). The export itself is recorded in the log."
+              "\"Export (Excel)\" downloads the filtered events (20,000 at most). The export itself is recorded in the log.",
+              "\"Auditor\" profile: give it to internal or external auditors for full read access, without any data entry rights."
             ]
           },
           {
@@ -4252,6 +4413,14 @@
           {
             "q": "Valuation shows \"Not valued\" for an item.",
             "a": "No cost is known for this item (opening stock or adjustments only, never received at a purchase order price), or it was received in several currencies. Its quantity is counted, not its value."
+          },
+          {
+            "q": "The \"Approve\" button does not appear on my request.",
+            "a": "This is segregation of duties: you cannot approve your own requisition, an order you created, or an invoice or payment you entered. Another member of the group must do it."
+          },
+          {
+            "q": "A payment is blocked because of \"bank details\".",
+            "a": "The supplier's bank details have changed. Someone in Finance (other than the person who made the change) must verify them by call-back on the supplier page, \"Bank details\" tab."
           }
         ]
       },
@@ -4390,7 +4559,39 @@
       "USER_DEACTIVATED": "User deactivated",
       "USER_DELETED": "User deleted",
       "WAREHOUSE_ACCESS_CHANGED": "Warehouse access changed",
-      "AUDIT_LOG_EXPORTED": "Audit log exported"
+      "AUDIT_LOG_EXPORTED": "Audit log exported",
+      "SOD_VIOLATION_BLOCKED": "Segregation of duties: action refused",
+      "TASK_COMPLETION_DENIED": "GoFlow task refused (other group / claimed by someone else)",
+      "BUDGET_LINE_CREATED": "Budget line created",
+      "BUDGET_LINE_UPDATED": "Budget line updated",
+      "BUDGET_LINE_DELETED": "Budget line deleted",
+      "ROLE_CREATED": "Role created",
+      "ROLE_UPDATED": "Role updated",
+      "ROLE_DELETED": "Role deleted",
+      "ROLE_PERMISSION_ADDED": "Permission added to a role",
+      "ROLE_PERMISSION_REMOVED": "Permission removed from a role",
+      "ENTERPRISE_CREATED": "Company created",
+      "ENTERPRISE_UPDATED": "Company updated",
+      "ENTERPRISE_ACTIVATED": "Company reactivated",
+      "ENTERPRISE_DEACTIVATED": "Company suspended",
+      "SUPPLIER_UPDATED": "Supplier updated",
+      "SUPPLIER_BANK_CHANGED": "Bank details changed",
+      "SUPPLIER_BANK_VERIFIED": "Bank details verified",
+      "SUPPLIER_BANK_REJECTED": "Bank details rejected",
+      "SUPPLIER_PREQUALIFICATION_DECIDED": "Prequalification decision",
+      "SUPPLIER_DOCUMENT_REVIEWED": "Supplier document reviewed",
+      "REQUISITION_DELETED": "Requisition deleted",
+      "PURCHASE_ORDER_REJECTED": "Purchase order rejected",
+      "PURCHASE_ORDER_DELETED": "Purchase order deleted",
+      "GOODS_RECEIPT_CANCELLED": "Goods receipt cancelled",
+      "INVOICE_REJECTED": "Invoice rejected",
+      "INVOICE_DUPLICATE_BLOCKED": "Duplicate invoice refused",
+      "PAYMENT_APPROVED": "Payment approved",
+      "PAYMENT_STATUS_CHANGED": "Payment status changed",
+      "PAYMENT_BLOCKED": "Payment blocked (bank details)",
+      "STOCK_ISSUE_CANCELLED": "Stock issue cancelled",
+      "STOCK_ADJUSTED": "Stock adjustment",
+      "STOCK_COUNT_VALIDATED": "Stock count validated"
     },
     "groups": {
       "all": "All events",
@@ -4398,7 +4599,10 @@
       "password": "Passwords",
       "users": "User accounts",
       "access": "Access and exports",
-      "failures": "Failures and blocks"
+      "failures": "Failures and blocks",
+      "controls": "Internal control",
+      "data": "Sensitive data",
+      "operations": "Cancellations and payments"
     },
     "search": "Email, name or IP address…",
     "from": "From",
@@ -4413,7 +4617,7 @@
       "date": "Date",
       "action": "Action",
       "actor": "Author",
-      "target": "Account concerned",
+      "target": "Object concerned",
       "ip": "IP address",
       "enterprise": "Company"
     },
@@ -4431,12 +4635,99 @@
       "UNKNOWN_EMAIL": "unknown email",
       "WRONG_PASSWORD": "wrong password",
       "INACTIVE_ACCOUNT": "disabled account",
-      "WRONG_OLD_PASSWORD": "wrong current password"
+      "WRONG_OLD_PASSWORD": "wrong current password",
+      "BANK_CHANGE_UNVERIFIED": "bank details not verified",
+      "BANK_CHANGE_REJECTED": "bank details rejected",
+      "NOT_IN_GROUP": "outside the task's group",
+      "CLAIMED_BY_OTHER": "task claimed by someone else"
     },
     "scope": {
       "ACCOUNT": "account",
       "IP": "IP address"
     },
-    "exportLimit": "The export is limited to the 20,000 most recent events matching the filters."
+    "exportLimit": "The export is limited to the 20,000 most recent events matching the filters.",
+    "entities": {
+      "user": "Account",
+      "supplier": "Supplier",
+      "budget_line": "Budget line",
+      "role": "Role",
+      "enterprise": "Company",
+      "task": "Task",
+      "requisition": "Requisition",
+      "purchase_order": "Purchase order",
+      "goods_receipt": "Goods receipt",
+      "invoice": "Invoice",
+      "payment": "Payment",
+      "stock_issue": "Stock issue",
+      "stock_adjustment": "Adjustment",
+      "stock_count": "Stock count"
+    },
+    "rule": {
+      "SELF_APPROVAL": "approving one's own request / document",
+      "SELF_VERIFICATION": "verifying one's own change"
+    },
+    "status": {
+      "APPROVED": "approved",
+      "REJECTED": "rejected",
+      "PENDING": "pending",
+      "VERIFIED": "verified",
+      "PAID": "paid",
+      "CANCELLED": "cancelled",
+      "PROCESSING": "processing",
+      "FAILED": "failed"
+    }
+  },
+  "supplierBank": {
+    "tab": "Bank details",
+    "open": "View bank details",
+    "alertPending": "This supplier's bank details have changed: payments are blocked until your company verifies them.",
+    "alertRejected": "This supplier's latest bank details were rejected: payments are blocked.",
+    "current": "Current bank details",
+    "state": {
+      "PENDING": "To verify",
+      "VERIFIED": "Verified",
+      "REJECTED": "Rejected"
+    },
+    "fields": {
+      "bank_name": "Bank",
+      "bank_account": "Account number",
+      "bank_iban": "IBAN",
+      "bank_swift": "SWIFT / BIC"
+    },
+    "pendingTitle": "Changed on {{date}} — payments blocked",
+    "pendingText": "Before validating, confirm the new details directly with the supplier. A bank detail change request is the most common way to divert a payment.",
+    "callbackTip": "Call the supplier back on a number you already know (never the one given in the change message).",
+    "rejectedText": "Change rejected: {{reason}}. Payments stay blocked until a new change is verified.",
+    "noChange": "No change since the supplier was created: payments allowed.",
+    "ownChange": "You entered this change: another authorised person must verify it.",
+    "verify": "Verified (call-back done)",
+    "reject": "Reject",
+    "history": "Change history",
+    "noHistory": "No change recorded.",
+    "col": {
+      "date": "Date",
+      "by": "Changed by",
+      "change": "Change",
+      "review": "Your company's decision"
+    },
+    "source": {
+      "PORTAL": "by the supplier (portal)",
+      "BUYER": "by a buyer"
+    },
+    "superseded": "Replaced by a more recent change",
+    "verifyTitle": "Confirm the new bank details?",
+    "rejectTitle": "Reject the new bank details?",
+    "verifyText": "You confirm you have checked the new bank details of {{supplier}} with the supplier. Payments will be allowed again.",
+    "rejectText": "Payments to this supplier stay blocked. If they have a portal account, they are notified with your reason.",
+    "verifyComment": "Comment (e.g. confirmed by phone with Mr …)",
+    "reasonPlaceholder": "Reason",
+    "reasonRequired": "Enter the reason for rejection",
+    "verified": "Bank details verified",
+    "rejected": "Bank details rejected",
+    "err": {
+      "SELF_VERIFICATION": "You entered this change: another person must verify it",
+      "SUPERSEDED": "A more recent change is awaiting your verification",
+      "REASON_REQUIRED": "Enter the reason for rejection"
+    }
   }
 }

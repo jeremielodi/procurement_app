@@ -22,6 +22,7 @@ const userModelForBudget = require('../models/UserModel');
 async function budgetListAccess(req, res, next) {
   if (req.query.projectId) return next();
   if (await userModelForBudget.hasPermission(req.user.id, 'MANAGE_BUDGET')) return next();
+  if (await userModelForBudget.hasPermission(req.user.id, 'AUDIT_ACCESS')) return next(); // auditeur : lecture
   return res.status(403).json({ success: false, message: 'Permission MANAGE_BUDGET requise' });
 }
 const enterpriseController = require('../controllers/EnterpriseController');
@@ -281,6 +282,9 @@ router.get('/suppliers/:id/prequalification', authenticate, hasPermission('VIEW_
 // Vérification des documents et décision de préqualification : administrateur d'entreprise (PREQUALIFY_SUPPLIERS)
 router.put('/suppliers/:id/documents/:documentId/review', authenticate, hasPermission('PREQUALIFY_SUPPLIERS'), sup.reviewDocument.bind(sup));
 router.put('/suppliers/:id/prequalification', authenticate, hasPermission('PREQUALIFY_SUPPLIERS'), sup.setPrequalification.bind(sup));
+// Coordonnées bancaires : historique des changements, vérification par l'entreprise (paiements bloqués sinon)
+router.get('/suppliers/:id/bank-changes', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.bankChanges.bind(sup));
+router.put('/suppliers/:id/bank-changes/:changeId/review', authenticate, hasPermission('VERIFY_SUPPLIER_BANK'), sup.reviewBankChange.bind(sup));
 
 // ============================================
 // ROUTES DES COMMANDES D'ACHAT (protégées)
@@ -536,8 +540,9 @@ router.get('/budget', hasPermission('VIEW_BUDGET'), budgetListAccess, budgetCont
 // Module Budget (consultation détaillée + édition) : Finance uniquement (MANAGE_BUDGET).
 // VIEW_BUDGET ne sert qu'à choisir une ligne budgétaire du projet dans le formulaire de réquisition.
 router.get('/budget/search', hasPermission('VIEW_BUDGET'), budgetController.search);
-router.get('/budget/summary', hasPermission('MANAGE_BUDGET'), budgetController.getSummary);
-router.get('/budget/:id', hasPermission('MANAGE_BUDGET'), budgetController.getOne);
+// Auditeur (AUDIT_ACCESS) : consultation du module Budget, sans modification
+router.get('/budget/summary', hasAnyPermission('MANAGE_BUDGET', 'AUDIT_ACCESS'), budgetController.getSummary);
+router.get('/budget/:id', hasAnyPermission('MANAGE_BUDGET', 'AUDIT_ACCESS'), budgetController.getOne);
 router.post('/budget', hasPermission('MANAGE_BUDGET'), budgetController.create);
 router.post('/budget/expenses', hasPermission('MANAGE_BUDGET'), budgetController.addExpense);
 router.put('/budget/:id', hasPermission('MANAGE_BUDGET'), budgetController.update);
@@ -561,7 +566,7 @@ router.get('/goods-receipts/:id',
   grnController.getById.bind(grnController)
 );
 router.post('/goods-receipts',
-  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  authenticate, hasPermission('RECORD_GOODS_RECEIPT'),
   grnController.create.bind(grnController)
 );
 router.get('/purchase-orders/:poId/goods-receipts',
@@ -652,7 +657,7 @@ router.get('/service-acceptance-notes/:id',
   sanController.getById.bind(sanController)
 );
 router.post('/service-acceptance-notes',
-  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  authenticate, hasPermission('RECORD_SERVICE_ACCEPTANCE'),
   sanController.create.bind(sanController)
 );
 router.get('/purchase-orders/:poId/service-acceptance-notes',
@@ -672,19 +677,19 @@ router.get('/invoices/:id',
   invoiceController.getById.bind(invoiceController)
 );
 router.post('/invoices',
-  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  authenticate, hasPermission('MANAGE_INVOICES'),
   invoiceController.create.bind(invoiceController)
 );
 router.post('/invoices/:id/match',
-  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  authenticate, hasPermission('MANAGE_INVOICES'),
   invoiceController.runMatch.bind(invoiceController)
 );
 router.post('/invoices/:id/approve',
-  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  authenticate, hasPermission('MANAGE_INVOICES'),
   invoiceController.approve.bind(invoiceController)
 );
 router.post('/invoices/:id/reject',
-  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  authenticate, hasPermission('MANAGE_INVOICES'),
   invoiceController.reject.bind(invoiceController)
 );
 
@@ -700,15 +705,15 @@ router.get('/payments/:id',
   paymentController.getById.bind(paymentController)
 );
 router.post('/payments',
-  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  authenticate, hasPermission('MANAGE_PAYMENTS'),
   paymentController.create.bind(paymentController)
 );
 router.post('/payments/:id/approve',
-  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  authenticate, hasPermission('APPROVE_PAYMENTS'),
   paymentController.approve.bind(paymentController)
 );
 router.patch('/payments/:id/status',
-  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  authenticate, hasPermission('APPROVE_PAYMENTS'),
   paymentController.updateStatus.bind(paymentController)
 );
 router.get('/payments/:id/pdf',

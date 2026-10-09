@@ -9,12 +9,14 @@ import { purchaseOrderService } from '../../services/purchaseOrderService';
 import Modal from '../Common/Modal';
 import toast from 'react-hot-toast';
 import { t, getLocale } from '../../i18n';
+import { usePermissions } from '../../hooks/usePermissions';
 import SearchSelect from '../Common/SearchSelect';
 
 export default function BudgetDetail({ budget, onClose }) {
   const { formatAmount } = useCurrency();
   const queryClient = useQueryClient();
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const canManage = usePermissions().hasPermission('MANAGE_BUDGET'); // auditeur : consultation seule
   const [expenseForm, setExpenseForm] = useState({
     amount: '',
     description: '',
@@ -124,13 +126,15 @@ export default function BudgetDetail({ budget, onClose }) {
             <DollarSign size={18} />
             {t('budget.expenses')}
           </h3>
-          <button
-            onClick={() => setShowExpenseModal(true)}
-            className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
-          >
-            <Plus size={16} />
-            {t('budget.addExpense')}
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setShowExpenseModal(true)}
+              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+            >
+              <Plus size={16} />
+              {t('budget.addExpense')}
+            </button>
+          )}
         </div>
 
         {budget.expenses?.length === 0 ? (

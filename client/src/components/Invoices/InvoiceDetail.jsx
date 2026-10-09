@@ -69,6 +69,9 @@ export default function InvoiceDetail() {
           <FileText size={28} className="text-blue-600" />
           <div>
             <h1 className="text-xl font-bold text-gray-900">{invoice.invoice_number}</h1>
+            {invoice.supplier_invoice_number && (
+              <p className="text-sm text-gray-700">{t('invoice.supplierNumberShort', { number: invoice.supplier_invoice_number })}</p>
+            )}
             <p className="text-sm text-gray-500">
               {invoice.supplier_name && `${invoice.supplier_name} — `}
               {STATUS_LABELS[invoice.status] || invoice.status}

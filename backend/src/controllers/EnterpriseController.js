@@ -4,11 +4,16 @@
 //  - Administrateur d'entreprise : consultation / modification des informations de SON entreprise
 //  - Tout utilisateur : GET /enterprises/current (sa propre entreprise : nom, logo, devise)
 const bcrypt = require('bcrypt');
+const { audit, AUDIT } = require('../utils/auditLog');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const i18n = require('../i18n');
 const enterpriseModel = require('../models/EnterpriseModel');
 const { saveLogo, removeLogo, sendLogo } = require('../utils/logoUpload');
+
+// Journal d'audit : champs suivis d'une entreprise
+const ENTERPRISE_FIELDS = ['name', 'code', 'address', 'phone', 'email', 'website', 'tax_id', 'registration_number', 'currency_id', 'is_active'];
+const pickEnterprise = (e) => Object.fromEntries(ENTERPRISE_FIELDS.map(f => [f, e?.[f] ?? null]));
 
 const LOGO_DIR = 'enterprise-logos';
 
@@ -120,6 +125,10 @@ class EnterpriseController {
           email: b.adminEmail, password: b.adminPassword, firstName: b.adminFirstName, lastName: b.adminLastName, language: b.adminLanguage,
         }, req.user.id);
       }
+      await audit(req, AUDIT.ENTERPRISE_CREATED, {
+        entity: { type: 'enterprise', id: enterprise.id, label: enterprise.name }, enterpriseId: enterprise.id,
+        details: { ...pickEnterprise(enterprise), admin: admin?.email || null },
+      });
       res.status(201).json({ success: true, data: { ...enterprise, admin }, message: 'Entreprise créée' });
     } catch (error) {
       res.status(error.status || 500).json({ success: false, message: error.message });
@@ -149,6 +158,16 @@ class EnterpriseController {
         await removeLogo(existing.logo_path);
         enterprise = await enterpriseModel.findById(id);
       }
+      const before = pickEnterprise(existing);
+      const after = pickEnterprise(enterprise);
+      const changed = ENTERPRISE_FIELDS.filter(f => String(before[f] ?? '') !== String(after[f] ?? ''));
+      if (changed.length || req.file) {
+        await audit(req, AUDIT.ENTERPRISE_UPDATED, {
+          entity: { type: 'enterprise', id, label: enterprise.name }, enterpriseId: id,
+          oldValue: Object.fromEntries(changed.map(f => [f, before[f]])),
+          details: { ...Object.fromEntries(changed.map(f => [f, after[f]])), ...(req.file ? { logo: 'changed' } : {}) },
+        });
+      }
       res.json({ success: true, data: enterprise, message: 'Entreprise mise à jour' });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
@@ -160,6 +179,9 @@ class EnterpriseController {
     try {
       const enterprise = await enterpriseModel.setActive(req.params.id, req.body.isActive);
       if (!enterprise) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      await audit(req, enterprise.is_active ? AUDIT.ENTERPRISE_ACTIVATED : AUDIT.ENTERPRISE_DEACTIVATED, {
+        entity: { type: 'enterprise', id: enterprise.id, label: enterprise.name }, enterpriseId: enterprise.id,
+      });
       res.json({ success: true, data: enterprise, message: enterprise.is_active ? 'Entreprise réactivée' : 'Entreprise suspendue' });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });

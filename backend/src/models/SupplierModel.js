@@ -86,7 +86,8 @@ class SupplierModel {
       fields.updated_at = new Date();
       await db.update('suppliers', fields, 'id', id);
     }
-    return { supplier: await this.getById(id), ignoredIdentity: existing.self_registered };
+    // before / fields : historique bancaire et journal d'audit (SupplierController)
+    return { supplier: await this.getById(id), ignoredIdentity: existing.self_registered, before: existing, fields };
   }
 
   async updatePrequalification(id, prequalified, dueDiligenceCompleted = true) {

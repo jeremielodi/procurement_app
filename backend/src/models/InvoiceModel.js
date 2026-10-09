@@ -91,20 +91,46 @@ class InvoiceModel {
     return { match_status: matchStatus, match_details: details, invoiceValid: details.passed };
   }
 
-  async create({ invoiceNumber, poId, grnId, supplierId, invoiceDate, dueDate,
+  /** N° de facture du fournisseur : supplierInvoiceNumber, ou l'ancien champ invoiceNumber s'il n'est pas un n° interne */
+  supplierNumberOf({ supplierInvoiceNumber, invoiceNumber }) {
+    const v = supplierInvoiceNumber ?? (invoiceNumber && !/^INV-\d{4}-\d+$/.test(String(invoiceNumber).trim()) ? invoiceNumber : null);
+    return v == null || String(v).trim() === '' ? null : String(v).trim().slice(0, 100);
+  }
+
+  /**
+   * Facture déjà enregistrée par l'entreprise pour ce fournisseur avec ce n° (hors rejetées / annulées), sinon null.
+   * Même règle que l'index unique uq_invoices_supplier_number (migration 21).
+   */
+  async findDuplicate(supplierId, supplierInvoiceNumber) {
+    if (!supplierId || !supplierInvoiceNumber) return null;
+    const params = [supplierId, supplierInvoiceNumber];
+    return db.one(
+      `SELECT id, invoice_number, supplier_invoice_number, total_amount, invoice_date, status FROM invoices
+       WHERE supplier_id = $1 AND LOWER(TRIM(supplier_invoice_number)) = LOWER(TRIM($2))
+         AND status NOT IN ('REJECTED', 'CANCELLED')${tenant.filter('enterprise_id', params)}
+       ORDER BY id LIMIT 1`,
+      params
+    );
+  }
+
+  async create({ invoiceNumber, supplierInvoiceNumber, poId, grnId, supplierId, invoiceDate, dueDate,
                  subtotal, taxAmount, totalAmount, currency, notes, createdBy,
                  processInstanceId, camundaTaskId }) {
-    const number = invoiceNumber || await this.generateInvoiceNumber();
+    // N° interne toujours généré (INV-AAAA-NNNN) ; le n° du fournisseur est conservé à part
+    const number = await this.generateInvoiceNumber();
+    const supplierNumber = this.supplierNumberOf({ supplierInvoiceNumber, invoiceNumber });
+    // Fournisseur de la facture = celui du bon de commande
+    const poSupplier = poId ? (await db.one('SELECT supplier_id FROM purchase_orders WHERE id = $1', [poId]))?.supplier_id : null;
     const defaultCurrency = await getEnterpriseCurrencyCode();
 
     const inv = await db.one(
       `INSERT INTO invoices
-         (invoice_number, po_id, grn_id, supplier_id, invoice_date, due_date,
+         (invoice_number, supplier_invoice_number, po_id, grn_id, supplier_id, invoice_date, due_date,
           subtotal, tax_amount, total_amount, currency, notes,
           created_by, process_instance_id, camunda_task_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        RETURNING id, invoice_number`,
-      [number, poId||null, grnId||null, supplierId||null,
+      [number, supplierNumber, poId||null, grnId||null, poSupplier || supplierId || null,
        invoiceDate, dueDate||null,
        subtotal||0, taxAmount||0, totalAmount,
        currency||defaultCurrency, notes||null,
@@ -156,7 +182,7 @@ class InvoiceModel {
     params.push(limit, offset);
 
     return db.select(
-      `SELECT inv.id, inv.invoice_number, inv.status, inv.match_status,
+      `SELECT inv.id, inv.invoice_number, inv.supplier_invoice_number, inv.status, inv.match_status,
               inv.total_amount, inv.currency, inv.invoice_date, inv.due_date,
               inv.created_at,
               po.po_number, s.name AS supplier_name

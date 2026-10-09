@@ -15,6 +15,33 @@ export async function getToken(request) {
   return token;
 }
 
+/**
+ * Second administrateur de l'entreprise de test, pour les approbations : la séparation des tâches interdit
+ * d'approuver ce qu'on a soi-même demandé, créé ou saisi (réquisition, bon de commande, facture, paiement).
+ * Créé au premier appel par l'admin principal, puis réutilisé.
+ */
+export const APPROVER_CREDS = {
+  email: 'approver.tests@procurement.com',
+  password: 'Approver123!',
+};
+export async function getApproverToken(request) {
+  const login = async () => (await (await request.post('/api/auth/login', { data: APPROVER_CREDS })).json()).data?.token;
+  let token = await login();
+  if (token) return token;
+  const admin = await getToken(request);
+  const res = await request.post('/api/users', {
+    headers: auth(admin),
+    data: {
+      username: 'approver_tests', email: APPROVER_CREDS.email, password: APPROVER_CREDS.password,
+      firstName: 'Approbateur', lastName: 'Tests', profileIds: ['prof_admin'],
+    },
+  });
+  if (![200, 201, 409].includes(res.status())) throw new Error(`Création de l'approbateur : ${res.status()} ${await res.text()}`);
+  token = await login();
+  if (!token) throw new Error('Connexion de l\'approbateur impossible');
+  return token;
+}
+
 /** Returns the Authorization header object for a given token. */
 export function auth(token) {
   return { Authorization: `Bearer ${token}` };

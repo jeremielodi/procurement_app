@@ -4,6 +4,13 @@ const camundaService = require('../services/CamundaService');
 const db             = require('../config/database');
 const i18n           = require('../i18n');
 const grnExportService = require('../services/GoodsReceiptExportService');
+const { audit, AUDIT } = require('../utils/auditLog');
+
+/** Annulation d'un GRN tracée dans le journal d'audit */
+const auditCancel = (req, result) => audit(req, AUDIT.GOODS_RECEIPT_CANCELLED, {
+  entity: { type: 'goods_receipt', id: result.id, label: result.grnNumber },
+  details: { reason: req.body?.reason || null, reversedMovements: result.reversedMovements },
+});
 
 // Erreurs métier du modèle ({ status, code }) → réponse HTTP ; le reste → 500
 function sendError(res, error, fallback) {
@@ -157,6 +164,7 @@ class GoodsReceiptController {
       // Annulation : écritures de stock inverses (jamais un simple changement de statut)
       if (status === 'CANCELLED') {
         const result = await grnModel.cancel(id, { userId: req.user.id, reason: req.body.reason });
+        await auditCancel(req, result);
         return res.json({ success: true, data: result, message: 'GRN annulé' });
       }
       await grnModel.updateStatus(id, status);
@@ -170,6 +178,7 @@ class GoodsReceiptController {
   async cancel(req, res) {
     try {
       const result = await grnModel.cancel(req.params.id, { userId: req.user.id, reason: req.body?.reason });
+      await auditCancel(req, result);
       res.json({ success: true, data: result, message: 'GRN annulé' });
     } catch (error) {
       return sendError(res, error, 'Erreur lors de l\'annulation du GRN');

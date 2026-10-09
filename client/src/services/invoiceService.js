@@ -9,8 +9,9 @@ export const invoiceService = {
     const response = await api.get(`/invoices/${id}`);
     return response.data;
   },
+  // Erreurs métier (DUPLICATE_INVOICE…) affichées par le formulaire
   create: async (data) => {
-    const response = await api.post('/invoices', data);
+    const response = await api.post('/invoices', data, { skipErrorToast: true });
     return response.data;
   },
   runMatch: async (id) => {

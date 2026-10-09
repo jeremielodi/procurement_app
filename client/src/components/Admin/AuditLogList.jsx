@@ -20,10 +20,24 @@ export const AUDIT_GROUPS = {
   password: ['PASSWORD_CHANGED', 'PASSWORD_CHANGE_FAILED', 'PASSWORD_RESET_REQUESTED', 'PASSWORD_RESET_CONFIRMED', 'PASSWORD_RESET_INVALID_LINK', 'PASSWORD_RESET_BY_ADMIN'],
   users: ['USER_CREATED', 'USER_UPDATED', 'USER_ACTIVATED', 'USER_DEACTIVATED', 'USER_DELETED', 'SUPPLIER_REGISTERED'],
   access: ['WAREHOUSE_ACCESS_CHANGED', 'AUDIT_LOG_EXPORTED'],
+  // Contrôle interne : séparation des tâches, coordonnées bancaires, doublons
+  controls: ['SOD_VIOLATION_BLOCKED', 'TASK_COMPLETION_DENIED', 'PAYMENT_BLOCKED', 'INVOICE_DUPLICATE_BLOCKED',
+    'SUPPLIER_BANK_CHANGED', 'SUPPLIER_BANK_VERIFIED', 'SUPPLIER_BANK_REJECTED'],
+  // Données sensibles : budget, rôles, entreprise, fournisseurs
+  data: ['BUDGET_LINE_CREATED', 'BUDGET_LINE_UPDATED', 'BUDGET_LINE_DELETED', 'ROLE_CREATED', 'ROLE_UPDATED', 'ROLE_DELETED',
+    'ROLE_PERMISSION_ADDED', 'ROLE_PERMISSION_REMOVED', 'ENTERPRISE_CREATED', 'ENTERPRISE_UPDATED', 'ENTERPRISE_ACTIVATED',
+    'ENTERPRISE_DEACTIVATED', 'SUPPLIER_UPDATED', 'SUPPLIER_PREQUALIFICATION_DECIDED', 'SUPPLIER_DOCUMENT_REVIEWED'],
+  // Annulations, rejets, paiements et ajustements
+  operations: ['REQUISITION_DELETED', 'PURCHASE_ORDER_REJECTED', 'PURCHASE_ORDER_DELETED', 'GOODS_RECEIPT_CANCELLED', 'INVOICE_REJECTED',
+    'PAYMENT_APPROVED', 'PAYMENT_STATUS_CHANGED', 'STOCK_ISSUE_CANCELLED', 'STOCK_ADJUSTED', 'STOCK_COUNT_VALIDATED'],
   failures: null, // failuresOnly
 };
-const FAILURES = ['LOGIN_FAILED', 'LOGIN_BLOCKED', 'PASSWORD_CHANGE_FAILED', 'PASSWORD_RESET_INVALID_LINK'];
-const SENSITIVE = ['USER_DELETED', 'USER_DEACTIVATED', 'PASSWORD_RESET_BY_ADMIN', 'AUDIT_LOG_EXPORTED'];
+const FAILURES = ['LOGIN_FAILED', 'LOGIN_BLOCKED', 'PASSWORD_CHANGE_FAILED', 'PASSWORD_RESET_INVALID_LINK',
+  'SOD_VIOLATION_BLOCKED', 'TASK_COMPLETION_DENIED', 'PAYMENT_BLOCKED', 'INVOICE_DUPLICATE_BLOCKED'];
+const SENSITIVE = ['USER_DELETED', 'USER_DEACTIVATED', 'PASSWORD_RESET_BY_ADMIN', 'AUDIT_LOG_EXPORTED', 'SUPPLIER_BANK_CHANGED',
+  'SUPPLIER_BANK_REJECTED', 'BUDGET_LINE_UPDATED', 'BUDGET_LINE_DELETED', 'ROLE_PERMISSION_ADDED', 'ROLE_PERMISSION_REMOVED',
+  'REQUISITION_DELETED', 'PURCHASE_ORDER_DELETED', 'GOODS_RECEIPT_CANCELLED', 'STOCK_ADJUSTED'];
+const label = (prefix, code) => { const k = `${prefix}.${code}`; const v = t(k); return v === k ? code : v; };
 
 const actionLabel = (a) => { const k = `audit.actions.${a}`; const v = t(k); return v === k ? a : v; };
 const actionCls = (a) => (FAILURES.includes(a) ? 'bg-red-100 text-red-800'
@@ -35,7 +49,10 @@ const fmtDateTime = (d) => (d ? new Date(d).toLocaleString(getLocale(), { dateSt
 function summaryOf(r) {
   const v = r.new_value || {};
   const parts = [];
-  if (v.reason) parts.push(t(`audit.reason.${v.reason}`) === `audit.reason.${v.reason}` ? v.reason : t(`audit.reason.${v.reason}`));
+  if (v.rule) parts.push(label('audit.rule', v.rule));
+  if (v.reason) parts.push(label('audit.reason', v.reason));
+  if (v.permission) parts.push(v.permission);
+  if (v.status && r.action !== 'USER_UPDATED') parts.push(label('audit.status', v.status));
   if (v.scope) parts.push(t(`audit.scope.${v.scope}`));
   if (!r.user_id && v.email) parts.push(v.email);
   if (r.action === 'USER_UPDATED' && r.old_value) parts.push(Object.keys(r.old_value).join(', '));
@@ -193,7 +210,9 @@ export default function AuditLogList() {
                     <td className="px-3 py-2">
                       {r.entity_id && (r.target_name || r.target_email)
                         ? <><div className="text-gray-900">{r.target_name || r.target_email}</div>{r.target_name && <div className="text-xs text-gray-500">{r.target_email}</div>}</>
-                        : '—'}
+                        : r.entity_type && r.entity_type !== 'user' && (r.entity_label || r.entity_ref)
+                          ? <><div className="text-gray-900">{r.entity_label || r.entity_ref}</div><div className="text-xs text-gray-500">{label('audit.entities', r.entity_type)}</div></>
+                          : '—'}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs text-gray-600">{r.ip_address || '—'}</td>
                   </tr>

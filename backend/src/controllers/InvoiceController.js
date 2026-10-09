@@ -2,13 +2,15 @@
 const invoiceModel   = require('../models/InvoiceModel');
 const camundaService = require('../services/CamundaService');
 const db             = require('../config/database');
+const segregation    = require('../utils/segregation');
+const { audit, AUDIT } = require('../utils/auditLog');
 
 class InvoiceController {
 
   async create(req, res) {
     try {
       const {
-        invoiceNumber, poId, grnId, supplierId,
+        invoiceNumber, supplierInvoiceNumber, poId, grnId, supplierId,
         invoiceDate, dueDate, subtotal, taxAmount, totalAmount, currency,
         notes, taskId
       } = req.body;
@@ -26,6 +28,24 @@ class InvoiceController {
         }
       }
 
+      // Facture en double : même fournisseur, même n° de facture fournisseur (hors rejetées / annulées)
+      const supplierNumber = invoiceModel.supplierNumberOf({ supplierInvoiceNumber, invoiceNumber });
+      const effectiveSupplier = poId
+        ? (await db.one('SELECT supplier_id FROM purchase_orders WHERE id = $1', [poId]))?.supplier_id || supplierId
+        : supplierId;
+      const duplicate = await invoiceModel.findDuplicate(effectiveSupplier, supplierNumber);
+      if (duplicate) {
+        await audit(req, AUDIT.INVOICE_DUPLICATE_BLOCKED, {
+          entity: { type: 'invoice', id: duplicate.id, label: duplicate.invoice_number },
+          details: { supplierInvoiceNumber: supplierNumber, supplierId: effectiveSupplier, amount: totalAmount, poId: poId || null },
+        });
+        return res.status(409).json({
+          success: false, code: 'DUPLICATE_INVOICE',
+          message: `Facture déjà enregistrée : n° ${supplierNumber} de ce fournisseur = ${duplicate.invoice_number}`,
+          details: { invoiceId: duplicate.id, invoiceNumber: duplicate.invoice_number, status: duplicate.status },
+        });
+      }
+
       // Resolve process_instance_id for Camunda lookup
       let processInstanceId = null;
       if (poId) {
@@ -39,7 +59,7 @@ class InvoiceController {
       }
 
       const result = await invoiceModel.create({
-        invoiceNumber, poId, grnId, supplierId,
+        invoiceNumber, supplierInvoiceNumber, poId, grnId, supplierId,
         invoiceDate, dueDate, subtotal, taxAmount, totalAmount, currency,
         notes, createdBy, processInstanceId, camundaTaskId: taskId || null
       });
@@ -85,6 +105,10 @@ class InvoiceController {
         message: `Facture créée — rapprochement: ${result.match_status}`
       });
     } catch (error) {
+      // Saisie simultanée : l'index unique uq_invoices_supplier_number tranche
+      if (error.code === '23505' && String(error.constraint || error.message).includes('uq_invoices_supplier_number')) {
+        return res.status(409).json({ success: false, code: 'DUPLICATE_INVOICE', message: 'Facture déjà enregistrée pour ce fournisseur avec ce numéro' });
+      }
       console.error('Error creating invoice:', error);
       res.status(500).json({ success: false, message: 'Erreur création facture', error: error.message });
     }
@@ -138,6 +162,8 @@ class InvoiceController {
 
       const inv = await invoiceModel.findById(id);
       if (!inv) return res.status(404).json({ success: false, message: 'Facture non trouvée' });
+      // Séparation des tâches : validée par une autre personne que celle qui l'a saisie
+      await segregation.assertCanApproveInvoice(req, inv);
 
       await invoiceModel.approve(id, userId, comments);
 
@@ -149,6 +175,7 @@ class InvoiceController {
 
       res.json({ success: true, message: 'Facture approuvée' });
     } catch (error) {
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message });
       res.status(500).json({ success: false, message: "Erreur approbation facture", error: error.message });
     }
   }
@@ -161,7 +188,13 @@ class InvoiceController {
 
       if (!reason) return res.status(400).json({ success: false, message: 'reason requis' });
 
+      const inv = await invoiceModel.findById(id);
+      if (!inv) return res.status(404).json({ success: false, message: 'Facture non trouvée' });
       await invoiceModel.reject(id, userId, reason);
+      await audit(req, AUDIT.INVOICE_REJECTED, {
+        entity: { type: 'invoice', id: inv.id, label: inv.invoice_number },
+        details: { reason, amount: inv.total_amount, supplierInvoiceNumber: inv.supplier_invoice_number || null },
+      });
 
       if (taskId) {
         try {

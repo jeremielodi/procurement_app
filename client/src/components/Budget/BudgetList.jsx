@@ -11,11 +11,14 @@ import BudgetDetail from './BudgetDetail';
 import toast from 'react-hot-toast';
 import { t } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+import { usePermissions } from '../../hooks/usePermissions';
 
 export default function BudgetList() {
   const { formatAmount } = useCurrency();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  // Auditeur (AUDIT_ACCESS) : consultation seule
+  const canManage = usePermissions().hasPermission('MANAGE_BUDGET');
   const [fundingSource, setFundingSource] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -58,16 +61,18 @@ export default function BudgetList() {
           <h1 className="text-2xl font-bold text-gray-800">{t('budget.title')}</h1>
           <p className="text-gray-500 mt-1">{t('budget.subtitle')}</p>
         </div>
-        <button
-          onClick={() => {
-            setSelectedBudget(null);
-            setShowModal(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus size={18} />
-          {t('budget.new')}
-        </button>
+        {canManage && (
+          <button
+            onClick={() => {
+              setSelectedBudget(null);
+              setShowModal(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus size={18} />
+            {t('budget.new')}
+          </button>
+        )}
       </div>
 
       {/* Cartes de synthèse */}
@@ -218,27 +223,31 @@ export default function BudgetList() {
                       >
                         <Eye size={18} />
                       </button>
-                      <button
-                        onClick={() => {
-                          setSelectedBudget(budget);
-                          setShowModal(true);
-                        }}
-                        className="text-green-600 hover:text-green-800"
-                        title={t('common.edit')}
-                      >
-                        <Edit size={18} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(t('budget.confirmDelete'))) {
-                            deleteMutation.mutate(budget.id);
-                          }
-                        }}
-                        className="text-red-600 hover:text-red-800"
-                        title={t('common.delete')}
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      {canManage && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedBudget(budget);
+                              setShowModal(true);
+                            }}
+                            className="text-green-600 hover:text-green-800"
+                            title={t('common.edit')}
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(t('budget.confirmDelete'))) {
+                                deleteMutation.mutate(budget.id);
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-800"
+                            title={t('common.delete')}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 );

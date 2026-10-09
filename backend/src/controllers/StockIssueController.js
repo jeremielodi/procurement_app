@@ -8,6 +8,7 @@ const notificationModel = require('../models/NotificationModel');
 const userModel = require('../models/UserModel');
 const db = require('../config/database');
 const i18n = require('../i18n');
+const { audit, AUDIT } = require('../utils/auditLog');
 
 function sendError(res, error, fallback) {
   if (error.status) {
@@ -153,6 +154,10 @@ module.exports = {
       const reason = String(req.body?.reason || '').trim();
       if (!reason) return res.status(400).json({ success: false, code: 'REASON_REQUIRED', message: 'Motif obligatoire' });
       const result = await stockIssueModel.cancel(req.params.id, { userId: req.user.id, reason });
+      await audit(req, AUDIT.STOCK_ISSUE_CANCELLED, {
+        entity: { type: 'stock_issue', id: result.id, label: result.issueNumber },
+        details: { reason, destinationType: result.destinationType, reversedMovements: result.reversedMovements },
+      });
       const issue = await stockIssueModel.getById(req.params.id);
       await notifyReceivers(req, issue, issue.destination_type === 'WAREHOUSE' ? 'transferCancelled' : 'cancelled', issueLink(issue));
       res.json({ success: true, data: result, message: 'Sortie annulée' });

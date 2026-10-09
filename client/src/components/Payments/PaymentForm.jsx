@@ -76,7 +76,13 @@ export default function PaymentForm() {
         toast.error(res.message || t('payment.createError'));
       }
     } catch (e) {
-      toast.error(e.response?.data?.message || t('payment.error'));
+      const body = e.response?.data;
+      // Coordonnées bancaires du fournisseur modifiées et non vérifiées : message traduit (lien vers la fiche fournisseur)
+      if (['BANK_CHANGE_UNVERIFIED', 'BANK_CHANGE_REJECTED'].includes(body?.code)) {
+        toast.error(t(`payment.err.${body.code}`, { supplier: body.details?.supplierName || '' }), { duration: 8000 });
+      } else {
+        toast.error(body?.message || t('payment.error'));
+      }
     } finally {
       setLoading(false);
     }

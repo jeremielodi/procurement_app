@@ -534,7 +534,7 @@
         },
         {
           "title": "Séparation des tâches",
-          "desc": "Demandeur, approbateur, acheteur, magasinier et finance sont des profils distincts ; le workflow impose l'ordre des étapes : aucun paiement sans réception ni facture rapprochée."
+          "desc": "Personne n'approuve sa propre demande, son bon de commande, sa facture ou son paiement ; le workflow impose l'ordre des étapes : aucun paiement sans réception ni facture rapprochée. Toute tentative refusée est tracée."
         },
         {
           "title": "Contrôle budgétaire et 3 voies",
@@ -559,6 +559,9 @@
         "Documents officiels en PDF : réquisition, bon de commande, réception, bons de sortie, de transfert et de retour, paiement",
         "Valorisation du stock à une date passée (clôture d'exercice)",
         "Écarts de rapprochement, pertes en transit et écarts d'inventaire identifiés et motivés",
+        "Changement de coordonnées bancaires d'un fournisseur : paiements bloqués jusqu'à vérification par contre-appel",
+        "Factures en double refusées (même fournisseur, même numéro)",
+        "Profil Auditeur en lecture seule : tous les dossiers, le budget et le journal d'audit, sans aucun droit de saisie",
         "Données cloisonnées par entreprise, fichiers versionnés, sauvegardes quotidiennes"
       ]
     },
@@ -801,7 +804,8 @@
     "unclaimConfirmText": "Elle ne vous sera plus assignée et redeviendra disponible pour tous les membres du groupe, qui pourront la prendre en charge.",
     "unclaimOtherAssignee": "Actuellement prise en charge par {{assignee}}.",
     "releasing": "Libération…",
-    "unclaimConfirmTextOther": "Elle ne lui sera plus assignée et redeviendra disponible pour tous les membres du groupe, qui pourront la prendre en charge."
+    "unclaimConfirmTextOther": "Elle ne lui sera plus assignée et redeviendra disponible pour tous les membres du groupe, qui pourront la prendre en charge.",
+    "selfApproval": "Votre propre demande : un autre membre du groupe doit la traiter"
   },
   "notifications": {
     "unknownDate": "Date inconnue",
@@ -1406,7 +1410,8 @@
         "INVALID_DATE": "Date de livraison invalide",
         "DATE_IN_PAST": "La date de livraison prévue est déjà passée"
       }
-    }
+    },
+    "selfApproval": "Vous avez créé ce bon (ou demandé l'achat) : un autre approbateur doit le valider"
   },
   "grnStatus": {
     "DRAFT": "Brouillon",
@@ -1676,7 +1681,12 @@
       "Rapprochement",
       "Statut",
       ""
-    ]
+    ],
+    "supplierNumberRequired": "Indiquez le n° de la facture du fournisseur",
+    "supplierNumberPlaceholder": "N° imprimé sur la facture, ex. F-2026-0153",
+    "supplierNumberHint": "Contrôle anti-doublon : une même facture d'un fournisseur ne peut être saisie qu'une fois. Le n° interne INV-… est attribué automatiquement.",
+    "duplicate": "Facture déjà enregistrée : le n° {{number}} de ce fournisseur correspond à {{existing}}.",
+    "supplierNumberShort": "N° fournisseur : {{number}}"
   },
   "paymentStatus": {
     "PENDING": "En attente",
@@ -1751,7 +1761,13 @@
     "processing": "En cours…",
     "confirm": "Confirmer le paiement",
     "confirmed": "Paiement confirmé et enregistré.",
-    "confirmedOn": " Le {{date}}."
+    "confirmedOn": " Le {{date}}.",
+    "selfApproval": "Saisi par vous : une autre personne doit le confirmer",
+    "bankBlocked": "Paiement bloqué : les coordonnées bancaires du fournisseur ont changé et doivent être vérifiées.",
+    "err": {
+      "BANK_CHANGE_UNVERIFIED": "Paiement bloqué : les coordonnées bancaires de {{supplier}} ont changé. Faites-les vérifier (fiche fournisseur › Coordonnées bancaires) avant de payer.",
+      "BANK_CHANGE_REJECTED": "Paiement bloqué : les nouvelles coordonnées bancaires de {{supplier}} ont été rejetées."
+    }
   },
   "tenders": {
     "audience": {
@@ -3202,6 +3218,10 @@
               [
                 "Super administrateur",
                 "Administre la plateforme : entreprises, référentiels (localisations, catégories), rôles. N'a pas accès aux achats."
+              ],
+              [
+                "Auditeur",
+                "Consulte tous les dossiers d'achat, le stock, le budget et le journal d'audit, avec les exports. Aucune saisie ni approbation."
               ]
             ]
           },
@@ -3409,6 +3429,10 @@
             "text": "Un seul niveau intervient, celui correspondant au montant. L'approbateur peut approuver ou rejeter, avec un commentaire qui apparaît dans le suivi du workflow. Un rejet arrête le circuit (statut « Rejeté ») et le demandeur est notifié."
           },
           {
+            "type": "warn",
+            "text": "Vous ne pouvez pas approuver votre propre réquisition, même si vous avez le profil d'approbateur : un autre membre du groupe doit la traiter."
+          },
+          {
             "type": "tip",
             "text": "Seuls les approbateurs membres du projet de la réquisition reçoivent la tâche. Si personne ne la reçoit, vérifiez les membres du projet (Organisation → Projets)."
           },
@@ -3545,6 +3569,14 @@
             "text": "La préqualification se fait catégorie par catégorie et par entreprise (onglet « Préqualification » de la fiche fournisseur). Elle n'est possible que si le fournisseur est actif, a déclaré la catégorie et a un dossier complet : tous les documents déposés et vérifiés. Un rejet exige un motif. Seuls les fournisseurs préqualifiés peuvent être invités aux appels d'offres réservés et sont proposés dans les bons de commande."
           },
           {
+            "type": "h",
+            "text": "Coordonnées bancaires"
+          },
+          {
+            "type": "p",
+            "text": "L'onglet « Coordonnées bancaires » de la fiche montre le compte actuel, l'historique des changements et la décision de votre entreprise. Un changement non vérifié bloque les paiements (voir « Contrôle interne »)."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -3594,6 +3626,10 @@
           {
             "type": "warn",
             "text": "Un bon de commande en cours d'approbation n'est plus modifiable. En cas d'erreur, il doit être rejeté par l'approbateur."
+          },
+          {
+            "type": "tip",
+            "text": "Le bon de commande est approuvé par une autre personne que celle qui l'a créé (et que le demandeur de la réquisition)."
           },
           {
             "type": "links",
@@ -3681,7 +3717,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "La Finance saisit la facture depuis la tâche « Saisir la facture » : numéro du fournisseur, date, montants. L'application rapproche automatiquement trois documents : la commande, la réception et la facture."
+            "text": "La Finance saisit la facture depuis la tâche « Saisir la facture » : n° de la facture du fournisseur (obligatoire), date, montants. L'application rapproche automatiquement trois documents : la commande, la réception et la facture."
           },
           {
             "type": "table",
@@ -3713,6 +3749,10 @@
             "text": "Une facture conforme passe à l'étape de paiement. Une facture non conforme est bloquée : vérifiez la commande, la réception ou demandez un avoir au fournisseur."
           },
           {
+            "type": "warn",
+            "text": "Une facture déjà enregistrée pour le même fournisseur avec le même n° est refusée (doublon). La validation d'une facture est faite par une autre personne que celle qui l'a saisie."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -3730,6 +3770,13 @@
           {
             "type": "p",
             "text": "Depuis la tâche « Paiement », la Finance enregistre le paiement : montant, date, mode (virement bancaire, chèque, espèces, Mobile Money), référence et compte. Le paiement clôt le cycle : la réquisition passe à « Terminé ». Un reçu de paiement PDF (français ou anglais) est disponible."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Le paiement est confirmé par une autre personne que celle qui l'a saisi.",
+              "Si les coordonnées bancaires du fournisseur ont changé, le paiement est bloqué jusqu'à leur vérification (fiche fournisseur › « Coordonnées bancaires »)."
+            ]
           },
           {
             "type": "links",
@@ -4054,6 +4101,119 @@
           }
         ]
       },
+      "control": {
+        "title": "Contrôle interne",
+        "summary": "Séparation des tâches, coordonnées bancaires, factures en double, profil Auditeur et journal d'audit.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "procureApp applique automatiquement les règles de contrôle interne attendues par les auditeurs. Elles valent pour tout le monde, administrateurs compris : une tentative refusée est enregistrée dans le journal d'audit."
+          },
+          {
+            "type": "h",
+            "text": "Séparation des tâches"
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Document",
+                "Ne peut pas l'approuver"
+              ],
+              [
+                "Réquisition (N1, N2, N3)",
+                "Son demandeur"
+              ],
+              [
+                "Bon de commande",
+                "La personne qui l'a créé, et le demandeur de la réquisition"
+              ],
+              [
+                "Facture",
+                "La personne qui l'a saisie"
+              ],
+              [
+                "Paiement",
+                "La personne qui l'a saisi"
+              ],
+              [
+                "Changement de coordonnées bancaires",
+                "La personne qui l'a saisi"
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "Dans « Mes tâches », une demande que vous ne pouvez pas traiter affiche « Votre propre demande : un autre membre du groupe doit la traiter ». Sur un bon de commande ou un paiement, le bouton d'approbation est remplacé par une explication. Une tâche GoFlow ne peut être traitée que par un membre de son groupe (ou un administrateur), et pas si quelqu'un d'autre l'a prise en charge."
+          },
+          {
+            "type": "tip",
+            "text": "Dans une petite équipe, prévoyez au moins deux personnes par profil d'approbation (ex. deux managers), sinon les demandes d'un approbateur resteraient sans approbateur possible."
+          },
+          {
+            "type": "h",
+            "text": "Coordonnées bancaires des fournisseurs"
+          },
+          {
+            "type": "p",
+            "text": "Tout changement de banque, de n° de compte, d'IBAN ou de SWIFT — par le fournisseur sur son portail ou par un acheteur — est historisé et signalé à la Finance. Tant que votre entreprise ne l'a pas vérifié, aucun paiement à ce fournisseur ne peut être saisi ni approuvé."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Ouvrez la fiche du fournisseur, onglet « Coordonnées bancaires » : ancien et nouveau compte sont affichés.",
+              "Rappelez le fournisseur à un numéro déjà connu (jamais celui donné dans la demande de changement) pour confirmer.",
+              "Cliquez sur « Vérifiées (contre-appel fait) », ou « Rejeter » avec un motif : les paiements restent alors bloqués et le fournisseur est prévenu."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Factures en double"
+          },
+          {
+            "type": "p",
+            "text": "Le n° de la facture du fournisseur est obligatoire. Une même facture (même fournisseur, même n°, sans tenir compte des majuscules ni des espaces) ne peut être saisie qu'une fois ; la facture existante est indiquée. Le n° interne INV-… est attribué automatiquement."
+          },
+          {
+            "type": "h",
+            "text": "Profil Auditeur"
+          },
+          {
+            "type": "p",
+            "text": "L'administrateur peut créer des comptes avec le profil « Auditeur » : consultation des réquisitions, commandes, réceptions, factures, paiements, fournisseurs, stock (dont la valorisation), budget et journal d'audit, avec les exports. Aucune saisie, aucune approbation, aucune tâche GoFlow."
+          },
+          {
+            "type": "h",
+            "text": "Ce qui est tracé dans le journal d'audit"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Connexions, mots de passe, comptes utilisateurs et accès aux dépôts.",
+              "Contrôle interne : tentatives refusées (séparation des tâches, tâche hors groupe), paiements bloqués, factures en double, changements et vérifications bancaires.",
+              "Données sensibles (avant / après) : lignes budgétaires, rôles et permissions, informations de l'entreprise, fournisseurs, préqualification, vérification des documents.",
+              "Annulations et paiements : réquisition ou bon supprimé, bon rejeté, réception annulée, facture rejetée, paiement approuvé ou changé de statut, sortie annulée, ajustement de stock, inventaire validé."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/admin/audit",
+                "label": "Journal d'audit"
+              },
+              {
+                "to": "/suppliers",
+                "label": "Fournisseurs"
+              },
+              {
+                "to": "/payments",
+                "label": "Paiements"
+              }
+            ]
+          }
+        ]
+      },
       "dashboard": {
         "title": "Tableau de bord",
         "summary": "Indicateurs, alertes et « Qui bloque ? ».",
@@ -4139,9 +4299,10 @@
           {
             "type": "list",
             "items": [
-              "Onglets : connexions, mots de passe, comptes utilisateurs, accès et exports, « Échecs et blocages » (connexions refusées ou bloquées, liens invalides…).",
+              "Onglets : connexions, mots de passe, comptes utilisateurs, accès et exports, contrôle interne, données sensibles, annulations et paiements, « Échecs et blocages » (connexions refusées, liens invalides, tentatives bloquées par les contrôles).",
               "Filtres par action, période et recherche (email, nom, adresse IP) ; un clic sur une ligne affiche le détail : valeurs avant / après une modification, navigateur.",
-              "« Exporter (Excel) » télécharge les événements filtrés (20 000 au plus). L'export est lui-même enregistré dans le journal."
+              "« Exporter (Excel) » télécharge les événements filtrés (20 000 au plus). L'export est lui-même enregistré dans le journal.",
+              "Profil « Auditeur » : donnez-le aux auditeurs internes ou externes pour une consultation complète, sans aucun droit de saisie."
             ]
           },
           {
@@ -4252,6 +4413,14 @@
           {
             "q": "La valorisation indique « Non valorisé » pour un article.",
             "a": "Aucun coût n'est connu pour cet article (stock initial ou ajustements uniquement, sans réception au prix d'un bon de commande), ou il a été reçu dans plusieurs devises. Sa quantité est comptée, pas sa valeur."
+          },
+          {
+            "q": "Le bouton « Approuver » n'apparaît pas sur ma demande.",
+            "a": "C'est la séparation des tâches : on n'approuve pas sa propre réquisition, un bon de commande qu'on a créé, ni une facture ou un paiement qu'on a saisi. Un autre membre du groupe doit le faire."
+          },
+          {
+            "q": "Un paiement est bloqué « coordonnées bancaires ».",
+            "a": "Les coordonnées bancaires du fournisseur ont changé. Une personne de la Finance (autre que celle qui a fait le changement) doit les vérifier par contre-appel dans la fiche du fournisseur, onglet « Coordonnées bancaires »."
           }
         ]
       },
@@ -4390,7 +4559,39 @@
       "USER_DEACTIVATED": "Utilisateur désactivé",
       "USER_DELETED": "Utilisateur supprimé",
       "WAREHOUSE_ACCESS_CHANGED": "Accès à un dépôt modifiés",
-      "AUDIT_LOG_EXPORTED": "Journal d'audit exporté"
+      "AUDIT_LOG_EXPORTED": "Journal d'audit exporté",
+      "SOD_VIOLATION_BLOCKED": "Séparation des tâches : action refusée",
+      "TASK_COMPLETION_DENIED": "Tâche GoFlow refusée (hors groupe / prise par un autre)",
+      "BUDGET_LINE_CREATED": "Ligne budgétaire créée",
+      "BUDGET_LINE_UPDATED": "Ligne budgétaire modifiée",
+      "BUDGET_LINE_DELETED": "Ligne budgétaire supprimée",
+      "ROLE_CREATED": "Rôle créé",
+      "ROLE_UPDATED": "Rôle modifié",
+      "ROLE_DELETED": "Rôle supprimé",
+      "ROLE_PERMISSION_ADDED": "Permission ajoutée à un rôle",
+      "ROLE_PERMISSION_REMOVED": "Permission retirée d'un rôle",
+      "ENTERPRISE_CREATED": "Entreprise créée",
+      "ENTERPRISE_UPDATED": "Entreprise modifiée",
+      "ENTERPRISE_ACTIVATED": "Entreprise réactivée",
+      "ENTERPRISE_DEACTIVATED": "Entreprise suspendue",
+      "SUPPLIER_UPDATED": "Fournisseur modifié",
+      "SUPPLIER_BANK_CHANGED": "Coordonnées bancaires modifiées",
+      "SUPPLIER_BANK_VERIFIED": "Coordonnées bancaires vérifiées",
+      "SUPPLIER_BANK_REJECTED": "Coordonnées bancaires rejetées",
+      "SUPPLIER_PREQUALIFICATION_DECIDED": "Décision de préqualification",
+      "SUPPLIER_DOCUMENT_REVIEWED": "Document fournisseur vérifié",
+      "REQUISITION_DELETED": "Réquisition supprimée",
+      "PURCHASE_ORDER_REJECTED": "Bon de commande rejeté",
+      "PURCHASE_ORDER_DELETED": "Bon de commande supprimé",
+      "GOODS_RECEIPT_CANCELLED": "Réception annulée",
+      "INVOICE_REJECTED": "Facture rejetée",
+      "INVOICE_DUPLICATE_BLOCKED": "Facture en double refusée",
+      "PAYMENT_APPROVED": "Paiement approuvé",
+      "PAYMENT_STATUS_CHANGED": "Statut de paiement modifié",
+      "PAYMENT_BLOCKED": "Paiement bloqué (coordonnées bancaires)",
+      "STOCK_ISSUE_CANCELLED": "Sortie de stock annulée",
+      "STOCK_ADJUSTED": "Ajustement de stock",
+      "STOCK_COUNT_VALIDATED": "Inventaire validé"
     },
     "groups": {
       "all": "Tous les événements",
@@ -4398,7 +4599,10 @@
       "password": "Mots de passe",
       "users": "Comptes utilisateurs",
       "access": "Accès et exports",
-      "failures": "Échecs et blocages"
+      "failures": "Échecs et blocages",
+      "controls": "Contrôle interne",
+      "data": "Données sensibles",
+      "operations": "Annulations et paiements"
     },
     "search": "Email, nom ou adresse IP…",
     "from": "Du",
@@ -4413,7 +4617,7 @@
       "date": "Date",
       "action": "Action",
       "actor": "Auteur",
-      "target": "Compte concerné",
+      "target": "Objet concerné",
       "ip": "Adresse IP",
       "enterprise": "Entreprise"
     },
@@ -4431,12 +4635,99 @@
       "UNKNOWN_EMAIL": "email inconnu",
       "WRONG_PASSWORD": "mot de passe incorrect",
       "INACTIVE_ACCOUNT": "compte désactivé",
-      "WRONG_OLD_PASSWORD": "ancien mot de passe incorrect"
+      "WRONG_OLD_PASSWORD": "ancien mot de passe incorrect",
+      "BANK_CHANGE_UNVERIFIED": "coordonnées bancaires non vérifiées",
+      "BANK_CHANGE_REJECTED": "coordonnées bancaires rejetées",
+      "NOT_IN_GROUP": "hors du groupe de la tâche",
+      "CLAIMED_BY_OTHER": "tâche prise par quelqu'un d'autre"
     },
     "scope": {
       "ACCOUNT": "compte",
       "IP": "adresse IP"
     },
-    "exportLimit": "L'export est limité aux 20 000 événements les plus récents des filtres choisis."
+    "exportLimit": "L'export est limité aux 20 000 événements les plus récents des filtres choisis.",
+    "entities": {
+      "user": "Compte",
+      "supplier": "Fournisseur",
+      "budget_line": "Ligne budgétaire",
+      "role": "Rôle",
+      "enterprise": "Entreprise",
+      "task": "Tâche",
+      "requisition": "Réquisition",
+      "purchase_order": "Bon de commande",
+      "goods_receipt": "Réception",
+      "invoice": "Facture",
+      "payment": "Paiement",
+      "stock_issue": "Sortie de stock",
+      "stock_adjustment": "Ajustement",
+      "stock_count": "Inventaire"
+    },
+    "rule": {
+      "SELF_APPROVAL": "approuver sa propre demande / son propre document",
+      "SELF_VERIFICATION": "vérifier son propre changement"
+    },
+    "status": {
+      "APPROVED": "approuvé",
+      "REJECTED": "rejeté",
+      "PENDING": "en attente",
+      "VERIFIED": "vérifié",
+      "PAID": "payé",
+      "CANCELLED": "annulé",
+      "PROCESSING": "en cours",
+      "FAILED": "échec"
+    }
+  },
+  "supplierBank": {
+    "tab": "Coordonnées bancaires",
+    "open": "Voir les coordonnées bancaires",
+    "alertPending": "Les coordonnées bancaires de ce fournisseur ont changé : ses paiements sont bloqués jusqu'à leur vérification par votre entreprise.",
+    "alertRejected": "Les dernières coordonnées bancaires de ce fournisseur ont été rejetées : ses paiements sont bloqués.",
+    "current": "Coordonnées bancaires actuelles",
+    "state": {
+      "PENDING": "À vérifier",
+      "VERIFIED": "Vérifiées",
+      "REJECTED": "Rejetées"
+    },
+    "fields": {
+      "bank_name": "Banque",
+      "bank_account": "N° de compte",
+      "bank_iban": "IBAN",
+      "bank_swift": "SWIFT / BIC"
+    },
+    "pendingTitle": "Modifiées le {{date}} — paiements bloqués",
+    "pendingText": "Avant de valider, confirmez les nouvelles coordonnées directement auprès du fournisseur. Une demande de changement de RIB est le moyen le plus courant de détourner un paiement.",
+    "callbackTip": "Rappelez le fournisseur à un numéro déjà connu (jamais celui indiqué dans le message de changement).",
+    "rejectedText": "Changement rejeté : {{reason}}. Les paiements restent bloqués jusqu'à un nouveau changement vérifié.",
+    "noChange": "Aucun changement depuis la création du fournisseur : paiements autorisés.",
+    "ownChange": "Vous avez saisi ce changement : une autre personne habilitée doit le vérifier.",
+    "verify": "Vérifiées (contre-appel fait)",
+    "reject": "Rejeter",
+    "history": "Historique des changements",
+    "noHistory": "Aucun changement enregistré.",
+    "col": {
+      "date": "Date",
+      "by": "Modifié par",
+      "change": "Changement",
+      "review": "Décision de votre entreprise"
+    },
+    "source": {
+      "PORTAL": "par le fournisseur (portail)",
+      "BUYER": "par un acheteur"
+    },
+    "superseded": "Remplacé par un changement plus récent",
+    "verifyTitle": "Confirmer les nouvelles coordonnées ?",
+    "rejectTitle": "Rejeter les nouvelles coordonnées ?",
+    "verifyText": "Vous confirmez avoir vérifié les nouvelles coordonnées bancaires de {{supplier}} auprès du fournisseur. Les paiements seront de nouveau autorisés.",
+    "rejectText": "Les paiements à ce fournisseur restent bloqués. S'il a un compte sur le portail, il est prévenu avec votre motif.",
+    "verifyComment": "Commentaire (ex. confirmé par téléphone avec M. …)",
+    "reasonPlaceholder": "Motif",
+    "reasonRequired": "Indiquez le motif du rejet",
+    "verified": "Coordonnées bancaires vérifiées",
+    "rejected": "Coordonnées bancaires rejetées",
+    "err": {
+      "SELF_VERIFICATION": "Vous avez saisi ce changement : une autre personne doit le vérifier",
+      "SUPERSEDED": "Un changement plus récent attend votre vérification",
+      "REASON_REQUIRED": "Indiquez le motif du rejet"
+    }
   }
 }

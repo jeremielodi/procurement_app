@@ -10,6 +10,7 @@ const supplierModel = require('../models/SupplierModel');
 const referenceModel = require('../models/ReferenceModel');
 const notificationModel = require('../models/NotificationModel');
 const storage = require('../services/StorageService');
+const supplierBankService = require('../services/SupplierBankService');
 const { saveLogo, removeLogo, sendLogo } = require('../utils/logoUpload');
 const {
   supplierFilesMiddleware, documentsFromRequest, storeDocument,
@@ -264,6 +265,8 @@ class SupplierPortalController {
       }
 
       await db.update('suppliers', fields, 'id', supplier.id);
+      // Changement de coordonnées bancaires : historisé, à vérifier par chaque entreprise avant tout paiement
+      await supplierBankService.recordChange(req, supplier, fields, 'PORTAL');
       if (locationIds) await supplierModel.setLocations(supplier.id, locationIds);
       if (categoryIds) await supplierModel.setCategories(supplier.id, categoryIds);
       for (const doc of documents) {

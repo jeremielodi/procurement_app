@@ -3,6 +3,10 @@ const UserModel = require('../models/UserModel');
 const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
+const segregation = require('../utils/segregation');
+const { taskLabel } = require('../utils/workflowLabels');
+const supplierBankService = require('../services/SupplierBankService');
+const { audit, AUDIT } = require('../utils/auditLog');
 
 /** Process GoFlow appartenant à l'entreprise courante (via la réquisition liée) */
 async function processIdsOfEnterprise(processIds) {
@@ -65,17 +69,24 @@ function isMine(task, currentUser) {
   return !!task.assignee && (task.assignee === currentUser.email || task.assignee === currentUser.id);
 }
 
-function getTaskPermissions(task, currentUser) {
+/**
+ * Droits d'un utilisateur sur une tâche. conflict = code de séparation des tâches (utils/segregation, ex. SELF_APPROVAL :
+ * approuver sa propre réquisition) → ni prise en charge ni complétion, raison renvoyée dans blockedReason.
+ */
+function getTaskPermissions(task, currentUser, conflict = null) {
   const isCompleted = task.status === 'completed';
   const inGroup = currentUser.isAdmin || currentUser.groups.includes(task.candidateGroup);
   return {
     isMine: isMine(task, currentUser),
-    canClaim: !isCompleted && !task.assignee && inGroup,
+    canClaim: !isCompleted && !task.assignee && inGroup && !conflict,
     // Libérer : la personne qui l'a prise, ou un admin (ex. collègue absent)
     canUnclaim: !isCompleted && !!task.assignee && (isMine(task, currentUser) || currentUser.isAdmin),
-    canComplete: !isCompleted && isMine(task, currentUser)
+    canComplete: !isCompleted && isMine(task, currentUser) && !conflict,
+    blockedReason: conflict || null,
   };
 }
+
+const conflictOf = (conflicts, task) => conflicts.get(`${task.processInstanceId}|${task.taskDefinitionKey}`) || null;
 
 /**
  * GET /api/tasks/user
@@ -111,6 +122,7 @@ async function getUserTasks(req, res) {
       }
     }
 
+    const conflicts = await segregation.taskConflicts((userTasks || []).filter(t => t.status !== 'completed'), currentUser.id);
     const enrichedTasks = await Promise.all(
       (userTasks || []).map(async (task) => {
         let variables = null;
@@ -136,7 +148,7 @@ async function getUserTasks(req, res) {
           priority: task.priority,
           status: task.status === 'completed' ? 'COMPLETED' : (task.assignee ? 'ASSIGNED' : 'UNASSIGNED'),
           variables,
-          ...getTaskPermissions(task, currentUser)
+          ...getTaskPermissions(task, currentUser, conflictOf(conflicts, task))
         };
       })
     );
@@ -210,6 +222,16 @@ async function claimTask(req, res) {
     }
     if (task.assignee) {
       return res.status(409).json({ success: false, message: `Tâche déjà prise en charge par ${task.assignee}` });
+    }
+    const conflict = await segregation.taskConflict(task, currentUser.id);
+    if (conflict) {
+      const error = await segregation.block(req, {
+        code: conflict,
+        message: 'Séparation des tâches : vous ne pouvez pas approuver votre propre demande — un autre membre du groupe doit la traiter',
+        entity: { type: 'task', id: task.taskDefinitionKey, label: taskLabel(task.taskDefinitionKey) || task.taskName || task.name },
+        details: { taskId, processInstanceId: task.processInstanceId, step: 'claim' },
+      });
+      return res.status(error.status).json({ success: false, code: error.code, message: error.message });
     }
     if (!getTaskPermissions(task, currentUser).canClaim) {
       return res.status(403).json({
@@ -304,15 +326,54 @@ async function completeTask(req, res) {
     const {
       variables = {},
       comment,
-      taskDefinitionKey,
-      requisitionId,
+      taskDefinitionKey: bodyTaskKey,
+      requisitionId: bodyRequisitionId,
       estimatedAmount
     } = req.body;
     const userId = req.user?.id;
 
     // La tâche doit appartenir à un processus de l'entreprise courante
-    if (!(await findEnterpriseTask(taskId))) {
+    const task = await findEnterpriseTask(taskId);
+    if (!task) {
       return res.status(404).json({ success: false, message: 'Tâche introuvable ou déjà terminée' });
+    }
+
+    // Contrôles côté serveur (jamais sur les valeurs envoyées par le client) : groupe de la tâche, prise en charge,
+    // séparation des tâches. La clé et la réquisition viennent de GoFlow / de la base.
+    const taskDefinitionKey = task.taskDefinitionKey || bodyTaskKey;
+    const currentUser = await getCurrentUserContext(userId);
+    if (!(currentUser.isAdmin || currentUser.groups.includes(task.candidateGroup) || isMine(task, currentUser))) {
+      await audit(req, AUDIT.TASK_COMPLETION_DENIED, {
+        entity: { type: 'task', id: taskDefinitionKey, label: taskLabel(task.taskDefinitionKey || taskDefinitionKey) || task.taskName || task.name },
+        details: { taskId, reason: 'NOT_IN_GROUP', candidateGroup: task.candidateGroup },
+      });
+      return res.status(403).json({ success: false, code: 'TASK_NOT_IN_GROUP', message: `Cette tâche est réservée au groupe « ${task.candidateGroup} »` });
+    }
+    if (task.assignee && !isMine(task, currentUser) && !currentUser.isAdmin) {
+      await audit(req, AUDIT.TASK_COMPLETION_DENIED, {
+        entity: { type: 'task', id: taskDefinitionKey, label: taskLabel(task.taskDefinitionKey || taskDefinitionKey) || task.taskName || task.name },
+        details: { taskId, reason: 'CLAIMED_BY_OTHER', assignee: task.assignee },
+      });
+      return res.status(409).json({ success: false, code: 'TASK_CLAIMED_BY_OTHER', message: `Tâche prise en charge par ${task.assignee}` });
+    }
+    const conflict = await segregation.taskConflict({ ...task, taskDefinitionKey }, userId);
+    if (conflict) {
+      const error = await segregation.block(req, {
+        code: conflict,
+        message: 'Séparation des tâches : vous ne pouvez pas approuver votre propre demande — un autre membre du groupe doit la traiter',
+        entity: { type: 'task', id: taskDefinitionKey, label: taskLabel(task.taskDefinitionKey || taskDefinitionKey) || task.taskName || task.name },
+        details: { taskId, processInstanceId: task.processInstanceId, step: 'complete' },
+      });
+      return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+    }
+    const linkedRequisition = task.processInstanceId
+      ? await db.one('SELECT id FROM requisitions WHERE process_instance_id = $1', [task.processInstanceId])
+      : null;
+    const requisitionId = linkedRequisition?.id || bodyRequisitionId;
+
+    // Paiement saisi depuis la tâche : refusé AVANT de terminer l'étape si les coordonnées bancaires ne sont pas vérifiées
+    if (taskDefinitionKey === 'Activity_ProcessPayment' && variables.amount) {
+      await supplierBankService.assertPayable(req, { invoiceId: variables.invoiceId || null, poId: variables.poId || null });
     }
 
     // Build Camunda variables
@@ -517,6 +578,7 @@ async function completeTask(req, res) {
 
     res.json({ success: true, message: 'Tâche complétée avec succès' });
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
     console.error('Error completing task:', error);
     res.status(500).json({
       success: false,
@@ -543,6 +605,7 @@ async function getTasksByProcess(req, res) {
       camundaService.getCompletedTasks({ processInstanceId })
     ]);
 
+    const conflicts = await segregation.taskConflicts(activeTasks || [], currentUser.id);
     const allTasks = [...(activeTasks || []), ...(completedTasks || [])].map(task => ({
       id: task.id,
       name: task.taskName || task.name,
@@ -557,7 +620,7 @@ async function getTasksByProcess(req, res) {
       priority: task.priority,
       completedAt: task.completedAt,
       status: task.status === 'completed' ? 'COMPLETED' : 'PENDING',
-      ...getTaskPermissions(task, currentUser)
+      ...getTaskPermissions(task, currentUser, task.status === 'completed' ? null : conflictOf(conflicts, task))
     }));
 
     res.json({ success: true, data: allTasks, count: allTasks.length, processInstanceId });

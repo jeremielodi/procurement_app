@@ -49,6 +49,7 @@ import { useCurrency } from '../../contexts/EnterpriseContext'
 import { usePermissions } from '../../hooks/usePermissions'
 import { SUPPLIER_TYPE_LABELS } from '../../utils/supplierDocs'
 import SupplierPrequalificationPanel from './prequal/SupplierPrequalificationPanel'
+import SupplierBankPanel from './SupplierBankPanel'
 import toast from 'react-hot-toast'
 import { t } from '../../i18n'
 
@@ -312,9 +313,19 @@ export default function SupplierDetail() {
         </div>
       </div>
 
+      {/* Coordonnées bancaires modifiées : paiements bloqués tant que mon entreprise ne les a pas vérifiées */}
+      {['PENDING', 'REJECTED'].includes(supplier.bank_status?.state) && (
+        <div className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4 text-sm ${supplier.bank_status.state === 'PENDING' ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-red-200 bg-red-50 text-red-800'}`} data-testid="bank-alert">
+          <span>{supplier.bank_status.state === 'PENDING' ? t('supplierBank.alertPending') : t('supplierBank.alertRejected')}</span>
+          <button onClick={() => setActiveTab('bank')} className="rounded-lg bg-white px-3 py-1.5 font-medium ring-1 ring-current hover:opacity-80">
+            {t('supplierBank.open')}
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="flex gap-4">
+        <nav className="flex flex-wrap gap-4">
           <button
             onClick={() => setActiveTab('details')}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
@@ -335,6 +346,17 @@ export default function SupplierDetail() {
           >
             {t('supplierDetail.prequalTab')}
             {supplier.dossier && !supplier.dossier.complete && <span className="ml-1 text-orange-500" title={t('supplierDetail.incompleteFile')}>●</span>}
+          </button>
+          <button
+            onClick={() => setActiveTab('bank')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'bank'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t('supplierBank.tab')}
+            {['PENDING', 'REJECTED'].includes(supplier.bank_status?.state) && <span className="ml-1 text-amber-500" title={t('supplierBank.state.PENDING')}>●</span>}
           </button>
           <button
             onClick={() => setActiveTab('purchase-orders')}
@@ -360,6 +382,9 @@ export default function SupplierDetail() {
       </div>
 
       {/* Contenu des tabs */}
+      {activeTab === 'bank' && (
+        <SupplierBankPanel supplier={supplier} canVerify={hasPermission('VERIFY_SUPPLIER_BANK')} onChanged={refetch} />
+      )}
       {activeTab === 'prequalification' && (
         <SupplierPrequalificationPanel supplier={supplier} canReview={hasPermission('PREQUALIFY_SUPPLIERS')}
           canUpload={hasPermission('MANAGE_SUPPLIERS')} onChanged={refetch} />

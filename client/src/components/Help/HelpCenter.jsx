@@ -28,6 +28,7 @@ const SECTIONS = [
   { id: 'stock', roles: ['logistic'] },
   { id: 'issues', roles: ['logistic', 'requester'] },
   { id: 'equipment', roles: ['logistic'] },
+  { id: 'control', roles: ['finance', 'auditor', 'admin', 'management', 'dg'] },
   { id: 'dashboard', roles: ['*'] },
   { id: 'budget', roles: ['finance'] },
   { id: 'admin', roles: ['superadmin'] },
@@ -35,7 +36,7 @@ const SECTIONS = [
   { id: 'faq', roles: ['*'] },
 ]
 const SUPPLIER_SECTIONS = ['supplierPortal', 'account']
-const SUPERADMIN_SECTIONS = ['overview', 'roles', 'admin', 'account']
+const SUPERADMIN_SECTIONS = ['overview', 'roles', 'control', 'admin', 'account']
 // Écrans accessibles à un compte fournisseur (cf. ProtectedRoute) : les autres liens sont masqués
 const SUPPLIER_LINK = (to) => to.startsWith('/supplier/') || to === '/notifications'
 
@@ -48,7 +49,7 @@ const ROUTE_SECTIONS = [
   ['/purchase-orders', 'purchaseOrders'], ['/goods-receipts', 'receiving'],
   ['/service-acceptance-notes', 'services'], ['/invoices', 'invoices'], ['/payments', 'payments'],
   ['/tenders', 'tenders'], ['/suppliers', 'suppliers'], ['/budget', 'budget'], ['/dashboard', 'dashboard'],
-  ['/users', 'admin'], ['/projects', 'admin'], ['/departments', 'admin'], ['/settings', 'admin'], ['/admin', 'admin'],
+  ['/admin/audit', 'control'], ['/users', 'admin'], ['/projects', 'admin'], ['/departments', 'admin'], ['/settings', 'admin'], ['/admin', 'admin'],
   ['/profile', 'account'], ['/notifications', 'account'],
   ['/supplier', 'supplierPortal'],
 ]

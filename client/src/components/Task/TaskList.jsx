@@ -16,7 +16,8 @@ import {
   Filter,
   DollarSign,
   Building2,
-  Hash
+  Hash,
+  ShieldAlert
 } from 'lucide-react';
 import { taskService } from '../../services/taskService';
 import { useAuth } from '../../hooks/useAuth';
@@ -517,6 +518,11 @@ const TaskList = () => {
                     
                     {!isCompleted && task.status !== 'COMPLETED' && (
                       <>
+                        {task.blockedReason === 'SELF_APPROVAL' && (
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 ring-1 ring-amber-200" data-testid="task-self-approval">
+                            <ShieldAlert size={14} /> {t('taskList.selfApproval')}
+                          </span>
+                        )}
                         {task.canClaim && (
                           <button
                             onClick={(e) => {

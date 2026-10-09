@@ -4,8 +4,10 @@ import { useAuth } from './useAuth';
 export const usePermissions = () => {
   const { user } = useAuth();
   
+  // permissionName : un nom, ou une liste (au moins une des permissions)
   const hasPermission = (permissionName) => {
     if (!user) return false;
+    if (Array.isArray(permissionName)) return permissionName.some(p => hasPermission(p));
     // L'admin a toutes les permissions (via le profil prof_admin)
     if (user.profiles?.some(p => p.id === 'prof_admin')) return true;
     // Vérifier si l'utilisateur a la permission

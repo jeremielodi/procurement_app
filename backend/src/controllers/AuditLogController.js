@@ -6,13 +6,13 @@ const auditLogModel = require('../models/AuditLogModel');
 const { audit, AUDIT } = require('../utils/auditLog');
 const i18n = require('../i18n');
 
-const FILTER_KEYS = ['action', 'actions', 'q', 'userId', 'from', 'to', 'enterpriseId', 'failuresOnly'];
+const FILTER_KEYS = ['action', 'actions', 'q', 'userId', 'from', 'to', 'enterpriseId', 'failuresOnly', 'entityType', 'entityRef'];
 const pick = (query) => Object.fromEntries(FILTER_KEYS.filter(k => query[k] !== undefined && query[k] !== '').map(k => [k, query[k]]));
 
-/** Détails lisibles d'une ligne : « clé : valeur » (objets JSON aplatis) */
+/** Détails lisibles d'une ligne : « clé : valeur » (objets JSON aplatis ; _label = libellé de l'objet, affiché à part) */
 function detailsText(value) {
   if (!value || typeof value !== 'object') return '';
-  return Object.entries(value)
+  return Object.entries(value).filter(([k]) => k !== '_label')
     .map(([k, v]) => `${k}: ${v !== null && typeof v === 'object' ? JSON.stringify(v) : v}`)
     .join(' · ');
 }
@@ -66,7 +66,9 @@ module.exports = {
           action: T(`auditActions.${r.action}`) === `auditActions.${r.action}` ? r.action : T(`auditActions.${r.action}`),
           enterprise: r.enterprise_name || '',
           actor: [r.actor_name, r.user_email].filter(Boolean).join(' — '),
-          target: [r.target_name, r.target_email].filter(Boolean).join(' — '),
+          target: r.entity_type === 'user' || r.target_email
+            ? [r.target_name, r.target_email].filter(Boolean).join(' — ')
+            : [r.entity_type ? T(`auditEntities.${r.entity_type}`) : null, r.entity_label || r.entity_ref].filter(Boolean).join(' — '),
           details: detailsText(r.new_value),
           before: detailsText(r.old_value),
           ip: r.ip_address || '',

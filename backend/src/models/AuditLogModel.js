@@ -6,10 +6,13 @@ const tenant = require('../utils/tenant');
 const { AUDIT } = require('../utils/auditLog');
 
 const EXPORT_LIMIT = 20000;
+// Onglet « Échecs et blocages » : connexions refusées, liens invalides, contrôles internes déclenchés
+const FAILURE_ACTIONS = ['LOGIN_FAILED', 'LOGIN_BLOCKED', 'PASSWORD_CHANGE_FAILED', 'PASSWORD_RESET_INVALID_LINK',
+  'SOD_VIOLATION_BLOCKED', 'TASK_COMPLETION_DENIED', 'PAYMENT_BLOCKED', 'INVOICE_DUPLICATE_BLOCKED'];
 
 class AuditLogModel {
   /** Clause WHERE commune à la liste et à l'export */
-  buildWhere({ action, actions, q, userId, from, to, enterpriseId, failuresOnly } = {}) {
+  buildWhere({ action, actions, q, userId, from, to, enterpriseId, failuresOnly, entityType, entityRef } = {}) {
     const params = [];
     let where = 'WHERE 1=1';
     if (tenant.current()?.superAdmin) {
@@ -22,15 +25,19 @@ class AuditLogModel {
       .map(s => s.trim()).filter(s => Object.values(AUDIT).includes(s));
     if (list.length) { params.push(list); where += ` AND a.action = ANY($${params.length}::varchar[])`; }
     if (['1', 'true', true].includes(failuresOnly)) {
-      where += ` AND a.action IN ('LOGIN_FAILED', 'LOGIN_BLOCKED', 'PASSWORD_CHANGE_FAILED', 'PASSWORD_RESET_INVALID_LINK')`;
+      where += ` AND a.action = ANY($${params.push(FAILURE_ACTIONS)}::varchar[])`;
     }
+    // Historique d'un objet (ex. un fournisseur, une ligne budgétaire)
+    if (entityType) { params.push(String(entityType)); where += ` AND a.entity_type = $${params.length}`; }
+    if (entityRef) { params.push(String(entityRef)); where += ` AND a.entity_ref = $${params.length}`; }
     if (userId) { params.push(userId); where += ` AND (a.user_id = $${params.length} OR a.entity_id = $${params.length})`; }
     if (q && String(q).trim()) {
       params.push(`%${String(q).trim().toLowerCase()}%`);
       const n = params.length;
       where += ` AND (LOWER(COALESCE(a.user_email, '')) LIKE $${n} OR LOWER(COALESCE(actor.first_name || ' ' || actor.last_name, '')) LIKE $${n}
                  OR LOWER(COALESCE(target.email, '')) LIKE $${n} OR LOWER(COALESCE(target.first_name || ' ' || target.last_name, '')) LIKE $${n}
-                 OR COALESCE(a.ip_address, '') LIKE $${n} OR LOWER(COALESCE(a.new_value->>'email', '')) LIKE $${n})`;
+                 OR COALESCE(a.ip_address, '') LIKE $${n} OR LOWER(COALESCE(a.new_value->>'email', '')) LIKE $${n}
+                 OR LOWER(COALESCE(a.new_value->>'_label', '')) LIKE $${n} OR LOWER(COALESCE(a.entity_ref, '')) = TRIM($${n}, '%'))`;
     }
     const isoDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || '')) && !Number.isNaN(Date.parse(d));
     // Période en jours du fuseau de l'application (created_at est écrit dans le fuseau de la session PostgreSQL)
@@ -54,7 +61,7 @@ class AuditLogModel {
     // created_at : TIMESTAMP sans fuseau écrit dans le fuseau de la session PostgreSQL → converti en instant réel
     return `a.id, (a.created_at AT TIME ZONE current_setting('TimeZone')) AS created_at, a.action, a.user_id, a.user_email,
             NULLIF(TRIM(COALESCE(actor.first_name, '') || ' ' || COALESCE(actor.last_name, '')), '') AS actor_name,
-            a.entity_type, a.entity_id, target.email AS target_email,
+            a.entity_type, a.entity_id, a.entity_ref, a.new_value->>'_label' AS entity_label, target.email AS target_email,
             NULLIF(TRIM(COALESCE(target.first_name, '') || ' ' || COALESCE(target.last_name, '')), '') AS target_name,
             a.old_value, a.new_value, a.ip_address, a.user_agent, a.enterprise_id, e.name AS enterprise_name`;
   }

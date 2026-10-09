@@ -14,10 +14,11 @@
  *   npx playwright test tests/api/flow.spec.js --project=api --reporter=line
  */
 import { test, expect } from '@playwright/test';
-import { getToken, auth } from './helpers.js';
+import { getToken, getApproverToken, auth } from './helpers.js';
 
 // ── Shared state ──────────────────────────────────────────────────────────────
 let token      = null;
+let approverToken;   // approbations : second administrateur (séparation des tâches)
 let dept       = null;
 let supplier   = null;
 let project    = null;
@@ -59,6 +60,7 @@ test.describe.serial('🔄 BPMN Procurement Flow — end to end', () => {
   // ── 0. Auth ────────────────────────────────────────────────────────────────
   test('0 · Authentification admin', async ({ request }) => {
     token = await getToken(request);
+    approverToken = await getApproverToken(request);
     expect(token).toBeTruthy();
 
     // Charger département, fournisseur et projet pour les étapes suivantes
@@ -211,7 +213,7 @@ test.describe.serial('🔄 BPMN Procurement Flow — end to end', () => {
     if (!approvalTask) test.skip('Tâche approbation non trouvée (step 3 skipped)');
 
     const res  = await request.post(`/api/tasks/${approvalTask.id}/complete`, {
-      headers: auth(token),
+      headers: auth(approverToken),
       data: {
         variables: { approved: true },
         taskDefinitionKey: 'Activity_ValidationN1_Manager',
@@ -287,7 +289,7 @@ test.describe.serial('🔄 BPMN Procurement Flow — end to end', () => {
     if (!purchaseOrder) test.skip('PO non créé');
 
     const res  = await request.post(`/api/purchase-orders/${purchaseOrder.id}/approve`, {
-      headers: auth(token),
+      headers: auth(approverToken),
       data: { notes: 'Approuvé par test Playwright' }
     });
     const body = await res.json();

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getToken, auth, supplierRegistration, firstReferenceIds } from './helpers.js';
+import { getToken, getApproverToken, auth, supplierRegistration, firstReferenceIds } from './helpers.js';
 
 // Confirmation de commande par le fournisseur (étape GoFlow Activity_SupplierConfirmation) :
 // portail fournisseur (mes commandes, détail, PDF, refus motivé puis confirmation), saisie par les achats,
@@ -42,7 +42,8 @@ test.describe.serial('API › Confirmation de commande par le fournisseur', () =
         requisitionId: req.id, supplierId: supplier.id, currency: 'USD', totalAmount: 50, deliveryDate: future(20),
         items: [{ description: 'Ramettes de papier', quantity: 10, unitPrice: 5 }],
       } })).json()).data;
-      const ok = await request.post(`/api/purchase-orders/${po.id}/approve`, { headers: H, data: { comments: 'ok' } });
+      // Approbation par un autre administrateur que le créateur du bon (séparation des tâches)
+      const ok = await request.post(`/api/purchase-orders/${po.id}/approve`, { headers: auth(await getApproverToken(request)), data: { comments: 'ok' } });
       expect(ok.status()).toBe(200);
       return (await (await request.get(`/api/purchase-orders/${po.id}`, { headers: H })).json()).data;
     };

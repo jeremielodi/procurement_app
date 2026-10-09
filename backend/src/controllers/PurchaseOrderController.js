@@ -4,6 +4,15 @@ const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
 const i18n = require('../i18n');
 const purchaseOrderExportService = require('../services/PurchaseOrderExportService');
+const segregation = require('../utils/segregation');
+const { audit, AUDIT } = require('../utils/auditLog');
+
+/** Erreur métier { status, code } (séparation des tâches…) sinon 500 */
+function sendError(res, error, fallback) {
+  if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+  console.error(fallback, error);
+  return res.status(500).json({ success: false, message: fallback, error: error.message });
+}
 
 class PurchaseOrderController {
 
@@ -97,6 +106,8 @@ class PurchaseOrderController {
       if (!purchaseOrder) {
         return res.status(404).json({ success: false, message: 'Commande non trouvée' });
       }
+      // Séparation des tâches : l'interface remplace « Approuver » par une explication
+      purchaseOrder.self_approval = await segregation.isPurchaseOrderSelfApproval(purchaseOrder, req.user.id);
       res.json({ success: true, data: purchaseOrder });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Erreur récupération commande', error: error.message });
@@ -139,8 +150,8 @@ class PurchaseOrderController {
   async approve(req, res) {
     try {
       const { id } = req.params;
-      const { approverId, comments, taskId } = req.body;
-      const userId = req.user?.id || approverId;
+      const { comments } = req.body;
+      const userId = req.user.id;
 
       const existing = await purchaseOrderModel.findById(id);
       if (!existing) return res.status(404).json({ success: false, message: 'Commande non trouvée' });
@@ -148,6 +159,8 @@ class PurchaseOrderController {
       if (existing.status !== 'PO_PENDING' && existing.status !== 'DRAFT') {
         return res.status(400).json({ success: false, message: 'Seules les commandes en attente peuvent être approuvées' });
       }
+      // Séparation des tâches : ni le créateur du bon, ni le demandeur de la réquisition
+      await segregation.assertCanApprovePurchaseOrder(req, existing);
 
       let camundaTaskCompleted = false;
 
@@ -186,8 +199,7 @@ class PurchaseOrderController {
         camundaTaskCompleted
       });
     } catch (error) {
-      console.error('Error approving purchase order:', error);
-      res.status(500).json({ success: false, message: "Erreur lors de l'approbation", error: error.message });
+      return sendError(res, error, "Erreur lors de l'approbation");
     }
   }
 
@@ -198,8 +210,8 @@ class PurchaseOrderController {
   async reject(req, res) {
     try {
       const { id } = req.params;
-      const { approverId, reason, taskId } = req.body;
-      const userId = req.user?.id || approverId;
+      const { reason } = req.body;
+      const userId = req.user.id;
 
       if (!reason) {
         return res.status(400).json({ success: false, message: 'La raison du rejet est requise' });
@@ -232,6 +244,10 @@ class PurchaseOrderController {
       }
 
       await purchaseOrderModel.reject(id, userId, reason);
+      await audit(req, AUDIT.PURCHASE_ORDER_REJECTED, {
+        entity: { type: 'purchase_order', id: existing.id, label: existing.po_number },
+        details: { reason, amount: existing.total_amount, supplier: existing.supplier_name || null },
+      });
 
       res.json({
         success: true,
@@ -269,6 +285,10 @@ class PurchaseOrderController {
         return res.status(400).json({ success: false, message: 'Seules les commandes en brouillon peuvent être supprimées' });
       }
       await purchaseOrderModel.delete(id);
+      await audit(req, AUDIT.PURCHASE_ORDER_DELETED, {
+        entity: { type: 'purchase_order', id: existing.id, label: existing.po_number },
+        oldValue: { status: existing.status, amount: existing.total_amount, supplier: existing.supplier_name || null },
+      });
       res.json({ success: true, message: 'Commande supprimée avec succès' });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Erreur suppression', error: error.message });

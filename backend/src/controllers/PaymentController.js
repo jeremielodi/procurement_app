@@ -7,6 +7,11 @@ const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { getBranding } = require('../utils/enterpriseBranding');
 const i18n = require('../i18n');
 const { pdfContext } = require('../utils/pdfI18n');
+const segregation = require('../utils/segregation');
+const supplierBankService = require('../services/SupplierBankService');
+const { audit, AUDIT } = require('../utils/auditLog');
+
+const PAYMENT_STATUSES = ['PENDING', 'PROCESSING', 'PAID', 'FAILED', 'CANCELLED'];
 
 class PaymentController {
 
@@ -32,6 +37,9 @@ class PaymentController {
           return res.status(404).json({ success: false, message: 'Facture introuvable' });
         }
       }
+
+      // Coordonnées bancaires du fournisseur modifiées et non vérifiées par l'entreprise : paiement refusé
+      await supplierBankService.assertPayable(req, { invoiceId, poId });
 
       // Resolve processInstanceId
       let processInstanceId = null;
@@ -89,6 +97,7 @@ class PaymentController {
         message: 'Paiement enregistré avec succès'
       });
     } catch (error) {
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
       console.error('Error creating payment:', error);
       res.status(500).json({ success: false, message: 'Erreur création paiement', error: error.message });
     }
@@ -117,6 +126,11 @@ class PaymentController {
     try {
       const pay = await paymentModel.findById(req.params.id);
       if (!pay) return res.status(404).json({ success: false, message: 'Paiement non trouvé' });
+      // Pour l'interface : approbation impossible par celui qui l'a saisi ; coordonnées bancaires à vérifier
+      pay.self_approval = segregation.same(pay.created_by, req.user.id);
+      const supplierId = await supplierBankService.supplierOf({ invoiceId: pay.invoice_id, poId: pay.po_id });
+      pay.supplier_id = pay.supplier_id || supplierId;
+      pay.bank_status = supplierId ? (await supplierBankService.status(supplierId)).state : 'NONE';
       res.json({ success: true, data: pay });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Erreur récupération paiement', error: error.message });
@@ -129,9 +143,17 @@ class PaymentController {
       const userId = req.user?.id;
       const pay = await paymentModel.findById(id);
       if (!pay) return res.status(404).json({ success: false, message: 'Paiement non trouvé' });
+      // Séparation des tâches, puis coordonnées bancaires du fournisseur vérifiées par l'entreprise
+      await segregation.assertCanApprovePayment(req, pay);
+      await supplierBankService.assertPayable(req, { invoiceId: pay.invoice_id, poId: pay.po_id, paymentLabel: pay.payment_number });
       await paymentModel.approve(id, userId);
+      await audit(req, AUDIT.PAYMENT_APPROVED, {
+        entity: { type: 'payment', id: pay.id, label: pay.payment_number },
+        details: { amount: pay.amount, currency: pay.currency, invoiceId: pay.invoice_id },
+      });
       res.json({ success: true, message: 'Paiement approuvé' });
     } catch (error) {
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
       res.status(500).json({ success: false, message: 'Erreur approbation paiement', error: error.message });
     }
   }
@@ -140,10 +162,22 @@ class PaymentController {
     try {
       const { id } = req.params;
       const { status } = req.body;
-      if (!status) return res.status(400).json({ success: false, message: 'status requis' });
+      if (!PAYMENT_STATUSES.includes(status)) return res.status(400).json({ success: false, message: 'status invalide' });
+      const pay = await paymentModel.findById(id);
+      if (!pay) return res.status(404).json({ success: false, message: 'Paiement non trouvé' });
+      // « Payé » = approbation : mêmes contrôles que POST /payments/:id/approve
+      if (status === 'PAID' || status === 'PROCESSING') {
+        await segregation.assertCanApprovePayment(req, pay);
+        await supplierBankService.assertPayable(req, { invoiceId: pay.invoice_id, poId: pay.po_id, paymentLabel: pay.payment_number });
+      }
       await paymentModel.updateStatus(id, status);
+      await audit(req, AUDIT.PAYMENT_STATUS_CHANGED, {
+        entity: { type: 'payment', id: pay.id, label: pay.payment_number },
+        oldValue: { status: pay.status }, details: { status, amount: pay.amount },
+      });
       res.json({ success: true, message: 'Statut paiement mis à jour' });
     } catch (error) {
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
       res.status(500).json({ success: false, message: 'Erreur mise à jour', error: error.message });
     }
   }

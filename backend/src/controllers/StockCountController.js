@@ -2,6 +2,7 @@
 // Inventaires (COUNT_STOCK : ouvrir, compter, annuler ; ADJUST_STOCK : valider les écarts) et ajustements ponctuels
 // (ADJUST_STOCK). Consultation : VIEW_STOCK.
 const countModel = require('../models/StockCountModel');
+const { audit, AUDIT } = require('../utils/auditLog');
 
 function sendError(res, error, fallback) {
   if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, line: error.line, pending: error.pending });
@@ -56,7 +57,11 @@ module.exports = {
 
   async validate(req, res) {
     try {
-      res.json({ success: true, data: await countModel.validate(req.params.id, { userId: req.user.id }), message: 'Inventaire validé' });
+      const result = await countModel.validate(req.params.id, { userId: req.user.id });
+      await audit(req, AUDIT.STOCK_COUNT_VALIDATED, {
+        entity: { type: 'stock_count', id: result.id, label: result.countNumber }, details: { adjustedLines: result.adjustedLines },
+      });
+      res.json({ success: true, data: result, message: 'Inventaire validé' });
     } catch (error) { return sendError(res, error, 'Erreur lors de la validation de l\'inventaire'); }
   },
 
@@ -77,7 +82,13 @@ module.exports = {
   /** POST /stock-adjustments { warehouseId, stockItemId, lotId?, unitId?, quantity, reason, comment } */
   async createAdjustment(req, res) {
     try {
-      res.status(201).json({ success: true, data: await countModel.createAdjustment(req.body || {}, { userId: req.user.id }), message: 'Ajustement enregistré' });
+      const result = await countModel.createAdjustment(req.body || {}, { userId: req.user.id });
+      const b = req.body || {};
+      await audit(req, AUDIT.STOCK_ADJUSTED, {
+        entity: { type: 'stock_adjustment', id: result.id, label: result.adjustmentNumber },
+        details: { reason: b.reason, comment: b.comment || null, quantity: b.quantity, stockItemId: b.stockItemId, warehouseId: b.warehouseId, unitId: b.unitId || null, movement: result.movementNumber },
+      });
+      res.status(201).json({ success: true, data: result, message: 'Ajustement enregistré' });
     } catch (error) { return sendError(res, error, 'Erreur lors de l\'ajustement'); }
   },
 };

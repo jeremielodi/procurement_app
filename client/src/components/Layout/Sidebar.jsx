@@ -279,7 +279,7 @@ const menuGroups = [
       path: '/budget', 
       icon: DollarSign, 
       label: 'nav.budgetManagement',
-      permission: 'MANAGE_BUDGET'
+      permission: ['MANAGE_BUDGET', 'AUDIT_ACCESS'] // auditeur : consultation
     }
   ]
 }

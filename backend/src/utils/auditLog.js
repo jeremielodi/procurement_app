@@ -1,5 +1,6 @@
 // backend/src/utils/auditLog.js
-// Journal d'audit (table audit_logs, migration 12_audit_logs.sql) : événements de sécurité des comptes.
+// Journal d'audit (table audit_logs, migrations 12 / 20 / 21) : événements de sécurité des comptes et actions sensibles
+// (budget, rôles, entreprise, fournisseurs, annulations, séparation des tâches).
 // N'interrompt jamais la requête : une erreur d'écriture est seulement loguée.
 // Ne jamais y mettre de mot de passe ni de token.
 const db = require('../config/database');
@@ -24,6 +25,43 @@ const AUDIT = {
   USER_DELETED: 'USER_DELETED',
   WAREHOUSE_ACCESS_CHANGED: 'WAREHOUSE_ACCESS_CHANGED',
   AUDIT_LOG_EXPORTED: 'AUDIT_LOG_EXPORTED', // export Excel du journal (filtres, nombre de lignes)
+  // Séparation des tâches : tentative refusée (approuver sa propre demande, son propre bon, son propre paiement…)
+  SOD_VIOLATION_BLOCKED: 'SOD_VIOLATION_BLOCKED',
+  TASK_COMPLETION_DENIED: 'TASK_COMPLETION_DENIED', // tâche GoFlow d'un autre groupe ou prise par quelqu'un d'autre
+  // Budget
+  BUDGET_LINE_CREATED: 'BUDGET_LINE_CREATED',
+  BUDGET_LINE_UPDATED: 'BUDGET_LINE_UPDATED',
+  BUDGET_LINE_DELETED: 'BUDGET_LINE_DELETED',
+  // Rôles, permissions, entreprises
+  ROLE_CREATED: 'ROLE_CREATED',
+  ROLE_UPDATED: 'ROLE_UPDATED',
+  ROLE_DELETED: 'ROLE_DELETED',
+  ROLE_PERMISSION_ADDED: 'ROLE_PERMISSION_ADDED',
+  ROLE_PERMISSION_REMOVED: 'ROLE_PERMISSION_REMOVED',
+  ENTERPRISE_CREATED: 'ENTERPRISE_CREATED',
+  ENTERPRISE_UPDATED: 'ENTERPRISE_UPDATED',
+  ENTERPRISE_ACTIVATED: 'ENTERPRISE_ACTIVATED',
+  ENTERPRISE_DEACTIVATED: 'ENTERPRISE_DEACTIVATED',
+  // Fournisseurs
+  SUPPLIER_UPDATED: 'SUPPLIER_UPDATED',
+  SUPPLIER_BANK_CHANGED: 'SUPPLIER_BANK_CHANGED',
+  SUPPLIER_BANK_VERIFIED: 'SUPPLIER_BANK_VERIFIED',
+  SUPPLIER_BANK_REJECTED: 'SUPPLIER_BANK_REJECTED',
+  SUPPLIER_PREQUALIFICATION_DECIDED: 'SUPPLIER_PREQUALIFICATION_DECIDED',
+  SUPPLIER_DOCUMENT_REVIEWED: 'SUPPLIER_DOCUMENT_REVIEWED',
+  // Annulations, rejets, ajustements
+  REQUISITION_DELETED: 'REQUISITION_DELETED',
+  PURCHASE_ORDER_REJECTED: 'PURCHASE_ORDER_REJECTED',
+  PURCHASE_ORDER_DELETED: 'PURCHASE_ORDER_DELETED',
+  GOODS_RECEIPT_CANCELLED: 'GOODS_RECEIPT_CANCELLED',
+  INVOICE_REJECTED: 'INVOICE_REJECTED',
+  INVOICE_DUPLICATE_BLOCKED: 'INVOICE_DUPLICATE_BLOCKED',
+  PAYMENT_APPROVED: 'PAYMENT_APPROVED',
+  PAYMENT_STATUS_CHANGED: 'PAYMENT_STATUS_CHANGED',
+  PAYMENT_BLOCKED: 'PAYMENT_BLOCKED', // coordonnées bancaires du fournisseur non vérifiées
+  STOCK_ISSUE_CANCELLED: 'STOCK_ISSUE_CANCELLED',
+  STOCK_ADJUSTED: 'STOCK_ADJUSTED',
+  STOCK_COUNT_VALIDATED: 'STOCK_COUNT_VALIDATED',
 };
 
 // Adresse locale / privée : la requête arrive par un reverse proxy (Caddy, Nginx, Docker)
@@ -49,13 +87,16 @@ function clientIp(req) {
  * @param {object} [opts]
  *   actor     { id, email, enterprise_id } — auteur (défaut : req.user ; null pour un visiteur)
  *   target    { id, email, enterprise_id } — compte concerné (entity_type 'user')
+ *   entity    { type, id, label } — autre objet concerné (ligne budgétaire, rôle, fournisseur, document…) :
+ *             entity_type = type, entity_ref = id (texte), label ajouté aux détails (_label) pour l'affichage
  *   details   objet JSON (new_value) : email saisi, motif d'échec, champs modifiés…
  *   oldValue  objet JSON (old_value) : valeurs avant modification
+ *   enterpriseId  entreprise de la ligne (défaut : celle de l'auteur / du compte) — ex. super admin agissant sur une entreprise
  */
-async function audit(req, action, { actor, target, details, oldValue } = {}) {
+async function audit(req, action, { actor, target, entity, details, oldValue, enterpriseId: forcedEnterpriseId } = {}) {
   try {
     const who = actor === undefined ? req?.user || null : actor;
-    let enterpriseId = who?.enterprise_id || who?.enterpriseId || (who && req?.enterpriseId) || target?.enterprise_id || target?.enterpriseId || null;
+    let enterpriseId = forcedEnterpriseId || who?.enterprise_id || who?.enterpriseId || (who && req?.enterpriseId) || target?.enterprise_id || target?.enterpriseId || null;
     // Routes ouvertes avant tenantContext (mot de passe, déconnexion) : entreprise lue sur le compte
     const accountId = who?.id || target?.id;
     if (!enterpriseId && accountId) {
@@ -66,10 +107,11 @@ async function audit(req, action, { actor, target, details, oldValue } = {}) {
       user_email: who?.email || null,
       enterprise_id: enterpriseId,
       action,
-      entity_type: target ? 'user' : null,
+      entity_type: target ? 'user' : entity?.type || null,
       entity_id: target?.id || null,
+      entity_ref: !target && entity?.id != null ? String(entity.id).slice(0, 100) : null,
       old_value: oldValue ? JSON.stringify(oldValue) : null,
-      new_value: details ? JSON.stringify(details) : null,
+      new_value: details || entity?.label ? JSON.stringify({ ...(entity?.label ? { _label: entity.label } : {}), ...(details || {}) }) : null,
       ip_address: clientIp(req),
       user_agent: String(req?.headers?.['user-agent'] || '').slice(0, 500) || null,
     });

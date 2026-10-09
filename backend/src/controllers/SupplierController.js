@@ -9,6 +9,11 @@ const { storeDocument, DOC_LABELS } = require('../utils/supplierDocuments');
 const { parseIdList, sendDocument } = require('./SupplierPortalController');
 const { generatePrequalifiedWorkbook } = require('../services/PrequalifiedSupplierExportService');
 const notificationModel = require('../models/NotificationModel');
+const supplierBankService = require('../services/SupplierBankService');
+const { audit, AUDIT } = require('../utils/auditLog');
+
+// Champs suivis par le journal d'audit lors d'une modification par un acheteur (hors coordonnées bancaires, historisées à part)
+const AUDITED_FIELDS = ['name', 'status', 'prequalified', 'registration_number', 'tax_id', 'id_nat', 'email', 'phone', 'address', 'payment_terms'];
 
 const fail = (res, error) => res.status(error.status || 500).json({ success: false, message: error.message });
 const PREQ_STATUSES = ['APPROVED', 'REJECTED'];
@@ -58,6 +63,8 @@ class SupplierController {
       const supplier = await supplierModel.getFullProfile(req.params.id);
       if (!supplier) return res.status(404).json({ success: false, message: 'Fournisseur introuvable' });
       supplier.prequalification = await supplierModel.getPrequalification(supplier.id);
+      // Coordonnées bancaires : dernier changement et sa vérification par l'entreprise (paiements bloqués si PENDING / REJECTED)
+      supplier.bank_status = await supplierBankService.status(supplier.id);
       res.json({ success: true, data: supplier });
     } catch (error) { fail(res, error); }
   }
@@ -75,6 +82,15 @@ class SupplierController {
       const result = await supplierModel.update(req.params.id, req.body);
       if (!result) return res.status(404).json({ success: false, message: 'Fournisseur introuvable' });
       await applyLinks(result.supplier, req.body);
+      await supplierBankService.recordChange(req, result.before, result.fields, 'BUYER');
+      const changed = AUDITED_FIELDS.filter(f => result.fields[f] !== undefined && String(result.fields[f] ?? '') !== String(result.before[f] ?? ''));
+      if (changed.length) {
+        await audit(req, AUDIT.SUPPLIER_UPDATED, {
+          entity: { type: 'supplier', id: result.supplier.id, label: result.supplier.name },
+          oldValue: Object.fromEntries(changed.map(f => [f, result.before[f]])),
+          details: Object.fromEntries(changed.map(f => [f, result.fields[f]])),
+        });
+      }
       res.json({
         success: true,
         data: result.supplier,
@@ -158,6 +174,10 @@ class SupplierController {
       if (status === 'REJECTED' && !comment) return res.status(400).json({ success: false, message: 'Indiquez le motif du refus' });
 
       await supplierModel.reviewDocument(req.enterpriseId, document, status, comment, req.user.id);
+      await audit(req, AUDIT.SUPPLIER_DOCUMENT_REVIEWED, {
+        entity: { type: 'supplier', id: supplier.id, label: supplier.name },
+        details: { document: document.doc_type, status: status || 'PENDING', comment: comment || null },
+      });
 
       // Le fournisseur est prévenu d'un refus pour pouvoir déposer un nouveau fichier
       if (status === 'REJECTED' && supplier.user_id) {
@@ -175,6 +195,28 @@ class SupplierController {
         message: { VERIFIED: 'Document vérifié', REJECTED: 'Document refusé' }[status] || 'Vérification annulée',
       });
     } catch (error) { fail(res, error); }
+  }
+
+  // ---------------- Coordonnées bancaires ----------------
+
+  /** GET /suppliers/:id/bank-changes — historique des changements et décision de l'entreprise courante */
+  async bankChanges(req, res) {
+    try {
+      const supplier = await supplierModel.getById(req.params.id);
+      if (!supplier) return res.status(404).json({ success: false, message: 'Fournisseur introuvable' });
+      res.json({ success: true, data: { status: await supplierBankService.status(supplier.id), changes: await supplierBankService.history(supplier.id) } });
+    } catch (error) { fail(res, error); }
+  }
+
+  /** PUT /suppliers/:id/bank-changes/:changeId/review { status: VERIFIED | REJECTED, reason } (VERIFY_SUPPLIER_BANK) */
+  async reviewBankChange(req, res) {
+    try {
+      const status = await supplierBankService.review(req, req.params.id, req.params.changeId, req.body || {});
+      res.json({ success: true, data: { status, changes: await supplierBankService.history(req.params.id) } });
+    } catch (error) {
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+      fail(res, error);
+    }
   }
 
   // ---------------- Préqualification (entreprise courante, par catégorie) ----------------
@@ -224,6 +266,11 @@ class SupplierController {
       }
 
       await supplierModel.setPrequalification(req.enterpriseId, supplier.id, categoryId, status, req.body.comment?.trim(), req.user.id);
+      const category = await db.one('SELECT name FROM market_categories WHERE id = $1', [categoryId]);
+      await audit(req, AUDIT.SUPPLIER_PREQUALIFICATION_DECIDED, {
+        entity: { type: 'supplier', id: supplier.id, label: supplier.name },
+        details: { category: category?.name || categoryId, status: status || 'PENDING', comment: req.body.comment?.trim() || null },
+      });
       res.json({
         success: true,
         data: await supplierModel.getPrequalification(supplier.id),

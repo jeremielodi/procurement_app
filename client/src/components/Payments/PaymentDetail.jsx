@@ -54,8 +54,8 @@ export default function PaymentDetail() {
       await paymentService.approve(id);
       toast.success(t('payment.markedPaid'));
       load();
-    } catch {
-      toast.error(t('payment.approveError'));
+    } catch (err) {
+      toast.error(err.response?.data?.message || t('payment.approveError'));
     } finally {
       setApproving(false);
     }
@@ -259,14 +259,26 @@ export default function PaymentDetail() {
       {/* Approve action */}
       {payment.status === 'PENDING' && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-center justify-between">
-          <p className="text-sm text-yellow-800 font-medium">{t('payment.awaitingConfirmation')}</p>
-          <button onClick={handleApprove} disabled={approving}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-medium">
-            {approving
-              ? <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-              : <CheckCircle size={16} />}
-            {approving ? t('payment.processing') : t('payment.confirm')}
-          </button>
+          <div>
+            <p className="text-sm text-yellow-800 font-medium">{t('payment.awaitingConfirmation')}</p>
+            {['PENDING', 'REJECTED'].includes(payment.bank_status) && (
+              <p className="mt-1 text-sm text-red-700" data-testid="payment-bank-blocked">
+                {t('payment.bankBlocked')}{' '}
+                {payment.supplier_id && <Link to={`/suppliers/${payment.supplier_id}?tab=bank`} className="underline">{t('supplierBank.open')}</Link>}
+              </p>
+            )}
+          </div>
+          {payment.self_approval ? (
+            <span className="text-sm text-amber-800" data-testid="payment-self-approval">{t('payment.selfApproval')}</span>
+          ) : (
+            <button onClick={handleApprove} disabled={approving || ['PENDING', 'REJECTED'].includes(payment.bank_status)}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-medium">
+              {approving
+                ? <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                : <CheckCircle size={16} />}
+              {approving ? t('payment.processing') : t('payment.confirm')}
+            </button>
+          )}
         </div>
       )}
 

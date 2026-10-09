@@ -22,7 +22,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { getToken, auth } from './helpers.js';
+import { getToken, getApproverToken, auth } from './helpers.js';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -33,6 +33,8 @@ const STATUS_POLL_TIMEOUT = 15_000; // 15 s pour les mises à jour de statut DB
 // ── Données partagées (chargées une seule fois dans le beforeAll global) ──────
 
 let sharedToken    = null;
+// Approbations : second administrateur (on n'approuve pas ce qu'on a soi-même demandé ou créé)
+let approverToken;
 let sharedDept     = null;
 let sharedSupplier = null;
 let sharedProject  = null;
@@ -187,7 +189,7 @@ async function submitAndApprovePO(request, token, poId) {
 
   // PO_PENDING → PO_APPROVED
   const appRes = await request.post(`/api/purchase-orders/${poId}/approve`, {
-    headers: auth(token),
+    headers: auth(approverToken),
     data: { notes: 'Approuvé par test Playwright étendu' },
   });
   if (!appRes.ok()) {
@@ -205,6 +207,7 @@ test.beforeAll(async ({ request }) => {
   // Auth
   sharedToken = await getToken(request);
   expect(sharedToken).toBeTruthy();
+  approverToken = await getApproverToken(request);
 
   // Charger les données de référence
   const [deptRes, suppRes, projRes] = await Promise.all([
@@ -352,7 +355,7 @@ test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () =
     if (!approvalTask) test.skip('Tâche N2 non trouvée (S1-3 skipped)');
 
     const res  = await request.post(`/api/tasks/${approvalTask.id}/complete`, {
-      headers: auth(sharedToken),
+      headers: auth(approverToken),
       data: {
         variables:         { approved: true },
         taskDefinitionKey: 'Activity_ValidationN2_Finance',
@@ -446,7 +449,7 @@ test.describe.serial('Scénario 2 — Approbation N3 DG (150 000 XAF)', () => {
     if (!approvalTask) test.skip('Tâche N3 non trouvée (S2-3 skipped)');
 
     const res  = await request.post(`/api/tasks/${approvalTask.id}/complete`, {
-      headers: auth(sharedToken),
+      headers: auth(approverToken),
       data: {
         variables:         { approved: true },
         taskDefinitionKey: 'Activity_ValidationN3_DG',
@@ -525,7 +528,7 @@ test.describe.serial('Scénario 3 — Rejet N1 Manager (10 000 XAF)', () => {
     if (!rejectTask) test.skip('Tâche N1 non trouvée (S3-2 skipped)');
 
     const res  = await request.post(`/api/tasks/${rejectTask.id}/complete`, {
-      headers: auth(sharedToken),
+      headers: auth(approverToken),
       data: {
         variables:         { approved: false },
         taskDefinitionKey: 'Activity_ValidationN1_Manager',
@@ -601,7 +604,7 @@ test.describe.serial('Scénario 4 — Rejet PO (PO_PENDING → PO_REJECTED)', ()
     }
 
     const completeRes = await request.post(`/api/tasks/${task.id}/complete`, {
-      headers: auth(sharedToken),
+      headers: auth(approverToken),
       data: {
         variables:         { approved: true },
         taskDefinitionKey: 'Activity_ValidationN1_Manager',
@@ -794,7 +797,7 @@ test.describe.serial('Scénario 6 — GRN partielle (5 sur 10 articles reçus)',
     }
 
     const completeRes = await request.post(`/api/tasks/${task.id}/complete`, {
-      headers: auth(sharedToken),
+      headers: auth(approverToken),
       data: {
         variables:         { approved: true },
         taskDefinitionKey: 'Activity_ValidationN1_Manager',
@@ -942,7 +945,7 @@ test.describe.serial('Scénario 7 — Invoice mismatch 3-way (montant +5% > PO �
       );
       if (taskN2) {
         const completeRes = await request.post(`/api/tasks/${taskN2.id}/complete`, {
-          headers: auth(sharedToken),
+          headers: auth(approverToken),
           data: {
             variables:         { approved: true },
             taskDefinitionKey: 'Activity_ValidationN2_Finance',
@@ -960,7 +963,7 @@ test.describe.serial('Scénario 7 — Invoice mismatch 3-way (montant +5% > PO �
     }
 
     const completeRes = await request.post(`/api/tasks/${task.id}/complete`, {
-      headers: auth(sharedToken),
+      headers: auth(approverToken),
       data: {
         variables:         { approved: true },
         taskDefinitionKey: 'Activity_ValidationN3_DG',

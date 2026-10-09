@@ -332,6 +332,12 @@
       "confirmedMessage": "{supplier} confirmed order {number}. Planned delivery: {date}.",
       "declinedTitle": "Order declined by the supplier: {number}",
       "declinedMessage": "{supplier} declined order {number} — reason: {reason}. Decide what to do next (renegotiation, another supplier…)."
+    },
+    "supplierBank": {
+      "changedTitle": "Bank details changed: {supplier}",
+      "changedMessage": "The bank details of {supplier} have changed. Check them with the supplier (call back a known number) before any payment: payments are blocked until verified.",
+      "rejectedTitle": "Bank details refused",
+      "rejectedMessage": "A customer refused your new bank details: {reason}. Correct them in your profile or contact them."
     }
   },
   "pdf": {
@@ -602,7 +608,39 @@
     "USER_DEACTIVATED": "User deactivated",
     "USER_DELETED": "User deleted",
     "WAREHOUSE_ACCESS_CHANGED": "Warehouse access changed",
-    "AUDIT_LOG_EXPORTED": "Audit log exported"
+    "AUDIT_LOG_EXPORTED": "Audit log exported",
+    "SOD_VIOLATION_BLOCKED": "Segregation of duties: action refused",
+    "TASK_COMPLETION_DENIED": "GoFlow task refused (other group / claimed by someone else)",
+    "BUDGET_LINE_CREATED": "Budget line created",
+    "BUDGET_LINE_UPDATED": "Budget line updated",
+    "BUDGET_LINE_DELETED": "Budget line deleted",
+    "ROLE_CREATED": "Role created",
+    "ROLE_UPDATED": "Role updated",
+    "ROLE_DELETED": "Role deleted",
+    "ROLE_PERMISSION_ADDED": "Permission added to a role",
+    "ROLE_PERMISSION_REMOVED": "Permission removed from a role",
+    "ENTERPRISE_CREATED": "Company created",
+    "ENTERPRISE_UPDATED": "Company updated",
+    "ENTERPRISE_ACTIVATED": "Company reactivated",
+    "ENTERPRISE_DEACTIVATED": "Company suspended",
+    "SUPPLIER_UPDATED": "Supplier updated",
+    "SUPPLIER_BANK_CHANGED": "Bank details changed",
+    "SUPPLIER_BANK_VERIFIED": "Bank details verified",
+    "SUPPLIER_BANK_REJECTED": "Bank details rejected",
+    "SUPPLIER_PREQUALIFICATION_DECIDED": "Prequalification decision",
+    "SUPPLIER_DOCUMENT_REVIEWED": "Supplier document reviewed",
+    "REQUISITION_DELETED": "Requisition deleted",
+    "PURCHASE_ORDER_REJECTED": "Purchase order rejected",
+    "PURCHASE_ORDER_DELETED": "Purchase order deleted",
+    "GOODS_RECEIPT_CANCELLED": "Goods receipt cancelled",
+    "INVOICE_REJECTED": "Invoice rejected",
+    "INVOICE_DUPLICATE_BLOCKED": "Duplicate invoice refused",
+    "PAYMENT_APPROVED": "Payment approved",
+    "PAYMENT_STATUS_CHANGED": "Payment status changed",
+    "PAYMENT_BLOCKED": "Payment blocked (bank details)",
+    "STOCK_ISSUE_CANCELLED": "Stock issue cancelled",
+    "STOCK_ADJUSTED": "Stock adjustment",
+    "STOCK_COUNT_VALIDATED": "Stock count validated"
   },
   "auditExport": {
     "sheet": "Audit log",
@@ -617,5 +655,21 @@
       "ip": "IP address",
       "userAgent": "Browser"
     }
+  },
+  "auditEntities": {
+    "user": "Account",
+    "supplier": "Supplier",
+    "budget_line": "Budget line",
+    "role": "Role",
+    "enterprise": "Company",
+    "task": "Task",
+    "requisition": "Requisition",
+    "purchase_order": "Purchase order",
+    "goods_receipt": "Goods receipt",
+    "invoice": "Invoice",
+    "payment": "Payment",
+    "stock_issue": "Stock issue",
+    "stock_adjustment": "Adjustment",
+    "stock_count": "Stock count"
   }
 }

@@ -368,7 +368,13 @@ export default function RequisitionTasks() {
                               {t('reqTasks.assignedTo', { user: task.assignee })}
                             </span>
                           )}
-                          {isUnassigned && !canClaim && task.candidateGroup && (
+                          {task.blockedReason === 'SELF_APPROVAL' && (
+                            <span className="inline-flex items-center gap-1 text-amber-700 ml-3">
+                              <AlertCircle size={14} />
+                              {t('taskList.selfApproval')}
+                            </span>
+                          )}
+                          {isUnassigned && !canClaim && !task.blockedReason && task.candidateGroup && (
                             <span className="inline-flex items-center gap-1 text-gray-500 ml-3">
                               <AlertCircle size={14} />
                               {t('reqTasks.reservedFor', { group: task.candidateGroup })}

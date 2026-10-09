@@ -420,10 +420,11 @@ test.describe.serial('Workflow documentation screenshots', () => {
         await settle(page);
 
         const invNumField = page
-          .locator('input[name*="invoiceNumber"], input[placeholder*="numéro" i]')
+          .locator('input[name="supplierInvoiceNumber"], input[name*="invoiceNumber"], input[placeholder*="numéro" i]')
           .first();
         if (await invNumField.isVisible().catch(() => false)) {
-          await invNumField.fill('FACT-2026-DOC-001');
+          // N° unique : un même n° de facture fournisseur est refusé (doublon)
+          await invNumField.fill(`FACT-DOC-${Date.now().toString(36)}`);
         }
 
         const subtotalField = page

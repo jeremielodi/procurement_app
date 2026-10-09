@@ -277,7 +277,7 @@ function App() {
         } />
 
         <Route path="/budget" element={
-          <ProtectedRoute requiredPermission="MANAGE_BUDGET">
+          <ProtectedRoute requiredPermission={['MANAGE_BUDGET', 'AUDIT_ACCESS']}>
             <Layout>
               <BudgetList />
             </Layout>

@@ -10,6 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const requisitionExportService = require('../services/RequisitionExportService');
 const i18n = require('../i18n');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
+const { audit, AUDIT } = require('../utils/auditLog');
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -434,6 +435,10 @@ async create(req, res) {
       const requisitionNumber = requisition.requisition_number;
       
       await requisitionModel.delete(id);
+      await audit(req, AUDIT.REQUISITION_DELETED, {
+        entity: { type: 'requisition', id, label: requisitionNumber },
+        oldValue: { status: requisition.status, title: requisition.title, requester: requisition.requester_id, amount: requisition.estimated_amount ?? null },
+      });
       
       // Émettre une notification de suppression
       if (io) {

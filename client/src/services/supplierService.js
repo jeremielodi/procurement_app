@@ -81,6 +81,17 @@ export const supplierService = {
     return response.data
   },
 
+  // ---------- Coordonnées bancaires : historique des changements, vérification par mon entreprise ----------
+  getBankChanges: async (supplierId) => {
+    const response = await api.get(`/suppliers/${supplierId}/bank-changes`)
+    return response.data
+  },
+  // VERIFIED | REJECTED (motif obligatoire) — erreurs métier affichées par l'appelant
+  reviewBankChange: async (supplierId, changeId, { status, reason }) => {
+    const response = await api.put(`/suppliers/${supplierId}/bank-changes/${changeId}/review`, { status, reason }, { skipErrorToast: true })
+    return response.data
+  },
+
   // ---------- Préqualification (mon entreprise, par catégorie) ----------
   setPrequalification: async (supplierId, { categoryId, status, comment }) => {
     const response = await api.put(`/suppliers/${supplierId}/prequalification`, { categoryId, status, comment })

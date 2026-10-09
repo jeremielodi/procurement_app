@@ -25,7 +25,8 @@ import {
   AlertCircle,
   Eye,
   FileCheck,
-  Info
+  Info,
+  AlertTriangle
 } from 'lucide-react'
 import { purchaseOrderService } from '../../services/purchaseOrderService'
 import PODeliveryTracking, { DeliveryStatusBadge } from './PODeliveryTracking'
@@ -248,13 +249,20 @@ export default function PODetail() {
          
           {(po.status === 'PO_PENDING' || po.status === 'DRAFT') && (
             <>
-              <button
-                onClick={() => setShowApproveModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <CheckCircle size={18} />
-                {t('common.approve')}
-              </button>
+              {po.self_approval ? (
+                // Séparation des tâches : le créateur du bon (ou le demandeur) ne peut pas l'approuver
+                <span className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200" data-testid="po-self-approval">
+                  <AlertTriangle size={16} /> {t('po.selfApproval')}
+                </span>
+              ) : (
+                <button
+                  onClick={() => setShowApproveModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <CheckCircle size={18} />
+                  {t('common.approve')}
+                </button>
+              )}
               <button
                 onClick={() => setShowRejectModal(true)}
                 className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"

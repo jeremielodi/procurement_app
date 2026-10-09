@@ -332,6 +332,12 @@
       "confirmedMessage": "{supplier} a confirmé la commande {number}. Livraison prévue : {date}.",
       "declinedTitle": "Commande refusée par le fournisseur : {number}",
       "declinedMessage": "{supplier} a décliné la commande {number} — motif : {reason}. Décidez de la suite (nouvelle négociation, autre fournisseur…)."
+    },
+    "supplierBank": {
+      "changedTitle": "Coordonnées bancaires modifiées : {supplier}",
+      "changedMessage": "Les coordonnées bancaires de {supplier} ont changé. Vérifiez-les auprès du fournisseur (contre-appel à un numéro connu) avant tout paiement : les paiements sont bloqués jusqu'à la vérification.",
+      "rejectedTitle": "Coordonnées bancaires refusées",
+      "rejectedMessage": "Un client a refusé vos nouvelles coordonnées bancaires : {reason}. Corrigez-les dans votre profil ou contactez-le."
     }
   },
   "pdf": {
@@ -602,7 +608,39 @@
     "USER_DEACTIVATED": "Utilisateur désactivé",
     "USER_DELETED": "Utilisateur supprimé",
     "WAREHOUSE_ACCESS_CHANGED": "Accès à un dépôt modifiés",
-    "AUDIT_LOG_EXPORTED": "Journal d'audit exporté"
+    "AUDIT_LOG_EXPORTED": "Journal d'audit exporté",
+    "SOD_VIOLATION_BLOCKED": "Séparation des tâches : action refusée",
+    "TASK_COMPLETION_DENIED": "Tâche GoFlow refusée (hors groupe / prise par un autre)",
+    "BUDGET_LINE_CREATED": "Ligne budgétaire créée",
+    "BUDGET_LINE_UPDATED": "Ligne budgétaire modifiée",
+    "BUDGET_LINE_DELETED": "Ligne budgétaire supprimée",
+    "ROLE_CREATED": "Rôle créé",
+    "ROLE_UPDATED": "Rôle modifié",
+    "ROLE_DELETED": "Rôle supprimé",
+    "ROLE_PERMISSION_ADDED": "Permission ajoutée à un rôle",
+    "ROLE_PERMISSION_REMOVED": "Permission retirée d'un rôle",
+    "ENTERPRISE_CREATED": "Entreprise créée",
+    "ENTERPRISE_UPDATED": "Entreprise modifiée",
+    "ENTERPRISE_ACTIVATED": "Entreprise réactivée",
+    "ENTERPRISE_DEACTIVATED": "Entreprise suspendue",
+    "SUPPLIER_UPDATED": "Fournisseur modifié",
+    "SUPPLIER_BANK_CHANGED": "Coordonnées bancaires modifiées",
+    "SUPPLIER_BANK_VERIFIED": "Coordonnées bancaires vérifiées",
+    "SUPPLIER_BANK_REJECTED": "Coordonnées bancaires rejetées",
+    "SUPPLIER_PREQUALIFICATION_DECIDED": "Décision de préqualification",
+    "SUPPLIER_DOCUMENT_REVIEWED": "Document fournisseur vérifié",
+    "REQUISITION_DELETED": "Réquisition supprimée",
+    "PURCHASE_ORDER_REJECTED": "Bon de commande rejeté",
+    "PURCHASE_ORDER_DELETED": "Bon de commande supprimé",
+    "GOODS_RECEIPT_CANCELLED": "Réception annulée",
+    "INVOICE_REJECTED": "Facture rejetée",
+    "INVOICE_DUPLICATE_BLOCKED": "Facture en double refusée",
+    "PAYMENT_APPROVED": "Paiement approuvé",
+    "PAYMENT_STATUS_CHANGED": "Statut de paiement modifié",
+    "PAYMENT_BLOCKED": "Paiement bloqué (coordonnées bancaires)",
+    "STOCK_ISSUE_CANCELLED": "Sortie de stock annulée",
+    "STOCK_ADJUSTED": "Ajustement de stock",
+    "STOCK_COUNT_VALIDATED": "Inventaire validé"
   },
   "auditExport": {
     "sheet": "Journal d'audit",
@@ -617,5 +655,21 @@
       "ip": "Adresse IP",
       "userAgent": "Navigateur"
     }
+  },
+  "auditEntities": {
+    "user": "Compte",
+    "supplier": "Fournisseur",
+    "budget_line": "Ligne budgétaire",
+    "role": "Rôle",
+    "enterprise": "Entreprise",
+    "task": "Tâche",
+    "requisition": "Réquisition",
+    "purchase_order": "Bon de commande",
+    "goods_receipt": "Réception",
+    "invoice": "Facture",
+    "payment": "Paiement",
+    "stock_issue": "Sortie de stock",
+    "stock_adjustment": "Ajustement",
+    "stock_count": "Inventaire"
   }
 }

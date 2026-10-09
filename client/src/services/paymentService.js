@@ -11,11 +11,12 @@ export const paymentService = {
     return response.data;
   },
   create: async (data) => {
-    const response = await api.post('/payments', data);
+    const response = await api.post('/payments', data, { skipErrorToast: true }); // erreurs affichées par le formulaire
     return response.data;
   },
   approve: async (id) => {
-    const response = await api.post(`/payments/${id}/approve`);
+    // Erreurs métier (séparation des tâches, coordonnées bancaires) affichées par la fiche
+    const response = await api.post(`/payments/${id}/approve`, {}, { skipErrorToast: true });
     return response.data;
   },
   updateStatus: async (id, status) => {

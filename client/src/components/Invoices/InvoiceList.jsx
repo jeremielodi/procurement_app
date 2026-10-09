@@ -56,6 +56,7 @@ export default function InvoiceList() {
   const filtered = invoices.filter(inv =>
     !search ||
     inv.invoice_number?.toLowerCase().includes(search.toLowerCase()) ||
+    inv.supplier_invoice_number?.toLowerCase().includes(search.toLowerCase()) ||
     inv.po_number?.toLowerCase().includes(search.toLowerCase()) ||
     inv.supplier_name?.toLowerCase().includes(search.toLowerCase())
   );
@@ -126,7 +127,9 @@ export default function InvoiceList() {
                 const MatchIcon = m.icon;
                 return (
                   <tr key={inv.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono font-medium">{inv.invoice_number}</td>
+                    <td className="px-4 py-3 font-mono font-medium">{inv.invoice_number}
+                      {inv.supplier_invoice_number && <div className="text-xs font-normal text-gray-500">{t('invoice.supplierNumberShort', { number: inv.supplier_invoice_number })}</div>}
+                    </td>
                     <td className="px-4 py-3 text-blue-600">{inv.po_number || '—'}</td>
                     <td className="px-4 py-3 text-gray-700">{inv.supplier_name || '—'}</td>
                     <td className="px-4 py-3 font-medium">{parseFloat(inv.total_amount || 0).toLocaleString(getLocale())} {inv.currency}</td>

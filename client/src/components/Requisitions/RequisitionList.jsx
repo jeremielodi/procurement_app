@@ -609,15 +609,6 @@ export default function RequisitionList() {
                             </button>
                           </>
                         )}
-                        {requisition.process_instance_id && (
-                          <Link
-                            to={`/requisitions/${requisition.id}/workflow`}
-                            className="text-gray-400 hover:text-orange-600 transition-colors"
-                            title={t('requisitions.workflow')}
-                          >
-                            <Clock size={18} />
-                          </Link>
-                        )}
                       </div>
                     </td>
                   </tr>

@@ -2,8 +2,12 @@
 var q = require('q');
 const fs = require('fs');
 const { uuid } = require('./util');
-const { Pool, Sql } = require('pg')
+const { Pool, Sql, types } = require('pg')
 const Transaction = require('./transaction');
+
+// Colonnes DATE (livraison, péremption, facture…) : renvoyées telles quelles « AAAA-MM-JJ ». Par défaut pg en fait
+// un Date à minuit LOCAL, sérialisé en UTC → la veille quand le serveur est en avance sur UTC (ex. 2026-10-08T23:00Z).
+types.setTypeParser(types.builtins.DATE, (value) => value);
 
 /**
  * @class DatabaseConnector

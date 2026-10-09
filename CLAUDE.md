@@ -83,9 +83,9 @@ Le fichier `backend/src/services/CamundaService.js` montre comment appeler GoFlo
 ### ⚠️ Problèmes connus
 - ✅ Corrigé (2026-10-09) : `database.js` partage UNE connexion pour les requêtes simples, mais **toute transaction passe désormais par une connexion dédiée du pool** — `db.withTransaction(fn)` et `db.transaction().execute()` (`config/transaction.js`, utilisé par réquisitions, utilisateurs, PO, budget, fournisseurs, AO, entreprise). Avant, `execute()` faisait BEGIN/COMMIT sur la connexion partagée : la transaction englobait les requêtes concurrentes des autres utilisateurs (un ROLLBACK pouvait les annuler). Nouveau code : de préférence `db.withTransaction` (lecture des résultats au fil de l'eau)
 - ✅ Corrigé (2026-10-09) : PDF simultanés sous Windows (`EBUSY` sur le profil Chrome temporaire, arrêt du serveur) → `utils/pdfRenderer.js` (un Chrome partagé, une page par document)
-- `TaskController` : les insertions `workflow_history` des étapes GRN / SAN / facture passent l'id entier du PO comme `entity_id` (colonne UUID) → échec silencieux (`catch`), ces événements manquent dans l'historique
-- Colonnes `DATE` (ex. `confirmed_delivery_date`, `expiry_date`) : sérialisées par `pg` en minuit local puis en UTC → décalage d'un jour possible si le serveur est en avance sur UTC ; comparer / afficher les dates au format `AAAA-MM-JJ`
-- `routes/requisitions.js` n'est chargé nulle part (code mort)
+- ✅ Corrigé (2026-10-09) : les événements GRN / SAN / facture / paiement créés depuis une tâche (`TaskController.logDocumentEvent`) sont rattachés à la réquisition (avant : id entier du PO dans `entity_id` UUID → échec silencieux) ; le suivi du workflow les ajoute à l'étape (`timeline.doc.*`, liens vers le document et le PO)
+- ✅ Corrigé (2026-10-09) : colonnes `DATE` renvoyées en texte `AAAA-MM-JJ` (`types.setTypeParser` dans `config/database.js`) — avant, minuit local sérialisé en UTC donnait la veille quand le serveur est en avance sur UTC. Ne pas appeler de méthode `Date` directement sur ces valeurs : `new Date(v)` (minuit UTC) ou comparer les chaînes
+- ✅ Supprimé (2026-10-09) : `routes/requisitions.js`, jamais chargé (code mort)
 - Le worker `goods_receipt` ne crée pas de GRN en base (incohérence BPMN : déclaré external task mais `Activity_GoodsReceipt` est un userTask)
 - `Activity_1x2n3lq` = nom auto-généré (Validation N2), à corriger dans le BPMN
 

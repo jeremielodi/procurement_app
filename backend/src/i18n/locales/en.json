@@ -191,7 +191,16 @@
     "promisedDelivery": "Planned delivery: {date}",
     "supplierReference": "Supplier reference: {value}",
     "budgetRecheck": "Budget adjusted: new check requested",
-    "budgetAbandoned": "Requisition abandoned after insufficient budget"
+    "budgetAbandoned": "Requisition abandoned after insufficient budget",
+    "doc": {
+      "GRN_COMPLETE": "Complete and compliant receipt",
+      "GRN_PARTIAL": "Partial or non-compliant receipt",
+      "SERVICE_ACCEPTED": "Service accepted",
+      "SERVICE_REJECTED": "Service rejected",
+      "INVOICE_MATCHED": "3-way match passed",
+      "INVOICE_MISMATCH": "3-way match discrepancy",
+      "PAYMENT_RECORDED": "Payment recorded"
+    }
   },
   "supplierProfile": {
     "logo_path": "Logo",

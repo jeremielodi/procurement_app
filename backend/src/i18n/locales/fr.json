@@ -191,7 +191,16 @@
     "promisedDelivery": "Livraison prévue : {date}",
     "supplierReference": "Référence fournisseur : {value}",
     "budgetRecheck": "Budget ajusté : nouvelle vérification demandée",
-    "budgetAbandoned": "Réquisition abandonnée après budget insuffisant"
+    "budgetAbandoned": "Réquisition abandonnée après budget insuffisant",
+    "doc": {
+      "GRN_COMPLETE": "Réception complète et conforme",
+      "GRN_PARTIAL": "Réception partielle ou non conforme",
+      "SERVICE_ACCEPTED": "Prestation acceptée",
+      "SERVICE_REJECTED": "Prestation refusée",
+      "INVOICE_MATCHED": "Rapprochement 3 voies conforme",
+      "INVOICE_MISMATCH": "Écart au rapprochement 3 voies",
+      "PAYMENT_RECORDED": "Paiement enregistré"
+    }
   },
   "supplierProfile": {
     "logo_path": "Logo",

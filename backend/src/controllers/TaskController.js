@@ -270,6 +270,25 @@ function getVariableFromVars(variables, key) {
 }
 
 /**
+ * Document créé depuis une tâche GoFlow (GRN, SAN, facture, paiement) → workflow_history, rattaché à la RÉQUISITION
+ * (entity_id est un UUID : l'id entier du bon de commande y échouait) ; le n° du bon et le document sont dans comments
+ * (JSON lu par RequisitionTimelineService). N'interrompt jamais la complétion de la tâche.
+ */
+async function logDocumentEvent({ requisitionId, poId, taskId, userId, taskName, action, document = null, comment = null }) {
+  try {
+    const po = poId ? await db.one('SELECT id, po_number FROM purchase_orders WHERE id = $1', [poId]) : null;
+    await db.exec(
+      `INSERT INTO workflow_history (entity_type, entity_id, process_instance_id, task_id, task_name, action, comments, performed_by, performed_at)
+       SELECT 'requisition', r.id, r.process_instance_id, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP FROM requisitions r WHERE r.id = $1`,
+      [requisitionId, taskId, taskName, action,
+       JSON.stringify({ poId: po?.id || poId || null, poNumber: po?.po_number || null, document, comment }), userId]
+    );
+  } catch (error) {
+    console.error('Historique %s non enregistré : %s', action, error.message);
+  }
+}
+
+/**
  * POST /api/tasks/:taskId/complete
  *
  * Body:
@@ -363,15 +382,10 @@ async function completeTask(req, res) {
             }, { userId });
             // Inject grnCompliant into the Camunda variables (already completed above,
             // so we just store the result in workflow history)
-            await db.insert('workflow_history', {
-              entity_type: 'purchase_order',
-              entity_id:   poId,
-              task_id:     taskId,
-              task_name:   'Activity_GoodsReceipt',
-              action:      grnResult.grnCompliant ? 'GRN_COMPLETE' : 'GRN_PARTIAL',
-              comments:    `GRN ${grnResult.grnNumber} — statut: ${grnResult.status}`,
-              performed_by: userId,
-              performed_at: new Date()
+            await logDocumentEvent({
+              requisitionId, poId, taskId, userId, taskName: 'Activity_GoodsReceipt',
+              action: grnResult.grnCompliant ? 'GRN_COMPLETE' : 'GRN_PARTIAL',
+              document: { type: 'grn', id: grnResult.id, number: grnResult.grnNumber, status: grnResult.status },
             });
           }
         }
@@ -381,15 +395,10 @@ async function completeTask(req, res) {
           const serviceAccepted = variables.serviceAccepted ?? variables.accepted ?? true;
           const poId = variables.poId;
           if (poId) {
-            await db.insert('workflow_history', {
-              entity_type: 'purchase_order',
-              entity_id:   poId,
-              task_id:     taskId,
-              task_name:   'Activity_ServiceAcceptance',
-              action:      serviceAccepted ? 'SERVICE_ACCEPTED' : 'SERVICE_REJECTED',
-              comments:    variables.comments || null,
-              performed_by: userId,
-              performed_at: new Date()
+            await logDocumentEvent({
+              requisitionId, poId, taskId, userId, taskName: 'Activity_ServiceAcceptance',
+              action: serviceAccepted ? 'SERVICE_ACCEPTED' : 'SERVICE_REJECTED',
+              comment: variables.comments || null,
             });
           }
         }
@@ -414,15 +423,10 @@ async function completeTask(req, res) {
             });
             // Patch the already-sent Camunda variables with invoiceValid
             // (the completeTask call above already ran — this is just for DB logging)
-            await db.insert('workflow_history', {
-              entity_type: 'purchase_order',
-              entity_id:   poId,
-              task_id:     taskId,
-              task_name:   'Activity_EnterInvoice',
-              action:      invResult.invoiceValid ? 'INVOICE_MATCHED' : 'INVOICE_MISMATCH',
-              comments:    `Facture ${invResult.invoiceNumber} — rapprochement: ${invResult.match_status}`,
-              performed_by: userId,
-              performed_at: new Date()
+            await logDocumentEvent({
+              requisitionId, poId, taskId, userId, taskName: 'Activity_EnterInvoice',
+              action: invResult.invoiceValid ? 'INVOICE_MATCHED' : 'INVOICE_MISMATCH',
+              document: { type: 'invoice', id: invResult.id, number: invResult.invoiceNumber, status: invResult.match_status },
             });
           }
         }
@@ -445,15 +449,9 @@ async function completeTask(req, res) {
               createdBy:     userId,
               camundaTaskId: taskId
             });
-            await db.insert('workflow_history', {
-              entity_type: 'purchase_order',
-              entity_id:   poId || invoiceId,
-              task_id:     taskId,
-              task_name:   'Activity_ProcessPayment',
-              action:      'PAYMENT_RECORDED',
-              comments:    `Paiement ${payResult.paymentNumber} — ${variables.amount}`,
-              performed_by: userId,
-              performed_at: new Date()
+            await logDocumentEvent({
+              requisitionId, poId, taskId, userId, taskName: 'Activity_ProcessPayment', action: 'PAYMENT_RECORDED',
+              document: { type: 'payment', id: payResult.id, number: payResult.paymentNumber, amount: variables.amount },
             });
           }
         }

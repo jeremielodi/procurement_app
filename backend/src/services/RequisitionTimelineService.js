@@ -13,6 +13,9 @@ const APPROVAL_KEYS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_F
 const SOURCING_KEYS = ['Activity_DirectPurchase', 'Activity_RequestQuotations', 'Activity_RFPProcess', 'Activity_SoleSource'];
 const PO_APPROVED = ['PO_APPROVED', 'PO_SENT', 'PO_CONFIRMED', 'PO_RECEIVED', 'PO_COMPLETE', 'APPROVED', 'SENT', 'COMPLETED'];
 const PO_REJECTED = ['PO_REJECTED', 'REJECTED', 'CANCELLED'];
+// Événements « document créé depuis une tâche » (TaskController.logDocumentEvent) et écran du document
+const DOCUMENT_ACTIONS = ['GRN_COMPLETE', 'GRN_PARTIAL', 'SERVICE_ACCEPTED', 'SERVICE_REJECTED', 'INVOICE_MATCHED', 'INVOICE_MISMATCH', 'PAYMENT_RECORDED'];
+const DOC_ROUTES = { grn: '/goods-receipts', invoice: '/invoices', payment: '/payments' };
 
 // Tâche en attente → étape du workflow
 const TASK_STEP = {
@@ -188,6 +191,28 @@ class RequisitionTimelineService {
             date: row.performed_at, kind: action === 'REJECTED' ? 'danger' : 'success',
             title: `${taskLabel(row.task_name)} — ${T(action === 'REJECTED' ? 'timeline.rejectedWord' : 'timeline.approvedWord')}`,
             actor: who(row) || T('timeline.system'), details: row.comments ? [T('timeline.comment', { value: row.comments })] : [], links: [],
+          });
+        }
+        continue;
+      }
+
+      // Document créé depuis une tâche (TaskController.logDocumentEvent) : complète l'événement de la tâche
+      if (DOCUMENT_ACTIONS.includes(action)) {
+        const info = json || {};
+        const details = [T(`timeline.doc.${action}`)];
+        if (info.comment) details.push(T('timeline.comment', { value: info.comment }));
+        const links = [];
+        if (info.document?.id && DOC_ROUTES[info.document.type]) links.push({ label: info.document.number, to: `${DOC_ROUTES[info.document.type]}/${info.document.id}` });
+        if (info.poId && info.poNumber) links.push({ label: info.poNumber, to: `/purchase-orders/${info.poId}` });
+        const t = tasks.get(row.task_id);
+        if (t?.event) {
+          t.event.details.unshift(...details);
+          for (const l of links) if (!t.event.links.some(x => x.to === l.to)) t.event.links.push(l);
+          if (['GRN_PARTIAL', 'SERVICE_REJECTED', 'INVOICE_MISMATCH'].includes(action)) t.event.kind = 'warning';
+        } else {
+          events.push({
+            date: row.performed_at, kind: ['GRN_PARTIAL', 'SERVICE_REJECTED', 'INVOICE_MISMATCH'].includes(action) ? 'warning' : 'success',
+            title: taskLabel(row.task_name) || action, actor: who(row) || T('timeline.system'), details, links,
           });
         }
         continue;

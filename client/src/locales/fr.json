@@ -778,7 +778,7 @@
     "methodSole": "Source unique (justifiée)",
     "loginRequired": "Veuillez vous connecter pour voir vos tâches",
     "loading": "Chargement des tâches...",
-    "subtitle": "Gérez vos tâches d'approbation et de traitement",
+    "subtitle": "Les tâches de vos groupes : ouvrez la réquisition pour prendre en charge et traiter une tâche.",
     "pending": "En attente ({{count}})",
     "completedTab": "Terminées ({{count}})",
     "allTab": "Toutes ({{count}})",
@@ -807,7 +807,13 @@
     "unclaimOtherAssignee": "Actuellement prise en charge par {{assignee}}.",
     "releasing": "Libération…",
     "unclaimConfirmTextOther": "Elle ne lui sera plus assignée et redeviendra disponible pour tous les membres du groupe, qui pourront la prendre en charge.",
-    "selfApproval": "Votre propre demande : un autre membre du groupe doit la traiter"
+    "selfApproval": "Votre propre demande : un autre membre du groupe doit la traiter",
+    "processInRequisition": "Une tâche se prend en charge et se traite depuis l'onglet « Tâches » de sa réquisition : la commande, la réception, la facture ou le paiement y sont automatiquement rattachés à la bonne réquisition et au bon bon de commande.",
+    "openInRequisition": "Traiter dans la réquisition",
+    "viewInRequisition": "Voir dans la réquisition",
+    "noRequisition": "Réquisition introuvable",
+    "claimedByMe": "Prise en charge par vous",
+    "toClaim": "À prendre en charge"
   },
   "notifications": {
     "unknownDate": "Date inconnue",
@@ -1292,7 +1298,13 @@
     "newAmount": "Nouveau montant proposé *",
     "newAmountPlaceholder": "Montant proposé",
     "adjustmentJustification": "Justification de l'ajustement",
-    "adjustmentPlaceholder": "Expliquez pourquoi un ajustement budgétaire est nécessaire..."
+    "adjustmentPlaceholder": "Expliquez pourquoi un ajustement budgétaire est nécessaire...",
+    "missing": {
+      "poPending": "Aucun bon de commande en attente d'approbation pour cette réquisition.",
+      "poToConfirm": "Aucun bon de commande envoyé au fournisseur pour cette réquisition.",
+      "poActive": "Aucun bon de commande approuvé pour cette réquisition : la réception, la SAN et la facture se rattachent à un bon de commande.",
+      "invoice": "Aucune facture à payer pour cette réquisition : saisissez d'abord la facture (tâche « Saisir la facture »)."
+    }
   },
   "po": {
     "approved": "Commande approuvée avec succès",
@@ -3248,8 +3260,9 @@
           {
             "type": "steps",
             "items": [
+              "Dans « Mes tâches », cliquez sur la tâche (ou « Traiter dans la réquisition ») : l'onglet « Tâches » de la réquisition s'ouvre, la tâche est mise en évidence.",
               "Cliquez « Prendre en charge » : une confirmation s'affiche, car la tâche vous sera assignée et disparaîtra de la liste de vos collègues.",
-              "Cliquez sur la tâche. Selon son type, un formulaire s'ouvre dans une fenêtre (approbation, choix…) ou vous êtes redirigé vers l'écran dédié (bon de réception, acceptation de service, facture, paiement, appel d'offres).",
+              "Cliquez « Traiter ». Selon la tâche, une fenêtre s'ouvre (approbation, choix…) ou l'écran dédié, déjà rattaché au bon document de la réquisition (bon de commande, réception, facture, paiement, appel d'offres). S'il manque un document (ex. aucune facture à payer), un message l'indique.",
               "Complétez et validez : GoFlow passe automatiquement à l'étape suivante et prévient le groupe suivant."
             ]
           },
@@ -3271,7 +3284,7 @@
           },
           {
             "type": "warn",
-            "text": "Les écrans de réception, d'acceptation de service, de facture et de paiement doivent être ouverts depuis la tâche : c'est ce lien qui fait avancer le circuit dans GoFlow."
+            "text": "Une commande est toujours rattachée à une réquisition, une réception, une acceptation de service ou une facture à un bon de commande, un paiement à une facture. C'est pourquoi ces documents se créent uniquement depuis l'onglet « Tâches » de la réquisition : les listes (réceptions, factures, paiements) n'ont pas de bouton de création."
           },
           {
             "type": "links",
@@ -4731,5 +4744,13 @@
       "SUPERSEDED": "Un changement plus récent attend votre vérification",
       "REASON_REQUIRED": "Indiquez le motif du rejet"
     }
+  },
+  "workflowOnly": {
+    "grn": "Une réception se rattache toujours à un bon de commande, lui-même rattaché à une réquisition.",
+    "san": "Une acceptation de service se rattache toujours à un bon de commande, lui-même rattaché à une réquisition.",
+    "invoice": "Une facture se rattache toujours à un bon de commande, lui-même rattaché à une réquisition.",
+    "payment": "Un paiement se rattache toujours à une facture, elle-même rattachée au bon de commande et à la réquisition.",
+    "how": "Ouvrez « Mes tâches », puis la réquisition concernée : dans son onglet « Tâches », prenez en charge l'étape et cliquez sur « Traiter ». Le formulaire s'ouvre avec le bon document.",
+    "listHint": "Les documents se créent depuis la tâche de la réquisition"
   }
 }

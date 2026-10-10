@@ -19,13 +19,17 @@ class InvoiceController {
       if (totalAmount == null || !invoiceDate) {
         return res.status(400).json({ success: false, message: 'totalAmount et invoiceDate sont requis' });
       }
-
-      if (poId) {
-        let po;
-        try { po = await db.one('SELECT id FROM purchase_orders WHERE id = $1', [poId]); } catch (_) { po = null; }
-        if (!po) {
-          return res.status(404).json({ success: false, message: 'Commande introuvable' });
-        }
+      // Une facture est TOUJOURS rattachée à un bon de commande (lui-même rattaché à une réquisition)
+      if (!poId) {
+        return res.status(400).json({ success: false, code: 'PO_REQUIRED', message: 'Bon de commande requis : la facture se saisit depuis la tâche de la réquisition' });
+      }
+      let po;
+      try { po = await db.one('SELECT id, status FROM purchase_orders WHERE id = $1', [poId]); } catch (_) { po = null; }
+      if (!po) {
+        return res.status(404).json({ success: false, message: 'Commande introuvable' });
+      }
+      if (['PO_REJECTED', 'REJECTED', 'CANCELLED', 'DRAFT', 'PO_PENDING'].includes(po.status)) {
+        return res.status(409).json({ success: false, code: 'PO_NOT_INVOICEABLE', message: `Commande au statut ${po.status} : facture impossible` });
       }
 
       // Facture en double : même fournisseur, même n° de facture fournisseur (hors rejetées / annulées)

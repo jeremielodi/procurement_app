@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+import WorkflowOnlyPage from '../Common/WorkflowOnlyPage';
 
 export default function InvoiceForm() {
   const navigate = useNavigate();
@@ -111,6 +112,9 @@ export default function InvoiceForm() {
       setLoading(false);
     }
   }
+
+  // Document rattaché obligatoirement : création uniquement depuis la tâche de la réquisition
+  if (!poId) return <WorkflowOnlyPage title={t('invoice.newTitle')} icon={FileText} doc="invoice" />;
 
   return (
     <div className="p-6 max-w-2xl mx-auto">

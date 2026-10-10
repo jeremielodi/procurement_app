@@ -13,30 +13,18 @@ test.describe('📦 GRN — Bons de Réception', () => {
     await expect(page.locator('h1')).toContainText('Bons de Réception (GRN)', { timeout: 10_000 });
   });
 
-  test('Le bouton "Nouveau GRN" est visible', async ({ page }) => {
+  // Une réception se crée uniquement depuis la tâche de la réquisition (rattachée à son bon de commande)
+  test('La liste GRN n\'a pas de bouton de création mais un lien vers « Mes tâches »', async ({ page }) => {
     await page.goto('/goods-receipts');
-    await expect(page.locator('button:has-text("Nouveau GRN")')).toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('main a[href="/tasks"], a[href="/tasks"]').first()).toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('button:has-text("Nouveau GRN")')).toHaveCount(0);
   });
 
-  test('Cliquer "Nouveau GRN" navigue vers le formulaire', async ({ page }) => {
-    await page.goto('/goods-receipts');
-    await page.click('button:has-text("Nouveau GRN")');
-    await expect(page).toHaveURL(/\/goods-receipts\/new/);
-  });
-
-  test('Le formulaire GRN affiche le titre et le warning sans poId', async ({ page }) => {
+  test('Le formulaire GRN sans poId explique où créer la réception (aucun formulaire)', async ({ page }) => {
     await page.goto('/goods-receipts/new');
     await expect(page.locator('h1')).toContainText('Nouveau Bon de Réception', { timeout: 8_000 });
-    // Sans poId en URL, le formulaire affiche un avertissement
-    await expect(page.locator('text=Accédez à cette page depuis une commande')).toBeVisible();
-  });
-
-  test('Soumettre le formulaire GRN sans poId affiche une erreur toast', async ({ page }) => {
-    await page.goto('/goods-receipts/new');
-    // Sans poId en URL, le bouton submit est désactivé (validation)
-    await expect(page.locator('button[type="submit"]')).toBeDisabled({ timeout: 5_000 });
-    // On reste sur la même page
-    await expect(page).toHaveURL(/\/goods-receipts\/new/);
+    await expect(page.getByTestId('workflow-only')).toBeVisible();
+    await expect(page.locator('button[type="submit"]')).toHaveCount(0);
   });
 
   test('La liste GRN — filtre de statut fonctionne', async ({ page }) => {

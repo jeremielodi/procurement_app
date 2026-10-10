@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CreditCard, Plus, Search, RefreshCw, Eye } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { CreditCard, Search, RefreshCw, Eye, CheckSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { paymentService } from '../../services/paymentService';
 import { useCurrency } from '../../contexts/EnterpriseContext';
@@ -59,12 +59,11 @@ export default function PaymentList() {
           <h1 className="text-2xl font-bold text-gray-900">{t('payment.title')}</h1>
           <p className="text-gray-500 text-sm mt-1">{t('payment.subtitle')}</p>
         </div>
-        <button
-          onClick={() => navigate('/payments/new')}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-        >
-          <Plus size={16} /> {t('payment.new')}
-        </button>
+        {/* Pas de création ici : le document se crée depuis la tâche de la réquisition (rattachement garanti) */}
+        <Link to="/tasks" title={t('workflowOnly.listHint')}
+          className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+          <CheckSquare size={16} /> {t('nav.myTasks')}
+        </Link>
       </div>
 
       {/* Summary */}

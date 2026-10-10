@@ -20,36 +20,40 @@ class PurchaseOrderController {
     try {
       const {
         requisitionId, taskId, supplierId, orderDate, deliveryDate,
-        shippingAddress, totalAmount, currency, items, notes, createdBy
+        shippingAddress, totalAmount, currency, items, notes
       } = req.body;
 
       if (!requisitionId || !supplierId || !totalAmount) {
         return res.status(400).json({
           success: false,
+          code: 'REQUISITION_REQUIRED',
           message: 'requisitionId, supplierId et totalAmount sont requis'
         });
+      }
+      // Une commande est TOUJOURS rattachée à une réquisition existante (entreprise courante : tenantGuard) et active
+      const requisition = await db.one('SELECT id, status, process_instance_id FROM requisitions WHERE id = $1', [requisitionId]);
+      if (!requisition) {
+        return res.status(404).json({ success: false, code: 'REQUISITION_NOT_FOUND', message: 'Réquisition introuvable' });
+      }
+      if (['DRAFT', 'REJECTED', 'CANCELLED'].includes(requisition.status)) {
+        return res.status(409).json({ success: false, code: 'REQUISITION_NOT_ACTIVE', message: `Réquisition au statut ${requisition.status} : aucune commande possible` });
       }
 
       const result = await purchaseOrderModel.create({
         requisitionId, taskId: taskId || null, supplierId, orderDate, deliveryDate,
         shippingAddress, totalAmount, currency, notes,
         items: items || [],
-        createdBy: createdBy || req.user?.id || 1
+        createdBy: req.user.id // jamais une valeur du client (séparation des tâches)
       });
 
-      // Complete the Camunda task — use taskId directly if provided, otherwise look it up
+      // Étape GoFlow « Créer le bon de commande » de CETTE réquisition (le taskId du client n'est retenu que s'il
+      // correspond : une autre tâche ne doit jamais être terminée par la création d'une commande)
       try {
-        let camundaTaskId = taskId;
-        if (!camundaTaskId) {
-          const reqRow = await db.one(
-            'SELECT process_instance_id FROM requisitions WHERE id = $1',
-            [requisitionId]
-          );
-          if (reqRow?.process_instance_id) {
-            const tasks = await camundaService.getProcessTasks(reqRow.process_instance_id);
-            const found = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_CreatePO');
-            if (found) camundaTaskId = found.id;
-          }
+        let camundaTaskId = null;
+        if (requisition.process_instance_id) {
+          const tasks = await camundaService.getProcessTasks(requisition.process_instance_id);
+          const createTasks = (tasks || []).filter(t => t.taskDefinitionKey === 'Activity_CreatePO');
+          camundaTaskId = (createTasks.find(t => t.id === taskId) || createTasks[0])?.id || null;
         }
         if (camundaTaskId) {
           await camundaService.completeTask(camundaTaskId, {

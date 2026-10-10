@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { sanService } from '../../services/sanService';
 import api from '../../services/api';
 import { t } from '../../i18n';
+import WorkflowOnlyPage from '../Common/WorkflowOnlyPage';
 
 export default function SANForm() {
   const navigate = useNavigate();
@@ -59,6 +60,9 @@ export default function SANForm() {
       setLoading(false);
     }
   }
+
+  // Document rattaché obligatoirement : création uniquement depuis la tâche de la réquisition
+  if (!poId) return <WorkflowOnlyPage title={t('san.newTitle')} icon={ClipboardCheck} doc="san" />;
 
   return (
     <div className="p-6 max-w-2xl mx-auto">

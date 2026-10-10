@@ -75,7 +75,7 @@ Le fichier `backend/src/services/CamundaService.js` montre comment appeler GoFlo
 - SAN (Service Acceptance Note) : model, controller, routes, UI (SANList/SANForm/SANDetail), tests API + e2e — complète `Activity_ServiceAcceptance`
 - Invoices (Factures) : table, model, controller, routes, UI, 3-way matching (PO + GRN + Facture)
 - Payments (Paiements) : table, model, controller, routes, UI, PDF
-- **TaskList → redirect vers formulaires dédiés** (GRN/SAN/Facture/Paiement via GoFlow)
+- **Onglet tâches de la réquisition → formulaires dédiés** (GRN/SAN/Facture/Paiement via GoFlow) ; « Mes tâches » renvoie vers cet onglet
 - **Portail fournisseur & appels d'offres** (2026-10-04) — voir section dédiée ci-dessous
 - **Confirmation fournisseur**, **ajustement budgétaire avec nouvelle vérification**, **recherche globale** (2026-10-09) — voir « Cycle achats — compléments »
 - **Stock** : inventaires, ajustements, réapprovisionnement, valorisation CMUP, transferts en transit, bon de retour PDF (2026-10-09) — voir « Gestion de stock »
@@ -104,16 +104,16 @@ Process ID : `ProcurementProcess`
 ### User Tasks Camunda (actions humaines)
 | taskDefinitionKey | Nom | candidateGroups | Formulaire frontend |
 |---|---|---|---|
-| `Activity_ValidationN1_Manager` | Manager Approval (N1) | `manager` | Modale TaskList |
-| `Activity_ValidationN2_Finance` | Finance Approval (N2) | `finance` | Modale TaskList |
-| `Activity_ValidationN3_DG` | DG Approval (N3) | `dg` | Modale TaskList |
-| `Activity_DetermineType` | Determine Procurement Type | `procurement` | Modale TaskList |
-| `Activity_DirectPurchase` | Direct Purchase | `procurement` | Modale TaskList |
-| `Activity_RequestQuotations` | Request Multiple Quotations | `procurement` | Modale TaskList |
+| `Activity_ValidationN1_Manager` | Manager Approval (N1) | `manager` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_ValidationN2_Finance` | Finance Approval (N2) | `finance` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_ValidationN3_DG` | DG Approval (N3) | `dg` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_DetermineType` | Determine Procurement Type | `procurement` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_DirectPurchase` | Direct Purchase | `procurement` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_RequestQuotations` | Request Multiple Quotations | `procurement` | Fenêtre (onglet tâches de la réquisition) |
 | `Activity_RFPProcess` | Call for Tenders / RFP | `procurement` | **→ `/tenders/new?taskId=&requisitionId=`** (complétée à l'attribution) |
-| `Activity_SoleSource` | Sole Source Justification | `procurement` | Modale TaskList |
-| `Activity_CreatePO` | Create Purchase Order | `procurement` | Modale TaskList |
-| `Activity_POApproval` | Approve Purchase Order | `management` | Modale TaskList |
+| `Activity_SoleSource` | Sole Source Justification | `procurement` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_CreatePO` | Create Purchase Order | `procurement` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_POApproval` | Approve Purchase Order | `management` | Fenêtre (onglet tâches de la réquisition) |
 | `Activity_BudgetAdjustment` | Request Budget Adjustment | `requester` (assignee `${requester}`) | **→ fiche de la réquisition** (`BudgetAdjustmentPanel`) |
 | `Activity_SupplierConfirmation` | Supplier Order Confirmation | `procurement` | **→ fiche du PO `?confirm=1`** (`SupplierConfirmationPanel`) ; complétée aussi par la réponse du fournisseur sur son portail |
 | `Activity_GoodsReceipt` | Goods Receipt Note (GRN) | `logistic` | **→ `/goods-receipts/new?taskId=&poId=`** |
@@ -123,23 +123,16 @@ Process ID : `ProcurementProcess`
 
 ## Architecture GoFlow — Principe clé (Option B)
 
-**Les formulaires GRN, SAN, Facture et Paiement ne sont accessibles en création QUE via la TaskList.**
+**Une tâche se prend en charge et se traite UNIQUEMENT depuis l'onglet tâches de sa réquisition (`/requisitions/:id/tasks`, `RequisitionTasks`).** « Mes tâches » (`Task/TaskList`) est une vue d'ensemble : chaque carte (réquisition lue en base par `GET /tasks/user` : `requisitionId`, `requisitionNumber`, `requisitionTitle`) renvoie vers `/requisitions/:id/tasks?task=<id>` (tâche mise en évidence). `RequisitionTasks.resolveTaskTarget` ouvre le formulaire avec les documents de CETTE réquisition, lus en base (variables GoFlow seulement pour départager) : PO en attente (`Activity_POApproval`), PO envoyé (`Activity_SupplierConfirmation`, `?confirm=1`), PO actif (GRN / SAN / facture, dernière réception non annulée), facture non payée (paiement) ; document manquant → message `reqTasks.missing.*`, jamais de formulaire orphelin ni d'étape terminée sans son document.
+
+**Chaîne de rattachement imposée par le serveur** : commande → réquisition existante et active (400 `REQUISITION_REQUIRED`, 409 `REQUISITION_NOT_ACTIVE` si DRAFT / REJECTED / CANCELLED ; `created_by` = utilisateur connecté, jamais le corps ; seule l'étape `Activity_CreatePO` de cette réquisition est terminée, le `taskId` du client n'est retenu que s'il correspond) ; réception / SAN → bon de commande (`poId` requis) ; facture → bon de commande approuvé (400 `PO_REQUIRED`, 409 `PO_NOT_INVOICEABLE`) ; paiement → facture (400 `INVOICE_REQUIRED`, 409 `INVOICE_NOT_PAYABLE`, bon de commande déduit de la facture). Côté client : pas de bouton « Nouveau » dans les listes GRN / SAN / factures / paiements (lien « Mes tâches ») ; `GRNForm` / `SANForm` / `InvoiceForm` sans `poId`, `PaymentForm` sans `invoiceId` → `Common/WorkflowOnlyPage` (explication, aucun formulaire)
+
+**Les formulaires GRN, SAN, Facture et Paiement ne sont accessibles en création QUE via la tâche de la réquisition.**
 
 - GoFlow gère l'ordre des étapes : impossible de créer une facture avant le GRN, etc.
 - Le **PODetail** affiche uniquement les documents P2P déjà créés (lecture seule) avec un bandeau info.
-- Les **listes** (GRNList, InvoiceList, etc.) conservent un bouton "Nouveau" pour usage hors-workflow (admin, correction).
-- La TaskList détecte le `taskDefinitionKey` : si c'est une tâche à formulaire dédié → `navigate(route)` ; sinon → modale générique.
-
-### Code du redirect dans TaskList
-```js
-// client/src/components/Task/TaskList.jsx
-const FORM_TASKS = {
-  'Activity_GoodsReceipt':      (t) => `/goods-receipts/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
-  'Activity_ServiceAcceptance': (t) => `/service-acceptance-notes/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
-  'Activity_EnterInvoice':      (t) => `/invoices/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
-  'Activity_ProcessPayment':    (t) => `/payments/new?taskId=${t.id}&poId=${t.variables?.poId || ''}`,
-};
-```
+- Les **listes** (GRNList, InvoiceList, etc.) n'ont plus de bouton « Nouveau » (création uniquement depuis la tâche de la réquisition).
+- `RequisitionTasks` détecte le `taskDefinitionKey` : tâche à formulaire dédié → `navigate(route)` ; sinon → fenêtre de décision.
 
 ### Complétion de la tâche Camunda depuis les formulaires
 Chaque formulaire lit `taskId` depuis `useSearchParams()` et le passe au backend via le service.
@@ -400,8 +393,8 @@ Tous préfixés `po_` pour éviter les conflits avec les helpers de `Requisition
 
 ## Tests
 ```
-npx playwright test tests/api/      # Tests API backend — avec GoFlow : 234 pass (2026-10-09, dont contrôle interne)
-npx playwright test tests/e2e/      # Tests navigateur — 64 pass avec GoFlow (le filtre de « Mes tâches » attend des tâches réelles)
+npx playwright test tests/api/      # Tests API backend — avec GoFlow : 235 pass (2026-10-10, dont contrôle interne et chaîne de rattachement)
+npx playwright test tests/e2e/      # Tests navigateur — 60 pass avec GoFlow (2026-10-10 ; le filtre de « Mes tâches » attend des tâches réelles)
 ```
 - Variables d'env : `API_URL` (backend), `APP_URL` (frontend, qui doit tourner ; le port 3000 est parfois pris par le frontend GoFlow)
 - **GoFlow local** : conteneur `goflow-app` sur `http://localhost:8080` (`CAMUNDA_URL` / `CAMUNDA_REST_URL`). Sans GoFlow, les tests qui attendent des tâches s'ignorent (skip) au lieu d'échouer

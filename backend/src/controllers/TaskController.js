@@ -122,6 +122,15 @@ async function getUserTasks(req, res) {
       }
     }
 
+    // Réquisition de chaque tâche, lue en base (les variables GoFlow peuvent manquer) : « Mes tâches » renvoie
+    // vers l'onglet tâches de la réquisition, seul endroit où une tâche est prise en charge et traitée
+    const reqRows = userTasks.length
+      ? await db.select(
+        'SELECT id, requisition_number, title, process_instance_id FROM requisitions WHERE process_instance_id = ANY($1)',
+        [[...new Set(userTasks.map(t => t.processInstanceId).filter(Boolean))]]
+      )
+      : [];
+    const reqByProcess = new Map(reqRows.map(r => [r.process_instance_id, r]));
     const conflicts = await segregation.taskConflicts((userTasks || []).filter(t => t.status !== 'completed'), currentUser.id);
     const enrichedTasks = await Promise.all(
       (userTasks || []).map(async (task) => {
@@ -148,6 +157,9 @@ async function getUserTasks(req, res) {
           priority: task.priority,
           status: task.status === 'completed' ? 'COMPLETED' : (task.assignee ? 'ASSIGNED' : 'UNASSIGNED'),
           variables,
+          requisitionId: reqByProcess.get(task.processInstanceId)?.id || null,
+          requisitionNumber: reqByProcess.get(task.processInstanceId)?.requisition_number || null,
+          requisitionTitle: reqByProcess.get(task.processInstanceId)?.title || null,
           ...getTaskPermissions(task, currentUser, conflictOf(conflicts, task))
         };
       })

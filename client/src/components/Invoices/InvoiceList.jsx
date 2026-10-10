@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FileText, Plus, Search, RefreshCw, Eye, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { FileText, Search, RefreshCw, Eye, CheckCircle, XCircle, AlertTriangle, CheckSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { invoiceService } from '../../services/invoiceService';
 import { t, withLabel, getLocale } from '../../i18n';
@@ -68,12 +68,11 @@ export default function InvoiceList() {
           <h1 className="text-2xl font-bold text-gray-900">{t('invoice.title')}</h1>
           <p className="text-gray-500 text-sm mt-1">{t('invoice.subtitle')}</p>
         </div>
-        <button
-          onClick={() => navigate('/invoices/new')}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-        >
-          <Plus size={16} /> {t('invoice.new')}
-        </button>
+        {/* Pas de création ici : le document se crée depuis la tâche de la réquisition (rattachement garanti) */}
+        <Link to="/tasks" title={t('workflowOnly.listHint')}
+          className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+          <CheckSquare size={16} /> {t('nav.myTasks')}
+        </Link>
       </div>
 
       <div className="flex gap-3 mb-4 flex-wrap">

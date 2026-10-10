@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save, PackageCheck, Warehouse, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import WorkflowOnlyPage from '../Common/WorkflowOnlyPage';
 import toast from 'react-hot-toast';
 import { grnService } from '../../services/grnService';
 import { warehouseService } from '../../services/stockService';
@@ -168,6 +169,9 @@ export default function GRNForm() {
   }
 
   const inputCls = 'border border-gray-200 rounded px-2 py-1 text-sm';
+
+  // Document rattaché obligatoirement : création uniquement depuis la tâche de la réquisition
+  if (!poId) return <WorkflowOnlyPage title={t('grn.newTitle')} icon={PackageCheck} doc="grn" />;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">

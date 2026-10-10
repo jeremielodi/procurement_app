@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+import WorkflowOnlyPage from '../Common/WorkflowOnlyPage';
 
 const PAYMENT_METHODS = ['BANK_TRANSFER', 'CHECK', 'CASH', 'MOBILE_MONEY'];
 
@@ -87,6 +88,9 @@ export default function PaymentForm() {
       setLoading(false);
     }
   }
+
+  // Document rattaché obligatoirement : création uniquement depuis la tâche de la réquisition
+  if (!invoiceId) return <WorkflowOnlyPage title={t('payment.newTitle')} icon={CreditCard} doc="payment" />;
 
   return (
     <div className="p-6 max-w-xl mx-auto">

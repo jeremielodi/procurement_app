@@ -18,7 +18,7 @@ class PaymentController {
   async create(req, res) {
     try {
       const {
-        invoiceId, poId, paymentDate, amount, currency,
+        invoiceId, paymentDate, amount, currency,
         paymentMethod, reference, bankAccount, notes, taskId
       } = req.body;
       const createdBy = req.user?.id;
@@ -26,17 +26,21 @@ class PaymentController {
       if (!amount) {
         return res.status(400).json({ success: false, message: 'amount est requis' });
       }
-      if (!invoiceId && !poId) {
-        return res.status(400).json({ success: false, message: 'invoiceId ou poId est requis' });
+      // Un paiement est TOUJOURS rattaché à une facture (elle-même rattachée au bon de commande et à la réquisition)
+      if (!invoiceId) {
+        return res.status(400).json({ success: false, code: 'INVOICE_REQUIRED', message: 'Facture requise : le paiement se saisit depuis la tâche de la réquisition' });
       }
 
-      if (invoiceId) {
-        let inv;
-        try { inv = await db.one('SELECT id FROM invoices WHERE id = $1', [invoiceId]); } catch (_) { inv = null; }
-        if (!inv) {
-          return res.status(404).json({ success: false, message: 'Facture introuvable' });
-        }
+      let inv;
+      try { inv = await db.one('SELECT id, po_id, status FROM invoices WHERE id = $1', [invoiceId]); } catch (_) { inv = null; }
+      if (!inv) {
+        return res.status(404).json({ success: false, message: 'Facture introuvable' });
       }
+      if (['REJECTED', 'CANCELLED'].includes(inv.status)) {
+        return res.status(409).json({ success: false, code: 'INVOICE_NOT_PAYABLE', message: `Facture au statut ${inv.status} : paiement impossible` });
+      }
+      // Bon de commande = celui de la facture (jamais une valeur du client)
+      const poId = inv.po_id;
 
       // Coordonnées bancaires du fournisseur modifiées et non vérifiées par l'entreprise : paiement refusé
       await supplierBankService.assertPayable(req, { invoiceId, poId });

@@ -21,24 +21,21 @@ test.describe('💳 Paiements', () => {
     await expect(page.getByText('Payés').first()).toBeVisible();
   });
 
-  test('Le bouton "Nouveau paiement" est visible', async ({ page }) => {
+  // Un paiement se crée uniquement depuis la tâche de la réquisition (rattaché à sa facture)
+  test('La liste des paiements n\'a pas de bouton de création', async ({ page }) => {
     await page.goto('/payments');
-    await expect(page.locator('button:has-text("Nouveau paiement")')).toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('a[href="/tasks"]').first()).toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('button:has-text("Nouveau paiement")')).toHaveCount(0);
   });
 
-  test('Cliquer "Nouveau paiement" navigue vers le formulaire', async ({ page }) => {
-    await page.goto('/payments');
-    await page.click('button:has-text("Nouveau paiement")');
-    await expect(page).toHaveURL(/\/payments\/new/);
-  });
-
-  test('Le formulaire de paiement affiche le bon titre', async ({ page }) => {
+  test('Sans facture, le formulaire de paiement explique où le saisir', async ({ page }) => {
     await page.goto('/payments/new');
     await expect(page.locator('h1')).toContainText('Nouveau Paiement', { timeout: 8_000 });
+    await expect(page.getByTestId('workflow-only')).toBeVisible();
   });
 
   test('Le formulaire de paiement a les champs requis', async ({ page }) => {
-    await page.goto('/payments/new');
+    await page.goto('/payments/new?invoiceId=999999');
     // Montant
     await expect(page.locator('input[type="number"]').first()).toBeVisible({ timeout: 5_000 });
     // Mode de paiement (select)
@@ -50,7 +47,7 @@ test.describe('💳 Paiements', () => {
   });
 
   test('Soumettre sans montant affiche une erreur toast', async ({ page }) => {
-    await page.goto('/payments/new');
+    await page.goto('/payments/new?invoiceId=999999');
     await page.waitForLoadState('networkidle');
     // Vider le champ montant
     const amountInput = page.locator('input[type="number"]').first();

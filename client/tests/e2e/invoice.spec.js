@@ -13,24 +13,21 @@ test.describe('🧾 Factures — 3-Way Match', () => {
     await expect(page.locator('h1')).toContainText('Factures Fournisseurs', { timeout: 10_000 });
   });
 
-  test('Le bouton "Nouvelle facture" est visible', async ({ page }) => {
+  // Une facture se crée uniquement depuis la tâche de la réquisition (rattachée à son bon de commande)
+  test('La liste des factures n\'a pas de bouton de création', async ({ page }) => {
     await page.goto('/invoices');
-    await expect(page.locator('button:has-text("Nouvelle facture")')).toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('a[href="/tasks"]').first()).toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('button:has-text("Nouvelle facture")')).toHaveCount(0);
   });
 
-  test('Cliquer "Nouvelle facture" navigue vers le formulaire', async ({ page }) => {
-    await page.goto('/invoices');
-    await page.click('button:has-text("Nouvelle facture")');
-    await expect(page).toHaveURL(/\/invoices\/new/);
-  });
-
-  test('Le formulaire de saisie facture affiche le bon titre', async ({ page }) => {
+  test('Sans bon de commande, le formulaire facture explique où la saisir', async ({ page }) => {
     await page.goto('/invoices/new');
     await expect(page.locator('h1')).toContainText('Saisie Facture Fournisseur', { timeout: 8_000 });
+    await expect(page.getByTestId('workflow-only')).toBeVisible();
   });
 
   test('Le formulaire facture a les champs montant et date', async ({ page }) => {
-    await page.goto('/invoices/new');
+    await page.goto('/invoices/new?poId=999999');
     // Champs numériques (sous-total, TVA, total)
     const numberInputs = page.locator('input[type="number"]');
     await expect(numberInputs.first()).toBeVisible({ timeout: 5_000 });
@@ -42,7 +39,7 @@ test.describe('🧾 Factures — 3-Way Match', () => {
   });
 
   test('Soumettre un formulaire facture vide affiche une erreur', async ({ page }) => {
-    await page.goto('/invoices/new');
+    await page.goto('/invoices/new?poId=999999');
     await page.click('button[type="submit"]');
     // Doit rester sur la même page (validation front)
     await expect(page).toHaveURL(/\/invoices\/new/);

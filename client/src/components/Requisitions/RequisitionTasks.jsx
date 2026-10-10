@@ -1,6 +1,10 @@
 // src/components/Requisitions/RequisitionTasks.jsx
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+// Onglet tâches d'une réquisition : SEUL endroit où une tâche GoFlow est prise en charge et traitée (« Mes tâches »
+// renvoie ici avec ?task=<id>, mis en évidence). « Traiter » ouvre le formulaire dédié avec le document de CETTE
+// réquisition (resolveTaskTarget : bon de commande selon son statut, dernière réception, facture non payée), ou un
+// message clair s'il manque — jamais de document orphelin ni de tâche terminée sans son document.
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   CheckCircle,
@@ -30,12 +34,22 @@ import toast from 'react-hot-toast';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { purchaseOrderService } from '../../services/purchaseOrderService';
 import { grnService } from '../../services/grnService';
+import { invoiceService } from '../../services/invoiceService';
 import { t, getLocale } from '../../i18n';
 import { TASK_LABELS } from '../../utils/taskLabels';
+
+// Statuts de bon de commande par étape
+const PO_PENDING = ['PO_PENDING', 'DRAFT'];
+const PO_TO_CONFIRM = ['PO_SENT', 'PO_APPROVED'];
+const PO_ACTIVE = ['PO_APPROVED', 'PO_SENT', 'PO_CONFIRMED', 'PO_RECEIVED', 'PO_COMPLETE', 'APPROVED', 'SENT', 'COMPLETED'];
 
 export default function RequisitionTasks() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get('task'); // tâche ouverte depuis « Mes tâches »
+  const highlightRef = useRef(null);
+  const [opening, setOpening] = useState(null);
   const { user } = useAuth();
   const userEmail = user?.email;
   const { formatAmount } = useCurrency();
@@ -64,6 +78,11 @@ export default function RequisitionTasks() {
   useEffect(() => {
     loadData();
   }, [id]);
+
+  // Tâche ouverte depuis « Mes tâches » : amenée à l'écran une fois la liste chargée
+  useEffect(() => {
+    if (!loading && highlightRef.current) highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [loading, highlightId, tasks.length]);
 
   const loadData = async () => {
     try {
@@ -126,61 +145,71 @@ export default function RequisitionTasks() {
     }
   };
 
+  /**
+   * Formulaire dédié d'une tâche, avec les documents de CETTE réquisition (lus en base ; les variables GoFlow ne
+   * servent qu'à départager). Renvoie { url } ou { missing: <code> } (document manquant), null = fenêtre générique.
+   */
+  const resolveTaskTarget = async (task) => {
+    const key = task.taskDefinitionKey;
+    const q = (to) => `${to}${to.includes('?') ? '&' : '?'}taskId=${encodeURIComponent(task.id)}`;
+    if (key === 'Activity_CreatePO') return { url: `/purchase-orders/${id}/${task.id}` };
+    if (key === 'Activity_RFPProcess') return { url: `/tenders/new?taskId=${encodeURIComponent(task.id)}&requisitionId=${id}` };
+    if (key === 'Activity_BudgetAdjustment') return { url: `/requisitions/${id}` };
+    const DOC_TASKS = ['Activity_POApproval', 'Activity_SupplierConfirmation', 'Activity_GoodsReceipt',
+      'Activity_ServiceAcceptance', 'Activity_EnterInvoice', 'Activity_ProcessPayment'];
+    if (!DOC_TASKS.includes(key)) return null;
+
+    const vars = (await requisitionService.getProcessVariables(requisition.process_instance_id).catch(() => null))?.data || {};
+    const pos = (await purchaseOrderService.getAll({ requisitionId: id }).catch(() => null))?.data || [];
+    const poFor = (statuses) => {
+      const fromVars = pos.find(p => String(p.id) === String(vars.poId) && statuses.includes(p.status));
+      return fromVars || pos.find(p => statuses.includes(p.status)) || null;
+    };
+
+    if (key === 'Activity_POApproval') {
+      const po = poFor(PO_PENDING);
+      return po ? { url: q(`/purchase-orders/${po.id}`) } : { missing: 'poPending' };
+    }
+    if (key === 'Activity_SupplierConfirmation') {
+      const po = poFor(PO_TO_CONFIRM);
+      return po ? { url: q(`/purchase-orders/${po.id}?confirm=1`) } : { missing: 'poToConfirm' };
+    }
+    const po = poFor(PO_ACTIVE);
+    if (!po) return { missing: 'poActive' };
+    if (key === 'Activity_GoodsReceipt') return { url: q(`/goods-receipts/new?poId=${po.id}`) };
+    if (key === 'Activity_ServiceAcceptance') return { url: q(`/service-acceptance-notes/new?poId=${po.id}`) };
+    if (key === 'Activity_EnterInvoice') {
+      const grns = ((await grnService.getByPO(po.id).catch(() => null))?.data || []).filter(g => g.status !== 'CANCELLED');
+      const grn = grns.find(g => String(g.id) === String(vars.grnId)) || grns.sort((a, b) => b.id - a.id)[0];
+      return { url: q(`/invoices/new?poId=${po.id}${grn ? `&grnId=${grn.id}` : ''}`) };
+    }
+    // Activity_ProcessPayment : facture non payée de cette réquisition
+    const invoices = [];
+    for (const p of pos.filter(x => PO_ACTIVE.includes(x.status))) {
+      invoices.push(...(((await invoiceService.getAll({ poId: p.id }).catch(() => null))?.data) || []));
+    }
+    const payable = invoices.filter(i => !['PAID', 'REJECTED', 'CANCELLED'].includes(i.status));
+    const invoice = payable.find(i => String(i.id) === String(vars.invoiceId)) || payable.sort((a, b) => b.id - a.id)[0];
+    return invoice ? { url: q(`/payments/new?invoiceId=${invoice.id}`) } : { missing: 'invoice' };
+  };
+
   const handleCompleteTask = async (task) => {
-
-    const processVariables = await requisitionService.getProcessVariables(requisition.process_instance_id);
-
-    if (task.taskDefinitionKey == "Activity_CreatePO") {
-      // Navigate to purchase orders route
-      navigate(`/purchase-orders/${id}/${task.id}`);
-      return; // Exit early since we're navigating away
-    }
-    else if (task.taskDefinitionKey == 'Activity_POApproval') {
-
-      const purchases = await purchaseOrderService.getAll({ requisitionId: id });
-      if (purchases.success && purchases.data.length) {
-        navigate(`/purchase-orders/${purchases.data[0].id}`);
-      }
-      return;
-    } else if (task.taskDefinitionKey == 'Activity_GoodsReceipt') {
-      const purchases = await purchaseOrderService.getAll({ requisitionId: id });
-      if (purchases.success && purchases.data.length) {
-        navigate(`/goods-receipts/new?poId=${purchases.data[0].id}&taskId=${task.id}`);
-      }
-    }
-
-    else if (task.taskDefinitionKey == 'Activity_ServiceAcceptance') {
-      const purchases = await purchaseOrderService.getAll({ requisitionId: id });
-      if (purchases.success && purchases.data.length) {
-        navigate(`/service-acceptance-notes/new?poId=${purchases.data[0].id}&taskId=${task.id}`);
-      }
-    }
-    else if (task.taskDefinitionKey == 'Activity_EnterInvoice') {
-      const purchases = await purchaseOrderService.getAll({ requisitionId: id });
-
-      // grnId
-      if (purchases.success && purchases.data.length) {
-        const poId = purchases.data[0].id;
-        const grnId = processVariables.data.grnId;
-        navigate(`/invoices/new?poId=${poId}&taskId=${task.id}&grnId=${grnId}`);
-      }
-    }
-    else if (task.taskDefinitionKey == 'Activity_ProcessPayment') {
-      const { invoiceId, poId } = processVariables.data;
-      navigate(`/payments/new?taskId=${task.id}&invoiceId=${invoiceId}&poId=${poId}`);
-    }
-    else {
-      setSelectedTask(task);
-      setFormData({
-        approved: '',
-        comment: '',
-        procurementMethod: '',
-        justification: '',
-        newBudgetAmount: '',
-        adjustmentJustification: ''
-      });
-      setShowTaskModal(true);
-    }
+    setOpening(task.id);
+    let target;
+    try { target = await resolveTaskTarget(task); } finally { setOpening(null); }
+    if (target?.url) { navigate(target.url); return; }
+    if (target?.missing) { toast.error(t(`reqTasks.missing.${target.missing}`), { duration: 7000 }); return; }
+    // Autres tâches (approbations, méthode d'achat…) : fenêtre de décision
+    setSelectedTask(task);
+    setFormData({
+      approved: '',
+      comment: '',
+      procurementMethod: '',
+      justification: '',
+      newBudgetAmount: '',
+      adjustmentJustification: ''
+    });
+    setShowTaskModal(true);
   };
 
   const handleSubmitTask = async () => {
@@ -336,7 +365,12 @@ export default function RequisitionTasks() {
               const canProcess = task.canComplete;
 
               return (
-                <div key={task.id} className={`p-6 hover:bg-gray-50 transition-colors ${getTaskColor(task.name)}`}>
+                <div
+                  key={task.id}
+                  ref={task.id === highlightId ? highlightRef : undefined}
+                  className={`p-6 hover:bg-gray-50 transition-colors ${getTaskColor(task.name)} ${task.id === highlightId ? 'ring-2 ring-inset ring-blue-500 bg-blue-50/40' : ''}`}
+                  data-testid={task.id === highlightId ? 'task-highlighted' : undefined}
+                >
                   <div className="flex justify-between items-start">
                     <div className="flex gap-3 flex-1">
                       {getTaskIcon(getTaskName(task))}
@@ -344,7 +378,7 @@ export default function RequisitionTasks() {
                         <h3 className="font-semibold text-gray-800">{displayName(task)}</h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 mt-2 text-sm">
                           <div className="text-gray-500">{t('reqTasks.requisitionLabel')}</div>
-                          <div className="font-medium text-blue-600">{task.variables?.requisitionNumber || '-'}</div>
+                          <div className="font-medium text-blue-600">{task.variables?.requisitionNumber || requisition?.requisition_number || '-'}</div>
 
                           <div className="text-gray-500">{t('reqTasks.createdOn')}</div>
                           <div>{formatDate(task.created)}</div>
@@ -412,9 +446,13 @@ export default function RequisitionTasks() {
                       {canProcess && (
                         <button
                           onClick={() => handleCompleteTask(task)}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                          disabled={opening === task.id}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 disabled:opacity-60"
+                          data-testid="task-process"
                         >
-                          <Send size={16} />
+                          {opening === task.id
+                            ? <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                            : <Send size={16} />}
                           {t('reqTasks.process')}
                         </button>
                       )}
@@ -489,7 +527,7 @@ export default function RequisitionTasks() {
                 </h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="text-gray-600">{t('taskList.number')}</div>
-                  <div className="font-medium text-blue-700">{selectedTask.variables.requisitionNumber || '-'}</div>
+                  <div className="font-medium text-blue-700">{selectedTask.variables?.requisitionNumber || requisition?.requisition_number || '-'}</div>
                   <div className="text-gray-600">{t('taskList.title')}</div>
                   <div className="font-medium">{selectedTask.variables.title || '-'}</div>
                   <div className="text-gray-600">{t('taskList.amount')}</div>

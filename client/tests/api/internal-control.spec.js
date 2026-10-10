@@ -111,14 +111,42 @@ test.describe.serial('API › Contrôle interne', () => {
     } }));
     expect([dup.status, dup.body.code, dup.body.details?.invoiceId]).toEqual([409, 'DUPLICATE_INVOICE', invoice.id]);
     expect((await lastAudit(request, `action=INVOICE_DUPLICATE_BLOCKED&q=${encodeURIComponent(saved.invoice_number)}`)).length).toBeGreaterThan(0);
+    // Autre fournisseur (son propre bon de commande) : même n° accepté
+    const otherPo = (await (await request.post('/api/purchase-orders', { headers: H(), data: {
+      requisitionId: req.id, supplierId: otherSupplier.id, currency: 'USD', totalAmount: 10, deliveryDate: future(15),
+      items: [{ description: 'Autre article', quantity: 1, unitPrice: 10 }],
+    } })).json()).data;
+    expect((await request.post(`/api/purchase-orders/${otherPo.id}/approve`, { headers: auth(approver), data: {} })).status()).toBe(200);
     const other = await json(await request.post('/api/invoices', { headers: H(), data: {
-      supplierId: otherSupplier.id, supplierInvoiceNumber: number, invoiceDate: future(0), totalAmount: 10,
+      poId: otherPo.id, supplierInvoiceNumber: number, invoiceDate: future(0), totalAmount: 10,
     } }));
     expect(other.status, JSON.stringify(other.body)).toBe(201);
     // Validation : pas par celui qui l'a saisie
     const selfOk = await json(await request.post(`/api/invoices/${invoice.id}/approve`, { headers: H(), data: {} }));
     expect([selfOk.status, selfOk.body.code]).toEqual([403, 'SELF_APPROVAL']);
     expect((await request.post(`/api/invoices/${invoice.id}/approve`, { headers: auth(approver), data: {} })).status()).toBe(200);
+  });
+
+  test('Chaîne de rattachement : commande → réquisition, facture → commande, paiement → facture', async ({ request }) => {
+    // Commande sans réquisition
+    const noReq = await json(await request.post('/api/purchase-orders', { headers: H(), data: { supplierId: supplier.id, totalAmount: 5, items: [] } }));
+    expect([noReq.status, noReq.body.code]).toEqual([400, 'REQUISITION_REQUIRED']);
+    // L'auteur d'une commande est toujours l'utilisateur connecté (createdBy du client ignoré)
+    const approverId = (await (await request.get('/api/auth/profile', { headers: auth(approver) })).json()).data.id;
+    const spoof = await json(await request.post('/api/purchase-orders', { headers: H(), data: {
+      requisitionId: req.id, supplierId: supplier.id, totalAmount: 5, createdBy: approverId, items: [{ description: 'x', quantity: 1, unitPrice: 5 }],
+    } }));
+    expect(spoof.status).toBe(201);
+    const spoofPo = (await (await request.get(`/api/purchase-orders/${spoof.body.data.id}`, { headers: H() })).json()).data;
+    expect(spoofPo.created_by).not.toBe(approverId);
+    expect(spoofPo.self_approval).toBe(true);
+    // Facture sans commande, sur une commande en attente ; paiement sans facture
+    const noPo = await json(await request.post('/api/invoices', { headers: H(), data: { invoiceDate: future(0), totalAmount: 10, supplierInvoiceNumber: `X-${stamp}` } }));
+    expect([noPo.status, noPo.body.code]).toEqual([400, 'PO_REQUIRED']);
+    const pending = await json(await request.post('/api/invoices', { headers: H(), data: { poId: spoof.body.data.id, invoiceDate: future(0), totalAmount: 5, supplierInvoiceNumber: `Y-${stamp}` } }));
+    expect([pending.status, pending.body.code]).toEqual([409, 'PO_NOT_INVOICEABLE']);
+    const noInvoice = await json(await request.post('/api/payments', { headers: H(), data: { poId: po.id, amount: 10, paymentDate: future(0) } }));
+    expect([noInvoice.status, noInvoice.body.code]).toEqual([400, 'INVOICE_REQUIRED']);
   });
 
   test('Coordonnées bancaires modifiées : paiement bloqué ; vérification par une autre personne ; rejet motivé', async ({ request }) => {

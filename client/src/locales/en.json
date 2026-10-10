@@ -778,7 +778,7 @@
     "methodSole": "Sole source (justified)",
     "loginRequired": "Please sign in to see your tasks",
     "loading": "Loading tasks...",
-    "subtitle": "Manage your approval and processing tasks",
+    "subtitle": "Your groups' tasks: open the requisition to claim and process a task.",
     "pending": "Pending ({{count}})",
     "completedTab": "Completed ({{count}})",
     "allTab": "All ({{count}})",
@@ -807,7 +807,13 @@
     "unclaimOtherAssignee": "Currently claimed by {{assignee}}.",
     "releasing": "Releasing…",
     "unclaimConfirmTextOther": "It will no longer be assigned to that person and will be available again to all members of the group, who will be able to claim it.",
-    "selfApproval": "Your own request: another member of the group must process it"
+    "selfApproval": "Your own request: another member of the group must process it",
+    "processInRequisition": "A task is claimed and processed from the \"Tasks\" tab of its requisition: the order, receipt, invoice or payment is automatically linked to the right requisition and purchase order there.",
+    "openInRequisition": "Process in the requisition",
+    "viewInRequisition": "View in the requisition",
+    "noRequisition": "Requisition not found",
+    "claimedByMe": "Claimed by you",
+    "toClaim": "To be claimed"
   },
   "notifications": {
     "unknownDate": "Unknown date",
@@ -1292,7 +1298,13 @@
     "newAmount": "New proposed amount *",
     "newAmountPlaceholder": "Proposed amount",
     "adjustmentJustification": "Adjustment justification",
-    "adjustmentPlaceholder": "Explain why a budget adjustment is needed..."
+    "adjustmentPlaceholder": "Explain why a budget adjustment is needed...",
+    "missing": {
+      "poPending": "No purchase order awaiting approval for this requisition.",
+      "poToConfirm": "No purchase order sent to the supplier for this requisition.",
+      "poActive": "No approved purchase order for this requisition: receipts, service acceptances and invoices are linked to a purchase order.",
+      "invoice": "No invoice to pay for this requisition: enter the invoice first (\"Enter invoice\" task)."
+    }
   },
   "po": {
     "approved": "Order approved successfully",
@@ -3248,8 +3260,9 @@
           {
             "type": "steps",
             "items": [
-              "Click \"Claim\": a confirmation appears, because the task will be assigned to you and will disappear from your colleagues' list.",
-              "Click the task. Depending on its type, a form opens in a window (approval, choice…) or you are taken to the dedicated screen (goods receipt, service acceptance, invoice, payment, call for tenders).",
+              "In \"My tasks\", click the task (or \"Process in the requisition\"): the requisition's \"Tasks\" tab opens with the task highlighted.",
+              "Click \"Claim\": a confirmation is shown, because the task will be assigned to you and disappear from your colleagues' list.",
+              "Click \"Process\". Depending on the task, a window opens (approval, choice…) or the dedicated screen, already linked to the right document of the requisition (purchase order, receipt, invoice, payment, call for tenders). If a document is missing (e.g. no invoice to pay), a message says so.",
               "Complete and validate: GoFlow automatically moves to the next step and notifies the next group."
             ]
           },
@@ -3271,7 +3284,7 @@
           },
           {
             "type": "warn",
-            "text": "The goods receipt, service acceptance, invoice and payment screens must be opened from the task: that link is what moves the process forward in GoFlow."
+            "text": "An order is always linked to a requisition; a receipt, service acceptance or invoice to a purchase order; a payment to an invoice. That is why these documents are only created from the requisition's \"Tasks\" tab: the lists (receipts, invoices, payments) have no create button."
           },
           {
             "type": "links",
@@ -4731,5 +4744,13 @@
       "SUPERSEDED": "A more recent change is awaiting your verification",
       "REASON_REQUIRED": "Enter the reason for rejection"
     }
+  },
+  "workflowOnly": {
+    "grn": "A goods receipt is always linked to a purchase order, itself linked to a requisition.",
+    "san": "A service acceptance is always linked to a purchase order, itself linked to a requisition.",
+    "invoice": "An invoice is always linked to a purchase order, itself linked to a requisition.",
+    "payment": "A payment is always linked to an invoice, itself linked to the purchase order and the requisition.",
+    "how": "Open \"My tasks\", then the requisition concerned: in its \"Tasks\" tab, claim the step and click \"Process\". The form opens with the right document.",
+    "listHint": "Documents are created from the requisition's task"
   }
 }

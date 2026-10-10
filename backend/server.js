@@ -211,6 +211,9 @@ async function startServer() {
     // task Listner
     startTaskListener(io);
 
+    // Rapport quotidien des réquisitions (email à minuit, entreprises ayant activé l'option)
+    require('./src/services/DailyRequisitionReportService').start();
+
     // Démarrer le serveur
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {

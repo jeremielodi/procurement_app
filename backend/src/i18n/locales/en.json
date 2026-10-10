@@ -290,6 +290,26 @@
       "phone": "Phone",
       "language": "Website language",
       "replyHint": "Reply directly to this email: your answer will go to the visitor's address."
+    },
+    "dailyReport": {
+      "subject": "Requisition status — {enterprise} — {date}",
+      "title": "Requisition status",
+      "asOf": "Status as of {date}",
+      "introAdmin": "Here is the requisition status of your {projects} project(s): for each project, the latest {count} requisitions, their status and current step.",
+      "introManager": "Here is the requisition status of the {projects} project(s) you are a member of: for each project, the latest {count} requisitions, their status and current step.",
+      "blockedIntro": "{count} requisition(s) have been waiting for an action for {days} days or more (in red below).",
+      "projectSummary": "{total} requisition(s) in total · {shown} shown · {today} new since yesterday",
+      "blocked": "{count} blocked",
+      "since": "waiting for {count} d",
+      "col": {
+        "number": "No.",
+        "title": "Subject / requester",
+        "amount": "Amount",
+        "status": "Status",
+        "step": "Current step"
+      },
+      "open": "Open requisitions",
+      "why": "You receive this daily report because you are an administrator or manager and your company enabled it (My company)."
     }
   },
   "notification": {

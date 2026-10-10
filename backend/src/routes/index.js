@@ -94,6 +94,10 @@ const e = enterpriseController;
 router.get('/enterprises/current', e.getCurrent.bind(e));
 router.get('/enterprises/default', e.getCurrent.bind(e)); // ancien nom, conservé
 router.put('/enterprises/current', hasPermission('MANAGE_USERS'), logoMiddleware, e.update.bind(e));
+// Rapport quotidien des réquisitions (administrateur d'entreprise) : état, activation, exemple immédiat
+router.get('/enterprises/current/daily-report', hasPermission('MANAGE_USERS'), e.dailyReportStatus.bind(e));
+router.put('/enterprises/current/daily-report', hasPermission('MANAGE_USERS'), e.setDailyReport.bind(e));
+router.post('/enterprises/current/daily-report/test', hasPermission('MANAGE_USERS'), e.sendDailyReportTest.bind(e));
 // Liste : super admin = toutes ; utilisateur = la sienne
 router.get('/enterprises', e.list.bind(e));
 router.get('/enterprises/:id', e.getOne.bind(e));

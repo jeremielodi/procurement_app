@@ -4288,7 +4288,8 @@
               "Projets et départements : les membres d'un projet sont ceux qui reçoivent les tâches GoFlow de ses réquisitions — tenez-les à jour.",
               "« Mon entreprise » : nom, logo, adresse, contacts, NIF / RCCM, devise. Ils apparaissent sur tous les PDF.",
               "Dépôts et accès de la logistique (voir « Stock »).",
-              "Préqualification des fournisseurs et vérification de leurs documents."
+              "Préqualification des fournisseurs et vérification de leurs documents.",
+              "« Mon entreprise » › « Rapport quotidien des réquisitions » : un email chaque nuit à minuit aux administrateurs et managers, dans leur langue, projet par projet (20 dernières réquisitions, étape en cours, réquisitions bloquées). « Recevoir un exemple maintenant » vous l'envoie tout de suite."
             ]
           },
           {
@@ -4752,5 +4753,28 @@
     "payment": "Un paiement se rattache toujours à une facture, elle-même rattachée au bon de commande et à la réquisition.",
     "how": "Ouvrez « Mes tâches », puis la réquisition concernée : dans son onglet « Tâches », prenez en charge l'étape et cliquez sur « Traiter ». Le formulaire s'ouvre avec le bon document.",
     "listHint": "Les documents se créent depuis la tâche de la réquisition"
+  },
+  "dailyReport": {
+    "title": "Rapport quotidien des réquisitions",
+    "description": "Chaque nuit à minuit ({{timezone}}), un email aux administrateurs et managers, chacun dans sa langue : projet par projet, les {{count}} dernières réquisitions avec leur statut, l'étape en cours et les réquisitions bloquées.",
+    "recipients_one": "{{count}} destinataire",
+    "recipients_other": "{{count}} destinataires",
+    "noRecipients": "Aucun administrateur ni manager actif.",
+    "role": {
+      "ADMIN": "Administrateur",
+      "MANAGER": "Manager"
+    },
+    "lastRun": "Dernier envoi",
+    "lastRunText": "{{date}} — {{sent}} email(s) envoyé(s), {{failed}} échec(s)",
+    "neverSent": "Aucun envoi pour le moment.",
+    "sendTest": "Recevoir un exemple maintenant",
+    "testSent": "Exemple envoyé à votre adresse email",
+    "enabledToast": "Rapport quotidien activé",
+    "disabledToast": "Rapport quotidien désactivé",
+    "err": {
+      "NOT_A_RECIPIENT": "Vous n'êtes pas destinataire du rapport (profil administrateur ou manager requis).",
+      "NO_REQUISITIONS": "Aucune réquisition dans vos projets : rien à envoyer.",
+      "EMAIL_FAILED": "L'email n'a pas pu être envoyé (vérifiez la configuration SMTP)."
+    }
   }
 }

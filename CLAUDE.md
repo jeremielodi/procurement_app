@@ -214,6 +214,13 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - `deploy/restore.sh <dossier> [--db-only|--files-only] [--yes]` : vérifie les empreintes, arrête `app`, `pg_restore --clean --single-transaction`, remplace le volume MinIO (MinIO arrêté, propriétaire 65532), redémarre. Documentation : `readme.md` › « Sauvegarde et restauration »
 - `.gitattributes` : `*.sh` toujours en LF
 
+## Rapport quotidien des réquisitions (email à minuit) — migration `22_daily_requisition_report.sql`
+
+- Option par entreprise `enterprise.daily_report_enabled` (défaut désactivée) : carte `Enterprises/DailyReportSettings` dans « Mon entreprise » ; `GET|PUT /enterprises/current/daily-report` (`MANAGE_USERS`, changement tracé `ENTERPRISE_UPDATED`), `POST /enterprises/current/daily-report/test` = exemple immédiat à l'administrateur connecté (409 `NOT_A_RECIPIENT` / `NO_REQUISITIONS`, 502 `EMAIL_FAILED`)
+- `DailyRequisitionReportService` : destinataires = utilisateurs actifs `prof_admin` (tous les projets) et `prof_manager` (projets dont ils sont membres ou responsables), email dans `users.language` (`email.dailyReport.*`) ; projet par projet : synthèse + **20 dernières réquisitions** (statut, avancement `PROGRESS_STATUS_SQL` exporté par `RequisitionModel`, étape GoFlow en cours = TASK_CREATED sans TASK_COMPLETED dans `workflow_history`, ancienneté, « bloquée » ≥ 7 j). Destinataire sans réquisition dans ses projets : pas d'email
+- Planificateur `start()` (`server.js`) : vérification chaque minute, envoi entre 0 h et 6 h (rattrapage d'une nuit manquée) dans le fuseau `APP_TIMEZONE` ; `daily_report_runs` (entreprise × jour) réservée avant l'envoi → un seul envoi par jour, même avec plusieurs instances. `DAILY_REPORT_DISABLED=1` coupe le planificateur
+- Tests : `tests/api/daily-report.spec.js`
+
 ## Emails de tâche GoFlow
 
 - `task_listner.handleTaskCreated` : à chaque TASK_CREATED, email aux utilisateurs **actifs**, ayant le **profil de la tâche** (`prof_<candidateGroup>`), **membres du projet** de la réquisition et de la **même entreprise** (`getTaskEmailRecipients`) + notification in-app
@@ -393,7 +400,7 @@ Tous préfixés `po_` pour éviter les conflits avec les helpers de `Requisition
 
 ## Tests
 ```
-npx playwright test tests/api/      # Tests API backend — avec GoFlow : 235 pass (2026-10-10, dont contrôle interne et chaîne de rattachement)
+npx playwright test tests/api/      # Tests API backend — avec GoFlow : 237 pass + 1 skip GoFlow (2026-10-10, dont contrôle interne, chaîne de rattachement, rapport quotidien)
 npx playwright test tests/e2e/      # Tests navigateur — 60 pass avec GoFlow (2026-10-10 ; le filtre de « Mes tâches » attend des tâches réelles)
 ```
 - Variables d'env : `API_URL` (backend), `APP_URL` (frontend, qui doit tourner ; le port 3000 est parfois pris par le frontend GoFlow)

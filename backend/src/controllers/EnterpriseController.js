@@ -10,6 +10,7 @@ const db = require('../config/database');
 const i18n = require('../i18n');
 const enterpriseModel = require('../models/EnterpriseModel');
 const { saveLogo, removeLogo, sendLogo } = require('../utils/logoUpload');
+const dailyReportService = require('../services/DailyRequisitionReportService');
 
 // Journal d'audit : champs suivis d'une entreprise
 const ENTERPRISE_FIELDS = ['name', 'code', 'address', 'phone', 'email', 'website', 'tax_id', 'registration_number', 'currency_id', 'is_active'];
@@ -169,6 +170,50 @@ class EnterpriseController {
         });
       }
       res.json({ success: true, data: enterprise, message: 'Entreprise mise à jour' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // ---------- Rapport quotidien des réquisitions (administrateur d'entreprise) ----------
+
+  /** GET /enterprises/current/daily-report — option, destinataires, dernier envoi */
+  async dailyReportStatus(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      res.json({ success: true, data: await dailyReportService.status(req.enterpriseId) });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /** PUT /enterprises/current/daily-report { enabled } */
+  async setDailyReport(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      const enabled = req.body?.enabled === true || req.body?.enabled === 'true';
+      const before = await db.one('SELECT name, daily_report_enabled FROM enterprise WHERE id = $1', [req.enterpriseId]);
+      await db.exec('UPDATE enterprise SET daily_report_enabled = $2, last_update = CURRENT_TIMESTAMP WHERE id = $1', [req.enterpriseId, enabled]);
+      if (before && before.daily_report_enabled !== enabled) {
+        await audit(req, AUDIT.ENTERPRISE_UPDATED, {
+          entity: { type: 'enterprise', id: req.enterpriseId, label: before.name },
+          oldValue: { daily_report_enabled: before.daily_report_enabled }, details: { daily_report_enabled: enabled },
+        });
+      }
+      res.json({ success: true, data: await dailyReportService.status(req.enterpriseId) });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /** POST /enterprises/current/daily-report/test — envoie maintenant le rapport à l'utilisateur connecté */
+  async sendDailyReportTest(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      const result = await dailyReportService.sendTest(req.enterpriseId, req.user.id);
+      if (result.reason) return res.status(409).json({ success: false, code: result.reason, data: result });
+      if (!result.sent) return res.status(502).json({ success: false, code: 'EMAIL_FAILED', data: result });
+      res.json({ success: true, data: result });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }

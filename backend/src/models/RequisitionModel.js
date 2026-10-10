@@ -611,4 +611,4 @@ class RequisitionModel {
   }
 }
 
-module.exports = new RequisitionModel();
+module.exports = new RequisitionModel();module.exports.PROGRESS_STATUS_SQL = PROGRESS_STATUS_SQL; // même règle d'avancement ailleurs (rapport quotidien)

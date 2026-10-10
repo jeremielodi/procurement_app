@@ -290,6 +290,26 @@
       "phone": "Téléphone",
       "language": "Langue du site",
       "replyHint": "Répondez directement à cet email : la réponse partira vers l'adresse du visiteur."
+    },
+    "dailyReport": {
+      "subject": "État des réquisitions — {enterprise} — {date}",
+      "title": "État des réquisitions",
+      "asOf": "Situation au {date}",
+      "introAdmin": "Voici l'état des réquisitions de vos {projects} projet(s) : pour chaque projet, les {count} dernières réquisitions, leur statut et l'étape en cours.",
+      "introManager": "Voici l'état des réquisitions des {projects} projet(s) dont vous êtes membre : pour chaque projet, les {count} dernières réquisitions, leur statut et l'étape en cours.",
+      "blockedIntro": "{count} réquisition(s) attendent une action depuis {days} jours ou plus (en rouge ci-dessous).",
+      "projectSummary": "{total} réquisition(s) au total · {shown} affichée(s) · {today} nouvelle(s) depuis hier",
+      "blocked": "{count} bloquée(s)",
+      "since": "en attente depuis {count} j",
+      "col": {
+        "number": "N°",
+        "title": "Objet / demandeur",
+        "amount": "Montant",
+        "status": "Statut",
+        "step": "Étape en cours"
+      },
+      "open": "Ouvrir les réquisitions",
+      "why": "Vous recevez ce rapport quotidien car vous êtes administrateur ou manager et que votre entreprise l'a activé (Mon entreprise)."
     }
   },
   "notification": {

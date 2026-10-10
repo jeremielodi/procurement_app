@@ -148,6 +148,14 @@ Légende : **À changer** = valeur à personnaliser avant toute mise en producti
 | `SMTP_FROM` | **À changer** | `notifications@mondomaine.com` | Adresse d'expédition. Avec Gmail, elle doit être celle du compte (ou un alias vérifié). |
 | `CONTACT_EMAIL` | Optionnel | `jeremielodi@gmail.com` | Destinataire des messages du formulaire de contact du site vitrine (réponse directe au visiteur grâce au Reply-To). |
 
+### Rapport quotidien des réquisitions
+
+Chaque entreprise peut activer, dans « Mon entreprise », un email envoyé **chaque nuit à minuit** (fuseau `APP_TIMEZONE`) à ses administrateurs et managers, dans la langue de chacun : projet par projet, les 20 dernières réquisitions, leur statut, l'étape en cours et les réquisitions bloquées. Il utilise le SMTP ci-dessus et `APP_URL` pour les liens. Un seul envoi par nuit, même avec plusieurs instances ; une nuit manquée (serveur arrêté) est rattrapée avant 6 h.
+
+| Variable | Rôle | Défaut |
+|---|---|---|
+| `DAILY_REPORT_DISABLED` | `1` coupe l'envoi automatique (ex. serveur de recette) | — |
+
 ### Sécurité de la connexion (anti force brute)
 
 Seules les tentatives **échouées** comptent ; une connexion réussie remet le compteur du compte à zéro. Au-delà du seuil, la connexion est refusée (429) pendant la fenêtre, et l'événement est écrit dans le journal d'audit (`LOGIN_BLOCKED`).
@@ -233,7 +241,7 @@ docker compose up -d --build
 Les scripts SQL de `database/` ne sont exécutés automatiquement **qu'à la création de la base**. Sur une base existante, appliquer les nouvelles migrations à la main (elles sont idempotentes, on peut les relancer) :
 
 ```bash
-for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations 12_audit_logs 13_stock_management 14_stock_issues 15_stock_equipment 16_stock_issue_destinations 17_supplier_order_confirmation 18_stock_counts 19_stock_transfers_in_transit 20_audit_log_access 21_internal_control; do
+for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations 12_audit_logs 13_stock_management 14_stock_issues 15_stock_equipment 16_stock_issue_destinations 17_supplier_order_confirmation 18_stock_counts 19_stock_transfers_in_transit 20_audit_log_access 21_internal_control 22_daily_requisition_report; do
   docker exec -i wwf_postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < database/$f.sql
 done
 ```

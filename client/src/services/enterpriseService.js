@@ -31,6 +31,20 @@ export const enterpriseService = {
     const response = await api.put('/enterprises/current', toFormData(data, logo), multipart);
     return response.data;
   },
+  // --- Rapport quotidien des réquisitions (administrateur d'entreprise) ---
+  getDailyReport: async () => {
+    const response = await api.get('/enterprises/current/daily-report');
+    return response.data;
+  },
+  setDailyReport: async (enabled) => {
+    const response = await api.put('/enterprises/current/daily-report', { enabled });
+    return response.data;
+  },
+  // Erreurs métier (NOT_A_RECIPIENT, NO_REQUISITIONS, EMAIL_FAILED) affichées par l'écran
+  sendDailyReportTest: async () => {
+    const response = await api.post('/enterprises/current/daily-report/test', {}, { skipErrorToast: true });
+    return response.data;
+  },
   // --- Super admin ---
   create: async (data, logo) => {
     const response = await api.post('/enterprises', toFormData(data, logo), multipart);

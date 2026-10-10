@@ -4288,7 +4288,8 @@
               "Projects and departments: a project's members are the people who receive the GoFlow tasks for its requisitions — keep them up to date.",
               "\"My company\": name, logo, address, contacts, tax ID / trade register, currency. They appear on every PDF.",
               "Warehouses and logistics access (see \"Stock\").",
-              "Supplier prequalification and verification of their documents."
+              "Supplier prequalification and verification of their documents.",
+              "\"My company\" › \"Daily requisition report\": an email every night at midnight to administrators and managers, in their language, project by project (latest 20 requisitions, current step, blocked requisitions). \"Send me a sample now\" sends it to you immediately."
             ]
           },
           {
@@ -4752,5 +4753,28 @@
     "payment": "A payment is always linked to an invoice, itself linked to the purchase order and the requisition.",
     "how": "Open \"My tasks\", then the requisition concerned: in its \"Tasks\" tab, claim the step and click \"Process\". The form opens with the right document.",
     "listHint": "Documents are created from the requisition's task"
+  },
+  "dailyReport": {
+    "title": "Daily requisition report",
+    "description": "Every night at midnight ({{timezone}}), an email to administrators and managers, each in their language: project by project, the latest {{count}} requisitions with their status, current step and blocked requisitions.",
+    "recipients_one": "{{count}} recipient",
+    "recipients_other": "{{count}} recipients",
+    "noRecipients": "No active administrator or manager.",
+    "role": {
+      "ADMIN": "Administrator",
+      "MANAGER": "Manager"
+    },
+    "lastRun": "Last sent",
+    "lastRunText": "{{date}} — {{sent}} email(s) sent, {{failed}} failure(s)",
+    "neverSent": "Not sent yet.",
+    "sendTest": "Send me a sample now",
+    "testSent": "Sample sent to your email address",
+    "enabledToast": "Daily report enabled",
+    "disabledToast": "Daily report disabled",
+    "err": {
+      "NOT_A_RECIPIENT": "You are not a recipient of the report (administrator or manager profile required).",
+      "NO_REQUISITIONS": "No requisition in your projects: nothing to send.",
+      "EMAIL_FAILED": "The email could not be sent (check the SMTP configuration)."
+    }
   }
 }

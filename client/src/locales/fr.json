@@ -695,7 +695,8 @@
       "missingToken": "Lien incomplet : ouvrez le lien reçu par email."
     },
     "tooManyAttempts_one": "Trop de tentatives de connexion échouées. Réessayez dans {{count}} minute, ou utilisez « Mot de passe oublié ».",
-    "tooManyAttempts_other": "Trop de tentatives de connexion échouées. Réessayez dans {{count}} minutes, ou utilisez « Mot de passe oublié »."
+    "tooManyAttempts_other": "Trop de tentatives de connexion échouées. Réessayez dans {{count}} minutes, ou utilisez « Mot de passe oublié ».",
+    "loginToContinue": "Connectez-vous pour ouvrir la page demandée : vous y serez redirigé juste après."
   },
   "supplierFields": {
     "companyName": "Raison sociale",

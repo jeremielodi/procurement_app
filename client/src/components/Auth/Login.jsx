@@ -1,16 +1,20 @@
 // src/components/Auth/Login.jsx
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { homePathFor } from '../../utils/accountType';
+import { afterLoginPath, safeRedirect } from '../../utils/loginRedirect';
 import { t } from '../../i18n';
 import LanguageSwitcher from '../Common/LanguageSwitcher';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, isAuthenticated, user } = useAuth();
+  // Page demandée avant la connexion (lien d'un email, session expirée…)
+  const [searchParams] = useSearchParams();
+  const redirectParam = searchParams.get('redirect');
+  const hasRedirect = !!safeRedirect(redirectParam);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -47,13 +51,18 @@ export default function Login() {
     const result = await login(formData.email, formData.password);
     if (result.success) {
       toast.success(t('auth.loginSuccess'));
-      navigate(homePathFor(result.user));
+      navigate(afterLoginPath(redirectParam, result.user), { replace: true });
     } else if (result.code === 'TOO_MANY_ATTEMPTS') {
       toast.error(t('auth.tooManyAttempts', { count: Math.max(1, Math.ceil((result.retryAfter || 60) / 60)) }), { duration: 8000 });
     } else {
       toast.error(result.message || t('auth.loginFailed'));
     }
   };
+
+  // Déjà connecté (ex. lien ouvert dans un autre onglet) : directement vers la page demandée
+  if (isAuthenticated && user) {
+    return <Navigate to={afterLoginPath(redirectParam, user)} replace />;
+  }
 
   return (
     <div
@@ -71,6 +80,11 @@ export default function Login() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {hasRedirect && (
+            <p className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900" data-testid="login-redirect-hint">
+              <LogIn size={16} className="mt-0.5 shrink-0" /> {t('auth.loginToContinue')}
+            </p>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Email

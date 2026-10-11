@@ -695,7 +695,8 @@
       "missingToken": "Incomplete link: open the link you received by email."
     },
     "tooManyAttempts_one": "Too many failed login attempts. Try again in {{count}} minute, or use \"Forgot password\".",
-    "tooManyAttempts_other": "Too many failed login attempts. Try again in {{count}} minutes, or use \"Forgot password\"."
+    "tooManyAttempts_other": "Too many failed login attempts. Try again in {{count}} minutes, or use \"Forgot password\".",
+    "loginToContinue": "Sign in to open the requested page: you will be taken there right after."
   },
   "supplierFields": {
     "companyName": "Company name",

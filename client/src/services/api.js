@@ -2,6 +2,7 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { t, getLang } from '../i18n'
+import { loginPathFor } from '../utils/loginRedirect'
 
 const api = axios.create({
   baseURL: '/api',
@@ -44,7 +45,7 @@ api.interceptors.response.use(
       if (!currentToken) return Promise.reject(error)
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      window.location.href = loginPathFor(window.location) // retour à la page en cours après reconnexion
       toast.error(t('services.sessionExpired'))
       return Promise.reject(error)
     }

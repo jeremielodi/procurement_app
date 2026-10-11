@@ -310,6 +310,8 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 
 ## Session, déconnexion et WebSocket
 
+- **Retour à la page demandée après connexion** (`utils/loginRedirect.js`) : `ProtectedRoute` sans session et la session expirée (401 dans `api.js`) envoient vers `/login?redirect=<chemin + paramètres>` ; `Login` y renvoie après succès (message `auth.loginToContinue`) et redirige aussitôt un utilisateur déjà connecté. `safeRedirect` n'accepte que des chemins internes (« / » mais ni « // » ni « / », pas de schéma, pas les pages publiques) : jamais de redirection vers un autre site. Les liens des emails (`appLink`) en profitent sans changement. Tests e2e : `login-redirect.spec.js` ; un test « sans session » doit utiliser `test.use({ storageState: { cookies: [], origins: [] } })` (`undefined` hérite de la session du projet)
+
 - **Un seul socket** : `client/src/services/realtime.js` (`connectRealtime(token)` / `disconnectRealtime()`), ouvert par `AuthContext` à la connexion, fermé au `logout`. Composants : `useWebSocket()` → `{ socket, isConnected }` (n'ouvre jamais de connexion). Ne pas créer d'autre `io(...)`
 - `logout()` (`AuthContext`) : vide le stockage, ferme le socket, `queryClient.cancelQueries()` + `clear()`, ferme les toasts. Un seul `AuthProvider` (dans `index.jsx`)
 - `api.js` : une réponse à une requête partie avec un autre token que le token courant (déconnexion) est ignorée ; 401 sans token → pas de « Session expirée »

@@ -27,8 +27,6 @@ const USERNAME = process.env.CAMUNDA_USERNAME || 'superuser@goflow.com';
 const PASSWORD = process.env.CAMUNDA_PASSWORD || 'superUser123';
 const PROCESS_KEY = process.env.PROCUREMENT_BPMN_PROCESS || '';
 
-console.log(USERNAME, " ", PASSWORD);
-
 const basicAuth = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
 
 let eventSource = null;

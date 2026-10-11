@@ -8,7 +8,7 @@ const EMAIL    = 'admin@procurement.com';
 const PASSWORD = 'Admin123!';
 
 // Ces tests ne dépendent pas du global-setup (pas de storageState)
-test.use({ storageState: undefined });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('🔐 Authentification', () => {
 

@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import { isSupplierUser, isSuperAdminUser } from '../../utils/accountType';
+import { loginPathFor } from '../../utils/loginRedirect';
 import { t } from '../../i18n';
 
 // Pages accessibles à un compte fournisseur / au super admin de la plateforme
@@ -25,9 +26,9 @@ export default function ProtectedRoute({
     return <LoadingSpinner fullScreen text={t('auth.checkingAuth')} />;
   }
   
-  // Si non authentifié, rediriger vers login
+  // Non authentifié : connexion, puis retour à la page demandée (ex. lien reçu par email)
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={loginPathFor(location)} replace />;
   }
   
   // Un fournisseur ne voit que son portail

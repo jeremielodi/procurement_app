@@ -142,7 +142,8 @@
     "stockValuation": "Valuation",
     "auditLog": "Audit log",
     "collapse": "Collapse menu",
-    "expand": "Expand menu"
+    "expand": "Expand menu",
+    "receiptRecon": "Receipt reconciliation"
   },
   "header": {
     "toggleSidebar": "Show / hide menu",
@@ -3911,6 +3912,14 @@
             "text": "Stock in transit between two warehouses still counts in the company value, but in no warehouse until it is received."
           },
           {
+            "type": "h",
+            "text": "Receipts ↔ stock reconciliation"
+          },
+          {
+            "type": "p",
+            "text": "Stock › \"Receipt reconciliation\" compares each goods receipt line with the stock movements it produced: quantity accepted = quantity entered, same warehouse, same lot, cost = purchase order price, cancelled receipt properly reversed, number of serial numbers = quantity accepted. By default only discrepancies are shown; \"Export (Excel)\" produces a summary and the line-by-line detail (movement numbers, reversing entries)."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -3940,6 +3949,10 @@
               {
                 "to": "/stock/valuation",
                 "label": "Valuation"
+              },
+              {
+                "to": "/stock/reconciliation",
+                "label": "Receipts ↔ stock reconciliation"
               }
             ]
           }
@@ -4208,7 +4221,8 @@
               "Sign-ins, passwords, user accounts and warehouse access.",
               "Internal control: refused attempts (segregation of duties, task outside one's group), blocked payments, duplicate invoices, bank changes and verifications.",
               "Sensitive data (before / after): budget lines, roles and permissions, company information, suppliers, prequalification, document reviews.",
-              "Cancellations and payments: requisition or order deleted, order rejected, receipt cancelled, invoice rejected, payment approved or status changed, issue cancelled, stock adjustment, stock count validated."
+              "Cancellations and payments: requisition or order deleted, order rejected, receipt cancelled, invoice rejected, payment approved or status changed, issue cancelled, stock adjustment, stock count validated.",
+              "Receipts ↔ stock reconciliation (Stock › \"Receipt reconciliation\"): checks that everything accepted at receipt entered stock, in the right warehouse, under the right lot and at the purchase order price; Excel export for the audit file."
             ]
           },
           {
@@ -4775,7 +4789,77 @@
     "err": {
       "NOT_A_RECIPIENT": "You are not a recipient of the report (administrator or manager profile required).",
       "NO_REQUISITIONS": "No requisition in your projects: nothing to send.",
-      "EMAIL_FAILED": "The email could not be sent (check the SMTP configuration)."
+      "EMAIL_FAILED": "The email could not be sent (check the SMTP configuration).",
+      "NO_RECIPIENTS": "No active administrator or manager to send the report to."
+    },
+    "sendAll": "Send to everyone now",
+    "sendAllConfirm": "Send the report now to the {{count}} recipients?",
+    "sendAllDone": "Report sent: {{sent}} email(s), {{failed}} failure(s)",
+    "scheduler": {
+      "ok": "Scheduler running on the server: the report will go out at midnight.",
+      "disabled": "Scheduler disabled on the server (DAILY_REPORT_DISABLED): no automatic sending.",
+      "stopped": "Scheduler not started on this server: no automatic sending (restart the application).",
+      "error": "The scheduler is hitting an error: the midnight report may not go out.",
+      "details": "Server time: {{time}} ({{timezone}}) · next sending: {{next}} at 00:00 · last check: {{tick}}",
+      "optionOff": "option disabled",
+      "badTimezone": "APP_TIMEZONE \"{{value}}\" is not a valid time zone: {{timezone}} is used instead."
+    }
+  },
+  "receiptRecon": {
+    "title": "Receipts ↔ stock reconciliation",
+    "subtitle": "Each goods receipt line compared with the stock movements it produced: quantity accepted, quantity entered, warehouse, lot, cost, cancellations.",
+    "rules": "Expected in stock = quantity accepted of a stockable catalogue item. A service or free-text line never enters stock (\"not stocked\", normal). A cancelled receipt must have been reversed by a reversing entry.",
+    "from": "From",
+    "to": "To",
+    "allWarehouses": "All warehouses",
+    "search": "Receipt, order, item, supplier…",
+    "onlyIssues": "Discrepancies only",
+    "export": "Export (Excel)",
+    "summary": {
+      "lines": "Lines checked",
+      "grns": "Receipts",
+      "ok": "Compliant",
+      "info": "Not stocked / cancelled",
+      "errors": "Discrepancies"
+    },
+    "noIssue": "No discrepancy: everything accepted at receipt entered stock, in the right warehouse, under the right lot and at the purchase order price.",
+    "empty": "No receipt line for these filters.",
+    "code": {
+      "OK": "Compliant",
+      "NOT_STOCKABLE": "Not stocked (service / free text)",
+      "CANCELLED_REVERSED": "Receipt cancelled, stock reversed",
+      "MISSING_ENTRY": "Accepted but not entered into stock",
+      "QTY_MISMATCH": "Quantity entered ≠ quantity accepted",
+      "WAREHOUSE_MISMATCH": "Entered into another warehouse",
+      "LOT_MISMATCH": "Entered under another lot",
+      "COST_MISMATCH": "Cost ≠ purchase order price",
+      "UNEXPECTED_ENTRY": "Unexpected stock entry",
+      "CANCELLED_NOT_REVERSED": "Receipt cancelled, stock not reversed",
+      "SERIAL_MISMATCH": "Number of serial numbers ≠ quantity accepted"
+    },
+    "col": {
+      "status": "Result",
+      "checks": "Discrepancies",
+      "grn": "Receipt",
+      "date": "Date",
+      "po": "Purchase order",
+      "supplier": "Supplier",
+      "warehouse": "Warehouse",
+      "item": "Item",
+      "lot": "Lot",
+      "unit": "Unit",
+      "received": "Received",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "expected": "Expected in stock",
+      "entered": "Entered",
+      "reversed": "Reversed",
+      "net": "Net in stock",
+      "poPrice": "PO price",
+      "stockCost": "Stock cost",
+      "currency": "Currency",
+      "movements": "Entry movements",
+      "reversals": "Reversing entries"
     }
   }
 }

@@ -17,7 +17,19 @@ const { appLink } = require('../utils/appUrl');
 const LATEST_PER_PROJECT = 20;
 const BLOCKED_DAYS = 7;
 const CATCH_UP_UNTIL_HOUR = 6; // rattrapage d'une nuit manquée : jusqu'à 6 h
-const TZ = () => process.env.APP_TIMEZONE || 'Africa/Kinshasa';
+const DEFAULT_TZ = 'Africa/Kinshasa';
+/** Fuseau valide (un APP_TIMEZONE mal écrit ferait échouer chaque passage : repli sur le fuseau par défaut) */
+const isValidTz = (tz) => { try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); return true; } catch { return false; } };
+const TZ = () => {
+  const tz = (process.env.APP_TIMEZONE || '').trim();
+  return tz && isValidTz(tz) ? tz : DEFAULT_TZ;
+};
+
+// État du planificateur DANS CE PROCESSUS (affiché dans « Mon entreprise » pour diagnostiquer un envoi manquant)
+const scheduler = {
+  running: false, disabled: false, startedAt: null,
+  lastTickAt: null, lastTickError: null, lastSentAt: null, lastNoEnterpriseDay: null,
+};
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -188,6 +200,24 @@ class DailyRequisitionReportService {
     return { recipients: users.length, sent, failed, skipped };
   }
 
+  /**
+   * Envoi immédiat à TOUS les destinataires (rattrapage d'une nuit manquée, vérification) : enregistré dans
+   * daily_report_runs pour le jour courant (la nuit suivante n'est pas affectée).
+   */
+  async sendNow(enterpriseId) {
+    const { day } = localNow();
+    const r = await this.sendForEnterprise(enterpriseId);
+    await db.exec(
+      `INSERT INTO daily_report_runs (enterprise_id, report_date, finished_at, recipients, sent, failed)
+       VALUES ($1, $2::date, CURRENT_TIMESTAMP, $3, $4, $5)
+       ON CONFLICT (enterprise_id, report_date) DO UPDATE SET finished_at = CURRENT_TIMESTAMP, recipients = EXCLUDED.recipients,
+         sent = daily_report_runs.sent + EXCLUDED.sent, failed = daily_report_runs.failed + EXCLUDED.failed, error = NULL`,
+      [enterpriseId, day, r.recipients, r.sent, r.failed]
+    );
+    console.log(`📧 Rapport quotidien (envoi manuel, ${day}) : ${r.sent} email(s) envoyé(s)${r.failed ? `, ${r.failed} échec(s)` : ''}`);
+    return r;
+  }
+
   /** Exemple immédiat pour l'utilisateur connecté (administrateur), sans toucher au suivi des envois */
   async sendTest(enterpriseId, userId) {
     const result = await this.sendForEnterprise(enterpriseId, { onlyUserId: userId });
@@ -204,9 +234,14 @@ class DailyRequisitionReportService {
    * deux instances ou deux passages ne peuvent pas envoyer deux fois.
    */
   async tick(date = new Date()) {
+    scheduler.lastTickAt = new Date();
     const { day, hour } = localNow(date);
     if (hour >= CATCH_UP_UNTIL_HOUR) return [];
     const enterprises = await db.select('SELECT id, name FROM enterprise WHERE daily_report_enabled AND is_active', []);
+    if (!enterprises.length && scheduler.lastNoEnterpriseDay !== day) {
+      scheduler.lastNoEnterpriseDay = day;
+      console.log(`📅 Rapport quotidien (${day}) : aucune entreprise active n'a activé l'option — rien à envoyer`);
+    }
     const results = [];
     for (const e of enterprises) {
       const claimed = await db.one(
@@ -222,7 +257,8 @@ class DailyRequisitionReportService {
            WHERE enterprise_id = $1 AND report_date = $2::date`,
           [e.id, day, r.recipients, r.sent, r.failed]
         );
-        console.log(`📧 Rapport quotidien ${e.name} (${day}) : ${r.sent} email(s) envoyé(s)${r.failed ? `, ${r.failed} échec(s)` : ''}`);
+        console.log(`📧 Rapport quotidien ${e.name} (${day}) : ${r.sent} email(s) envoyé(s)${r.failed ? `, ${r.failed} échec(s)` : ''}${r.skipped ? `, ${r.skipped} destinataire(s) sans réquisition` : ''}`);
+        if (r.sent) scheduler.lastSentAt = new Date();
         results.push({ enterpriseId: e.id, ...r });
       } catch (error) {
         await db.exec('UPDATE daily_report_runs SET finished_at = CURRENT_TIMESTAMP, error = $3 WHERE enterprise_id = $1 AND report_date = $2::date',
@@ -235,12 +271,33 @@ class DailyRequisitionReportService {
 
   /** Démarre le planificateur (une vérification par minute) ; DAILY_REPORT_DISABLED=1 le désactive */
   start() {
-    if (['1', 'true'].includes(String(process.env.DAILY_REPORT_DISABLED || '').toLowerCase())) return null;
-    const run = () => this.tick().catch(error => console.error('Rapport quotidien :', error.message));
+    if (['1', 'true'].includes(String(process.env.DAILY_REPORT_DISABLED || '').toLowerCase())) {
+      scheduler.disabled = true;
+      console.log('📅 Rapport quotidien : planificateur DÉSACTIVÉ (DAILY_REPORT_DISABLED) — aucun envoi automatique');
+      return null;
+    }
+    const configured = (process.env.APP_TIMEZONE || '').trim();
+    if (configured && !isValidTz(configured)) {
+      console.warn(`⚠️  APP_TIMEZONE = « ${configured} » n'est pas un fuseau valide (ex. Africa/Kinshasa) : rapport quotidien sur ${DEFAULT_TZ}`);
+    }
+    const run = () => this.tick()
+      .then(() => { scheduler.lastTickError = null; })
+      .catch(error => { scheduler.lastTickError = error.message; console.error('Rapport quotidien :', error.message); });
     const timer = setInterval(run, 60 * 1000);
     timer.unref?.();
     setTimeout(run, 15 * 1000).unref?.(); // rattrapage au démarrage
+    scheduler.running = true;
+    scheduler.startedAt = new Date();
+    const { day, hour } = localNow();
+    console.log(`📅 Rapport quotidien : planificateur actif (fuseau ${TZ()}, il est ${String(hour).padStart(2, '0')} h le ${day} ; envoi entre 00:00 et 0${CATCH_UP_UNTIL_HOUR}:00)`);
     return timer;
+  }
+
+  /** Prochaine fenêtre d'envoi (minuit suivant dans le fuseau de l'application), en texte AAAA-MM-JJ */
+  nextRunDay(date = new Date()) {
+    const { day, hour } = localNow(date);
+    if (hour < CATCH_UP_UNTIL_HOUR) return day;
+    return localNow(new Date(date.getTime() + 24 * 3600 * 1000)).day;
   }
 
   /** État pour l'écran « Mon entreprise » */
@@ -256,6 +313,14 @@ class DailyRequisitionReportService {
       recipients: recipients.map(r => ({ email: r.email, name: [r.first_name, r.last_name].filter(Boolean).join(' '), role: r.is_admin ? 'ADMIN' : 'MANAGER', language: r.language || 'fr' })),
       timezone: TZ(),
       latestPerProject: LATEST_PER_PROJECT,
+      // Planificateur de CE serveur : s'il n'est pas actif, aucun envoi automatique n'aura lieu
+      scheduler: {
+        running: scheduler.running, disabled: scheduler.disabled, startedAt: scheduler.startedAt,
+        lastTickAt: scheduler.lastTickAt, lastTickError: scheduler.lastTickError, lastSentAt: scheduler.lastSentAt,
+        serverTime: new Date(), localHour: localNow().hour, nextRunDay: this.nextRunDay(),
+        timezoneConfigured: (process.env.APP_TIMEZONE || '').trim() || null,
+        timezoneValid: !(process.env.APP_TIMEZONE || '').trim() || isValidTz((process.env.APP_TIMEZONE || '').trim()),
+      },
     };
   }
 }

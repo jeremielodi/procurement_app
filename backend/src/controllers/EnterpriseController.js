@@ -219,6 +219,19 @@ class EnterpriseController {
     }
   }
 
+  /** POST /enterprises/current/daily-report/send-now — rapport envoyé maintenant à tous les destinataires */
+  async sendDailyReportNow(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      const result = await dailyReportService.sendNow(req.enterpriseId);
+      if (!result.recipients) return res.status(409).json({ success: false, code: 'NO_RECIPIENTS', data: result });
+      if (!result.sent && result.failed) return res.status(502).json({ success: false, code: 'EMAIL_FAILED', data: result });
+      res.json({ success: true, data: { ...result, status: await dailyReportService.status(req.enterpriseId) } });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
   /** PATCH /enterprises/:id/active (super admin) — suspendre / réactiver */
   async setActive(req, res) {
     try {

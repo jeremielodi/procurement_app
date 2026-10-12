@@ -142,7 +142,8 @@
     "stockValuation": "Valorisation",
     "auditLog": "Journal d'audit",
     "collapse": "Réduire le menu",
-    "expand": "Agrandir le menu"
+    "expand": "Agrandir le menu",
+    "receiptRecon": "Rapprochement réceptions"
   },
   "header": {
     "toggleSidebar": "Afficher / masquer le menu",
@@ -3911,6 +3912,14 @@
             "text": "Le stock en transit entre deux dépôts reste compté dans la valeur de l'entreprise, mais dans aucun dépôt tant qu'il n'est pas réceptionné."
           },
           {
+            "type": "h",
+            "text": "Rapprochement réceptions ↔ stock"
+          },
+          {
+            "type": "p",
+            "text": "Stock › « Rapprochement réceptions » compare chaque ligne de bon de réception aux mouvements de stock qu'elle a produits : quantité acceptée = quantité entrée, même dépôt, même lot, coût = prix du bon de commande, réception annulée bien reprise, nombre de n° de série = quantité acceptée. Par défaut seules les anomalies s'affichent ; « Exporter (Excel) » produit une synthèse et le détail ligne par ligne (n° de mouvements, écritures inverses)."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -3940,6 +3949,10 @@
               {
                 "to": "/stock/valuation",
                 "label": "Valorisation"
+              },
+              {
+                "to": "/stock/reconciliation",
+                "label": "Rapprochement réceptions ↔ stock"
               }
             ]
           }
@@ -4208,7 +4221,8 @@
               "Connexions, mots de passe, comptes utilisateurs et accès aux dépôts.",
               "Contrôle interne : tentatives refusées (séparation des tâches, tâche hors groupe), paiements bloqués, factures en double, changements et vérifications bancaires.",
               "Données sensibles (avant / après) : lignes budgétaires, rôles et permissions, informations de l'entreprise, fournisseurs, préqualification, vérification des documents.",
-              "Annulations et paiements : réquisition ou bon supprimé, bon rejeté, réception annulée, facture rejetée, paiement approuvé ou changé de statut, sortie annulée, ajustement de stock, inventaire validé."
+              "Annulations et paiements : réquisition ou bon supprimé, bon rejeté, réception annulée, facture rejetée, paiement approuvé ou changé de statut, sortie annulée, ajustement de stock, inventaire validé.",
+              "Rapprochement réceptions ↔ stock (Stock › « Rapprochement réceptions ») : vérifie que tout ce qui a été accepté en réception est entré en stock, au bon dépôt, au bon lot et au prix du bon de commande ; export Excel pour le dossier d'audit."
             ]
           },
           {
@@ -4775,7 +4789,77 @@
     "err": {
       "NOT_A_RECIPIENT": "Vous n'êtes pas destinataire du rapport (profil administrateur ou manager requis).",
       "NO_REQUISITIONS": "Aucune réquisition dans vos projets : rien à envoyer.",
-      "EMAIL_FAILED": "L'email n'a pas pu être envoyé (vérifiez la configuration SMTP)."
+      "EMAIL_FAILED": "L'email n'a pas pu être envoyé (vérifiez la configuration SMTP).",
+      "NO_RECIPIENTS": "Aucun administrateur ni manager actif à qui envoyer le rapport."
+    },
+    "sendAll": "Envoyer maintenant à tous",
+    "sendAllConfirm": "Envoyer le rapport maintenant aux {{count}} destinataires ?",
+    "sendAllDone": "Rapport envoyé : {{sent}} email(s), {{failed}} échec(s)",
+    "scheduler": {
+      "ok": "Planificateur actif sur le serveur : le rapport partira à minuit.",
+      "disabled": "Planificateur désactivé sur le serveur (DAILY_REPORT_DISABLED) : aucun envoi automatique.",
+      "stopped": "Planificateur non démarré sur ce serveur : aucun envoi automatique (redémarrez l'application).",
+      "error": "Le planificateur rencontre une erreur : le rapport de minuit risque de ne pas partir.",
+      "details": "Heure du serveur : {{time}} ({{timezone}}) · prochain envoi : {{next}} à 00:00 · dernière vérification : {{tick}}",
+      "optionOff": "option désactivée",
+      "badTimezone": "APP_TIMEZONE « {{value}} » n'est pas un fuseau valide : {{timezone}} est utilisé à la place."
+    }
+  },
+  "receiptRecon": {
+    "title": "Rapprochement réceptions ↔ stock",
+    "subtitle": "Chaque ligne de bon de réception comparée aux mouvements de stock qu'elle a produits : quantité acceptée, quantité entrée, dépôt, lot, coût, annulations.",
+    "rules": "Attendu en stock = quantité acceptée d'un article stockable du catalogue. Une prestation ou une ligne en texte libre n'entre jamais en stock (« non stocké », normal). Une réception annulée doit avoir été reprise par une écriture inverse.",
+    "from": "Du",
+    "to": "Au",
+    "allWarehouses": "Tous les dépôts",
+    "search": "Réception, commande, article, fournisseur…",
+    "onlyIssues": "Anomalies seulement",
+    "export": "Exporter (Excel)",
+    "summary": {
+      "lines": "Lignes contrôlées",
+      "grns": "Réceptions",
+      "ok": "Conformes",
+      "info": "Non stockées / annulées",
+      "errors": "Anomalies"
+    },
+    "noIssue": "Aucune anomalie : tout ce qui a été accepté en réception est entré en stock, au bon dépôt, au bon lot et au prix du bon de commande.",
+    "empty": "Aucune ligne de réception pour ces filtres.",
+    "code": {
+      "OK": "Conforme",
+      "NOT_STOCKABLE": "Non stocké (prestation / texte libre)",
+      "CANCELLED_REVERSED": "Réception annulée, stock repris",
+      "MISSING_ENTRY": "Accepté mais non entré en stock",
+      "QTY_MISMATCH": "Quantité entrée ≠ quantité acceptée",
+      "WAREHOUSE_MISMATCH": "Entré dans un autre dépôt",
+      "LOT_MISMATCH": "Entré sous un autre lot",
+      "COST_MISMATCH": "Coût ≠ prix du bon de commande",
+      "UNEXPECTED_ENTRY": "Entrée en stock inattendue",
+      "CANCELLED_NOT_REVERSED": "Réception annulée, stock non repris",
+      "SERIAL_MISMATCH": "Nombre de n° de série ≠ quantité acceptée"
+    },
+    "col": {
+      "status": "Résultat",
+      "checks": "Écarts",
+      "grn": "Réception",
+      "date": "Date",
+      "po": "Bon de commande",
+      "supplier": "Fournisseur",
+      "warehouse": "Dépôt",
+      "item": "Article",
+      "lot": "Lot",
+      "unit": "Unité",
+      "received": "Reçu",
+      "accepted": "Accepté",
+      "rejected": "Rejeté",
+      "expected": "Attendu en stock",
+      "entered": "Entré",
+      "reversed": "Repris",
+      "net": "Net en stock",
+      "poPrice": "Prix PO",
+      "stockCost": "Coût stock",
+      "currency": "Devise",
+      "movements": "Mouvements d'entrée",
+      "reversals": "Écritures inverses"
     }
   }
 }

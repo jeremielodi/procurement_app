@@ -98,6 +98,7 @@ router.put('/enterprises/current', hasPermission('MANAGE_USERS'), logoMiddleware
 router.get('/enterprises/current/daily-report', hasPermission('MANAGE_USERS'), e.dailyReportStatus.bind(e));
 router.put('/enterprises/current/daily-report', hasPermission('MANAGE_USERS'), e.setDailyReport.bind(e));
 router.post('/enterprises/current/daily-report/test', hasPermission('MANAGE_USERS'), e.sendDailyReportTest.bind(e));
+router.post('/enterprises/current/daily-report/send-now', hasPermission('MANAGE_USERS'), e.sendDailyReportNow.bind(e));
 // Liste : super admin = toutes ; utilisateur = la sienne
 router.get('/enterprises', e.list.bind(e));
 router.get('/enterprises/:id', e.getOne.bind(e));
@@ -610,6 +611,9 @@ router.get('/stock/summary', authenticate, hasPermission('VIEW_STOCK'), st.summa
 router.get('/stock/balances/export', authenticate, hasPermission('VIEW_STOCK'), st.exportBalances);
 router.get('/stock/valuation', authenticate, hasPermission('VIEW_STOCK'), st.valuation);
 router.get('/stock/valuation/export', authenticate, hasPermission('VIEW_STOCK'), st.exportValuation);
+// Rapprochement réceptions ↔ stock (audit) : chaque ligne de bon de réception comparée à ses mouvements de stock
+router.get('/stock/receipt-reconciliation', authenticate, hasPermission('VIEW_STOCK'), st.receiptReconciliation);
+router.get('/stock/receipt-reconciliation/export', authenticate, hasPermission('VIEW_STOCK'), st.exportReceiptReconciliation);
 router.get('/stock/balances', authenticate, hasPermission('VIEW_STOCK'), st.balances);
 router.get('/stock/movements', authenticate, hasPermission('VIEW_STOCK'), st.movements);
 

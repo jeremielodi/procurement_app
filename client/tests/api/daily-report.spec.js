@@ -51,4 +51,16 @@ test.describe.serial('API › Rapport quotidien des réquisitions', () => {
     expect(res.status, JSON.stringify(res.body)).toBe(200);
     expect([res.body.data.recipients, res.body.data.sent]).toEqual([1, 1]);
   });
+
+  test('Planificateur actif sur le serveur ; envoi immédiat à tous enregistré dans le suivi du jour', async ({ request }) => {
+    const st = (await (await request.get('/api/enterprises/current/daily-report', { headers: auth(admin) })).json()).data;
+    expect(st.scheduler.running).toBe(true);
+    expect(st.scheduler.disabled).toBe(false);
+    expect(st.scheduler.nextRunDay).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const res = await json(await request.post('/api/enterprises/current/daily-report/send-now', { headers: auth(admin), data: {} }));
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(res.body.data.sent).toBeGreaterThan(0);
+    expect(res.body.data.status.lastRun.sent).toBeGreaterThanOrEqual(res.body.data.sent);
+    expect((await request.post('/api/enterprises/current/daily-report/send-now', { headers: auth(requesterToken), data: {} })).status()).toBe(403);
+  });
 });

@@ -40,7 +40,8 @@ import {
   Inbox,
   Laptop,
   Undo2,
-  ScrollText
+  ScrollText,
+  ShieldCheck
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -181,6 +182,7 @@ const menuGroups = [
       { path: '/stock/returns', icon: Undo2, label: 'nav.stockReturns', permission: 'VIEW_STOCK' },
       { path: '/stock/equipment', icon: Laptop, label: 'nav.equipment', permission: 'VIEW_STOCK' },
       { path: '/stock/valuation', icon: Coins, label: 'nav.stockValuation', permission: 'VIEW_STOCK' },
+      { path: '/stock/reconciliation', icon: ShieldCheck, label: 'nav.receiptRecon', permission: 'VIEW_STOCK' },
       { path: '/stock/counts', icon: ClipboardCheck, label: 'nav.stockCounts', permission: 'VIEW_STOCK' },
       { path: '/stock/adjustments', icon: SlidersHorizontal, label: 'nav.stockAdjustments', permission: 'VIEW_STOCK' },
       { path: '/stock/movements', icon: History, label: 'nav.stockMovements', permission: 'VIEW_STOCK' },

@@ -691,5 +691,56 @@
     "stock_issue": "Stock issue",
     "stock_adjustment": "Adjustment",
     "stock_count": "Stock count"
+  },
+  "receiptRecon": {
+    "title": "Receipts ↔ stock reconciliation",
+    "period": "Period: {from} to {to}",
+    "sheetSummary": "Summary",
+    "sheetDetail": "Detail",
+    "summary": {
+      "lines": "Receipt lines checked",
+      "grns": "Goods receipts",
+      "ok": "Compliant",
+      "info": "Not stocked / cancelled and reversed",
+      "errors": "Discrepancies",
+      "byCode": "By result"
+    },
+    "code": {
+      "OK": "Compliant",
+      "NOT_STOCKABLE": "Not stocked (service / free text)",
+      "CANCELLED_REVERSED": "Receipt cancelled, stock reversed",
+      "MISSING_ENTRY": "Accepted but not entered into stock",
+      "QTY_MISMATCH": "Quantity entered ≠ quantity accepted",
+      "WAREHOUSE_MISMATCH": "Entered into another warehouse",
+      "LOT_MISMATCH": "Entered under another lot",
+      "COST_MISMATCH": "Cost ≠ purchase order price",
+      "UNEXPECTED_ENTRY": "Unexpected stock entry",
+      "CANCELLED_NOT_REVERSED": "Receipt cancelled, stock not reversed",
+      "SERIAL_MISMATCH": "Number of serial numbers ≠ quantity accepted"
+    },
+    "col": {
+      "status": "Result",
+      "checks": "Discrepancies",
+      "grn": "Receipt",
+      "date": "Date",
+      "po": "Purchase order",
+      "supplier": "Supplier",
+      "warehouse": "Warehouse",
+      "item": "Item",
+      "lot": "Lot",
+      "unit": "Unit",
+      "received": "Received",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "expected": "Expected in stock",
+      "entered": "Entered",
+      "reversed": "Reversed",
+      "net": "Net in stock",
+      "poPrice": "PO price",
+      "stockCost": "Stock cost",
+      "currency": "Currency",
+      "movements": "Entry movements",
+      "reversals": "Reversing entries"
+    }
   }
 }

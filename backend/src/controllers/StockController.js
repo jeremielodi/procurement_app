@@ -4,6 +4,7 @@
 // /stock-items/:id sont contrôlées par tenantGuard (PATH_RESOURCES).
 const ExcelJS = require('exceljs');
 const valuationService = require('../services/StockValuationService');
+const reconciliationService = require('../services/ReceiptReconciliationService');
 const warehouseModel = require('../models/WarehouseModel');
 const stockItemModel = require('../models/StockItemModel');
 const stockModel = require('../models/StockModel');
@@ -257,6 +258,27 @@ const stock = {
       const asOf = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.asOf || '')) ? req.query.asOf : undefined;
       res.json({ success: true, data: await valuationService.valuation({ asOf, categoryId: req.query.categoryId, warehouseId: req.query.warehouseId }) });
     } catch (error) { return serverError(res, error, 'Erreur lors de la valorisation du stock'); }
+  },
+
+  /** GET /stock/receipt-reconciliation — rapprochement réceptions ↔ stock (fromDate, toDate, warehouseId, search, onlyIssues) */
+  async receiptReconciliation(req, res) {
+    try {
+      const { fromDate, toDate, warehouseId, search, onlyIssues } = req.query;
+      res.json({ success: true, data: await reconciliationService.report({ fromDate, toDate, warehouseId, search, onlyIssues }) });
+    } catch (error) { return serverError(res, error, 'Erreur lors du rapprochement réceptions / stock'); }
+  },
+
+  /** GET /stock/receipt-reconciliation/export — Excel (synthèse + détail) */
+  async exportReceiptReconciliation(req, res) {
+    try {
+      const T = i18n.translator(i18n.fromRequest(req));
+      const { fromDate, toDate, warehouseId, search, onlyIssues } = req.query;
+      const wb = await reconciliationService.workbook({ fromDate, toDate, warehouseId, search, onlyIssues }, T);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="rapprochement-receptions-stock-${new Date().toISOString().slice(0, 10)}.xlsx"`);
+      await wb.xlsx.write(res);
+      res.end();
+    } catch (error) { return serverError(res, error, 'Erreur lors de l\'export du rapprochement'); }
   },
 
   /** GET /stock/valuation/export — Excel de la valorisation */

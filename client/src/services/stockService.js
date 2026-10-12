@@ -31,6 +31,9 @@ export const stockService = {
   // Valorisation au CMUP (asOf, warehouseId, categoryId) et export Excel
   valuation: (params = {}) => api.get('/stock/valuation', { params }).then(data),
   exportValuation: (params = {}) => api.get('/stock/valuation/export', { params: { ...params, lang: getLang() }, responseType: 'blob' }).then(data),
+  // Rapprochement réceptions ↔ stock (audit)
+  receiptReconciliation: (params = {}) => api.get('/stock/receipt-reconciliation', { params }).then(data),
+  exportReceiptReconciliation: (params = {}) => api.get('/stock/receipt-reconciliation/export', { params: { ...params, lang: getLang() }, responseType: 'blob' }).then(data),
   exportBalances: (params = {}) =>
     api.get('/stock/balances/export', { params: { ...params, lang: getLang() }, responseType: 'blob' }).then(data),
 };

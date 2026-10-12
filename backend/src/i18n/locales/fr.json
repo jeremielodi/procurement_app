@@ -691,5 +691,56 @@
     "stock_issue": "Sortie de stock",
     "stock_adjustment": "Ajustement",
     "stock_count": "Inventaire"
+  },
+  "receiptRecon": {
+    "title": "Rapprochement réceptions ↔ stock",
+    "period": "Période : du {from} au {to}",
+    "sheetSummary": "Synthèse",
+    "sheetDetail": "Détail",
+    "summary": {
+      "lines": "Lignes de réception contrôlées",
+      "grns": "Bons de réception",
+      "ok": "Conformes",
+      "info": "Non stockées / annulées reprises",
+      "errors": "Anomalies",
+      "byCode": "Par résultat"
+    },
+    "code": {
+      "OK": "Conforme",
+      "NOT_STOCKABLE": "Non stocké (prestation / texte libre)",
+      "CANCELLED_REVERSED": "Réception annulée, stock repris",
+      "MISSING_ENTRY": "Accepté mais non entré en stock",
+      "QTY_MISMATCH": "Quantité entrée ≠ quantité acceptée",
+      "WAREHOUSE_MISMATCH": "Entré dans un autre dépôt",
+      "LOT_MISMATCH": "Entré sous un autre lot",
+      "COST_MISMATCH": "Coût ≠ prix du bon de commande",
+      "UNEXPECTED_ENTRY": "Entrée en stock inattendue",
+      "CANCELLED_NOT_REVERSED": "Réception annulée, stock non repris",
+      "SERIAL_MISMATCH": "Nombre de n° de série ≠ quantité acceptée"
+    },
+    "col": {
+      "status": "Résultat",
+      "checks": "Écarts",
+      "grn": "Réception",
+      "date": "Date",
+      "po": "Bon de commande",
+      "supplier": "Fournisseur",
+      "warehouse": "Dépôt",
+      "item": "Article",
+      "lot": "Lot",
+      "unit": "Unité",
+      "received": "Reçu",
+      "accepted": "Accepté",
+      "rejected": "Rejeté",
+      "expected": "Attendu en stock",
+      "entered": "Entré",
+      "reversed": "Repris",
+      "net": "Net en stock",
+      "poPrice": "Prix PO",
+      "stockCost": "Coût stock",
+      "currency": "Devise",
+      "movements": "Mouvements d'entrée",
+      "reversals": "Écritures inverses"
+    }
   }
 }

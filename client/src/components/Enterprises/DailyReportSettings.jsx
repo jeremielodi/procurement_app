@@ -1,10 +1,10 @@
 // src/components/Enterprises/DailyReportSettings.jsx
 // « Mon entreprise » : rapport quotidien des réquisitions par email (chaque nuit à minuit) aux administrateurs et
 // managers, chacun dans sa langue, projet par projet (20 dernières réquisitions). Activation, destinataires, dernier
-// envoi et envoi d'un exemple à soi-même.
+// envoi, état du planificateur de ce serveur (diagnostic d'un envoi manquant), exemple à soi-même, envoi immédiat à tous.
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Mail, Send, RefreshCw, Users, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Mail, Send, RefreshCw, Users, CheckCircle2, AlertTriangle, Clock, Users2 } from 'lucide-react';
 import { enterpriseService } from '../../services/enterpriseService';
 import { t, getLocale } from '../../i18n';
 
@@ -14,6 +14,7 @@ export default function DailyReportSettings() {
   const [data, setData] = useState(null);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendingAll, setSendingAll] = useState(false);
 
   const load = () => enterpriseService.getDailyReport().then(r => setData(r.data)).catch(() => setData(null));
   useEffect(() => { load(); }, []);
@@ -38,8 +39,25 @@ export default function DailyReportSettings() {
     } finally { setSending(false); }
   };
 
+  const sendAll = async () => {
+    if (!window.confirm(t('dailyReport.sendAllConfirm', { count: data.recipients.length }))) return;
+    setSendingAll(true);
+    try {
+      const r = await enterpriseService.sendDailyReportNow();
+      setData(r.data.status);
+      toast.success(t('dailyReport.sendAllDone', { sent: r.data.sent, failed: r.data.failed }));
+    } catch (err) {
+      const code = err.response?.data?.code;
+      toast.error(code ? t(`dailyReport.err.${code}`) : t('common.error'));
+    } finally { setSendingAll(false); }
+  };
+
   if (!data) return null;
   const run = data.lastRun;
+  const sch = data.scheduler || {};
+  // Planificateur : actif, désactivé sur le serveur, ou en erreur
+  const schState = sch.disabled ? 'disabled' : !sch.running ? 'stopped' : sch.lastTickError ? 'error' : 'ok';
+  const fmtDay = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString(getLocale(), { dateStyle: 'medium' }) : '—');
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4" data-testid="daily-report-settings">
@@ -89,6 +107,14 @@ export default function DailyReportSettings() {
             </p>
           ) : <p className="text-gray-500">{t('dailyReport.neverSent')}</p>}
           <button
+            onClick={sendAll}
+            disabled={sendingAll || !data.recipients.length}
+            className="mt-3 mr-2 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+            data-testid="daily-report-send-all"
+          >
+            {sendingAll ? <RefreshCw size={14} className="animate-spin" /> : <Users2 size={14} />} {t('dailyReport.sendAll')}
+          </button>
+          <button
             onClick={sendTest}
             disabled={sending}
             className="mt-3 inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-50"
@@ -96,6 +122,25 @@ export default function DailyReportSettings() {
           >
             {sending ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />} {t('dailyReport.sendTest')}
           </button>
+        </div>
+      </div>
+
+      {/* Planificateur sur ce serveur : s'il n'est pas actif (ou en erreur), aucun envoi automatique à minuit */}
+      <div className={`flex items-start gap-2 rounded-lg border p-3 text-sm ${schState === 'ok' ? 'border-green-200 bg-green-50 text-green-900' : 'border-red-200 bg-red-50 text-red-900'}`} data-testid="daily-report-scheduler">
+        {schState === 'ok' ? <Clock size={16} className="mt-0.5 shrink-0" /> : <AlertTriangle size={16} className="mt-0.5 shrink-0" />}
+        <div>
+          <p className="font-medium">{t(`dailyReport.scheduler.${schState}`)}</p>
+          <p className="mt-0.5 text-xs opacity-90">
+            {t('dailyReport.scheduler.details', {
+              time: fmtDateTime(sch.serverTime), timezone: data.timezone,
+              next: data.enabled ? fmtDay(sch.nextRunDay) : t('dailyReport.scheduler.optionOff'),
+              tick: fmtDateTime(sch.lastTickAt),
+            })}
+          </p>
+          {sch.timezoneConfigured && !sch.timezoneValid && (
+            <p className="mt-1 text-xs">{t('dailyReport.scheduler.badTimezone', { value: sch.timezoneConfigured, timezone: data.timezone })}</p>
+          )}
+          {sch.lastTickError && <p className="mt-1 font-mono text-xs">{sch.lastTickError}</p>}
         </div>
       </div>
     </div>

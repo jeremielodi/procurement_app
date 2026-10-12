@@ -45,6 +45,11 @@ export const enterpriseService = {
     const response = await api.post('/enterprises/current/daily-report/test', {}, { skipErrorToast: true });
     return response.data;
   },
+  // Rapport envoyé maintenant à tous les destinataires (rattrapage / vérification)
+  sendDailyReportNow: async () => {
+    const response = await api.post('/enterprises/current/daily-report/send-now', {}, { skipErrorToast: true });
+    return response.data;
+  },
   // --- Super admin ---
   create: async (data, logo) => {
     const response = await api.post('/enterprises', toFormData(data, logo), multipart);

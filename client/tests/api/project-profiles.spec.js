@@ -140,6 +140,52 @@ test.describe.serial('API › Profils liés au projet', () => {
     expect(member.profiles[0].assigned).toBe(false);
   });
 
+  test('Fiche utilisateur : Manager sur le projet A, Demandeur sur le projet B ; profils contrôlés', async ({ request }) => {
+    const email = `pp.mixed.${stamp}@nowhere.test`;
+    const base = { firstName: 'mixed', lastName: stamp, profileIds: ['prof_manager', 'prof_requester'] };
+    // Profil non coché sur la fiche → refusé, rien n'est créé
+    const bad = await json(await request.post('/api/users', { headers: H(), data: {
+      ...base, username: `ppmixedbad${stamp}`, email: `bad.${email}`, password: 'Secret123',
+      projectProfiles: [{ projectId: projectA.id, profileIds: ['prof_finance'] }],
+    } }));
+    expect([bad.status, bad.body.code]).toEqual([400, 'INVALID_PROFILE']);
+
+    const created = await json(await request.post('/api/users', { headers: H(), data: {
+      ...base, username: `ppmixed${stamp}`, email, password: 'Secret123',
+      projectProfiles: [{ projectId: projectA.id, profileIds: ['prof_manager'] }, { projectId: projectB.id, profileIds: ['prof_requester'] }],
+    } }));
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const id = created.body.data.id;
+    const projectsOf = async () => (await (await request.get(`/api/users/${id}`, { headers: H() })).json()).data.projects
+      .map(p => [p.id, p.profile_ids]).sort((a, b) => (a[0] === projectA.id ? -1 : 1));
+    expect(await projectsOf()).toEqual([[projectA.id, ['prof_manager']], [projectB.id, ['prof_requester']]]);
+    // Visible aussi sur la fiche du projet
+    expect((await members(request, projectA.id)).find(m => m.id === id).profiles.filter(p => p.assigned).map(p => p.id)).toEqual(['prof_manager']);
+
+    // Réquisition possible sur les deux projets (Demandeur sur B ; le profil Manager porte aussi CREATE_REQUISITIONS sur A)
+    const token = await tokenOf(request, { email, password: 'Secret123' });
+    const offered = (await (await request.get('/api/projects?forRequisition=1', { headers: auth(token) })).json()).data.map(p => p.id);
+    expect(offered).toContain(projectB.id);
+    expect(offered).toContain(projectA.id);
+
+    // Modification : projet B retiré (membre retiré), Demandeur ajouté sur A ; même projet cité deux fois → refusé
+    const twice = await json(await request.put(`/api/users/${id}`, { headers: H(), data: {
+      ...base, projectProfiles: [{ projectId: projectA.id, profileIds: [] }, { projectId: projectA.id, profileIds: [] }],
+    } }));
+    expect([twice.status, twice.body.code]).toEqual([400, 'INVALID_PROJECT_PROFILES']);
+    const upd = await json(await request.put(`/api/users/${id}`, { headers: H(), data: {
+      ...base, projectProfiles: [{ projectId: projectA.id, profileIds: ['prof_manager', 'prof_requester'] }],
+    } }));
+    expect(upd.status, JSON.stringify(upd.body)).toBe(200);
+    expect(await projectsOf()).toEqual([[projectA.id, ['prof_manager', 'prof_requester']]]);
+    expect((await members(request, projectB.id)).some(m => m.id === id)).toBe(false);
+    // Sans projectProfiles : inchangé
+    expect((await request.put(`/api/users/${id}`, { headers: H(), data: base })).status()).toBe(200);
+    expect(await projectsOf()).toEqual([[projectA.id, ['prof_manager', 'prof_requester']]]);
+    const logged = (await lastAudit(request, 'action=USER_UPDATED')).filter(r => r.entity_id === id);
+    expect(logged.some(r => r.new_value?.projectProfiles && r.old_value?.projectProfiles)).toBe(true);
+  });
+
   test('Tâche GoFlow : un manager d\'un autre projet ne peut pas la prendre ; une fois le profil attribué sur le projet, oui', async ({ request }) => {
     const req = (await (await request.post('/api/requisitions', { headers: H(), data: requisition(projectA.id, lineA.id, 'tâche N1') })).json()).data;
     expect(req?.id).toBeTruthy();

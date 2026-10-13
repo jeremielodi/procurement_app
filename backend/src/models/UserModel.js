@@ -372,6 +372,64 @@ class UserModel {
     return { success: true };
   }
 
+  /**
+   * Profils par projet saisis sur la fiche utilisateur : [{ projectId, profileIds }] (profils BPMN liés au projet).
+   * Contrôle avant écriture : chaque profil doit être un profil de workflow coché sur la fiche (profileIds),
+   * chaque projet cité une seule fois → code d'erreur ou null.
+   */
+  async checkProjectProfiles(assignments, profileIds) {
+    if (!Array.isArray(assignments)) return 'INVALID_PROJECT_PROFILES';
+    const scoped = new Set((await db.select('SELECT id FROM profiles WHERE project_scoped')).map(p => p.id));
+    const held = new Set((profileIds || []).filter(p => scoped.has(p)));
+    const seen = new Set();
+    for (const a of assignments) {
+      if (!a || !a.projectId || !Array.isArray(a.profileIds) || seen.has(String(a.projectId))) return 'INVALID_PROJECT_PROFILES';
+      seen.add(String(a.projectId));
+      if (a.profileIds.some(p => !held.has(p))) return 'INVALID_PROFILE';
+    }
+    const ids = [...seen];
+    if (ids.length) {
+      const found = await db.select('SELECT id FROM projects WHERE id::text = ANY($1)', [ids]);
+      if (found.length !== ids.length) return 'PROJECT_NOT_FOUND';
+    }
+    return null;
+  }
+
+  /**
+   * Remplace les projets de l'utilisateur et ses profils sur chacun : projet absent de la liste = membre retiré
+   * (ses profils avec), nouveau projet = membre ajouté (rôle MEMBER). → { before, after } pour le journal d'audit
+   */
+  async setProjectProfiles(userId, assignments, assignedBy) {
+    return db.withTransaction(async (tx) => {
+      const snapshot = async () => (await tx.select(
+        `SELECT pm.project_id::text AS "projectId",
+                COALESCE(array_agg(pmp.profile_id ORDER BY pmp.profile_id) FILTER (WHERE pmp.profile_id IS NOT NULL), '{}') AS "profileIds"
+         FROM project_members pm
+         LEFT JOIN project_member_profiles pmp ON pmp.project_id = pm.project_id AND pmp.user_id = pm.user_id
+         WHERE pm.user_id = $1 GROUP BY pm.project_id ORDER BY pm.project_id`,
+        [userId]
+      ));
+      const before = await snapshot();
+      const wanted = assignments.map(a => String(a.projectId));
+      await tx.exec('DELETE FROM project_members WHERE user_id = $1 AND NOT (project_id::text = ANY($2))', [userId, wanted]);
+      await tx.exec('DELETE FROM project_member_profiles WHERE user_id = $1', [userId]);
+      for (const a of assignments) {
+        await tx.exec(
+          `INSERT INTO project_members (project_id, user_id, role, assigned_at, assigned_by)
+           VALUES ($1, $2, 'MEMBER', CURRENT_TIMESTAMP, $3) ON CONFLICT (project_id, user_id) DO NOTHING`,
+          [a.projectId, userId, assignedBy]
+        );
+        for (const profileId of [...new Set(a.profileIds)]) {
+          await tx.exec(
+            'INSERT INTO project_member_profiles (project_id, user_id, profile_id, assigned_by) VALUES ($1, $2, $3, $4)',
+            [a.projectId, userId, profileId, assignedBy]
+          );
+        }
+      }
+      return { before, after: await snapshot() };
+    });
+  }
+
   /** Projets dont l'utilisateur est membre, avec ses profils de workflow exercés sur chacun (fiche utilisateur) */
   async getProjectAssignments(userId) {
     return db.select(

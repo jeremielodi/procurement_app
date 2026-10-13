@@ -2319,9 +2319,14 @@
     "deactivateAnywayHint": "« Désactiver quand même » laisse le matériel affecté à cette personne (visible dans Équipements) ; l'action est tracée dans le journal d'audit.",
     "allProjects": "Tous les projets",
     "allProjectsHint": "Profils de workflow : cochez « Tous les projets » pour une équipe transverse (finance, achats, logistique…). Sinon, le profil ne s'exerce que sur les projets où il est attribué au membre (fiche du projet).",
-    "projectsTitle": "Projets et profils exercés",
+    "projectsTitle": "Profils par projet",
     "noProjects": "Membre d'aucun projet",
-    "noProjectProfile": "aucun profil de workflow"
+    "noProjectProfile": "Cochez d'abord un profil de workflow (Manager, Demandeur…) ci-dessus",
+    "projectProfilesHint": "Choisissez les projets de l'utilisateur et, pour chacun, les profils de workflow qu'il y exerce (ex. Manager sur le projet A, Demandeur sur le projet B). Les profils cochés « Tous les projets » valent déjà partout.",
+    "addProject": "Ajouter un projet",
+    "selectProject": "Choisir un projet",
+    "removeProject": "Retirer de ce projet",
+    "loadingProjects": "Chargement des projets…"
   },
   "profiles": {
     "deleted": "Profil supprimé",
@@ -3428,7 +3433,7 @@
             "type": "list",
             "items": [
               "Fiche du projet (Projets → un projet) : pour chaque membre, cliquez sur ses profils pour les activer ou les retirer sur ce projet. À l'ajout d'un membre, tous ses profils de workflow y sont activés.",
-              "Fiche de l'utilisateur : la case « Tous les projets » à côté d'un profil de workflow le rend valable partout (équipes transverses : finance, achats, logistique…).",
+              "Fiche de l'utilisateur (Administration → Utilisateurs) : rubrique « Profils par projet » — « Ajouter un projet », puis cliquez les profils exercés sur ce projet (ex. Manager sur le projet A, Demandeur sur le projet B). La même attribution se fait aussi depuis la fiche du projet. La case « Tous les projets » à côté d'un profil de workflow le rend valable partout (équipes transverses : finance, achats, logistique…).",
               "Le profil doit d'abord figurer sur la fiche de l'utilisateur : le retirer de sa fiche le retire de tous les projets.",
               "Contrôlé par le serveur : liste des tâches, prise en charge, traitement, formulaires (bon de commande, réception, acceptation de service, facture, paiement, appel d'offres) et création d'une réquisition (seuls les projets où vous pouvez en créer sont proposés).",
               "Les emails et notifications de tâche ne vont qu'aux personnes ayant le profil sur le projet de la réquisition.",

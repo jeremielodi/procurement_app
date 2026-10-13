@@ -1,10 +1,12 @@
 // src/components/Admin/UserForm.jsx
 import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, Check, FolderKanban } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { t, LANGUAGES } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+import { projectService } from '../../services/projectService';
 
 export default function UserForm({ user, onClose }) {
   const queryClient = useQueryClient();
@@ -32,16 +34,35 @@ export default function UserForm({ user, onClose }) {
   if(profiles.data) {
     profiles = profiles.data;
   }
-  const profileName = new Map(profiles.map(p => [p.id, p.name]));
   const selectedScoped = profiles.filter(p => p.project_scoped && formData.profileIds.includes(p.id));
+  // Profils à attribuer projet par projet : profils de workflow cochés, sans « Tous les projets »
+  const perProjectProfiles = selectedScoped.filter(p => !formData.allProjectsProfileIds.includes(p.id));
 
-  // Fiche existante : projets et profils de workflow exercés sur chacun (lecture seule, modifiés sur la fiche du projet)
+  // Profils par projet (profils BPMN liés au projet) : [{ projectId, profileIds }] — null tant que la fiche
+  // existante n'est pas chargée (rien n'est alors envoyé : inchangé côté serveur)
+  const [projectRows, setProjectRows] = useState(user ? null : []);
   const { data: detailData } = useQuery({
     queryKey: ['user-detail', user?.id],
     queryFn: () => api.get(`/users/${user.id}`),
     enabled: !!user?.id
   });
-  const userProjects = detailData?.data?.data?.projects || [];
+  useEffect(() => {
+    const projects = detailData?.data?.data?.projects;
+    if (projects && projectRows === null) {
+      setProjectRows(projects.map(p => ({ projectId: p.id, profileIds: p.profile_ids || [] })));
+    }
+  }, [detailData, projectRows]);
+  const { data: projectsData } = useQuery({
+    queryKey: ['projects-for-user-form'],
+    queryFn: () => projectService.getAll({ is_active: true })
+  });
+  const allProjects = projectsData?.data || [];
+
+  const setRow = (index, patch) => setProjectRows(rows => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  const toggleRowProfile = (index, profileId) => setProjectRows(rows => rows.map((r, i) => (i !== index ? r : {
+    ...r,
+    profileIds: r.profileIds.includes(profileId) ? r.profileIds.filter(id => id !== profileId) : [...r.profileIds, profileId]
+  })));
   useEffect(() => {
     if (user) {
       setFormData({
@@ -79,10 +100,18 @@ export default function UserForm({ user, onClose }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Profils par projet : seulement les profils encore cochés sur la fiche ; lignes sans projet ignorées
+    const data = projectRows === null ? formData : {
+      ...formData,
+      projectProfiles: projectRows.filter(r => r.projectId).map(r => ({
+        projectId: r.projectId,
+        profileIds: r.profileIds.filter(id => formData.profileIds.includes(id))
+      }))
+    };
     if (user) {
-      updateMutation.mutate({ id: user.id, data: formData });
+      updateMutation.mutate({ id: user.id, data });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(data);
     }
   };
 
@@ -113,6 +142,7 @@ export default function UserForm({ user, onClose }) {
           <label className="block text-sm font-medium mb-1">{t('users.username')}</label>
           <input
             type="text"
+            name="username"
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg"
@@ -124,6 +154,7 @@ export default function UserForm({ user, onClose }) {
           <label className="block text-sm font-medium mb-1">{t('users.emailRequired')}</label>
           <input
             type="email"
+            name="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg"
@@ -136,7 +167,8 @@ export default function UserForm({ user, onClose }) {
             <label className="block text-sm font-medium mb-1">{t('users.passwordRequired')}</label>
             <input
               type="password"
-              value={formData.password}
+              name="password"
+            value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg"
               required
@@ -148,6 +180,7 @@ export default function UserForm({ user, onClose }) {
           <label className="block text-sm font-medium mb-1">{t('profile.firstName')}</label>
           <input
             type="text"
+            name="firstName"
             value={formData.firstName}
             onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg"
@@ -157,6 +190,7 @@ export default function UserForm({ user, onClose }) {
           <label className="block text-sm font-medium mb-1">{t('profile.lastName')}</label>
           <input
             type="text"
+            name="lastName"
             value={formData.lastName}
             onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg"
@@ -226,25 +260,68 @@ export default function UserForm({ user, onClose }) {
           </div>
         )}
 
-        {user && (
-          <div className="mt-3">
-            <p className="text-sm font-medium mb-1">{t('users.projectsTitle')}</p>
-            {userProjects.length === 0 ? (
-              <p className="text-xs text-gray-500">{t('users.noProjects')}</p>
-            ) : (
-              <ul className="text-xs text-gray-700 space-y-1" data-testid="user-projects">
-                {userProjects.map(p => (
-                  <li key={p.id}>
-                    <span className="font-medium">{p.code}</span> — {p.name} :{' '}
-                    {p.profile_ids.length
-                      ? p.profile_ids.map(id => profileName.get(id) || id).join(', ')
-                      : <span className="italic text-gray-500">{t('users.noProjectProfile')}</span>}
-                  </li>
-                ))}
-              </ul>
-            )}
+        {/* Profils par projet : ex. Manager sur le projet A, Demandeur sur le projet B */}
+        <div className="mt-3 rounded-lg border border-gray-200 p-3" data-testid="project-profiles">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <p className="text-sm font-medium flex items-center gap-1.5"><FolderKanban size={15} /> {t('users.projectsTitle')}</p>
+            <button
+              type="button"
+              disabled={projectRows === null}
+              onClick={() => setProjectRows(rows => [...rows, { projectId: '', profileIds: perProjectProfiles.map(p => p.id) }])}
+              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+              data-testid="add-project-row"
+            >
+              <Plus size={15} /> {t('users.addProject')}
+            </button>
           </div>
-        )}
+          <p className="text-xs text-gray-500 mb-2">{t('users.projectProfilesHint')}</p>
+
+          {projectRows === null ? (
+            <p className="text-xs text-gray-400">{t('users.loadingProjects')}</p>
+          ) : projectRows.length === 0 ? (
+            <p className="text-xs text-gray-500">{t('users.noProjects')}</p>
+          ) : (
+            <ul className="space-y-2">
+              {projectRows.map((row, index) => (
+                <li key={index} className="rounded-lg bg-gray-50 p-2" data-testid="project-row">
+                  <div className="flex items-center gap-2">
+                    <SearchSelect
+                      value={row.projectId}
+                      onChange={(e) => setRow(index, { projectId: e.target.value })}
+                      className="flex-1 px-3 py-1.5 border rounded-lg text-sm"
+                      data-testid="project-row-project"
+                    >
+                      <option value="">{t('users.selectProject')}</option>
+                      {allProjects
+                        .filter(p => p.id === row.projectId || !projectRows.some(r => r.projectId === p.id))
+                        .map(p => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
+                    </SearchSelect>
+                    <button type="button" onClick={() => setProjectRows(rows => rows.filter((_, i) => i !== index))}
+                      className="p-1.5 text-red-500 hover:text-red-700" title={t('users.removeProject')} aria-label={t('users.removeProject')}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {perProjectProfiles.length === 0 ? (
+                      <span className="text-xs text-gray-500 italic">{t('users.noProjectProfile')}</span>
+                    ) : perProjectProfiles.map(p => {
+                      const on = row.profileIds.includes(p.id);
+                      return (
+                        <button key={p.id} type="button" onClick={() => toggleRowProfile(index, p.id)} aria-pressed={on}
+                          data-testid={`project-row-profile-${p.id}`}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors ${
+                            on ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-100'
+                          }`}>
+                          {on && <Check size={12} />} {p.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-end gap-3 pt-4">

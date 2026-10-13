@@ -7,6 +7,27 @@ const equipmentModel = require('../models/StockEquipmentModel');
 const RESERVED_PROFILES = ['prof_superadmin', 'prof_supplier'];
 const hasReservedProfile = (ids) => Array.isArray(ids) && ids.some(p => RESERVED_PROFILES.includes(p));
 
+const PROJECT_PROFILE_ERRORS = {
+  INVALID_PROJECT_PROFILES: 'Profils par projet invalides (un projet cité deux fois ou sans liste de profils)',
+  INVALID_PROFILE: 'Un profil attribué sur un projet doit être un profil de workflow coché sur la fiche',
+  PROJECT_NOT_FOUND: 'Projet introuvable',
+};
+
+/**
+ * Profils par projet (fiche utilisateur, profils BPMN liés au projet) : { assignments: null } s'ils ne sont pas
+ * envoyés, sinon contrôlés avant toute écriture → { error } (réponse 400 déjà envoyée) ou { assignments }
+ */
+async function readProjectProfiles(req, res, profileIds) {
+  const { projectProfiles } = req.body;
+  if (projectProfiles === undefined) return { assignments: null };
+  const code = await userModel.checkProjectProfiles(projectProfiles, profileIds || []);
+  if (code) {
+    res.status(400).json({ success: false, code, message: PROJECT_PROFILE_ERRORS[code] });
+    return { error: true };
+  }
+  return { assignments: projectProfiles.map(a => ({ projectId: a.projectId, profileIds: a.profileIds })) };
+}
+
 class UserController {
   /**
    * Lister les utilisateurs
@@ -61,6 +82,8 @@ class UserController {
       if (!req.enterpriseId) {
         return res.status(403).json({ success: false, message: 'Seul un administrateur d\'entreprise peut créer des utilisateurs' });
       }
+      const projects = await readProjectProfiles(req, res, profileIds);
+      if (projects.error) return;
       const result = await userModel.create({
         username,
         email,
@@ -75,9 +98,12 @@ class UserController {
         enterpriseId: req.enterpriseId,
       });
       
+      // Profils par projet (profils BPMN liés au projet)
+      const projectChange = projects.assignments ? await userModel.setProjectProfiles(result.id, projects.assignments, req.user.id) : null;
       await audit(req, AUDIT.USER_CREATED, {
         target: { id: result.id, email: result.email, enterprise_id: req.enterpriseId },
-        details: { username, email, firstName, lastName, language, profileIds: profileIds || [], allProjectsProfileIds: allProjectsProfileIds || [] },
+        details: { username, email, firstName, lastName, language, profileIds: profileIds || [], allProjectsProfileIds: allProjectsProfileIds || [],
+          ...(projectChange ? { projectProfiles: projectChange.after } : {}) },
       });
       res.status(201).json({ success: true, data: result });
     } catch (error) {
@@ -121,6 +147,8 @@ class UserController {
       if (!existing) {
         return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
       }
+      const projects = await readProjectProfiles(req, res, profileIds);
+      if (projects.error) return;
       
       await userModel.update(id, {
         firstName,
@@ -131,10 +159,14 @@ class UserController {
         profileIds: profileIds || [],
         allProjectsProfileIds
       });
+      // Profils par projet (absents de la requête : inchangés)
+      const projectChange = projects.assignments ? await userModel.setProjectProfiles(id, projects.assignments, req.user.id) : null;
       await audit(req, AUDIT.USER_UPDATED, {
         target: { id, email: existing.email, enterprise_id: existing.enterpriseId },
-        oldValue: { firstName: existing.firstName, lastName: existing.lastName, department: existing.department, position: existing.position, language: existing.language, profileIds: (existing.profiles || []).map(p => p.id), allProjectsProfileIds: (existing.profiles || []).filter(p => p.all_projects).map(p => p.id) },
-        details: { firstName, lastName, department, position, language, profileIds: profileIds || [], ...(Array.isArray(allProjectsProfileIds) ? { allProjectsProfileIds } : {}) },
+        oldValue: { firstName: existing.firstName, lastName: existing.lastName, department: existing.department, position: existing.position, language: existing.language, profileIds: (existing.profiles || []).map(p => p.id), allProjectsProfileIds: (existing.profiles || []).filter(p => p.all_projects).map(p => p.id),
+          ...(projectChange ? { projectProfiles: projectChange.before } : {}) },
+        details: { firstName, lastName, department, position, language, profileIds: profileIds || [], ...(Array.isArray(allProjectsProfileIds) ? { allProjectsProfileIds } : {}),
+          ...(projectChange ? { projectProfiles: projectChange.after } : {}) },
       });
       
       res.json({ success: true, message: 'Utilisateur mis à jour' });

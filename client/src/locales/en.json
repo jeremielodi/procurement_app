@@ -2319,9 +2319,14 @@
     "deactivateAnywayHint": "\"Deactivate anyway\" leaves the equipment assigned to this person (visible in Equipment); the action is logged in the audit trail.",
     "allProjects": "All projects",
     "allProjectsHint": "Workflow profiles: tick \"All projects\" for a cross-functional team (finance, procurement, logistics…). Otherwise the profile only applies to the projects where it is assigned to the member (project record).",
-    "projectsTitle": "Projects and profiles held",
+    "projectsTitle": "Profiles per project",
     "noProjects": "Member of no project",
-    "noProjectProfile": "no workflow profile"
+    "noProjectProfile": "First tick a workflow profile (Manager, Requester…) above",
+    "projectProfilesHint": "Choose the user's projects and, for each one, the workflow profiles they hold there (e.g. Manager on project A, Requester on project B). Profiles ticked \"All projects\" already apply everywhere.",
+    "addProject": "Add a project",
+    "selectProject": "Choose a project",
+    "removeProject": "Remove from this project",
+    "loadingProjects": "Loading projects…"
   },
   "profiles": {
     "deleted": "Profile deleted",
@@ -3428,7 +3433,7 @@
             "type": "list",
             "items": [
               "Project record (Projects → a project): for each member, click their profiles to enable or remove them on this project. When a member is added, all their workflow profiles are enabled there.",
-              "User record: the \"All projects\" box next to a workflow profile makes it valid everywhere (cross-functional teams: finance, procurement, logistics…).",
+              "User record (Administration → Users): \"Profiles per project\" section — \"Add a project\", then click the profiles held on that project (e.g. Manager on project A, Requester on project B). The same assignment can also be made from the project record. The \"All projects\" box next to a workflow profile makes it valid everywhere (cross-functional teams: finance, procurement, logistics…).",
               "The profile must first be on the user's record: removing it from the record removes it from every project.",
               "Enforced by the server: task list, claiming, processing, forms (purchase order, receipt, service acceptance, invoice, payment, call for tenders) and requisition creation (only the projects where you can create one are offered).",
               "Task emails and notifications only go to people holding the profile on the requisition's project.",

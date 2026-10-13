@@ -43,6 +43,25 @@ const PO_PENDING = ['PO_PENDING', 'DRAFT'];
 const PO_TO_CONFIRM = ['PO_SENT', 'PO_APPROVED'];
 const PO_ACTIVE = ['PO_APPROVED', 'PO_SENT', 'PO_CONFIRMED', 'PO_RECEIVED', 'PO_COMPLETE', 'APPROVED', 'SENT', 'COMPLETED'];
 
+// Formulaire de la fenêtre de décision par étape BPMN (les autres étapes : commentaire)
+const TASK_FORMS = {
+  Activity_ValidationN1_Manager: 'approval',
+  Activity_ValidationN2_Finance: 'approval',
+  Activity_ValidationN3_DG: 'approval',
+  Activity_DetermineType: 'method',
+  Activity_BudgetAdjustment: 'budget',
+};
+
+// Méthode d'achat minimale selon le montant (même règle que RequisitionModel.requiredProcurementMethod) ;
+// la source unique (justifiée) reste toujours possible
+const METHOD_RIGOR = { DIRECT_PURCHASE: 1, MULTIPLE_QUOTATIONS: 2, RFP: 3 };
+const methodBelowThreshold = (method, amount) => {
+  if (!METHOD_RIGOR[method]) return false;
+  const value = parseFloat(amount) || 0;
+  const required = value <= 5000 ? 1 : value <= 25000 ? 2 : 3;
+  return METHOD_RIGOR[method] < required;
+};
+
 export default function RequisitionTasks() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -213,6 +232,14 @@ export default function RequisitionTasks() {
   };
 
   const handleSubmitTask = async () => {
+    // Méthode d'achat : la classification suivante reprend ce choix (contrôlé aussi par le serveur)
+    if (isMethodTask(selectedTask)) {
+      if (!formData.procurementMethod) { toast.error(t('reqTasks.methodRequired')); return; }
+      if (formData.procurementMethod === 'SOLE_SOURCE' && !formData.justification.trim()) {
+        toast.error(t('reqTasks.soleJustificationRequired'));
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       const variables = {};
@@ -231,7 +258,10 @@ export default function RequisitionTasks() {
       loadData();
     } catch (error) {
       console.error('Error completing task:', error);
-      toast.error(t('reqTasks.completeError'));
+      const code = error.response?.data?.code;
+      toast.error(code && ['METHOD_BELOW_THRESHOLD', 'PROCUREMENT_METHOD_REQUIRED', 'JUSTIFICATION_REQUIRED'].includes(code)
+        ? t(`reqTasks.err.${code}`)
+        : t('reqTasks.completeError'));
     } finally {
       setSubmitting(false);
     }
@@ -267,6 +297,18 @@ export default function RequisitionTasks() {
   const getTaskName = (task) => {
     return (task.name || task.taskName || task.activityName || t('common.unnamedTask'));
   };
+  // Formulaire de la fenêtre de décision : d'après la clé BPMN (le nom dépend du BPMN déployé, FR ou EN —
+  // avec le BPMN français, « Déterminer la méthode d'achat » n'affichait pas le choix de la méthode)
+  const taskForm = (task) => {
+    const key = task?.taskDefinitionKey;
+    if (TASK_FORMS[key]) return TASK_FORMS[key];
+    const name = getTaskName(task);
+    if (/Validation|Hierarchical|Approval|Approbation/.test(name)) return 'approval';
+    if (/Determine|Procurement/.test(name)) return 'method';
+    if (/Budget Adjustment|Ajustement budg/.test(name)) return 'budget';
+    return 'comment';
+  };
+  const isMethodTask = (task) => taskForm(task) === 'method';
   const displayName = (task) => TASK_LABELS[task.taskDefinitionKey] || getTaskName(task);
 
   const formatCurrency = (amount) => formatAmount(amount || 0);
@@ -546,10 +588,7 @@ export default function RequisitionTasks() {
 
 
             {/* Formulaire Validation */}
-            {(getTaskName(selectedTask).includes('Validation') ||
-              getTaskName(selectedTask).includes('Hierarchical') ||
-              (getTaskName(selectedTask).includes('Approval')) ||
-              getTaskName(selectedTask).includes('Approbation')) && (
+            {taskForm(selectedTask) === 'approval' && (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -596,8 +635,7 @@ export default function RequisitionTasks() {
               )}
 
             {/* Formulaire Détermination méthode d'achat */}
-            {(getTaskName(selectedTask).includes('Determine') ||
-              getTaskName(selectedTask).includes('Procurement')) && (
+            {isMethodTask(selectedTask) && (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -609,22 +647,27 @@ export default function RequisitionTasks() {
                         { value: 'MULTIPLE_QUOTATIONS', label: t('procurementMethod.MULTIPLE_QUOTATIONS'), desc: t('reqTasks.quotesDesc') },
                         { value: 'RFP', label: t('reqTasks.rfpLabel'), desc: t('reqTasks.rfpDesc') },
                         { value: 'SOLE_SOURCE', label: t('procurementMethod.SOLE_SOURCE'), desc: t('reqTasks.soleDesc') }
-                      ].map(option => (
-                        <label key={option.value} className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                          <input
-                            type="radio"
-                            name="procurementMethod"
-                            value={option.value}
-                            checked={formData.procurementMethod === option.value}
-                            onChange={(e) => handleInputChange('procurementMethod', e.target.value)}
-                            className="w-4 h-4 text-blue-600 mt-0.5"
-                          />
-                          <div>
-                            <span className="font-medium">{option.label}</span>
-                            <p className="text-xs text-gray-500">{option.desc}</p>
-                          </div>
-                        </label>
-                      ))}
+                      ].map(option => {
+                        const notAllowed = methodBelowThreshold(option.value, requisition?.estimated_amount ?? selectedTask.variables?.estimatedAmount);
+                        return (
+                          <label key={option.value} className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${notAllowed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}>
+                            <input
+                              type="radio"
+                              name="procurementMethod"
+                              value={option.value}
+                              disabled={notAllowed}
+                              checked={formData.procurementMethod === option.value}
+                              onChange={(e) => handleInputChange('procurementMethod', e.target.value)}
+                              className="w-4 h-4 text-blue-600 mt-0.5"
+                            />
+                            <div>
+                              <span className="font-medium">{option.label}</span>
+                              <p className="text-xs text-gray-500">{option.desc}</p>
+                              {notAllowed && <p className="text-xs text-orange-600">{t('reqTasks.methodBelowThreshold')}</p>}
+                            </div>
+                          </label>
+                        );
+                      })}
                     </div>
                   </div>
                   <div>
@@ -643,7 +686,7 @@ export default function RequisitionTasks() {
               )}
 
             {/* Formulaire Ajustement budgétaire */}
-            {getTaskName(selectedTask).includes('Budget Adjustment') && (
+            {taskForm(selectedTask) === 'budget' && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -674,13 +717,7 @@ export default function RequisitionTasks() {
             )}
 
             {/* Formulaire commentaire générique */}
-            {!getTaskName(selectedTask).includes('Validation') &&
-              !getTaskName(selectedTask).includes('Hierarchical') &&
-              !getTaskName(selectedTask).includes('Approbation') &&
-              !getTaskName(selectedTask).includes('Approval') &&
-              !getTaskName(selectedTask).includes('Determine') &&
-              !getTaskName(selectedTask).includes('Procurement') &&
-              !getTaskName(selectedTask).includes('Budget Adjustment') && (
+            {taskForm(selectedTask) === 'comment' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t('common.comment')}

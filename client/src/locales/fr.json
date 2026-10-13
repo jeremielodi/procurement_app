@@ -1295,7 +1295,7 @@
     "quotesDesc": "Entre 5 000 et 25 000 USD",
     "rfpLabel": "Appel d'offres (RFP)",
     "rfpDesc": "Pour les achats > 25 000 USD",
-    "soleDesc": "Avec justification approuvée",
+    "soleDesc": "Fournisseur unique — justification obligatoire",
     "justifyPlaceholder": "Justifiez votre choix...",
     "newAmount": "Nouveau montant proposé *",
     "newAmountPlaceholder": "Montant proposé",
@@ -1306,6 +1306,14 @@
       "poToConfirm": "Aucun bon de commande envoyé au fournisseur pour cette réquisition.",
       "poActive": "Aucun bon de commande approuvé pour cette réquisition : la réception, la SAN et la facture se rattachent à un bon de commande.",
       "invoice": "Aucune facture à payer pour cette réquisition : saisissez d'abord la facture (tâche « Saisir la facture »)."
+    },
+    "methodBelowThreshold": "Non autorisé pour ce montant",
+    "methodRequired": "Choisissez la méthode d'achat",
+    "soleJustificationRequired": "Justification obligatoire pour une source unique",
+    "err": {
+      "METHOD_BELOW_THRESHOLD": "Méthode d'achat insuffisante pour le montant de la réquisition",
+      "PROCUREMENT_METHOD_REQUIRED": "Choisissez la méthode d'achat",
+      "JUSTIFICATION_REQUIRED": "Justification obligatoire pour une source unique"
     }
   },
   "po": {
@@ -3120,7 +3128,7 @@
               "Réquisition (REQ-AAAA-NNNN) : le demandeur décrit ce qu'il faut acheter, les quantités, les prix estimés et la ligne budgétaire à imputer.",
               "Vérification du budget : automatique. Si une ligne budgétaire n'a pas assez de disponible, la réquisition passe « Budget insuffisant » : le demandeur change de ligne ou fait augmenter le budget, puis relance la vérification (ou abandonne la réquisition).",
               "Approbation : un seul niveau, choisi selon le montant — Manager (N1), Finance (N2) ou Direction générale (N3).",
-              "Méthode d'achat : déterminée automatiquement selon le montant (achat direct, devis multiples, appel d'offres) ou source unique justifiée.",
+              "Méthode d'achat : choisie par les achats — au moins celle imposée par le montant (achat direct, devis multiples, appel d'offres) ou source unique justifiée.",
               "Choix du fournisseur : devis, appel d'offres publié sur le portail fournisseurs, ou fournisseur unique.",
               "Bon de commande (PO-AAAA-NNNN) : créé par les achats, approuvé par la direction, puis envoyé automatiquement par email au fournisseur.",
               "Réception (GRN-AAAA-NNNN) : la logistique enregistre ce qui est arrivé (accepté / rejeté) ; les articles stockables entrent en stock.",
@@ -3470,7 +3478,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "Après approbation, l'application classe automatiquement la réquisition selon son montant, puis l'équipe Achats confirme la méthode et réalise l'étape correspondante."
+            "text": "Après approbation, l'équipe Achats choisit la méthode d'achat (tâche « Déterminer la méthode d'achat ») : l'étape suivante est celle de la méthode choisie (achat direct, devis multiples, appel d'offres ou justification de la source unique), puis la création du bon de commande. Une méthode moins exigeante que celle imposée par le montant n'est pas proposée."
           },
           {
             "type": "table",
@@ -3493,7 +3501,7 @@
               ],
               [
                 "quel que soit le montant",
-                "Source unique, si une justification a été approuvée"
+                "Source unique, avec une justification obligatoire"
               ]
             ]
           },

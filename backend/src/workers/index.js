@@ -359,7 +359,9 @@ async function processClassifyProcurement(task) {
   const requesterId = getVariableValue(task.variables, 'requesterId');
   const requisitionNumber = getVariableValue(task.variables, 'requisitionNumber');
 
-  const result = await requisitionModel.classifyProcurement(estimatedAmount, requisitionId);
+  // Méthode choisie par les achats à l'étape Activity_DetermineType (prime sur le calcul par montant)
+  const chosenMethod = getVariableValue(task.variables, 'procurementMethod');
+  const result = await requisitionModel.classifyProcurement(estimatedAmount, requisitionId, chosenMethod);
 
   await addWorkflowHistory(
     processInstanceId, 'requisition', requisitionId, task.id,

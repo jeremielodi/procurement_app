@@ -1,5 +1,6 @@
 // backend/src/controllers/TaskController.js
 const UserModel = require('../models/UserModel');
+const requisitionModel = require('../models/RequisitionModel');
 const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
@@ -382,6 +383,29 @@ async function completeTask(req, res) {
       ? await db.one('SELECT id FROM requisitions WHERE process_instance_id = $1', [task.processInstanceId])
       : null;
     const requisitionId = linkedRequisition?.id || bodyRequisitionId;
+
+    // Méthode d'achat : choix obligatoire, au moins aussi exigeant que le montant l'impose
+    // (sauf source unique, avec justification) — la classification suivante reprend ce choix
+    if (taskDefinitionKey === 'Activity_DetermineType') {
+      const requisition = requisitionId
+        ? await db.one('SELECT estimated_amount FROM requisitions WHERE id = $1', [requisitionId])
+        : null;
+      const method = variables.procurementMethod;
+      const methodError = requisitionModel.checkChosenMethod(method, requisition?.estimated_amount);
+      if (methodError === 'PROCUREMENT_METHOD_REQUIRED') {
+        return res.status(400).json({ success: false, code: methodError, message: "Choisissez la méthode d'achat" });
+      }
+      if (methodError === 'METHOD_BELOW_THRESHOLD') {
+        return res.status(400).json({
+          success: false, code: methodError,
+          requiredMethod: requisitionModel.requiredProcurementMethod(requisition?.estimated_amount),
+          message: "Méthode d'achat insuffisante pour le montant de la réquisition"
+        });
+      }
+      if (method === 'SOLE_SOURCE' && !String(variables.justification || '').trim()) {
+        return res.status(400).json({ success: false, code: 'JUSTIFICATION_REQUIRED', message: 'Justification obligatoire pour une source unique' });
+      }
+    }
 
     // Paiement saisi depuis la tâche : refusé AVANT de terminer l'étape si les coordonnées bancaires ne sont pas vérifiées
     if (taskDefinitionKey === 'Activity_ProcessPayment' && variables.amount) {

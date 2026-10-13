@@ -1295,7 +1295,7 @@
     "quotesDesc": "Between 5,000 and 25,000 USD",
     "rfpLabel": "Call for tenders (RFP)",
     "rfpDesc": "For purchases > 25,000 USD",
-    "soleDesc": "With approved justification",
+    "soleDesc": "Single supplier — justification required",
     "justifyPlaceholder": "Justify your choice...",
     "newAmount": "New proposed amount *",
     "newAmountPlaceholder": "Proposed amount",
@@ -1306,6 +1306,14 @@
       "poToConfirm": "No purchase order sent to the supplier for this requisition.",
       "poActive": "No approved purchase order for this requisition: receipts, service acceptances and invoices are linked to a purchase order.",
       "invoice": "No invoice to pay for this requisition: enter the invoice first (\"Enter invoice\" task)."
+    },
+    "methodBelowThreshold": "Not allowed for this amount",
+    "methodRequired": "Select the procurement method",
+    "soleJustificationRequired": "Justification required for a sole source",
+    "err": {
+      "METHOD_BELOW_THRESHOLD": "Procurement method not sufficient for the requisition amount",
+      "PROCUREMENT_METHOD_REQUIRED": "Select the procurement method",
+      "JUSTIFICATION_REQUIRED": "Justification required for a sole source"
     }
   },
   "po": {
@@ -3120,7 +3128,7 @@
               "Requisition (REQ-YYYY-NNNN): the requester describes what to buy, quantities, estimated prices and the budget line to charge.",
               "Budget check: automatic. If a budget line does not have enough available funds, the requisition becomes \"Insufficient budget\": the requester changes the line or has the budget increased, then restarts the check (or abandons the requisition).",
               "Approval: a single level, chosen according to the amount — Manager (N1), Finance (N2) or General Management (N3).",
-              "Purchasing method: determined automatically from the amount (direct purchase, multiple quotations, call for tenders) or a justified sole source.",
+              "Purchasing method: chosen by Procurement — at least the one required by the amount (direct purchase, multiple quotations, call for tenders) or a justified sole source.",
               "Supplier selection: quotations, a call for tenders published on the supplier portal, or a single supplier.",
               "Purchase order (PO-YYYY-NNNN): created by procurement, approved by management, then sent automatically by email to the supplier.",
               "Goods receipt (GRN-YYYY-NNNN): logistics records what arrived (accepted / rejected); stockable items enter stock.",
@@ -3470,7 +3478,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "After approval, the application automatically classifies the requisition according to its amount, then the Procurement team confirms the method and carries out the corresponding step."
+            "text": "After approval, the Procurement team selects the procurement method (\"Determine procurement method\" task): the next step is the one for the chosen method (direct purchase, multiple quotations, call for tenders or sole source justification), then the purchase order is created. A method less demanding than the one required by the amount is not offered."
           },
           {
             "type": "table",
@@ -3493,7 +3501,7 @@
               ],
               [
                 "any amount",
-                "Sole source, if a justification has been approved"
+                "Sole source, with a mandatory justification"
               ]
             ]
           },

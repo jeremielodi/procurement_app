@@ -34,6 +34,12 @@ const PROGRESS_STATUS_SQL = `
     ELSE 'IN_PROGRESS'
   END`;
 
+// Méthodes d'achat (Gateway_MethodDecision) et seuils de montant
+const PROCUREMENT_METHODS = ['DIRECT_PURCHASE', 'MULTIPLE_QUOTATIONS', 'RFP', 'SOLE_SOURCE'];
+const METHOD_RIGOR = { DIRECT_PURCHASE: 1, MULTIPLE_QUOTATIONS: 2, RFP: 3 };
+const DIRECT_PURCHASE_THRESHOLD = 5000;
+const QUOTATION_THRESHOLD = 25000;
+
 class RequisitionModel {
 
   /**
@@ -548,36 +554,57 @@ class RequisitionModel {
   }
 
   /**
-   * Classifier la méthode d'achat
+   * Méthode minimale imposée par le montant : ≤ 5 000 achat direct, ≤ 25 000 devis multiples, au-delà appel d'offres
    */
-  async classifyProcurement(estimatedAmount, requisitionId) {
-    const directPurchaseThreshold = 5000;
-    const quotationThreshold = 25000;
-    
+  requiredProcurementMethod(estimatedAmount) {
+    const amount = parseFloat(estimatedAmount) || 0;
+    if (amount <= DIRECT_PURCHASE_THRESHOLD) return 'DIRECT_PURCHASE';
+    if (amount <= QUOTATION_THRESHOLD) return 'MULTIPLE_QUOTATIONS';
+    return 'RFP';
+  }
+
+  /**
+   * Méthode choisie par les achats (Activity_DetermineType) : refusée si elle est moins exigeante que celle
+   * imposée par le montant ; la source unique (justification obligatoire) reste toujours possible.
+   * Renvoie null si le choix est valide, sinon un code d'erreur.
+   */
+  checkChosenMethod(method, estimatedAmount) {
+    if (!PROCUREMENT_METHODS.includes(method)) return 'PROCUREMENT_METHOD_REQUIRED';
+    if (method === 'SOLE_SOURCE') return null;
+    const required = this.requiredProcurementMethod(estimatedAmount);
+    return METHOD_RIGOR[method] < METHOD_RIGOR[required] ? 'METHOD_BELOW_THRESHOLD' : null;
+  }
+
+  /**
+   * Classifier la méthode d'achat (worker classify_procurement) : la méthode choisie par les achats à l'étape
+   * « Déterminer la méthode d'achat » prime ; à défaut (ancien processus), elle est déduite du montant
+   * ou d'une justification de source unique approuvée.
+   */
+  async classifyProcurement(estimatedAmount, requisitionId, chosenMethod = null) {
     let procurementMethod = '';
     let classificationReason = '';
-    
-    if (parseFloat(estimatedAmount) <= directPurchaseThreshold) {
-      procurementMethod = 'DIRECT_PURCHASE';
-      classificationReason = 'Amount below direct purchase threshold';
-    } else if (parseFloat(estimatedAmount) <= quotationThreshold) {
-      procurementMethod = 'MULTIPLE_QUOTATIONS';
-      classificationReason = 'Amount requires multiple quotations';
+
+    if (chosenMethod && !this.checkChosenMethod(chosenMethod, estimatedAmount)) {
+      procurementMethod = chosenMethod;
+      classificationReason = 'Method selected by procurement';
     } else {
-      procurementMethod = 'RFP';
-      classificationReason = 'Amount requires formal tender process';
+      procurementMethod = this.requiredProcurementMethod(estimatedAmount);
+      classificationReason = {
+        DIRECT_PURCHASE: 'Amount below direct purchase threshold',
+        MULTIPLE_QUOTATIONS: 'Amount requires multiple quotations',
+        RFP: 'Amount requires formal tender process'
+      }[procurementMethod];
+
+      const soleSource = await db.one(
+        'SELECT * FROM sole_source_justifications WHERE requisition_id = $1 AND approved = true',
+        [requisitionId]
+      );
+      if (soleSource) {
+        procurementMethod = 'SOLE_SOURCE';
+        classificationReason = 'Approved sole source justification';
+      }
     }
-    
-    const soleSource = await db.one(
-      'SELECT * FROM sole_source_justifications WHERE requisition_id = $1 AND approved = true',
-      [requisitionId]
-    );
-    
-    if (soleSource) {
-      procurementMethod = 'SOLE_SOURCE';
-      classificationReason = 'Approved sole source justification';
-    }
-    
+
     await this.updateStatus(requisitionId, `CLASSIFIED_${procurementMethod}`);
     
     await this.addWorkflowHistory({

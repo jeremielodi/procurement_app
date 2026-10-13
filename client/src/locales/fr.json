@@ -478,8 +478,8 @@
       "subtitle": "Ce qui est commandé et reçu entre directement en stock : plus de double saisie entre les achats et le magasin, une valeur de stock toujours à jour et des inventaires qui justifient chaque écart.",
       "items": [
         {
-          "title": "Dépôts par localisation",
-          "desc": "Plusieurs dépôts par ville, avec des accès par utilisateur : chaque magasinier ne travaille que sur ses dépôts."
+          "title": "Dépôts et catalogue",
+          "desc": "Plusieurs dépôts par ville, avec des accès par utilisateur ; le catalogue d'articles et le stock existant s'importent depuis Excel en quelques minutes (modèle fourni)."
         },
         {
           "title": "Réception → entrée en stock",
@@ -3087,6 +3087,114 @@
         "VALUED": "Valorisé"
       },
       "method": "CMUP recalculé à partir du journal des mouvements : chaque réception (au prix du bon de commande) met à jour le coût moyen ; les sorties partent au coût moyen ; les transferts entre dépôts sont sans effet. Un article reçu dans plusieurs devises, ou sans aucun coût connu (stock initial, ajustement), n'est pas valorisé."
+    },
+    "import": {
+      "button": "Importer",
+      "title": "Importer des articles (Excel / CSV)",
+      "templateTitle": "Modèle à remplir",
+      "templateHint": "Le modèle Excel contient des listes déroulantes (catégories, vos dépôts, Oui / Non), des exemples et un mode d'emploi.",
+      "templateXlsx": "Modèle Excel",
+      "templateCsv": "Modèle CSV",
+      "templateFile": "modele_import_articles_stock",
+      "templateFailed": "Impossible de télécharger le modèle",
+      "itemColumns": "Fiche article :",
+      "openingColumns": "Stock initial (facultatif) :",
+      "rules": "* obligatoire pour un nouvel article. Un code existant met à jour l'article (seules les cellules remplies). Stock initial : une ligne par dépôt / lot, dans les dépôts auxquels vous avez accès. Fichier .xlsx ou .csv, 2 000 lignes et 5 Mo au maximum.",
+      "chooseFile": "Choisir un fichier .xlsx ou .csv",
+      "analyzing": "Analyse du fichier…",
+      "importing": "Import en cours…",
+      "confirm": "Importer",
+      "confirmN_one": "Importer ({{count}} élément)",
+      "confirmN_other": "Importer ({{count}} éléments)",
+      "sumCreate_one": "{{count}} article à créer",
+      "sumCreate_other": "{{count}} articles à créer",
+      "sumUpdate_one": "{{count}} article à mettre à jour",
+      "sumUpdate_other": "{{count}} articles à mettre à jour",
+      "sumUnchanged_one": "{{count}} article inchangé",
+      "sumUnchanged_other": "{{count}} articles inchangés",
+      "sumOpenings_one": "{{count}} ligne de stock initial",
+      "sumOpenings_other": "{{count}} lignes de stock initial",
+      "sumErrors_one": "{{count}} ligne en erreur",
+      "sumErrors_other": "{{count}} lignes en erreur",
+      "errorsTitle_one": "{{count}} ligne sera ignorée — corrigez le fichier puis rechargez-le si besoin",
+      "errorsTitle_other": "{{count}} lignes seront ignorées — corrigez le fichier puis rechargez-le si besoin",
+      "lineError": "Ligne {{line}} : {{message}}",
+      "ready": "Vérifiez l'aperçu : rien n'est enregistré avant « Importer ».",
+      "tabItems": "Articles ({{count}})",
+      "tabOpenings": "Stock initial ({{count}})",
+      "line": "Ligne",
+      "action": "Action",
+      "actions": {
+        "CREATE": "À créer",
+        "UPDATE": "À mettre à jour",
+        "UNCHANGED": "Inchangé"
+      },
+      "noItems": "Aucun article dans le fichier",
+      "noOpenings": "Aucun stock initial dans le fichier",
+      "openingWarning": "Le stock initial crée des mouvements « Stock initial » définitifs dans le journal. Pour corriger ensuite : inventaire ou ajustement.",
+      "nothing": "Aucune ligne à importer : corrigez les erreurs ci-dessus.",
+      "done": "Import terminé : {{created}} article(s) créé(s), {{updated}} mis à jour, {{openings}} ligne(s) de stock initial",
+      "doneSkipped_one": "{{count}} ligne en erreur n'a pas été importée",
+      "doneSkipped_other": "{{count}} lignes en erreur n'ont pas été importées",
+      "failed": "L'import a échoué",
+      "columns": {
+        "code": "Code",
+        "name": "Désignation",
+        "unit": "Unité",
+        "category": "Catégorie",
+        "description": "Description",
+        "stockable": "Stockable",
+        "trackLots": "Suivi par lot",
+        "trackExpiry": "Suivi de péremption",
+        "trackSerials": "Suivi par n° de série",
+        "minQuantity": "Stock minimum",
+        "reorderQuantity": "Quantité de réapprovisionnement",
+        "warehouse": "Code dépôt",
+        "openingQuantity": "Quantité initiale",
+        "unitCost": "Coût unitaire",
+        "currency": "Devise",
+        "lotNumber": "N° de lot",
+        "expiryDate": "Date de péremption"
+      },
+      "err": {
+        "CODE_REQUIRED": "code vide",
+        "CODE_INVALID": "code « {{value}} » invalide (lettres, chiffres, . - _ ; 50 caractères max)",
+        "NAME_REQUIRED": "désignation obligatoire pour un nouvel article",
+        "UNIT_REQUIRED": "unité obligatoire pour un nouvel article",
+        "CATEGORY_UNKNOWN": "catégorie « {{value}} » inconnue",
+        "BOOL_INVALID": "{{column}} : « {{value}} » — répondez Oui ou Non",
+        "MIN_INVALID": "stock minimum « {{value}} » invalide (nombre ≥ 0)",
+        "REORDER_INVALID": "quantité de réapprovisionnement « {{value}} » invalide (nombre > 0)",
+        "EXPIRY_NEEDS_LOTS": "le suivi de péremption nécessite le suivi par lot",
+        "LOTS_NEED_STOCKABLE": "un article non stockable ne peut pas être suivi par lot",
+        "SERIALS_INVALID": "un équipement suivi par n° de série doit être stockable et sans suivi par lot",
+        "LOCKED_FIELDS": "article déjà mouvementé : unité, « stockable » et suivi par lot / n° de série ne sont plus modifiables",
+        "CONFLICTING_VALUES": "{{column}} différent de la ligne {{line}} (même code)",
+        "ITEM_INVALID": "l'article est en erreur à la ligne {{line}}",
+        "OPENING_WAREHOUSE_REQUIRED": "stock initial : code dépôt manquant",
+        "OPENING_QUANTITY_INVALID": "stock initial : quantité « {{value}} » invalide (nombre > 0)",
+        "WAREHOUSE_UNKNOWN": "dépôt « {{value}} » inconnu ou inactif",
+        "WAREHOUSE_FORBIDDEN": "vous n'avez pas accès au dépôt {{value}}",
+        "NOT_STOCKABLE": "article non stockable : pas de stock initial",
+        "SERIAL_ITEM": "équipement suivi par n° de série : enregistrez son stock avec « Enregistrer le parc existant » (Équipements)",
+        "LOT_REQUIRED": "n° de lot obligatoire (article suivi par lot)",
+        "LOT_NOT_TRACKED": "n° de lot renseigné pour un article sans suivi par lot",
+        "EXPIRY_REQUIRED": "date de péremption obligatoire",
+        "DATE_INVALID": "date « {{value}} » invalide (AAAA-MM-JJ ou JJ/MM/AAAA)",
+        "COST_INVALID": "coût unitaire « {{value}} » invalide",
+        "CURRENCY_UNKNOWN": "devise « {{value}} » inconnue",
+        "OPENING_EXISTS": "l'article a déjà du stock ou des mouvements dans le dépôt {{warehouse}} : utilisez un inventaire ou un ajustement",
+        "LOT_EXPIRY_MISMATCH": "le lot {{lot}} existe déjà avec la date de péremption {{expiry}}",
+        "DUPLICATE_OPENING": "même article, dépôt et lot que la ligne {{line}}"
+      },
+      "fileErr": {
+        "UNREADABLE": "Fichier illisible : vérifiez qu'il s'agit bien d'un .xlsx ou d'un .csv",
+        "EMPTY": "Le fichier ne contient aucun article",
+        "MISSING_COLUMNS": "Colonne « Code » introuvable : utilisez le modèle proposé",
+        "TOO_MANY_ROWS": "{{max}} lignes au maximum par import : découpez le fichier",
+        "NOTHING_TO_IMPORT": "Aucune ligne valide à importer",
+        "NO_FILE": "Aucun fichier reçu"
+      }
     }
   },
   "help": {
@@ -3865,6 +3973,24 @@
           },
           {
             "type": "h",
+            "text": "Importer des articles (Excel / CSV)"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Stock → Articles → « Importer » (profils Logistique, Achats, administrateur).",
+              "Téléchargez le « Modèle Excel » (listes déroulantes des catégories et de vos dépôts, exemples, mode d'emploi) ou le « Modèle CSV ». Remplacez les lignes d'exemple (codes EX-…) par vos articles.",
+              "Colonnes obligatoires pour un nouvel article : Code, Désignation, Unité. Un code qui existe déjà met l'article à jour : seules les cellules remplies sont modifiées.",
+              "Stock initial (facultatif) : Code dépôt + Quantité initiale, avec le coût unitaire (valorisation), la devise (sinon celle de l'entreprise), le n° de lot et la date de péremption si l'article les suit. Une ligne par dépôt ou par lot, en répétant le code.",
+              "Choisissez le fichier : l'aperçu montre les articles à créer / mettre à jour, le stock initial et chaque ligne en erreur avec sa raison. Rien n'est enregistré avant « Importer » ; les lignes en erreur sont ignorées."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "Le stock initial n'est accepté que dans vos dépôts et seulement si l'article n'a encore aucun mouvement dans ce dépôt : réimporter le même fichier ne double jamais le stock. Pour corriger un stock déjà enregistré, faites un inventaire ou un ajustement. Les équipements suivis par n° de série s'enregistrent avec « Enregistrer le parc existant » (Équipements)."
+          },
+          {
+            "type": "h",
             "text": "État du stock et mouvements"
           },
           {
@@ -4630,7 +4756,8 @@
       "PAYMENT_BLOCKED": "Paiement bloqué (coordonnées bancaires)",
       "STOCK_ISSUE_CANCELLED": "Sortie de stock annulée",
       "STOCK_ADJUSTED": "Ajustement de stock",
-      "STOCK_COUNT_VALIDATED": "Inventaire validé"
+      "STOCK_COUNT_VALIDATED": "Inventaire validé",
+      "STOCK_ITEMS_IMPORTED": "Import du catalogue de stock"
     },
     "groups": {
       "all": "Tous les événements",

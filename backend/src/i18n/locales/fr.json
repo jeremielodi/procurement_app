@@ -660,7 +660,8 @@
     "PAYMENT_BLOCKED": "Paiement bloqué (coordonnées bancaires)",
     "STOCK_ISSUE_CANCELLED": "Sortie de stock annulée",
     "STOCK_ADJUSTED": "Ajustement de stock",
-    "STOCK_COUNT_VALIDATED": "Inventaire validé"
+    "STOCK_COUNT_VALIDATED": "Inventaire validé",
+    "STOCK_ITEMS_IMPORTED": "Import du catalogue de stock"
   },
   "auditExport": {
     "sheet": "Journal d'audit",
@@ -741,6 +742,81 @@
       "currency": "Devise",
       "movements": "Mouvements d'entrée",
       "reversals": "Écritures inverses"
+    }
+  },
+  "stockImport": {
+    "fileName": "modele_import_articles_stock",
+    "yes": "Oui",
+    "no": "Non",
+    "requiredNew": "Obligatoire (nouvel article)",
+    "optional": "Facultatif",
+    "openingColumn": "Stock initial",
+    "sheets": {
+      "items": "Articles",
+      "references": "Référentiels",
+      "help": "Mode d'emploi"
+    },
+    "headers": {
+      "code": "Code",
+      "name": "Désignation",
+      "unit": "Unité",
+      "category": "Catégorie",
+      "description": "Description",
+      "stockable": "Stockable",
+      "trackLots": "Suivi par lot",
+      "trackExpiry": "Suivi de péremption",
+      "trackSerials": "Suivi par n° de série",
+      "minQuantity": "Stock minimum",
+      "reorderQuantity": "Quantité de réapprovisionnement",
+      "warehouse": "Code dépôt",
+      "openingQuantity": "Quantité initiale",
+      "unitCost": "Coût unitaire",
+      "currency": "Devise",
+      "lotNumber": "N° de lot",
+      "expiryDate": "Date de péremption"
+    },
+    "help": {
+      "code": "Code unique de l'article dans l'entreprise (lettres, chiffres, . - _). Un code existant met à jour l'article : seules les cellules remplies sont modifiées.",
+      "name": "Nom de l'article (obligatoire pour un nouvel article).",
+      "unit": "Unité de gestion : pce, boîte, carton, L, kg… (obligatoire pour un nouvel article). Non modifiable une fois l'article mouvementé.",
+      "category": "Code ou nom de la catégorie (feuille Référentiels). Pour un nouvel article, « Stockable » suit la catégorie si la colonne est vide.",
+      "description": "Texte libre.",
+      "stockable": "Oui / Non. Seuls les articles stockables entrent en stock (Oui par défaut, ou selon la catégorie).",
+      "trackLots": "Oui / Non. Un n° de lot est alors exigé à chaque entrée en stock.",
+      "trackExpiry": "Oui / Non. Nécessite le suivi par lot ; la date de péremption est alors exigée.",
+      "trackSerials": "Oui / Non. Équipement suivi unité par unité (incompatible avec le suivi par lot). Son stock existant s'enregistre par « Enregistrer le parc existant » (menu Équipements), pas par cet import.",
+      "minQuantity": "Seuil d'alerte (nombre ≥ 0).",
+      "reorderQuantity": "Quantité proposée par « Réapprovisionner » (nombre > 0).",
+      "warehouse": "Stock initial : code du dépôt (feuille Référentiels, dépôts auxquels vous avez accès). Laisser vide pour importer seulement l'article.",
+      "openingQuantity": "Stock initial : quantité présente dans le dépôt (> 0). Refusé si l'article a déjà des mouvements dans ce dépôt.",
+      "unitCost": "Stock initial : coût d'achat unitaire (sert à la valorisation CMUP). Facultatif.",
+      "currency": "Stock initial : code de la devise du coût (USD, EUR, CDF…). Vide = devise de l'entreprise.",
+      "lotNumber": "Stock initial : n° de lot (obligatoire si l'article est suivi par lot). Une ligne par lot.",
+      "expiryDate": "Stock initial : date de péremption du lot, AAAA-MM-JJ ou JJ/MM/AAAA (obligatoire si la péremption est suivie)."
+    },
+    "ref": {
+      "categoryCode": "Code catégorie",
+      "categoryName": "Catégorie",
+      "warehouseCode": "Code dépôt",
+      "warehouseName": "Dépôt",
+      "yesNo": "Oui / Non",
+      "column": "Colonne",
+      "required": "Obligatoire",
+      "description": "Contenu attendu"
+    },
+    "rules1": "1. Remplacez les lignes d'exemple (codes EX-…) par vos articles, une ligne par article. Les colonnes peuvent être dans n'importe quel ordre.",
+    "rules2": "2. Pour un stock initial dans plusieurs dépôts ou plusieurs lots, répétez le code sur une ligne par dépôt / lot (la fiche article est lue sur la première ligne).",
+    "rules3": "3. Enregistrez en .xlsx ou en .csv (séparateur ; ou ,) — 2 000 lignes et 5 Mo au maximum.",
+    "rules4": "4. L'import affiche d'abord un aperçu (articles créés / mis à jour, stock initial, lignes en erreur) : rien n'est enregistré avant votre confirmation.",
+    "rules5": "5. Le stock initial crée un mouvement « Stock initial » dans le journal. Pour corriger un stock déjà enregistré, utilisez un inventaire ou un ajustement.",
+    "example": {
+      "paper": "Papier A4 80 g",
+      "paperUnit": "rame",
+      "drug": "Paracétamol 500 mg",
+      "drugUnit": "boîte",
+      "laptop": "Ordinateur portable",
+      "laptopUnit": "pce",
+      "laptopDesc": "Stock existant : Équipements › Enregistrer le parc existant"
     }
   }
 }

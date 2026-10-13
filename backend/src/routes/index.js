@@ -592,6 +592,7 @@ router.post('/goods-receipts/:id/cancel',
 // GESTION DE STOCK : dépôts, catalogue, soldes, mouvements
 // ============================================
 const { warehouses: wh, items: si, stock: st } = stockController;
+const stockItemImportUpload = require('../utils/tabularImport').uploadHandler({ maxMb: 5 });
 // Dépôts où l'utilisateur peut réceptionner (formulaire GRN) — avant /warehouses/:id
 router.get('/warehouses/mine', authenticate, hasPermission('VIEW_PURCHASE_ORDERS'), wh.mine);
 router.get('/warehouses', authenticate, hasPermission('VIEW_STOCK'), wh.list);
@@ -602,6 +603,9 @@ router.put('/warehouses/:id/users', authenticate, hasPermission('MANAGE_WAREHOUS
 
 // Autocomplétion d'articles (réquisition, réception) : tout utilisateur de l'entreprise — avant /stock-items/:id
 router.get('/stock-items/search', authenticate, si.search);
+// Import du catalogue (+ stock initial facultatif) depuis Excel / CSV : modèle, aperçu, confirmation
+router.get('/stock-items/import/template', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), si.importTemplate);
+router.post('/stock-items/import', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), stockItemImportUpload, si.import);
 router.get('/stock-items', authenticate, hasPermission('VIEW_STOCK'), si.list);
 router.get('/stock-items/:id', authenticate, hasPermission('VIEW_STOCK'), si.get);
 router.post('/stock-items', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), si.create);

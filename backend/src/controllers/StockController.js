@@ -9,6 +9,7 @@ const warehouseModel = require('../models/WarehouseModel');
 const stockItemModel = require('../models/StockItemModel');
 const stockModel = require('../models/StockModel');
 const referenceModel = require('../models/ReferenceModel');
+const importService = require('../services/StockItemImportService');
 const i18n = require('../i18n');
 const { audit, AUDIT } = require('../utils/auditLog');
 
@@ -211,6 +212,44 @@ const items = {
       const row = await stockItemModel.create(fields, { enterpriseId: req.enterpriseId, createdBy: req.user.id });
       res.status(201).json({ success: true, data: await stockItemModel.getById(row.id), message: 'Article créé' });
     } catch (error) { return serverError(res, error, 'Erreur lors de la création de l\'article'); }
+  },
+
+  /** GET /stock-items/import/template?format=xlsx|csv&lang= — modèle à remplir (catégories et dépôts de l'utilisateur) */
+  async importTemplate(req, res) {
+    try {
+      const format = req.query.format === 'csv' ? 'csv' : 'xlsx';
+      const file = await importService.template({ userId: req.user.id, lang: i18n.fromRequest(req), format });
+      res.set('Content-Type', file.contentType);
+      res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}"`);
+      res.end(file.buffer);
+    } catch (error) { return serverError(res, error, 'Erreur lors de la génération du modèle'); }
+  },
+
+  /**
+   * POST /stock-items/import (multipart : file ; confirm=1 pour écrire) — sans confirm : aperçu
+   * { items, openings, errors, summary } ; avec confirm : lignes valides écrites en une transaction
+   */
+  async import(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(403).json({ success: false, message: 'Réservé aux utilisateurs d\'une entreprise' });
+      if (!req.file) return bad(res, 'Aucun fichier reçu', 'NO_FILE');
+      if (!['1', 'true'].includes(String(req.body?.confirm ?? req.query.confirm))) {
+        return res.json({ success: true, data: await importService.preview(req.file, { userId: req.user.id }) });
+      }
+      const result = await importService.apply(req.file, { userId: req.user.id });
+      await audit(req, AUDIT.STOCK_ITEMS_IMPORTED, {
+        entity: { type: 'stock_items', id: null, label: req.file.originalname },
+        details: { file: req.file.originalname, created: result.created, updated: result.updated, openings: result.openings,
+          openingQuantity: result.openingQuantity, skippedLines: result.skipped },
+        enterpriseId: req.enterpriseId,
+      });
+      res.json({ success: true, data: result, message: 'Import terminé' });
+    } catch (error) {
+      if (error.status && error.status < 500) {
+        return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
+      }
+      return serverError(res, error, 'Erreur lors de l\'import des articles');
+    }
   },
 
   async update(req, res) {

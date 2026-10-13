@@ -473,9 +473,6 @@ export default function RequisitionList() {
                   {t('requisitions.title')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('common.department')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('common.amount')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -489,6 +486,9 @@ export default function RequisitionList() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('requisitions.priority')}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {t('common.department')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('common.actions')}
@@ -535,12 +535,6 @@ export default function RequisitionList() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Building2 size={14} />
-                        {getDepartmentName(requisition.department_id)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">
                         {formatCurrency(requisition.estimated_amount, requisition.currency)}
                       </div>
@@ -562,6 +556,12 @@ export default function RequisitionList() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={`PRIORITY_${requisition.priority}`} size="sm" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Building2 size={14} />
+                        {getDepartmentName(requisition.department_id)}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">

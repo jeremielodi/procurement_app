@@ -660,7 +660,8 @@
     "PAYMENT_BLOCKED": "Payment blocked (bank details)",
     "STOCK_ISSUE_CANCELLED": "Stock issue cancelled",
     "STOCK_ADJUSTED": "Stock adjustment",
-    "STOCK_COUNT_VALIDATED": "Stock count validated"
+    "STOCK_COUNT_VALIDATED": "Stock count validated",
+    "STOCK_ITEMS_IMPORTED": "Stock catalogue import"
   },
   "auditExport": {
     "sheet": "Audit log",
@@ -741,6 +742,81 @@
       "currency": "Currency",
       "movements": "Entry movements",
       "reversals": "Reversing entries"
+    }
+  },
+  "stockImport": {
+    "fileName": "stock_items_import_template",
+    "yes": "Yes",
+    "no": "No",
+    "requiredNew": "Required (new item)",
+    "optional": "Optional",
+    "openingColumn": "Opening stock",
+    "sheets": {
+      "items": "Items",
+      "references": "Reference data",
+      "help": "Instructions"
+    },
+    "headers": {
+      "code": "Code",
+      "name": "Name",
+      "unit": "Unit",
+      "category": "Category",
+      "description": "Description",
+      "stockable": "Stockable",
+      "trackLots": "Lot tracking",
+      "trackExpiry": "Expiry tracking",
+      "trackSerials": "Serial number tracking",
+      "minQuantity": "Minimum stock",
+      "reorderQuantity": "Reorder quantity",
+      "warehouse": "Warehouse code",
+      "openingQuantity": "Opening quantity",
+      "unitCost": "Unit cost",
+      "currency": "Currency",
+      "lotNumber": "Lot number",
+      "expiryDate": "Expiry date"
+    },
+    "help": {
+      "code": "Unique item code within the company (letters, digits, . - _). An existing code updates the item: only filled cells are changed.",
+      "name": "Item name (required for a new item).",
+      "unit": "Unit of measure: pce, box, carton, L, kg… (required for a new item). Cannot be changed once the item has stock movements.",
+      "category": "Category code or name (Reference data sheet). For a new item, \"Stockable\" follows the category when the column is empty.",
+      "description": "Free text.",
+      "stockable": "Yes / No. Only stockable items are held in stock (Yes by default, or per category).",
+      "trackLots": "Yes / No. A lot number is then required for every stock entry.",
+      "trackExpiry": "Yes / No. Requires lot tracking; the expiry date is then required.",
+      "trackSerials": "Yes / No. Equipment tracked unit by unit (not compatible with lot tracking). Its existing stock is recorded through \"Register existing equipment\" (Equipment menu), not through this import.",
+      "minQuantity": "Alert threshold (number ≥ 0).",
+      "reorderQuantity": "Quantity suggested by \"Restock\" (number > 0).",
+      "warehouse": "Opening stock: warehouse code (Reference data sheet, warehouses you can access). Leave empty to import the item only.",
+      "openingQuantity": "Opening stock: quantity held in the warehouse (> 0). Refused if the item already has movements in that warehouse.",
+      "unitCost": "Opening stock: unit purchase cost (used for weighted average cost valuation). Optional.",
+      "currency": "Opening stock: currency code of the cost (USD, EUR, CDF…). Empty = company currency.",
+      "lotNumber": "Opening stock: lot number (required if the item is lot-tracked). One row per lot.",
+      "expiryDate": "Opening stock: lot expiry date, YYYY-MM-DD or DD/MM/YYYY (required if expiry is tracked)."
+    },
+    "ref": {
+      "categoryCode": "Category code",
+      "categoryName": "Category",
+      "warehouseCode": "Warehouse code",
+      "warehouseName": "Warehouse",
+      "yesNo": "Yes / No",
+      "column": "Column",
+      "required": "Required",
+      "description": "Expected content"
+    },
+    "rules1": "1. Replace the sample rows (EX-… codes) with your items, one row per item. Columns may be in any order.",
+    "rules2": "2. For opening stock in several warehouses or lots, repeat the code on one row per warehouse / lot (the item details are read from the first row).",
+    "rules3": "3. Save as .xlsx or .csv (; or , separator) — 2,000 rows and 5 MB maximum.",
+    "rules4": "4. The import first shows a preview (items created / updated, opening stock, rows with errors): nothing is saved until you confirm.",
+    "rules5": "5. Opening stock creates an \"Opening stock\" movement in the journal. To correct stock already recorded, use a stock count or an adjustment.",
+    "example": {
+      "paper": "A4 paper 80 g",
+      "paperUnit": "ream",
+      "drug": "Paracetamol 500 mg",
+      "drugUnit": "box",
+      "laptop": "Laptop",
+      "laptopUnit": "pce",
+      "laptopDesc": "Existing stock: Equipment › Register existing equipment"
     }
   }
 }

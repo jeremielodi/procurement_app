@@ -478,8 +478,8 @@
       "subtitle": "What is ordered and received goes straight into stock: no more double entry between purchasing and the warehouse, an always up-to-date stock value and stock counts that justify every difference.",
       "items": [
         {
-          "title": "Warehouses by location",
-          "desc": "Several warehouses per city, with per-user access: each storekeeper only works on their own warehouses."
+          "title": "Warehouses and catalogue",
+          "desc": "Several warehouses per city, with per-user access; the item catalogue and existing stock are imported from Excel in minutes (template provided)."
         },
         {
           "title": "Receipt → stock entry",
@@ -3087,6 +3087,114 @@
         "VALUED": "Valued"
       },
       "method": "WAC recomputed from the movement log: each receipt (at the purchase order price) updates the average cost; issues go out at the average cost; transfers between warehouses have no effect. An item received in several currencies, or without any known cost (opening stock, adjustment), is not valued."
+    },
+    "import": {
+      "button": "Import",
+      "title": "Import items (Excel / CSV)",
+      "templateTitle": "Template to fill in",
+      "templateHint": "The Excel template includes drop-down lists (categories, your warehouses, Yes / No), examples and instructions.",
+      "templateXlsx": "Excel template",
+      "templateCsv": "CSV template",
+      "templateFile": "stock_items_import_template",
+      "templateFailed": "Could not download the template",
+      "itemColumns": "Item:",
+      "openingColumns": "Opening stock (optional):",
+      "rules": "* required for a new item. An existing code updates the item (filled cells only). Opening stock: one row per warehouse / lot, in warehouses you can access. .xlsx or .csv file, 2,000 rows and 5 MB maximum.",
+      "chooseFile": "Choose an .xlsx or .csv file",
+      "analyzing": "Analysing the file…",
+      "importing": "Importing…",
+      "confirm": "Import",
+      "confirmN_one": "Import ({{count}} entry)",
+      "confirmN_other": "Import ({{count}} entries)",
+      "sumCreate_one": "{{count}} item to create",
+      "sumCreate_other": "{{count}} items to create",
+      "sumUpdate_one": "{{count}} item to update",
+      "sumUpdate_other": "{{count}} items to update",
+      "sumUnchanged_one": "{{count}} item unchanged",
+      "sumUnchanged_other": "{{count}} items unchanged",
+      "sumOpenings_one": "{{count}} opening stock row",
+      "sumOpenings_other": "{{count}} opening stock rows",
+      "sumErrors_one": "{{count}} row with errors",
+      "sumErrors_other": "{{count}} rows with errors",
+      "errorsTitle_one": "{{count}} row will be skipped — fix the file and upload it again if needed",
+      "errorsTitle_other": "{{count}} rows will be skipped — fix the file and upload it again if needed",
+      "lineError": "Row {{line}}: {{message}}",
+      "ready": "Check the preview: nothing is saved until you click \"Import\".",
+      "tabItems": "Items ({{count}})",
+      "tabOpenings": "Opening stock ({{count}})",
+      "line": "Row",
+      "action": "Action",
+      "actions": {
+        "CREATE": "To create",
+        "UPDATE": "To update",
+        "UNCHANGED": "Unchanged"
+      },
+      "noItems": "No items in the file",
+      "noOpenings": "No opening stock in the file",
+      "openingWarning": "Opening stock creates permanent \"Opening stock\" movements in the journal. To correct it later: stock count or adjustment.",
+      "nothing": "Nothing to import: fix the errors above.",
+      "done": "Import complete: {{created}} item(s) created, {{updated}} updated, {{openings}} opening stock row(s)",
+      "doneSkipped_one": "{{count}} row with errors was not imported",
+      "doneSkipped_other": "{{count}} rows with errors were not imported",
+      "failed": "The import failed",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "unit": "Unit",
+        "category": "Category",
+        "description": "Description",
+        "stockable": "Stockable",
+        "trackLots": "Lot tracking",
+        "trackExpiry": "Expiry tracking",
+        "trackSerials": "Serial number tracking",
+        "minQuantity": "Minimum stock",
+        "reorderQuantity": "Reorder quantity",
+        "warehouse": "Warehouse code",
+        "openingQuantity": "Opening quantity",
+        "unitCost": "Unit cost",
+        "currency": "Currency",
+        "lotNumber": "Lot number",
+        "expiryDate": "Expiry date"
+      },
+      "err": {
+        "CODE_REQUIRED": "empty code",
+        "CODE_INVALID": "invalid code \"{{value}}\" (letters, digits, . - _; 50 characters max)",
+        "NAME_REQUIRED": "name required for a new item",
+        "UNIT_REQUIRED": "unit required for a new item",
+        "CATEGORY_UNKNOWN": "unknown category \"{{value}}\"",
+        "BOOL_INVALID": "{{column}}: \"{{value}}\" — answer Yes or No",
+        "MIN_INVALID": "invalid minimum stock \"{{value}}\" (number ≥ 0)",
+        "REORDER_INVALID": "invalid reorder quantity \"{{value}}\" (number > 0)",
+        "EXPIRY_NEEDS_LOTS": "expiry tracking requires lot tracking",
+        "LOTS_NEED_STOCKABLE": "a non-stockable item cannot be lot-tracked",
+        "SERIALS_INVALID": "serial-tracked equipment must be stockable and not lot-tracked",
+        "LOCKED_FIELDS": "item already has stock movements: unit, \"stockable\" and lot / serial tracking can no longer be changed",
+        "CONFLICTING_VALUES": "{{column}} differs from row {{line}} (same code)",
+        "ITEM_INVALID": "the item has errors on row {{line}}",
+        "OPENING_WAREHOUSE_REQUIRED": "opening stock: warehouse code missing",
+        "OPENING_QUANTITY_INVALID": "opening stock: invalid quantity \"{{value}}\" (number > 0)",
+        "WAREHOUSE_UNKNOWN": "unknown or inactive warehouse \"{{value}}\"",
+        "WAREHOUSE_FORBIDDEN": "you do not have access to warehouse {{value}}",
+        "NOT_STOCKABLE": "non-stockable item: no opening stock",
+        "SERIAL_ITEM": "serial-tracked equipment: record its stock with \"Register existing equipment\" (Equipment)",
+        "LOT_REQUIRED": "lot number required (lot-tracked item)",
+        "LOT_NOT_TRACKED": "lot number given for an item without lot tracking",
+        "EXPIRY_REQUIRED": "expiry date required",
+        "DATE_INVALID": "invalid date \"{{value}}\" (YYYY-MM-DD or DD/MM/YYYY)",
+        "COST_INVALID": "invalid unit cost \"{{value}}\"",
+        "CURRENCY_UNKNOWN": "unknown currency \"{{value}}\"",
+        "OPENING_EXISTS": "the item already has stock or movements in warehouse {{warehouse}}: use a stock count or an adjustment",
+        "LOT_EXPIRY_MISMATCH": "lot {{lot}} already exists with expiry date {{expiry}}",
+        "DUPLICATE_OPENING": "same item, warehouse and lot as row {{line}}"
+      },
+      "fileErr": {
+        "UNREADABLE": "Unreadable file: make sure it is an .xlsx or .csv file",
+        "EMPTY": "The file contains no items",
+        "MISSING_COLUMNS": "\"Code\" column not found: use the template provided",
+        "TOO_MANY_ROWS": "{{max}} rows maximum per import: split the file",
+        "NOTHING_TO_IMPORT": "No valid rows to import",
+        "NO_FILE": "No file received"
+      }
     }
   },
   "help": {
@@ -3865,6 +3973,24 @@
           },
           {
             "type": "h",
+            "text": "Import items (Excel / CSV)"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Stock → Items → \"Import\" (Logistics, Procurement and administrator profiles).",
+              "Download the \"Excel template\" (drop-down lists of categories and your warehouses, examples, instructions) or the \"CSV template\". Replace the sample rows (EX-… codes) with your items.",
+              "Required columns for a new item: Code, Name, Unit. An existing code updates the item: only filled cells are changed.",
+              "Opening stock (optional): Warehouse code + Opening quantity, with the unit cost (valuation), currency (otherwise the company currency), lot number and expiry date if the item tracks them. One row per warehouse or lot, repeating the code.",
+              "Choose the file: the preview lists items to create / update, the opening stock and every row with errors and why. Nothing is saved until you click \"Import\"; rows with errors are skipped."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "Opening stock is only accepted in your warehouses and only if the item has no movement yet in that warehouse: importing the same file again never doubles the stock. To correct stock already recorded, use a stock count or an adjustment. Serial-tracked equipment is recorded with \"Register existing equipment\" (Equipment)."
+          },
+          {
+            "type": "h",
             "text": "Stock levels and movements"
           },
           {
@@ -4630,7 +4756,8 @@
       "PAYMENT_BLOCKED": "Payment blocked (bank details)",
       "STOCK_ISSUE_CANCELLED": "Stock issue cancelled",
       "STOCK_ADJUSTED": "Stock adjustment",
-      "STOCK_COUNT_VALIDATED": "Stock count validated"
+      "STOCK_COUNT_VALIDATED": "Stock count validated",
+      "STOCK_ITEMS_IMPORTED": "Stock catalogue import"
     },
     "groups": {
       "all": "All events",

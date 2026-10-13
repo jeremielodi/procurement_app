@@ -2,9 +2,10 @@
 // Catalogue d'articles de l'entreprise : code, désignation, unité, catégorie, stockable, suivi par lot / péremption,
 // stock minimum et quantité de réapprovisionnement. Création / modification : MANAGE_STOCK_ITEMS (logistique, achats, admin).
 // « Réapprovisionner » : articles sous le minimum → formulaire de réquisition pré-rempli (articles du catalogue).
+// « Importer » : catalogue (+ stock initial) depuis un fichier Excel / CSV, modèle téléchargeable (ImportStockItemsModal).
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Boxes, Plus, Pencil, RefreshCw, Search, AlertTriangle, ShoppingCart } from 'lucide-react';
+import { Boxes, Plus, Pencil, RefreshCw, Search, AlertTriangle, ShoppingCart, FileUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
 import { stockItemService } from '../../services/stockService';
@@ -12,6 +13,7 @@ import { categoryService } from '../../services/referenceService';
 import { usePermissions } from '../../hooks/usePermissions';
 import { t, getLocale, useTranslation } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+import ImportStockItemsModal from './ImportStockItemsModal';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const UNITS = ['pce', 'boîte', 'carton', 'paquet', 'rame', 'L', 'kg', 't', 'm', 'm²', 'm³', 'sac', 'lot', 'kit', 'paire'];
@@ -53,6 +55,7 @@ export default function StockItemList() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => { categoryService.listPublic().then(r => setCategories(r.data || [])).catch(() => {}); }, [lang]);
 
@@ -119,16 +122,23 @@ export default function StockItemList() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Boxes /> {t('stock.items.title')}</h1>
           <p className="text-sm text-gray-500">{t('stock.items.subtitle')}</p>
         </div>
-        {belowMinRows.length > 0 && (
-          <button onClick={restock} className="flex items-center gap-2 border border-orange-300 text-orange-800 bg-orange-50 hover:bg-orange-100 px-4 py-2 rounded-lg text-sm" data-testid="restock">
-            <ShoppingCart size={16} /> {t('stock.items.restock', { count: belowMinRows.length })}
-          </button>
-        )}
-        {canManage && (
-          <button onClick={() => setEditing({ ...EMPTY })} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm" data-testid="item-new">
-            <Plus size={16} /> {t('stock.items.new')}
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {belowMinRows.length > 0 && (
+            <button onClick={restock} className="flex items-center gap-2 border border-orange-300 text-orange-800 bg-orange-50 hover:bg-orange-100 px-4 py-2 rounded-lg text-sm" data-testid="restock">
+              <ShoppingCart size={16} /> {t('stock.items.restock', { count: belowMinRows.length })}
+            </button>
+          )}
+          {canManage && (
+            <button onClick={() => setImporting(true)} className="flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm" data-testid="item-import">
+              <FileUp size={16} /> {t('stock.import.button')}
+            </button>
+          )}
+          {canManage && (
+            <button onClick={() => setEditing({ ...EMPTY })} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm" data-testid="item-new">
+              <Plus size={16} /> {t('stock.items.new')}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-lg p-3">
@@ -202,6 +212,8 @@ export default function StockItemList() {
           <button disabled={page >= pagination.pages} onClick={() => setPage(p => p + 1)} className="px-3 py-1 border rounded disabled:opacity-40">›</button>
         </div>
       )}
+
+      <ImportStockItemsModal isOpen={importing} onClose={() => setImporting(false)} onImported={load} />
 
       <Modal isOpen={!!editing} onClose={() => !saving && setEditing(null)} title={editing?.id ? t('stock.items.editTitle') : t('stock.items.new')}
         confirmText={t('common.save')} onConfirm={save} isLoading={saving} size="lg">

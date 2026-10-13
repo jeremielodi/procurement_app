@@ -22,6 +22,15 @@ export const stockItemService = {
   get: (id) => api.get(`/stock-items/${id}`).then(data),
   create: (payload) => api.post('/stock-items', payload).then(data),
   update: (id, payload) => api.put(`/stock-items/${id}`, payload).then(data),
+  // Import Excel / CSV : modèle (xlsx | csv, langue de l'interface), aperçu puis confirmation (même fichier)
+  importTemplate: (format = 'xlsx') =>
+    api.get('/stock-items/import/template', { params: { format, lang: getLang() }, responseType: 'blob' }).then(data),
+  importFile: (file, { confirm = false } = {}) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    if (confirm) fd.append('confirm', '1');
+    return api.post('/stock-items/import', fd, { headers: { 'Content-Type': 'multipart/form-data' }, skipErrorToast: true }).then(data);
+  },
 };
 
 export const stockService = {

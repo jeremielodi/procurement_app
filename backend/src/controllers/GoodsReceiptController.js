@@ -25,7 +25,7 @@ class GoodsReceiptController {
 
   async create(req, res) {
     try {
-      const { poId, grnItems = [], observations, taskId, warehouseId } = req.body;
+      const { poId, grnItems = [], observations, taskId, warehouseId, closeRemaining, closeReason } = req.body;
       const receivedBy = req.body.receivedBy || req.user?.id;
 
       if (!poId) {
@@ -38,7 +38,16 @@ class GoodsReceiptController {
         return res.status(404).json({ success: false, message: 'Commande introuvable' });
       }
 
-      const result = await grnModel.create({ poId, receivedBy, grnItems, observations, warehouseId }, { userId: req.user.id });
+      const result = await grnModel.create({
+        poId, receivedBy, grnItems, observations, warehouseId,
+        closeRemaining: closeRemaining === true || closeRemaining === 'true', closeReason,
+      }, { userId: req.user.id });
+      if (result.deliveryClosed) {
+        await audit(req, AUDIT.PO_DELIVERY_CLOSED, {
+          entity: { type: 'purchase_order', id: poId, label: result.grnNumber },
+          details: { reason: String(closeReason || '').trim(), grnNumber: result.grnNumber },
+        });
+      }
 
       // Complete Camunda Activity_GoodsReceipt task
       let camundaTaskCompleted = false;
@@ -46,6 +55,8 @@ class GoodsReceiptController {
         grnId: result.id,
         grnNumber: result.grnNumber,
         grnCompliant: result.grnCompliant,
+        // Reste à livrer → nouvelle SAN puis nouveau GRN ; tout livré ou reliquat soldé → facture
+        deliveryComplete: result.deliveryComplete,
         receiptStatus: result.status
       };
 

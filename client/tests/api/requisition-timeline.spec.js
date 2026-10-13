@@ -19,7 +19,7 @@ test.describe('API › Réquisitions — suivi du workflow', () => {
     const { steps, events, progress } = body.data;
     expect(steps.map(s => s.key)).toEqual([
       'created', 'budget', 'approval', 'method', 'sourcing', 'po', 'po_approval',
-      'supplier_confirmation', 'grn', 'san', 'invoice', 'payment',
+      'supplier_confirmation', 'san', 'grn', 'invoice', 'payment',
     ]);
     for (const s of steps) expect(['done', 'current', 'pending', 'failed', 'skipped']).toContain(s.status);
     expect(steps.filter(s => s.status === 'current').length).toBeLessThanOrEqual(1);

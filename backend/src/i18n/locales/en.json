@@ -200,7 +200,10 @@
       "INVOICE_MATCHED": "3-way match passed",
       "INVOICE_MISMATCH": "3-way match discrepancy",
       "PAYMENT_RECORDED": "Payment recorded"
-    }
+    },
+    "deliveryClosed": "Remaining quantity closed — {reason}",
+    "deliveries": "{count} receipt(s) — delivery in progress",
+    "deliveryClosedEvent": "Remaining quantity of purchase order {number} closed"
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -661,7 +664,8 @@
     "STOCK_ISSUE_CANCELLED": "Stock issue cancelled",
     "STOCK_ADJUSTED": "Stock adjustment",
     "STOCK_COUNT_VALIDATED": "Stock count validated",
-    "STOCK_ITEMS_IMPORTED": "Stock catalogue import"
+    "STOCK_ITEMS_IMPORTED": "Stock catalogue import",
+    "PO_DELIVERY_CLOSED": "Purchase order remaining quantity closed"
   },
   "auditExport": {
     "sheet": "Audit log",

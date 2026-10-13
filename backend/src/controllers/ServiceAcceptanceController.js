@@ -30,10 +30,20 @@ class ServiceAcceptanceController {
 
       // Complete Camunda Activity_ServiceAcceptance task
       let camundaTaskCompleted = false;
+      // deliveryComplete (exigé par le BPMN) : la SAN précède chaque réception ; plus rien à réceptionner
+      // (tout livré ou reliquat soldé) → facture directement, sinon → GRN
+      const delivery = await db.one(
+        `SELECT po.delivery_closed_at IS NOT NULL
+                OR NOT EXISTS (SELECT 1 FROM v_po_item_delivery d WHERE d.purchase_order_id = po.id AND d.quantity_remaining > 0)
+                  AND EXISTS (SELECT 1 FROM v_po_item_delivery d WHERE d.purchase_order_id = po.id) AS complete
+         FROM purchase_orders po WHERE po.id = $1`,
+        [poId]
+      );
       const completionVars = {
         sanId: result.id,
         sanNumber: result.sanNumber,
         serviceAccepted: result.serviceAccepted,
+        deliveryComplete: !!delivery?.complete,
         sanStatus: result.status
       };
 

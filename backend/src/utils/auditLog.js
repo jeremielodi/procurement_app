@@ -63,6 +63,7 @@ const AUDIT = {
   STOCK_ADJUSTED: 'STOCK_ADJUSTED',
   STOCK_COUNT_VALIDATED: 'STOCK_COUNT_VALIDATED',
   STOCK_ITEMS_IMPORTED: 'STOCK_ITEMS_IMPORTED', // catalogue (+ stock initial) importé depuis Excel / CSV
+  PO_DELIVERY_CLOSED: 'PO_DELIVERY_CLOSED', // reliquat d'un bon de commande soldé (le fournisseur ne livrera pas le reste)
 };
 
 // Adresse locale / privée : la requête arrive par un reverse proxy (Caddy, Nginx, Docker)

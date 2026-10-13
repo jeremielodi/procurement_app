@@ -29,9 +29,11 @@ test.describe('📦 GRN — Bons de Réception', () => {
 
   test('La liste GRN — filtre de statut fonctionne', async ({ page }) => {
     await page.goto('/goods-receipts');
-    const statusFilter = page.locator('select').first();
-    if (await statusFilter.isVisible()) {
-      await statusFilter.selectOption({ label: /complet|complete/i });
+    // Filtre de statut : <select> sous-jacent du SearchSelect (option « Complet », valeur COMPLETE)
+    const statusFilter = page.locator('select:has(option[value="COMPLETE"])').first();
+    if (await statusFilter.count()) {
+      await statusFilter.selectOption('COMPLETE');
+      await expect(statusFilter).toHaveValue('COMPLETE');
       await page.waitForTimeout(500);
       // Toujours sur la page sans erreur
       await expect(page.locator('h1')).toContainText('Bons de Réception');

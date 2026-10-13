@@ -1570,7 +1570,9 @@
       "SERIAL_EXISTS": "N° de série déjà enregistré",
       "SERIAL_INTEGER": "Quantité entière obligatoire",
       "ASSET_TAG_EXISTS": "N° d'inventaire déjà attribué",
-      "ASSET_TAG_DUPLICATE": "N° d'inventaire en double"
+      "ASSET_TAG_DUPLICATE": "N° d'inventaire en double",
+      "DELIVERY_CLOSED": "Le reliquat de cette commande a été soldé : plus aucune réception possible",
+      "CLOSE_REASON_REQUIRED": "Motif obligatoire pour solder le reliquat"
     },
     "cancel": "Annuler la réception",
     "cancelTitle": "Annuler {{number}} ?",
@@ -1588,7 +1590,13 @@
     "notLinked": "Non lié au catalogue",
     "serials": "N° de série",
     "serialsPlaceholder": "Un par ligne : n° de série ; n° d'inventaire (facultatif)\nEx. 5CD1234XYZ ; INV-0042",
-    "serialsHint": "Un n° de série par unité acceptée"
+    "serialsHint": "Un n° de série par unité acceptée",
+    "remainingAfter": "Après cette réception, il restera {{remaining}} à livrer : une nouvelle acceptation (SAN) puis une nouvelle réception (GRN) seront demandées à la prochaine livraison.",
+    "closeRemaining": "Le fournisseur ne livrera pas le reste : solder le reliquat",
+    "closeReason": "Motif du solde du reliquat",
+    "closeReasonPlaceholder": "Motif (obligatoire) — ex. : rupture définitive chez le fournisseur",
+    "remainingClosed": "Reliquat soldé : le workflow passe à la saisie de la facture.",
+    "nextDelivery": "Livraison partielle enregistrée : le reste sera réceptionné à la prochaine livraison (nouvelle SAN puis nouveau GRN)."
   },
   "san": {
     "notFound": "SAN introuvable",
@@ -2587,7 +2595,29 @@
     "status": {
       "DELIVERED": "Livré",
       "PARTIALLY_DELIVERED": "Livré partiellement",
-      "NOT_DELIVERED": "Non livré"
+      "NOT_DELIVERED": "Non livré",
+      "CLOSED_SHORT": "Soldé (reliquat annulé)"
+    },
+    "close": {
+      "button": "Solder le reliquat",
+      "title": "Solder le reliquat",
+      "confirm": "Solder",
+      "reason": "Motif",
+      "reasonPlaceholder": "Ex. : le fournisseur a confirmé qu'il ne livrera pas le reste (rupture de stock)",
+      "explain": "Il reste {{remaining}} à livrer. Si le fournisseur ne livrera pas ce reste, soldez-le : plus aucune réception ne sera possible et le workflow passe directement à la saisie de la facture.",
+      "partialHint": "Livraison partielle : pour chaque nouvelle livraison, le demandeur valide la prestation (SAN) puis la logistique enregistre la réception (GRN). Si le reste ne sera jamais livré, utilisez « Solder le reliquat ».",
+      "banner": "Reliquat soldé le {{date}} par {{by}} — motif : {{reason}}",
+      "done": "Reliquat soldé : la facture peut être saisie",
+      "failed": "Le reliquat n'a pas pu être soldé",
+      "reasonRequired": "Motif obligatoire",
+      "err": {
+        "CLOSE_REASON_REQUIRED": "Motif obligatoire",
+        "DELIVERY_CLOSED": "Le reliquat est déjà soldé",
+        "PO_NOT_ACTIVE": "Commande non approuvée ou terminée",
+        "NOTHING_REMAINING": "Tout a été livré : rien à solder",
+        "NOTHING_DELIVERED": "Rien n'a été reçu : rejetez ou annulez plutôt la commande",
+        "PO_NOT_FOUND": "Commande introuvable"
+      }
     }
   },
   "stock": {
@@ -3245,8 +3275,8 @@
               "Méthode d'achat : choisie par les achats — au moins celle imposée par le montant (achat direct, devis multiples, appel d'offres) ou source unique justifiée.",
               "Choix du fournisseur : devis, appel d'offres publié sur le portail fournisseurs, ou fournisseur unique.",
               "Bon de commande (PO-AAAA-NNNN) : créé par les achats, approuvé par la direction, puis envoyé automatiquement par email au fournisseur.",
-              "Réception (GRN-AAAA-NNNN) : la logistique enregistre ce qui est arrivé (accepté / rejeté) ; les articles stockables entrent en stock.",
-              "Acceptation de service (SAN-AAAA-NNNN) : le demandeur confirme que la prestation a été rendue.",
+              "Acceptation de service (SAN-AAAA-NNNN) : à chaque livraison, le demandeur confirme d'abord que la livraison ou la prestation est conforme.",
+              "Réception (GRN-AAAA-NNNN) : puis la logistique enregistre ce qui est arrivé (accepté / rejeté) ; les articles stockables entrent en stock. Tant qu'il reste à livrer, une nouvelle acceptation puis une nouvelle réception sont demandées ; si le fournisseur ne livrera pas le reste, « Solder le reliquat ».",
               "Facture (INV-AAAA-NNNN) : la finance saisit la facture du fournisseur ; le rapprochement 3 voies (commande + réception + facture) est automatique.",
               "Paiement (PAY-AAAA-NNNN) : la finance enregistre le paiement ; un reçu PDF est disponible."
             ]
@@ -3788,12 +3818,72 @@
           {
             "type": "steps",
             "items": [
-              "Ouvrez la tâche « Bon de réception » : le formulaire reprend la commande. Pour chaque ligne, la quantité proposée est le reste à livrer.",
+              "Avant chaque réception, le demandeur a validé la livraison (acceptation de service, SAN). Ouvrez ensuite la tâche « Bon de réception (GRN) » : le formulaire reprend la commande. Pour chaque ligne, la quantité proposée est le reste à livrer.",
               "Indiquez la quantité reçue et la quantité rejetée (avec son motif) : l'acceptée est calculée (reçu − rejeté).",
               "Choisissez le dépôt de destination si au moins un article est stockable. Si vous n'avez accès qu'à un dépôt, il est choisi d'office ; si vous en avez plusieurs, le choix est obligatoire.",
               "Complétez les informations demandées selon l'article : n° de lot et date de péremption, ou un n° de série par unité pour un équipement (« n° de série ; n° d'inventaire », une ligne par appareil).",
               "Enregistrez : le bon de réception est créé, la quantité acceptée entre en stock (un mouvement par ligne ou par appareil) et le circuit avance."
             ]
+          },
+          {
+            "type": "h",
+            "text": "Livraisons partielles (en plusieurs fois)"
+          },
+          {
+            "type": "p",
+            "text": "Un fournisseur peut livrer une commande en plusieurs fois. Chaque livraison suit le même circuit : le demandeur valide d'abord ce qui est arrivé (acceptation de service, SAN), puis la logistique enregistre la réception (bon de réception, GRN). Tant qu'il reste quelque chose à livrer, le circuit redemande une SAN puis un GRN à la livraison suivante ; la facture n'est demandée qu'une fois tout livré — ou le reste soldé."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Le fournisseur livre une partie : le demandeur reçoit la tâche « Acceptation de service (SAN) » et valide la livraison.",
+              "La logistique reçoit la tâche « Bon de réception (GRN) » et saisit la quantité réellement arrivée (ex. 6 sur 10). Sous les lignes, l'encadré orange indique ce qui restera à livrer.",
+              "Enregistrez : la quantité acceptée entre en stock. Le bon de commande passe « Livré partiellement » et le message « Livraison partielle enregistrée » confirme qu'un nouveau tour sera demandé.",
+              "À la livraison suivante, une nouvelle tâche « Acceptation de service (SAN) » arrive chez le demandeur, puis une nouvelle tâche « Bon de réception (GRN) » chez la logistique, avec le reste à livrer proposé (ex. 4).",
+              "Quand tout est livré, le bon de commande passe « Livré » et la Finance reçoit la tâche « Saisie de la facture fournisseur »."
+            ]
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Exemple : 10 cartons commandés",
+                "Étapes",
+                "Reste à livrer"
+              ],
+              [
+                "1re livraison : 6 cartons",
+                "SAN (demandeur) → GRN de 6 (logistique)",
+                "4 → le circuit redemande une SAN"
+              ],
+              [
+                "2e livraison : 4 cartons",
+                "SAN (demandeur) → GRN de 4 (logistique)",
+                "0 → facture"
+              ],
+              [
+                "Variante : le reste ne viendra jamais",
+                "GRN de 6 + « Le fournisseur ne livrera pas le reste » (motif)",
+                "Soldé → facture"
+              ]
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Solder le reliquat (le reste ne sera jamais livré)"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Pendant la réception : cochez « Le fournisseur ne livrera pas le reste : solder le reliquat » sous les lignes et indiquez le motif (obligatoire). La réception est enregistrée et le circuit passe directement à la facture.",
+              "Entre deux livraisons (une acceptation de service est en attente et rien d'autre n'arrivera) : fiche du bon de commande › « Suivi des livraisons » › bouton « Solder le reliquat », avec le motif. L'étape en attente est terminée et le circuit passe à la facture.",
+              "Après le solde : le bon de commande affiche « Soldé (reliquat annulé) » avec la date, l'auteur et le motif ; plus aucune réception n'est acceptée. L'action est tracée dans le journal d'audit.",
+              "Le solde n'est possible qu'après au moins une réception : si rien n'a été livré, rejetez ou annulez plutôt la commande."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Une quantité rejetée à la réception reste due : elle compte dans le reste à livrer (reste = commandé − accepté). Le fournisseur peut la remplacer lors d'une livraison suivante."
           },
           {
             "type": "h",
@@ -3816,7 +3906,7 @@
             "type": "list",
             "items": [
               "Bon de réception PDF (dépôt, articles, lots, zones de signature).",
-              "Plusieurs réceptions partielles sont possibles pour une même commande.",
+              "Livraisons partielles : voir « Livraisons partielles (en plusieurs fois) » et « Solder le reliquat » ci-dessus.",
               "Annulation (direction) : passe des écritures de stock inverses ; refusée si une partie du stock reçu a déjà été sortie ou affectée."
             ]
           },
@@ -3829,6 +3919,24 @@
               }
             ]
           }
+        ],
+        "faq": [
+          {
+            "q": "Le fournisseur a livré seulement une partie de la commande.",
+            "a": "Enregistrez la réception de ce qui est arrivé. Le circuit redemandera une acceptation de service au demandeur puis une réception à la logistique pour la livraison suivante ; la facture attend que tout soit livré."
+          },
+          {
+            "q": "Le fournisseur ne livrera jamais le reste.",
+            "a": "Soldez le reliquat : case « Le fournisseur ne livrera pas le reste » dans le formulaire de réception, ou bouton « Solder le reliquat » dans le suivi des livraisons du bon de commande. Le motif est obligatoire ; le circuit passe à la facture."
+          },
+          {
+            "q": "Pourquoi le demandeur doit-il valider avant chaque réception ?",
+            "a": "L'acceptation de service (SAN) confirme que la livraison ou la prestation correspond au besoin ; la réception (GRN) enregistre ensuite les quantités et le stock. Ce double contrôle est fait à chaque livraison."
+          },
+          {
+            "q": "Je ne trouve pas la tâche « Bon de réception (GRN) » pour le reste à livrer.",
+            "a": "Elle n'apparaît qu'après la nouvelle acceptation de service du demandeur. Vérifiez dans « Mes tâches » ou dans le suivi du workflow de la réquisition qui doit agir."
+          }
         ]
       },
       "services": {
@@ -3837,7 +3945,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "Pour une prestation (formation, maintenance, consultance…), le demandeur reçoit la tâche « Acceptation de service ». Il indique si le service a été rendu de manière satisfaisante et ajoute un commentaire. Un service accepté permet de passer à la facture ; un service rejeté arrête le circuit."
+            "text": "Avant chaque réception, le demandeur reçoit la tâche « Acceptation de service (SAN) » : il indique si la livraison ou la prestation est conforme et ajoute un commentaire. Acceptée, la logistique enregistre ensuite la réception (GRN) ; rejetée, le circuit s'arrête. En cas de livraison partielle, une nouvelle acceptation est demandée pour chaque livraison suivante, jusqu'à la livraison complète ou au solde du reliquat."
           },
           {
             "type": "links",
@@ -3847,6 +3955,12 @@
                 "label": "Acceptations de service"
               }
             ]
+          }
+        ],
+        "faq": [
+          {
+            "q": "Pourquoi le demandeur doit-il valider avant chaque réception ?",
+            "a": "L'acceptation de service (SAN) confirme que la livraison ou la prestation correspond au besoin ; la réception (GRN) enregistre ensuite les quantités et le stock. Ce double contrôle est fait à chaque livraison."
           }
         ]
       },
@@ -4763,7 +4877,8 @@
       "STOCK_ISSUE_CANCELLED": "Sortie de stock annulée",
       "STOCK_ADJUSTED": "Ajustement de stock",
       "STOCK_COUNT_VALIDATED": "Inventaire validé",
-      "STOCK_ITEMS_IMPORTED": "Import du catalogue de stock"
+      "STOCK_ITEMS_IMPORTED": "Import du catalogue de stock",
+      "PO_DELIVERY_CLOSED": "Reliquat d'un bon de commande soldé"
     },
     "groups": {
       "all": "Tous les événements",

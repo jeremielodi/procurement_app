@@ -21,7 +21,8 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 // Codes d'erreur du serveur → messages traduits (sinon message du serveur)
 const ERROR_KEYS = ['OVER_DELIVERY', 'WAREHOUSE_REQUIRED', 'WAREHOUSE_FORBIDDEN', 'NO_WAREHOUSE_ACCESS', 'LOT_REQUIRED',
-  'EXPIRY_REQUIRED', 'LOT_EXPIRED', 'LOT_EXPIRY_MISMATCH', 'INVALID_QUANTITY', 'SERIALS_REQUIRED', 'SERIAL_DUPLICATE', 'SERIAL_EXISTS', 'SERIAL_INTEGER', 'ASSET_TAG_EXISTS', 'ASSET_TAG_DUPLICATE'];
+  'EXPIRY_REQUIRED', 'LOT_EXPIRED', 'LOT_EXPIRY_MISMATCH', 'INVALID_QUANTITY', 'SERIALS_REQUIRED', 'SERIAL_DUPLICATE', 'SERIAL_EXISTS', 'SERIAL_INTEGER', 'ASSET_TAG_EXISTS', 'ASSET_TAG_DUPLICATE',
+  'DELIVERY_CLOSED', 'CLOSE_REASON_REQUIRED'];
 
 export default function GRNForm() {
   const navigate = useNavigate();
@@ -34,6 +35,9 @@ export default function GRNForm() {
   const [warehouses, setWarehouses] = useState(null); // null = en cours de chargement
   const [warehouseId, setWarehouseId] = useState('');
   const [observations, setObservations] = useState('');
+  // Le fournisseur ne livrera pas le reste : reliquat soldé avec cette réception (motif obligatoire)
+  const [closeRemaining, setCloseRemaining] = useState(false);
+  const [closeReason, setCloseReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingPO, setLoadingPO] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -123,6 +127,8 @@ export default function GRNForm() {
   const warehouseMissing = needsWarehouse && !warehouseId;
   const noWarehouseAccess = needsWarehouse && warehouses !== null && warehouses.length === 0;
   const fullyDelivered = lines.length > 0 && lines.every(l => l.remaining <= EPS);
+  // Reste à livrer après cette réception (le rejeté reste dû) : nouvelle SAN puis nouveau GRN, sauf reliquat soldé
+  const remainingAfter = lines.reduce((sum, l, i) => sum + Math.max(0, (l.remaining || 0) - (computed[i]?.accepted || 0)), 0);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -132,6 +138,8 @@ export default function GRNForm() {
     if (nothingReceived) { toast.error(t('grn.err.nothingReceived')); return; }
     if (noWarehouseAccess) { toast.error(t('grn.err.NO_WAREHOUSE_ACCESS')); return; }
     if (warehouseMissing) { toast.error(t('grn.err.WAREHOUSE_REQUIRED')); return; }
+    const closing = closeRemaining && remainingAfter > EPS;
+    if (closing && !closeReason.trim()) { toast.error(t('grn.err.CLOSE_REASON_REQUIRED')); return; }
 
     const grnItems = lines
       .map((l, i) => ({ l, c: computed[i] }))
@@ -153,10 +161,13 @@ export default function GRNForm() {
       const res = await grnService.create({
         poId, grnItems, observations, taskId: taskId || undefined,
         warehouseId: needsWarehouse ? warehouseId : undefined,
+        ...(closing ? { closeRemaining: true, closeReason: closeReason.trim() } : {}),
       });
       if (res.success) {
         toast.success(t('grn.created', { number: res.data.grnNumber, status: t(`grnStatus.${res.data.status}`, { defaultValue: res.data.status }) }));
         if (res.data.stockMovements) toast.success(t('grn.stockPosted', { count: res.data.stockMovements }));
+        if (res.data.deliveryClosed) toast(t('grn.remainingClosed'), { icon: 'ℹ️', duration: 7000 });
+        else if (res.data.grnCompliant && !res.data.deliveryComplete) toast(t('grn.nextDelivery'), { icon: '🚚', duration: 8000 });
         navigate(`/goods-receipts/${res.data.id}`);
       } else {
         toast.error(res.message || t('grn.createError'));
@@ -359,6 +370,22 @@ export default function GRNForm() {
             onChange={e => setObservations(e.target.value)}
           />
         </div>
+
+        {/* Livraison partielle : reste à livrer après cette réception */}
+        {!fullyDelivered && !nothingReceived && remainingAfter > EPS && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm space-y-2" data-testid="grn-remaining">
+            <p className="text-amber-900">{t('grn.remainingAfter', { remaining: fmtQty(remainingAfter) })}</p>
+            <label className="flex items-center gap-2 text-gray-800">
+              <input type="checkbox" checked={closeRemaining} onChange={e => setCloseRemaining(e.target.checked)} data-testid="grn-close-remaining" />
+              {t('grn.closeRemaining')}
+            </label>
+            {closeRemaining && (
+              <textarea rows={2} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={t('grn.closeReasonPlaceholder')} aria-label={t('grn.closeReason')}
+                value={closeReason} onChange={e => setCloseReason(e.target.value)} />
+            )}
+          </div>
+        )}
 
         <div className="flex gap-3">
           <button type="button" onClick={() => navigate(-1)}

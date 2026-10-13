@@ -1570,7 +1570,9 @@
       "SERIAL_EXISTS": "Serial number already registered",
       "SERIAL_INTEGER": "Whole quantity required",
       "ASSET_TAG_EXISTS": "Asset tag already assigned",
-      "ASSET_TAG_DUPLICATE": "Duplicate asset tag"
+      "ASSET_TAG_DUPLICATE": "Duplicate asset tag",
+      "DELIVERY_CLOSED": "The remaining quantity of this order has been closed: no further receipt is possible",
+      "CLOSE_REASON_REQUIRED": "Reason required to close the remaining quantity"
     },
     "cancel": "Cancel receipt",
     "cancelTitle": "Cancel {{number}}?",
@@ -1588,7 +1590,13 @@
     "notLinked": "Not linked to the catalogue",
     "serials": "Serial numbers",
     "serialsPlaceholder": "One per line: serial number ; asset tag (optional)\nE.g. 5CD1234XYZ ; INV-0042",
-    "serialsHint": "One serial number per accepted unit"
+    "serialsHint": "One serial number per accepted unit",
+    "remainingAfter": "After this receipt, {{remaining}} will remain to be delivered: a new service acceptance (SAN) and a new receipt (GRN) will be requested at the next delivery.",
+    "closeRemaining": "The supplier will not deliver the rest: close the remaining quantity",
+    "closeReason": "Reason for closing the remaining quantity",
+    "closeReasonPlaceholder": "Reason (required) — e.g. item permanently out of stock at the supplier",
+    "remainingClosed": "Remaining quantity closed: the workflow moves on to invoice entry.",
+    "nextDelivery": "Partial delivery recorded: the rest will be received at the next delivery (new SAN then new GRN)."
   },
   "san": {
     "notFound": "SAN not found",
@@ -2587,7 +2595,29 @@
     "status": {
       "DELIVERED": "Delivered",
       "PARTIALLY_DELIVERED": "Partially delivered",
-      "NOT_DELIVERED": "Not delivered"
+      "NOT_DELIVERED": "Not delivered",
+      "CLOSED_SHORT": "Closed (remainder cancelled)"
+    },
+    "close": {
+      "button": "Close remaining quantity",
+      "title": "Close remaining quantity",
+      "confirm": "Close",
+      "reason": "Reason",
+      "reasonPlaceholder": "E.g. the supplier confirmed they will not deliver the rest (out of stock)",
+      "explain": "{{remaining}} remain to be delivered. If the supplier will not deliver it, close it: no further receipt will be possible and the workflow goes straight to invoice entry.",
+      "partialHint": "Partial delivery: for each new delivery, the requester accepts the service (SAN) and then logistics records the receipt (GRN). If the rest will never be delivered, use \"Close remaining quantity\".",
+      "banner": "Remaining quantity closed on {{date}} by {{by}} — reason: {{reason}}",
+      "done": "Remaining quantity closed: the invoice can be entered",
+      "failed": "The remaining quantity could not be closed",
+      "reasonRequired": "Reason required",
+      "err": {
+        "CLOSE_REASON_REQUIRED": "Reason required",
+        "DELIVERY_CLOSED": "The remaining quantity is already closed",
+        "PO_NOT_ACTIVE": "Purchase order not approved or finished",
+        "NOTHING_REMAINING": "Everything has been delivered: nothing to close",
+        "NOTHING_DELIVERED": "Nothing has been received: reject or cancel the order instead",
+        "PO_NOT_FOUND": "Purchase order not found"
+      }
     }
   },
   "stock": {
@@ -3245,8 +3275,8 @@
               "Purchasing method: chosen by Procurement — at least the one required by the amount (direct purchase, multiple quotations, call for tenders) or a justified sole source.",
               "Supplier selection: quotations, a call for tenders published on the supplier portal, or a single supplier.",
               "Purchase order (PO-YYYY-NNNN): created by procurement, approved by management, then sent automatically by email to the supplier.",
-              "Goods receipt (GRN-YYYY-NNNN): logistics records what arrived (accepted / rejected); stockable items enter stock.",
-              "Service acceptance (SAN-YYYY-NNNN): the requester confirms that the service was delivered.",
+              "Service acceptance (SAN-YYYY-NNNN): for each delivery, the requester first confirms that the delivery or service is compliant.",
+              "Goods receipt (GRN-YYYY-NNNN): logistics then records what arrived (accepted / rejected); stockable items enter stock. While something remains to be delivered, a new acceptance and a new receipt are requested; if the supplier will not deliver the rest, \"Close remaining quantity\".",
               "Invoice (INV-YYYY-NNNN): finance records the supplier invoice; the 3-way match (order + receipt + invoice) is automatic.",
               "Payment (PAY-YYYY-NNNN): finance records the payment; a PDF receipt is available."
             ]
@@ -3788,12 +3818,72 @@
           {
             "type": "steps",
             "items": [
-              "Open the \"Goods receipt\" task: the form loads the order. For each line, the proposed quantity is the remaining quantity.",
+              "Before each receipt, the requester has accepted the delivery (service acceptance, SAN). Then open the \"Goods receipt note (GRN)\" task: the form loads the order. For each line, the proposed quantity is the remaining quantity.",
               "Enter the quantity received and the quantity rejected (with its reason): the accepted quantity is calculated (received − rejected).",
               "Choose the destination warehouse if at least one item is stockable. If you only have access to one warehouse, it is selected automatically; if you have several, the choice is mandatory.",
               "Fill in the information required by the item: lot number and expiry date, or one serial number per unit for equipment (\"serial number ; asset tag\", one line per device).",
               "Save: the goods receipt is created, the accepted quantity enters stock (one movement per line or per device) and the process moves on."
             ]
+          },
+          {
+            "type": "h",
+            "text": "Partial deliveries (in several shipments)"
+          },
+          {
+            "type": "p",
+            "text": "A supplier may deliver an order in several shipments. Each delivery follows the same process: the requester first accepts what arrived (service acceptance, SAN), then logistics records the receipt (goods receipt note, GRN). While something remains to be delivered, the process asks again for a SAN and then a GRN at the next delivery; the invoice is only requested once everything is delivered — or the rest is closed."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "The supplier delivers part of the order: the requester receives the \"Service acceptance note (SAN)\" task and accepts the delivery.",
+              "Logistics receives the \"Goods receipt note (GRN)\" task and enters the quantity actually received (e.g. 6 out of 10). Below the lines, the orange box shows what will remain to be delivered.",
+              "Save: the accepted quantity enters stock. The purchase order becomes \"Partially delivered\" and the \"Partial delivery recorded\" message confirms that a new round will be requested.",
+              "At the next delivery, a new \"Service acceptance note (SAN)\" task goes to the requester, then a new \"Goods receipt note (GRN)\" task to logistics, with the remaining quantity proposed (e.g. 4).",
+              "When everything is delivered, the purchase order becomes \"Delivered\" and Finance receives the \"Enter supplier invoice\" task."
+            ]
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Example: 10 cartons ordered",
+                "Steps",
+                "Remaining"
+              ],
+              [
+                "1st delivery: 6 cartons",
+                "SAN (requester) → GRN of 6 (logistics)",
+                "4 → the process asks for a new SAN"
+              ],
+              [
+                "2nd delivery: 4 cartons",
+                "SAN (requester) → GRN of 4 (logistics)",
+                "0 → invoice"
+              ],
+              [
+                "Variant: the rest will never come",
+                "GRN of 6 + \"The supplier will not deliver the rest\" (reason)",
+                "Closed → invoice"
+              ]
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Close the remaining quantity (the rest will never be delivered)"
+          },
+          {
+            "type": "list",
+            "items": [
+              "During the receipt: tick \"The supplier will not deliver the rest: close the remaining quantity\" below the lines and enter the reason (required). The receipt is saved and the process goes straight to the invoice.",
+              "Between two deliveries (a service acceptance is pending and nothing else will arrive): purchase order › \"Delivery tracking\" › \"Close remaining quantity\" button, with the reason. The pending step is completed and the process moves on to the invoice.",
+              "After closing: the purchase order shows \"Closed (remainder cancelled)\" with the date, author and reason; no further receipt is accepted. The action is recorded in the audit log.",
+              "Closing is only possible after at least one receipt: if nothing was delivered, reject or cancel the order instead."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "A quantity rejected at receipt is still owed: it counts in the remaining quantity (remaining = ordered − accepted). The supplier can replace it in a later delivery."
           },
           {
             "type": "h",
@@ -3816,7 +3906,7 @@
             "type": "list",
             "items": [
               "Goods receipt PDF (warehouse, items, lots, signature areas).",
-              "Several partial receipts are possible for the same order.",
+              "Partial deliveries: see \"Partial deliveries (in several shipments)\" and \"Close the remaining quantity\" above.",
               "Cancellation (management): posts reversing stock entries; refused if part of the received stock has already been issued or assigned."
             ]
           },
@@ -3829,6 +3919,24 @@
               }
             ]
           }
+        ],
+        "faq": [
+          {
+            "q": "The supplier delivered only part of the order.",
+            "a": "Record the receipt of what arrived. The process will ask the requester for a new service acceptance and then logistics for a receipt at the next delivery; the invoice waits until everything is delivered."
+          },
+          {
+            "q": "The supplier will never deliver the rest.",
+            "a": "Close the remaining quantity: tick \"The supplier will not deliver the rest\" in the receipt form, or use \"Close remaining quantity\" in the purchase order delivery tracking. A reason is required; the process moves on to the invoice."
+          },
+          {
+            "q": "Why must the requester accept before each receipt?",
+            "a": "The service acceptance (SAN) confirms that the delivery or service matches the need; the receipt (GRN) then records quantities and stock. This double check is done for every delivery."
+          },
+          {
+            "q": "I cannot find the \"Goods receipt\" task for the remaining quantity.",
+            "a": "It only appears after the requester's new service acceptance. Check \"My tasks\" or the requisition's workflow tracking to see who needs to act."
+          }
         ]
       },
       "services": {
@@ -3837,7 +3945,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "For a service (training, maintenance, consultancy…), the requester receives the \"Service acceptance\" task. They indicate whether the service was delivered satisfactorily and add a comment. An accepted service moves on to the invoice; a rejected service stops the process."
+            "text": "Before each receipt, the requester receives the \"Service acceptance note (SAN)\" task: they indicate whether the delivery or service is compliant and add a comment. If accepted, logistics then records the receipt (GRN); if rejected, the process stops. For a partial delivery, a new acceptance is requested for each following delivery, until full delivery or until the remaining quantity is closed."
           },
           {
             "type": "links",
@@ -3847,6 +3955,12 @@
                 "label": "Service acceptances"
               }
             ]
+          }
+        ],
+        "faq": [
+          {
+            "q": "Why must the requester accept before each receipt?",
+            "a": "The service acceptance (SAN) confirms that the delivery or service matches the need; the receipt (GRN) then records quantities and stock. This double check is done for every delivery."
           }
         ]
       },
@@ -4763,7 +4877,8 @@
       "STOCK_ISSUE_CANCELLED": "Stock issue cancelled",
       "STOCK_ADJUSTED": "Stock adjustment",
       "STOCK_COUNT_VALIDATED": "Stock count validated",
-      "STOCK_ITEMS_IMPORTED": "Stock catalogue import"
+      "STOCK_ITEMS_IMPORTED": "Stock catalogue import",
+      "PO_DELIVERY_CLOSED": "Purchase order remaining quantity closed"
     },
     "groups": {
       "all": "All events",

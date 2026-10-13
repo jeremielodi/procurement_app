@@ -94,7 +94,9 @@ class RequisitionTimelineService {
       ),
       db.select(`SELECT id, email, first_name || ' ' || last_name AS name FROM users`, []),
       db.select(
-        `SELECT id, po_number, status, approved_at, approved_by, created_at, supplier_response, supplier_responded_at FROM purchase_orders WHERE requisition_id = $1 ORDER BY id`,
+        `SELECT id, po_number, status, approved_at, approved_by, created_at, supplier_response, supplier_responded_at,
+                delivery_closed_at, delivery_close_reason
+         FROM purchase_orders WHERE requisition_id = $1 ORDER BY id`,
         [req.id]
       ),
       db.one(`SELECT id, tender_number, status FROM tenders WHERE requisition_id = $1 AND status <> 'CANCELLED' ORDER BY id DESC LIMIT 1`, [req.id])
@@ -271,6 +273,14 @@ class RequisitionTimelineService {
           actor: who(row) || T('timeline.system'), details,
           links: info.poId ? [{ label: info.poNumber, to: `/purchase-orders/${info.poId}` }] : [],
         });
+      } else if (action === 'DELIVERY_CLOSED') {
+        const info = json || {};
+        events.push({
+          date: row.performed_at, kind: 'warning',
+          title: T('timeline.deliveryClosedEvent', { number: info.poNumber || '' }), actor: who(row) || T('timeline.system'),
+          details: info.comment ? [T('timeline.reason', { reason: info.comment })] : [],
+          links: info.poId ? [{ label: info.poNumber, to: `/purchase-orders/${info.poId}` }] : [],
+        });
       } else if (action === 'TENDER_PUBLISHED' || action === 'TENDER_AWARDED') {
         events.push({
           date: row.performed_at, kind: action === 'TENDER_AWARDED' ? 'success' : 'info',
@@ -309,6 +319,9 @@ class RequisitionTimelineService {
     const allPosPaid = activePos.length > 0
       && activePos.every(po => invoices.some(i => String(i.po_id) === String(po.id) && i.status === 'PAID'));
     const finished = req.status === 'COMPLETED' || processCompleted || (!req.process_instance_id && allPosPaid);
+    // Livraison en cours : une SAN ou un GRN attend encore (livraisons partielles) ; reliquat soldé : PO concerné
+    const deliveryOpen = pending.some(t => ['Activity_ServiceAcceptance', 'Activity_GoodsReceipt'].includes(t.key));
+    const closedPo = activePos.find(p => p.delivery_closed_at);
     const links = (list, numberKey, base) => list.map(d => ({ label: d[numberKey], to: `${base}/${d.id}` }));
 
     const steps = [
@@ -333,11 +346,17 @@ class RequisitionTimelineService {
         date: activePos.find(p => p.approved_at)?.approved_at,
         info: nameById.get(activePos.find(p => p.approved_by)?.approved_by) ? T('timeline.approvedBy', { name: nameById.get(activePos.find(p => p.approved_by).approved_by) }) : null,
       },
-      { key: 'supplier_confirmation', label: T('timeline.steps.supplier_confirmation'), status: done('Activity_SupplierConfirmation') || grns.length || activePos.some(p => p.supplier_response === 'CONFIRMED') ? 'done'
+      { key: 'supplier_confirmation', label: T('timeline.steps.supplier_confirmation'), status: done('Activity_SupplierConfirmation') || grns.length || sans.length || activePos.some(p => p.supplier_response === 'CONFIRMED') ? 'done'
           : activePos.some(p => p.supplier_response === 'DECLINED') ? 'failed' : 'pending',
         date: done('Activity_SupplierConfirmation')?.completedAt || activePos.find(p => p.supplier_response)?.supplier_responded_at },
-      { key: 'grn', label: T('timeline.steps.grn'), status: grns.length ? 'done' : 'pending', date: grns[0]?.receipt_date || grns[0]?.created_at, links: links(grns, 'grn_number', '/goods-receipts') },
-      { key: 'san', label: T('timeline.steps.san'), status: sans.length ? 'done' : 'pending', date: sans[0]?.acceptance_date || sans[0]?.created_at, links: links(sans, 'san_number', '/service-acceptance-notes') },
+      // Pour chaque livraison : SAN puis GRN ; tant qu'il reste à livrer, une nouvelle SAN puis un nouveau GRN sont demandés
+      { key: 'san', label: T('timeline.steps.san'), status: sans.length && !deliveryOpen ? 'done' : 'pending', date: sans[0]?.acceptance_date || sans[0]?.created_at, links: links(sans, 'san_number', '/service-acceptance-notes') },
+      {
+        key: 'grn', label: T('timeline.steps.grn'), status: grns.length && !deliveryOpen ? 'done' : 'pending',
+        date: grns[0]?.receipt_date || grns[0]?.created_at, links: links(grns, 'grn_number', '/goods-receipts'),
+        info: closedPo ? T('timeline.deliveryClosed', { reason: closedPo.delivery_close_reason || '' })
+          : grns.length > 1 || deliveryOpen ? T('timeline.deliveries', { count: grns.length }) : null,
+      },
       {
         key: 'invoice', label: T('timeline.steps.invoice'), status: invoices.length ? 'done' : 'pending', date: invoices[0]?.created_at,
         info: invoices[0]?.match_status ? T('timeline.matchingInfo', { status: matchLabel(invoices[0].match_status, lang) }) : null,

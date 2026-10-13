@@ -1,11 +1,16 @@
 // src/components/PurchaseOrders/PODeliveryTracking.jsx
 // Suivi des livraisons d'un bon de commande : par ligne, commandé / reçu / accepté / rejeté / reste à livrer,
 // et liste des réceptions (GRN). Le rejeté reste dû : reste = commandé − accepté.
-import React from 'react';
+// Livraison partielle : « Solder le reliquat » (le fournisseur ne livrera pas le reste, motif obligatoire) —
+// le workflow passe alors à la facture ; plus aucune réception n'est acceptée.
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Truck, PackageCheck } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Truck, PackageCheck, Ban } from 'lucide-react';
+import toast from 'react-hot-toast';
+import Modal from '../Common/Modal';
 import { deliveryService } from '../../services/stockService';
+import { usePermissions } from '../../hooks/usePermissions';
 import { t, getLocale } from '../../i18n';
 
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
@@ -13,6 +18,7 @@ const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits
 const BADGE = {
   DELIVERED: 'bg-green-100 text-green-800',
   PARTIALLY_DELIVERED: 'bg-amber-100 text-amber-800',
+  CLOSED_SHORT: 'bg-slate-200 text-slate-800',
   NOT_DELIVERED: 'bg-gray-100 text-gray-700',
 };
 
@@ -32,7 +38,27 @@ export default function PODeliveryTracking({ poId }) {
     enabled: !!poId,
   });
   const delivery = data?.data;
+  const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const [closing, setClosing] = useState(null); // motif saisi (fenêtre ouverte) ou null
+  const [saving, setSaving] = useState(false);
   if (isLoading || !delivery || !delivery.items?.length) return null;
+
+  const canClose = hasPermission('RECORD_GOODS_RECEIPT') && delivery.deliveryStatus === 'PARTIALLY_DELIVERED' && !delivery.closure;
+  const closeRemaining = async () => {
+    if (!closing?.trim()) { toast.error(t('delivery.close.reasonRequired')); return; }
+    setSaving(true);
+    try {
+      await deliveryService.closeRemaining(poId, closing.trim());
+      toast.success(t('delivery.close.done'));
+      setClosing(null);
+      queryClient.invalidateQueries({ queryKey: ['po-delivery', String(poId)] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-order'] });
+    } catch (e) {
+      const code = e.response?.data?.code;
+      toast.error(code ? t(`delivery.close.err.${code}`) : (e.response?.data?.message || t('delivery.close.failed')));
+    } finally { setSaving(false); }
+  };
 
   const { totals } = delivery;
   const percent = totals.ordered > 0 ? Math.min(100, Math.round((totals.accepted / totals.ordered) * 100)) : 0;
@@ -49,8 +75,25 @@ export default function PODeliveryTracking({ poId }) {
           </div>
           <span className="text-sm text-gray-600">{percent} %</span>
           <DeliveryStatusBadge status={delivery.deliveryStatus} />
+          {canClose && (
+            <button type="button" onClick={() => setClosing('')} data-testid="close-remaining"
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+              <Ban size={13} /> {t('delivery.close.button')}
+            </button>
+          )}
         </div>
       </div>
+      {delivery.closure && (
+        <div className="border-b border-slate-200 bg-slate-50 px-6 py-3 text-sm text-slate-700" data-testid="delivery-closure">
+          {t('delivery.close.banner', {
+            date: new Date(delivery.closure.closedAt).toLocaleDateString(getLocale()),
+            by: delivery.closure.closedBy || '—', reason: delivery.closure.reason,
+          })}
+        </div>
+      )}
+      {delivery.deliveryStatus === 'PARTIALLY_DELIVERED' && !delivery.closure && (
+        <div className="border-b border-amber-100 bg-amber-50 px-6 py-2 text-xs text-amber-800">{t('delivery.close.partialHint')}</div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-xs uppercase text-gray-500">
@@ -100,6 +143,17 @@ export default function PODeliveryTracking({ poId }) {
           </ul>
         </div>
       )}
+      <Modal isOpen={closing !== null} onClose={() => !saving && setClosing(null)} title={t('delivery.close.title')}
+        confirmText={t('delivery.close.confirm')} onConfirm={closeRemaining} isLoading={saving} confirmDisabled={!closing?.trim()}>
+        <div className="space-y-3 text-sm">
+          <p className="text-gray-700">{t('delivery.close.explain', { remaining: fmtQty(totals.remaining) })}</p>
+          <label className="block">
+            <span className="mb-1 block font-medium text-gray-700">{t('delivery.close.reason')} *</span>
+            <textarea rows={3} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={closing || ''} onChange={e => setClosing(e.target.value)} placeholder={t('delivery.close.reasonPlaceholder')} />
+          </label>
+        </div>
+      </Modal>
     </div>
   );
 }

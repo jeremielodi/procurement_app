@@ -30,20 +30,24 @@ class GoodsReceiptModel {
 
   /**
    * Création d'un GRN (et des entrées en stock).
-   * @param {object} data      { poId, receivedBy, grnItems, observations, warehouseId }
+   * @param {object} data      { poId, receivedBy, grnItems, observations, warehouseId, closeRemaining, closeReason }
+   *   closeRemaining : le fournisseur ne livrera pas le reste → reliquat soldé avec cette réception (motif obligatoire)
    *   grnItems[] : { poItemId, item_description, quantity_received, quantity_accepted, quantity_rejected,
    *                  rejection_reason, stockItemId (rattacher une ligne en texte libre), lotNumber, expiryDate }
    * @param {object} context   { userId } — utilisateur qui réceptionne (contrôle d'accès aux dépôts) ;
    *                           sans userId (worker) : dépôt obligatoire et non contrôlé
    */
-  async create({ poId, receivedBy, grnItems = [], observations, warehouseId }, { userId } = {}) {
+  async create({ poId, receivedBy, grnItems = [], observations, warehouseId, closeRemaining = false, closeReason }, { userId } = {}) {
+    const reason = String(closeReason || '').trim();
+    if (closeRemaining && !reason) throw fail(400, 'CLOSE_REASON_REQUIRED', 'Motif obligatoire pour solder le reliquat');
     return db.withTransaction(async (tx) => {
       // Verrou du PO : deux réceptions simultanées du même PO sont sérialisées (cumuls exacts)
       const po = await tx.one(
-        'SELECT id, enterprise_id, currency_id, supplier_id FROM purchase_orders WHERE id = $1 FOR UPDATE',
+        'SELECT id, enterprise_id, currency_id, supplier_id, delivery_closed_at FROM purchase_orders WHERE id = $1 FOR UPDATE',
         [poId]
       );
       if (!po) throw fail(404, 'PO_NOT_FOUND', 'Commande introuvable');
+      if (po.delivery_closed_at) throw fail(409, 'DELIVERY_CLOSED', 'Le reliquat de cette commande a été soldé : plus aucune réception possible');
 
       const poItems = await tx.select(
         `SELECT pi.id, pi.item_description, pi.quantity, pi.unit_price, pi.stock_item_id,
@@ -251,11 +255,23 @@ class GoodsReceiptModel {
          FROM v_po_item_delivery WHERE purchase_order_id = $1`,
         [poId]
       );
+      const poFullyDelivered = delivery.lines > 0 && delivery.open_lines === 0;
+      // Reliquat soldé avec cette réception (seulement s'il reste à livrer)
+      const deliveryClosed = closeRemaining && !poFullyDelivered;
+      if (deliveryClosed) {
+        await tx.exec(
+          `UPDATE purchase_orders SET delivery_closed_at = NOW(), delivery_closed_by = $2, delivery_close_reason = $3, updated_at = NOW()
+           WHERE id = $1`,
+          [poId, userId || receivedBy || null, reason]
+        );
+      }
 
       return {
         id: grn.id, grnNumber: grn.grn_number, status: grn.status, grnCompliant,
         warehouseId: warehouse?.id || null, stockMovements: movementCount,
-        poFullyDelivered: delivery.lines > 0 && delivery.open_lines === 0,
+        poFullyDelivered, deliveryClosed,
+        // Variable GoFlow : plus rien à réceptionner → facture ; sinon nouvelle SAN puis nouveau GRN
+        deliveryComplete: poFullyDelivered || deliveryClosed,
       };
     });
   }

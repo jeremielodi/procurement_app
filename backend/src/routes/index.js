@@ -354,6 +354,13 @@ router.post('/purchase-orders/:id/send',
   purchaseOrderController.send
 );
 
+// Livraison partielle : le fournisseur ne livrera pas le reste → reliquat soldé, le workflow passe à la facture
+router.post('/purchase-orders/:id/close-delivery',
+  authenticate,
+  hasPermission('RECORD_GOODS_RECEIPT'),
+  purchaseOrderController.closeDelivery
+);
+
 // Réponse du fournisseur reçue hors portail (téléphone, email) : confirmation / refus
 router.post('/purchase-orders/:id/supplier-response',
   authenticate,

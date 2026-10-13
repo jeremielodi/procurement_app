@@ -129,6 +129,52 @@ class PurchaseOrderController {
     }
   }
 
+  /**
+   * POST /purchase-orders/:id/close-delivery { reason } — solde le reliquat (le fournisseur ne livrera pas le reste)
+   * sans nouvelle réception. L'étape GoFlow en attente pour cette livraison (SAN ou GRN) est terminée avec
+   * deliveryComplete = true : le workflow passe à la facture.
+   */
+  async closeDelivery(req, res) {
+    try {
+      const result = await purchaseOrderModel.closeDelivery(req.params.id, { reason: req.body?.reason, userId: req.user.id });
+      const reason = String(req.body.reason).trim();
+      await audit(req, AUDIT.PO_DELIVERY_CLOSED, {
+        entity: { type: 'purchase_order', id: result.poId, label: result.poNumber },
+        details: { reason, remaining: result.remaining, accepted: result.accepted },
+      });
+
+      let camundaTaskCompleted = false;
+      const row = await db.one(
+        `SELECT r.id AS requisition_id, r.process_instance_id FROM purchase_orders po JOIN requisitions r ON r.id = po.requisition_id WHERE po.id = $1`,
+        [result.poId]
+      );
+      if (row?.process_instance_id) {
+        try {
+          const tasks = await camundaService.getProcessTasks(row.process_instance_id);
+          const task = (tasks || []).find(t => ['Activity_ServiceAcceptance', 'Activity_GoodsReceipt'].includes(t.taskDefinitionKey));
+          if (task) {
+            const vars = task.taskDefinitionKey === 'Activity_ServiceAcceptance'
+              ? { serviceAccepted: true, deliveryComplete: true, deliveryCloseReason: reason }
+              : { grnCompliant: true, deliveryComplete: true, deliveryCloseReason: reason };
+            camundaTaskCompleted = !!(await camundaService.completeTask(task.id, vars))?.success;
+          }
+          await db.exec(
+            `INSERT INTO workflow_history (entity_type, entity_id, process_instance_id, task_id, task_name, action, comments, performed_by, performed_at)
+             VALUES ('requisition', $1, $2, $3, $4, 'DELIVERY_CLOSED', $5, $6, CURRENT_TIMESTAMP)`,
+            [row.requisition_id, row.process_instance_id, task?.id || null, task?.taskDefinitionKey || null,
+             JSON.stringify({ poId: result.poId, poNumber: result.poNumber, comment: reason }), req.user.id]
+          );
+        } catch (e) {
+          console.error('[PO] Solde du reliquat — étape GoFlow (non bloquant) :', e.message);
+        }
+      }
+      res.json({ success: true, data: { ...result, camundaTaskCompleted }, message: 'Reliquat soldé' });
+    } catch (error) {
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+      res.status(500).json({ success: false, message: 'Erreur lors du solde du reliquat', error: error.message });
+    }
+  }
+
   async update(req, res) {
     try {
       const { id } = req.params;

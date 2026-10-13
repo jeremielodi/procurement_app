@@ -50,6 +50,9 @@ export const stockService = {
 // Suivi des livraisons d'un bon de commande (commandé / reçu / accepté / reste à livrer)
 export const deliveryService = {
   get: (poId) => api.get(`/purchase-orders/${poId}/delivery`).then(data),
+  // Le fournisseur ne livrera pas le reste : reliquat soldé (motif obligatoire), le workflow passe à la facture
+  closeRemaining: (poId, reason) =>
+    api.post(`/purchase-orders/${poId}/close-delivery`, { reason }, { skipErrorToast: true }).then(data),
 };
 
 // Sorties de stock vers un utilisateur (bons de sortie)

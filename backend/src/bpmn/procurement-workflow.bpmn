@@ -161,34 +161,38 @@
     </bpmn:serviceTask>
     <bpmn:userTask id="Activity_SupplierConfirmation" name="Supplier Order Confirmation" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_SendPO_SupplierConfirmation</bpmn:incoming>
-      <bpmn:outgoing>Flow_SupplierConfirmation_GRN</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SupplierConfirmation_SAN</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:userTask id="Activity_GoodsReceipt" name="Goods Receipt Note (GRN)" camunda:assignee="${storeKeeper}" camunda:candidateGroups="logistic">
-      <bpmn:incoming>Flow_SupplierConfirmation_GRN</bpmn:incoming>
+      <bpmn:incoming>Flow_SAN_OK</bpmn:incoming>
       <bpmn:outgoing>Flow_GRN_Gateway</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:exclusiveGateway id="Gateway_GRNDecision" name="GRN Compliant?">
+    <bpmn:exclusiveGateway id="Gateway_GRNDecision" name="GRN Compliant / Delivery Complete?">
       <bpmn:incoming>Flow_GRN_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_GRN_OK</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GRN_NextDelivery</bpmn:outgoing>
       <bpmn:outgoing>Flow_GRN_Dispute</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:endEvent id="Event_GRNDispute" name="GRN Dispute / Return">
       <bpmn:incoming>Flow_GRN_Dispute</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:userTask id="Activity_ServiceAcceptance" name="Service Acceptance Note (SAN)" camunda:assignee="${requester}" camunda:candidateGroups="requester">
-      <bpmn:incoming>Flow_GRN_OK</bpmn:incoming>
+      <bpmn:incoming>Flow_SupplierConfirmation_SAN</bpmn:incoming>
+      <bpmn:incoming>Flow_GRN_NextDelivery</bpmn:incoming>
       <bpmn:outgoing>Flow_SAN_Gateway</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:exclusiveGateway id="Gateway_SANDecision" name="Service Accepted?">
       <bpmn:incoming>Flow_SAN_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_SAN_OK</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SAN_DeliveryClosed</bpmn:outgoing>
       <bpmn:outgoing>Flow_SAN_Rejected</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:endEvent id="Event_SANRejected" name="Service Rejected">
       <bpmn:incoming>Flow_SAN_Rejected</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:userTask id="Activity_EnterInvoice" name="Enter Supplier Invoice" camunda:assignee="${financeOfficer}" camunda:candidateGroups="finance">
-      <bpmn:incoming>Flow_SAN_OK</bpmn:incoming>
+      <bpmn:incoming>Flow_GRN_OK</bpmn:incoming>
+      <bpmn:incoming>Flow_SAN_DeliveryClosed</bpmn:incoming>
       <bpmn:outgoing>Flow_EnterInvoice_ProcessInvoice</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:serviceTask id="Task_ProcessInvoice" name="3-Way Matching (PO + GRN + Invoice)" camunda:type="external" camunda:topic="process_invoice">
@@ -271,20 +275,26 @@
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${poApproved == false}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_SendPO_SupplierConfirmation" sourceRef="Task_SendPO" targetRef="Activity_SupplierConfirmation" />
-    <bpmn:sequenceFlow id="Flow_SupplierConfirmation_GRN" sourceRef="Activity_SupplierConfirmation" targetRef="Activity_GoodsReceipt" />
-    <bpmn:sequenceFlow id="Flow_GRN_Gateway" sourceRef="Activity_GoodsReceipt" targetRef="Gateway_GRNDecision" />
-    <bpmn:sequenceFlow id="Flow_GRN_OK" sourceRef="Gateway_GRNDecision" targetRef="Activity_ServiceAcceptance">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${grnCompliant == true}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_GRN_Dispute" sourceRef="Gateway_GRNDecision" targetRef="Event_GRNDispute">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${grnCompliant == false}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SupplierConfirmation_SAN" sourceRef="Activity_SupplierConfirmation" targetRef="Activity_ServiceAcceptance" />
     <bpmn:sequenceFlow id="Flow_SAN_Gateway" sourceRef="Activity_ServiceAcceptance" targetRef="Gateway_SANDecision" />
-    <bpmn:sequenceFlow id="Flow_SAN_OK" sourceRef="Gateway_SANDecision" targetRef="Activity_EnterInvoice">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${serviceAccepted == true}</bpmn:conditionExpression>
+    <bpmn:sequenceFlow id="Flow_SAN_OK" sourceRef="Gateway_SANDecision" targetRef="Activity_GoodsReceipt">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${serviceAccepted == true &amp;&amp; deliveryComplete == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SAN_DeliveryClosed" sourceRef="Gateway_SANDecision" targetRef="Activity_EnterInvoice">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${serviceAccepted == true &amp;&amp; deliveryComplete == true}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_SAN_Rejected" sourceRef="Gateway_SANDecision" targetRef="Event_SANRejected">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${serviceAccepted == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_GRN_Gateway" sourceRef="Activity_GoodsReceipt" targetRef="Gateway_GRNDecision" />
+    <bpmn:sequenceFlow id="Flow_GRN_OK" sourceRef="Gateway_GRNDecision" targetRef="Activity_EnterInvoice">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${grnCompliant == true &amp;&amp; deliveryComplete == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_GRN_NextDelivery" sourceRef="Gateway_GRNDecision" targetRef="Activity_ServiceAcceptance">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${grnCompliant == true &amp;&amp; deliveryComplete == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_GRN_Dispute" sourceRef="Gateway_GRNDecision" targetRef="Event_GRNDispute">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${grnCompliant == false}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_EnterInvoice_ProcessInvoice" sourceRef="Activity_EnterInvoice" targetRef="Task_ProcessInvoice" />
     <bpmn:sequenceFlow id="Flow_Invoice_Gateway" sourceRef="Task_ProcessInvoice" targetRef="Gateway_InvoiceDecision" />
@@ -437,35 +447,35 @@
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_GoodsReceipt_di" bpmnElement="Activity_GoodsReceipt">
-        <dc:Bounds x="2900" y="1150" width="100" height="80" />
+        <dc:Bounds x="3250" y="1150" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_GRNDecision_di" bpmnElement="Gateway_GRNDecision" isMarkerVisible="true">
-        <dc:Bounds x="3105" y="1165" width="50" height="50" />
+        <dc:Bounds x="3445" y="1165" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="3085" y="1222" width="90" height="14" />
+          <dc:Bounds x="3500" y="1135" width="90" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_GRNDispute_di" bpmnElement="Event_GRNDispute">
-        <dc:Bounds x="3262" y="1172" width="36" height="36" />
+        <dc:Bounds x="3572" y="1172" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="3236" y="1215" width="88" height="27" />
+          <dc:Bounds x="3546" y="1215" width="88" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_ServiceAcceptance_di" bpmnElement="Activity_ServiceAcceptance">
-        <dc:Bounds x="3250" y="75" width="100" height="80" />
+        <dc:Bounds x="2900" y="75" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_SANDecision_di" bpmnElement="Gateway_SANDecision" isMarkerVisible="true">
-        <dc:Bounds x="3445" y="90" width="50" height="50" />
+        <dc:Bounds x="3045" y="90" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="3444" y="52.5" width="52" height="27" />
+          <dc:Bounds x="3030" y="147" width="52" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_SANRejected_di" bpmnElement="Event_SANRejected">
-        <dc:Bounds x="3592" y="97" width="36" height="36" />
+        <dc:Bounds x="3152" y="97" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="3572" y="140" width="76" height="14" />
+          <dc:Bounds x="3132" y="140" width="76" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_EnterInvoice_di" bpmnElement="Activity_EnterInvoice">
@@ -642,35 +652,47 @@
         <di:waypoint x="2660" y="810" />
         <di:waypoint x="2730" y="810" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_SupplierConfirmation_GRN_di" bpmnElement="Flow_SupplierConfirmation_GRN">
-        <di:waypoint x="2830" y="810" />
-        <di:waypoint x="2830" y="1190" />
-        <di:waypoint x="2900" y="1190" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_GRN_Gateway_di" bpmnElement="Flow_GRN_Gateway">
-        <di:waypoint x="3000" y="1190" />
-        <di:waypoint x="3105" y="1190" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_GRN_OK_di" bpmnElement="Flow_GRN_OK">
-        <di:waypoint x="3130" y="1165" />
-        <di:waypoint x="3130" y="115" />
-        <di:waypoint x="3250" y="115" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_GRN_Dispute_di" bpmnElement="Flow_GRN_Dispute">
-        <di:waypoint x="3155" y="1190" />
-        <di:waypoint x="3262" y="1190" />
+      <bpmndi:BPMNEdge id="Flow_SupplierConfirmation_SAN_di" bpmnElement="Flow_SupplierConfirmation_SAN">
+        <di:waypoint x="2780" y="770" />
+        <di:waypoint x="2780" y="115" />
+        <di:waypoint x="2900" y="115" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_SAN_Gateway_di" bpmnElement="Flow_SAN_Gateway">
-        <di:waypoint x="3350" y="115" />
-        <di:waypoint x="3445" y="115" />
+        <di:waypoint x="3000" y="115" />
+        <di:waypoint x="3045" y="115" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_SAN_OK_di" bpmnElement="Flow_SAN_OK">
-        <di:waypoint x="3470" y="140" />
+        <di:waypoint x="3070" y="140" />
+        <di:waypoint x="3070" y="1190" />
+        <di:waypoint x="3250" y="1190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SAN_DeliveryClosed_di" bpmnElement="Flow_SAN_DeliveryClosed">
+        <di:waypoint x="3070" y="90" />
+        <di:waypoint x="3070" y="62" />
+        <di:waypoint x="3470" y="62" />
         <di:waypoint x="3470" y="237" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_SAN_Rejected_di" bpmnElement="Flow_SAN_Rejected">
-        <di:waypoint x="3495" y="115" />
-        <di:waypoint x="3592" y="115" />
+        <di:waypoint x="3095" y="115" />
+        <di:waypoint x="3152" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GRN_Gateway_di" bpmnElement="Flow_GRN_Gateway">
+        <di:waypoint x="3350" y="1190" />
+        <di:waypoint x="3445" y="1190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GRN_OK_di" bpmnElement="Flow_GRN_OK">
+        <di:waypoint x="3470" y="1165" />
+        <di:waypoint x="3470" y="317" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GRN_NextDelivery_di" bpmnElement="Flow_GRN_NextDelivery">
+        <di:waypoint x="3470" y="1215" />
+        <di:waypoint x="3470" y="1262" />
+        <di:waypoint x="2950" y="1262" />
+        <di:waypoint x="2950" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GRN_Dispute_di" bpmnElement="Flow_GRN_Dispute">
+        <di:waypoint x="3495" y="1190" />
+        <di:waypoint x="3572" y="1190" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_EnterInvoice_ProcessInvoice_di" bpmnElement="Flow_EnterInvoice_ProcessInvoice">
         <di:waypoint x="3520" y="277" />

@@ -4,11 +4,13 @@ const tenant = require('../utils/tenant');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 
 // Statut de livraison d'un PO (suivi des réceptions, vue v_po_item_delivery) :
-// DELIVERED = tout accepté, PARTIALLY_DELIVERED = au moins une quantité acceptée, NOT_DELIVERED sinon
+// DELIVERED = tout accepté, CLOSED_SHORT = reliquat soldé avant la livraison complète,
+// PARTIALLY_DELIVERED = au moins une quantité acceptée, NOT_DELIVERED sinon
 const DELIVERY_STATUS_SQL = (alias) => `(
   SELECT CASE
     WHEN COUNT(*) = 0 THEN NULL
     WHEN BOOL_AND(d.quantity_remaining <= 0) THEN 'DELIVERED'
+    WHEN ${alias}.delivery_closed_at IS NOT NULL THEN 'CLOSED_SHORT'
     WHEN BOOL_OR(d.quantity_accepted > 0) THEN 'PARTIALLY_DELIVERED'
     ELSE 'NOT_DELIVERED' END
   FROM v_po_item_delivery d WHERE d.purchase_order_id = ${alias}.id)`;
@@ -91,7 +93,14 @@ class PurchaseOrderModel {
    * Suivi des livraisons d'un PO : lignes (commandé / reçu / accepté / rejeté / reste) et réceptions
    */
   async getDelivery(id) {
-    const po = await db.one(`SELECT po.id, po.po_number, ${DELIVERY_STATUS_SQL('po')} AS delivery_status FROM purchase_orders po WHERE po.id = $1`, [id]);
+    const po = await db.one(
+      `SELECT po.id, po.po_number, ${DELIVERY_STATUS_SQL('po')} AS delivery_status,
+              po.delivery_closed_at, po.delivery_close_reason,
+              TRIM(COALESCE(cu.first_name, '') || ' ' || COALESCE(cu.last_name, '')) AS delivery_closed_by_name
+       FROM purchase_orders po LEFT JOIN users cu ON cu.id = po.delivery_closed_by
+       WHERE po.id = $1`,
+      [id]
+    );
     if (!po) return null;
     const items = await db.select(PO_ITEMS_SQL, [id]);
     const receipts = await db.select(
@@ -111,9 +120,42 @@ class PurchaseOrderModel {
     const sum = (k) => items.reduce((s, i) => s + (Number(i[k]) || 0), 0);
     return {
       poId: po.id, poNumber: po.po_number, deliveryStatus: po.delivery_status,
+      closure: po.delivery_closed_at
+        ? { closedAt: po.delivery_closed_at, reason: po.delivery_close_reason, closedBy: po.delivery_closed_by_name || null }
+        : null,
       totals: { ordered: sum('quantity'), accepted: sum('delivered_accepted'), rejected: sum('delivered_rejected'), remaining: sum('quantity_remaining') },
       items, receipts,
     };
+  }
+
+  /**
+   * Solde le reliquat d'un PO (le fournisseur ne livrera pas le reste), sans nouvelle réception.
+   * Refusé : motif vide, PO non approuvé, déjà soldé, rien de reçu (annuler / rejeter le PO), tout livré.
+   */
+  async closeDelivery(id, { reason, userId }) {
+    const text = String(reason || '').trim();
+    const fail = (status, code, message) => Object.assign(new Error(message), { status, code });
+    if (!text) throw fail(400, 'CLOSE_REASON_REQUIRED', 'Motif obligatoire pour solder le reliquat');
+    return db.withTransaction(async (tx) => {
+      const po = await tx.one('SELECT id, po_number, status, delivery_closed_at FROM purchase_orders WHERE id = $1 FOR UPDATE', [id]);
+      if (!po) throw fail(404, 'PO_NOT_FOUND', 'Commande introuvable');
+      if (po.delivery_closed_at) throw fail(409, 'DELIVERY_CLOSED', 'Le reliquat de cette commande est déjà soldé');
+      if (!['PO_APPROVED', 'PO_SENT', 'PO_CONFIRMED', 'PO_RECEIVED', 'APPROVED', 'SENT'].includes(po.status)) {
+        throw fail(409, 'PO_NOT_ACTIVE', 'Commande non approuvée ou terminée');
+      }
+      const d = await tx.one(
+        `SELECT COALESCE(SUM(quantity_accepted), 0)::float8 AS accepted, COALESCE(SUM(GREATEST(quantity_remaining, 0)), 0)::float8 AS remaining
+         FROM v_po_item_delivery WHERE purchase_order_id = $1`,
+        [id]
+      );
+      if (!(d.remaining > 0)) throw fail(409, 'NOTHING_REMAINING', 'Tout a été livré : rien à solder');
+      if (!(d.accepted > 0)) throw fail(409, 'NOTHING_DELIVERED', 'Rien n\x27a été reçu : rejetez ou annulez la commande plutôt que de la solder');
+      await tx.exec(
+        `UPDATE purchase_orders SET delivery_closed_at = NOW(), delivery_closed_by = $2, delivery_close_reason = $3, updated_at = NOW() WHERE id = $1`,
+        [id, userId, text]
+      );
+      return { poId: po.id, poNumber: po.po_number, remaining: d.remaining, accepted: d.accepted };
+    });
   }
 
   /**

@@ -126,10 +126,16 @@ function scenario({ method, sourcingTask, amount, justification, refused }) {
       await waitForTask(request, req, 'Activity_SupplierConfirmation');
     });
 
-    test('Confirmation fournisseur → réception → SAN', async ({ request }) => {
+    test('Confirmation fournisseur → SAN → réception', async ({ request }) => {
       const H = auth(token);
       const confirm = await request.post(`/api/purchase-orders/${po.id}/supplier-response`, { headers: H, data: { response: 'CONFIRMED', deliveryDate: future(5) } });
       expect(confirm.status(), JSON.stringify(await confirm.json())).toBe(200);
+
+      // Pour chaque livraison : acceptation (SAN) du demandeur d'abord, puis réception (GRN)
+      const sanTask = await waitForTask(request, req, 'Activity_ServiceAcceptance');
+      expect((await openTasks(request, req.process_instance_id)).map(t => t.taskDefinitionKey)).not.toContain('Activity_GoodsReceipt');
+      const sanRes = await request.post('/api/service-acceptance-notes', { headers: H, data: { poId: po.id, taskId: sanTask.id, serviceAccepted: true, comments: 'Conforme' } });
+      expect([200, 201], JSON.stringify(await sanRes.json())).toContain(sanRes.status());
 
       const grnTask = await waitForTask(request, req, 'Activity_GoodsReceipt');
       const poItem = (await (await request.get(`/api/purchase-orders/${po.id}`, { headers: H })).json()).data.items[0];
@@ -140,10 +146,7 @@ function scenario({ method, sourcingTask, amount, justification, refused }) {
       const grnBody = await grnRes.json();
       expect([200, 201], JSON.stringify(grnBody)).toContain(grnRes.status());
       grn = grnBody.data;
-
-      const sanTask = await waitForTask(request, req, 'Activity_ServiceAcceptance');
-      const sanRes = await request.post('/api/service-acceptance-notes', { headers: H, data: { poId: po.id, taskId: sanTask.id, serviceAccepted: true, comments: 'Conforme' } });
-      expect([200, 201], JSON.stringify(await sanRes.json())).toContain(sanRes.status());
+      expect(grn).toMatchObject({ poFullyDelivered: true, deliveryComplete: true });
     });
 
     test('Facture → paiement → processus terminé', async ({ request }) => {

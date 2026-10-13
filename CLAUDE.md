@@ -54,8 +54,8 @@ Le fichier `backend/src/services/CamundaService.js` montre comment appeler GoFlo
 6. **Purchase Order** — créé par Procurement, approuvé par management
 7. **Envoi PO fournisseur** — email automatique (`send_po_notification`)
 8. **Confirmation fournisseur** — userTask d'attente de l'accusé de réception
-9. **Goods Receipt Note (GRN)** — logistique enregistre la réception physique
-10. **Service Acceptance Note (SAN)** — requester valide la prestation reçue
+9. **Service Acceptance Note (SAN)** — le requester valide la livraison / prestation reçue (à chaque livraison, AVANT le GRN)
+10. **Goods Receipt Note (GRN)** — logistique enregistre la réception physique ; reste à livrer → nouvelle SAN puis nouveau GRN (boucle BPMN), jusqu'à livraison complète ou reliquat soldé
 11. **Saisie facture** — Finance enregistre la facture fournisseur
 12. **Rapprochement 3 voies** — automatique (`process_invoice`) : PO + GRN + Facture
 13. **Paiement** — Finance ordonne le paiement
@@ -116,8 +116,8 @@ Process ID : `ProcurementProcess`
 | `Activity_POApproval` | Approve Purchase Order | `management` | Fenêtre (onglet tâches de la réquisition) |
 | `Activity_BudgetAdjustment` | Request Budget Adjustment | `requester` (assignee `${requester}`) | **→ fiche de la réquisition** (`BudgetAdjustmentPanel`) |
 | `Activity_SupplierConfirmation` | Supplier Order Confirmation | `procurement` | **→ fiche du PO `?confirm=1`** (`SupplierConfirmationPanel`) ; complétée aussi par la réponse du fournisseur sur son portail |
-| `Activity_GoodsReceipt` | Goods Receipt Note (GRN) | `logistic` | **→ `/goods-receipts/new?taskId=&poId=`** |
-| `Activity_ServiceAcceptance` | Service Acceptance Note (SAN) | `requester` | **→ `/service-acceptance-notes/new?taskId=&poId=`** |
+| `Activity_ServiceAcceptance` | Service Acceptance Note (SAN) — avant chaque GRN | `requester` | **→ `/service-acceptance-notes/new?taskId=&poId=`** |
+| `Activity_GoodsReceipt` | Goods Receipt Note (GRN) — reboucle sur la SAN tant qu'il reste à livrer | `logistic` | **→ `/goods-receipts/new?taskId=&poId=`** |
 | `Activity_EnterInvoice` | Enter Supplier Invoice | `finance` | **→ `/invoices/new?taskId=&poId=`** |
 | `Activity_ProcessPayment` | Process Payment | `finance` | **→ `/payments/new?taskId=`** |
 
@@ -145,6 +145,14 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - **Recherche globale** : `GET /search?q=` (`GlobalSearchService`) — réquisitions, PO, réceptions, factures, fournisseurs, AO, articles ; chaque groupe seulement avec la permission de la liste correspondante, cloisonné par entreprise. Front : `Layout/GlobalSearch` dans l'en-tête (pas pour fournisseur ni super admin). Tests : `tests/api/global-search.spec.js`
 
 - **Méthode d'achat choisie** (2026-10-13) : `Activity_DetermineType` exige `procurementMethod` (400 `PROCUREMENT_METHOD_REQUIRED`), au moins aussi exigeant que le montant (≤ 5 000 achat direct, ≤ 25 000 devis, au-delà RFP ; sinon 400 `METHOD_BELOW_THRESHOLD` + `requiredMethod`), source unique toujours possible avec `justification` (400 `JUSTIFICATION_REQUIRED`) — `RequisitionModel.checkChosenMethod`. Le worker `classify_procurement` **reprend ce choix** (avant : recalcul par montant, ex. source unique → achat direct) ; sans choix (ancien processus) : calcul par montant. Front : `RequisitionTasks` choisit le formulaire de la fenêtre par `taskDefinitionKey` (`TASK_FORMS`) — par le nom, le BPMN français n'affichait pas le choix de la méthode. Tests : `tests/api/procurement-method.spec.js` (cycle complet GoFlow, source unique et achat direct)
+
+## Livraisons partielles : SAN puis GRN à chaque livraison (2026-10-13) — migration `23_po_delivery_closure.sql`
+
+- **BPMN (EN + FR, à redéployer dans GoFlow)** : Confirmation fournisseur → `Activity_ServiceAcceptance` → `Gateway_SANDecision` (`serviceAccepted == false` → `Event_SANRejected` ; `true && deliveryComplete == false` → `Activity_GoodsReceipt` ; `true && deliveryComplete == true` → facture) → `Gateway_GRNDecision` (`grnCompliant == false` → litige ; `true && deliveryComplete == false` → **retour à la SAN** (`Flow_GRN_NextDelivery`) ; `true && deliveryComplete == true` → facture). **Toute complétion de SAN / GRN doit fournir `deliveryComplete`** (sinon erreur d'expression GoFlow)
+- `deliveryComplete` : GRN → `GoodsReceiptModel.create` (tout accepté = `poFullyDelivered`, ou reliquat soldé avec cette réception) ; SAN → `ServiceAcceptanceController` (PO soldé ou tout livré). `POST /tasks/:id/complete` refuse SAN et GRN (400 `FORM_REQUIRED`) : uniquement par leurs formulaires
+- **Solder le reliquat** (le fournisseur ne livrera pas le reste, motif obligatoire) : colonnes PO `delivery_closed_at/by`, `delivery_close_reason` ; `delivery_status` `CLOSED_SHORT` ; avec une réception (`POST /goods-receipts { closeRemaining, closeReason }`, case dans `GRNForm`) ou sans (`POST /purchase-orders/:id/close-delivery { reason }`, `RECORD_GOODS_RECEIPT`, bouton de `PurchaseOrders/PODeliveryTracking` → termine la SAN / le GRN en attente avec `deliveryComplete = true`). Refus : `CLOSE_REASON_REQUIRED`, `DELIVERY_CLOSED` (aussi pour tout GRN après solde), `NOTHING_DELIVERED` (rien reçu : rejeter / annuler le PO), `NOTHING_REMAINING`, `PO_NOT_ACTIVE`. Audit `PO_DELIVERY_CLOSED`, événement `DELIVERY_CLOSED` du suivi
+- Suivi du workflow : étape `san` avant `grn`, étapes « en cours » tant qu'une SAN / un GRN attend, info « n réception(s) » / « Reliquat soldé ». Aide : rubrique `receiving` (« Livraisons partielles », « Solder le reliquat », FAQ)
+- Tests : `tests/api/partial-delivery.spec.js` (GoFlow), `tests/e2e/partial-delivery.spec.js`
 
 ## Réquisitions — import & avancement
 

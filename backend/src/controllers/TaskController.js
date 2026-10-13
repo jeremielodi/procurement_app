@@ -27,7 +27,6 @@ async function findEnterpriseTask(taskId) {
   const allowed = await processIdsOfEnterprise([task.processInstanceId].filter(Boolean));
   return allowed.has(task.processInstanceId) ? task : null;
 }
-const grnModel     = require('../models/GoodsReceiptModel');
 const supplierConfirmationService = require('../services/SupplierConfirmationService');
 const invoiceModel = require('../models/InvoiceModel');
 const paymentModel = require('../models/PaymentModel');
@@ -297,13 +296,6 @@ async function unclaimTask(req, res) {
   }
 }
 
-function getVariableFromVars(variables, key) {
-  if (!variables) return null;
-  // variables can be either flat { key: value } or Camunda shape { key: { value } }
-  const v = variables[key];
-  return v && typeof v === 'object' && 'value' in v ? v.value : v;
-}
-
 /**
  * Document créé depuis une tâche GoFlow (GRN, SAN, facture, paiement) → workflow_history, rattaché à la RÉQUISITION
  * (entity_id est un UUID : l'id entier du bon de commande y échouait) ; le n° du bon et le document sont dans comments
@@ -412,6 +404,15 @@ async function completeTask(req, res) {
       await supplierBankService.assertPayable(req, { invoiceId: variables.invoiceId || null, poId: variables.poId || null });
     }
 
+    // Réception et acceptation de service : uniquement par leurs formulaires (le document est créé et le BPMN reçoit
+    // grnCompliant / serviceAccepted / deliveryComplete) — jamais d'étape terminée sans son document
+    if (['Activity_GoodsReceipt', 'Activity_ServiceAcceptance'].includes(taskDefinitionKey)) {
+      return res.status(400).json({
+        success: false, code: 'FORM_REQUIRED',
+        message: 'Cette étape se traite depuis son formulaire (onglet « Tâches » de la réquisition)'
+      });
+    }
+
     // Build Camunda variables
     const taskVariables = { ...variables };
     if (comment) taskVariables.comment = comment;
@@ -463,42 +464,7 @@ async function completeTask(req, res) {
           });
         }
 
-        // --- GRN task (logistic) ---
-        if (taskDefinitionKey === 'Activity_GoodsReceipt') {
-          const grnItems  = variables.grnItems  || [];
-          const observations = variables.observations || null;
-          const poId = variables.poId || getVariableFromVars(variables, 'poId');
-
-          if (poId) {
-            const grnResult = await grnModel.create({
-              poId,
-              receivedBy: userId,
-              grnItems: Array.isArray(grnItems) ? grnItems : JSON.parse(grnItems || '[]'),
-              observations,
-              warehouseId: variables.warehouseId || null
-            }, { userId });
-            // Inject grnCompliant into the Camunda variables (already completed above,
-            // so we just store the result in workflow history)
-            await logDocumentEvent({
-              requisitionId, poId, taskId, userId, taskName: 'Activity_GoodsReceipt',
-              action: grnResult.grnCompliant ? 'GRN_COMPLETE' : 'GRN_PARTIAL',
-              document: { type: 'grn', id: grnResult.id, number: grnResult.grnNumber, status: grnResult.status },
-            });
-          }
-        }
-
-        // --- Service Acceptance task (requester) ---
-        if (taskDefinitionKey === 'Activity_ServiceAcceptance') {
-          const serviceAccepted = variables.serviceAccepted ?? variables.accepted ?? true;
-          const poId = variables.poId;
-          if (poId) {
-            await logDocumentEvent({
-              requisitionId, poId, taskId, userId, taskName: 'Activity_ServiceAcceptance',
-              action: serviceAccepted ? 'SERVICE_ACCEPTED' : 'SERVICE_REJECTED',
-              comment: variables.comments || null,
-            });
-          }
-        }
+        // Réception (GRN) et acceptation de service (SAN) : refusées plus haut (FORM_REQUIRED), traitées par leurs formulaires
 
         // --- Enter Invoice task (finance) ---
         if (taskDefinitionKey === 'Activity_EnterInvoice') {

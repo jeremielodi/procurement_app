@@ -2326,7 +2326,9 @@
     "addProject": "Ajouter un projet",
     "selectProject": "Choisir un projet",
     "removeProject": "Retirer de ce projet",
-    "loadingProjects": "Chargement des projets…"
+    "loadingProjects": "Chargement des projets…",
+    "total_one": "{{count}} utilisateur",
+    "total_other": "{{count}} utilisateurs"
   },
   "profiles": {
     "deleted": "Profil supprimé",

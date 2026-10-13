@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
+import AntdProvider from './components/Common/AntdProvider'
 import { onLangChange } from './i18n'
 import './styles/global.css'
 
@@ -28,7 +29,9 @@ root.render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <App />
+          <AntdProvider>
+            <App />
+          </AntdProvider>
           <Toaster position="top-right" />
         </AuthProvider>
       </BrowserRouter>

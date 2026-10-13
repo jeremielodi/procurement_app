@@ -9,10 +9,13 @@ import UserForm from './UserForm';
 import toast from 'react-hot-toast';
 import { t } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+import { Table } from 'antd';
+
+const PAGE_SIZE = 20;
 
 export default function UserList() {
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState({ search: '', is_active: 'all', page: 1 });
+  const [filters, setFilters] = useState({ search: '', is_active: 'all', page: 1, limit: PAGE_SIZE });
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showResetModal, setShowResetModal] = useState(false);
@@ -61,6 +64,90 @@ export default function UserList() {
   if(users.data) {
     users = users.data;
   }
+
+  // Colonnes du tableau antd (pagination côté serveur : page / limit envoyés à GET /users)
+  const columns = [
+    {
+      title: t('users.user'),
+      key: 'user',
+      render: (_, user) => (
+        <>
+          <div className="font-medium text-gray-900">{user.first_name} {user.last_name}</div>
+          <div className="text-sm text-gray-500">@{user.username}</div>
+        </>
+      ),
+    },
+    { title: t('common.email'), dataIndex: 'email', key: 'email', render: (v) => <span className="text-gray-600">{v}</span> },
+    { title: t('common.department'), dataIndex: 'department', key: 'department', render: (v) => <span className="text-gray-600">{v || '-'}</span> },
+    {
+      title: t('users.profiles'),
+      key: 'profiles',
+      render: (_, user) => (
+        <div className="flex flex-wrap gap-1">
+          {user.profile_names?.filter(n => n).map((profile, idx) => (
+            <span key={idx} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">{profile}</span>
+          ))}
+        </div>
+      ),
+    },
+    {
+      title: t('common.status'),
+      dataIndex: 'is_active',
+      key: 'status',
+      render: (active) => (
+        <span className={`px-2 py-1 text-xs rounded-full ${active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {active ? t('users.activeOne') : t('users.blockedOne')}
+        </span>
+      ),
+    },
+    {
+      title: t('common.actions'),
+      key: 'actions',
+      align: 'right',
+      render: (_, user) => (
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => {
+              setSelectedUser(user);
+              setShowModal(true);
+            }}
+            className="text-blue-600 hover:text-blue-800"
+            title={t('common.edit')}
+          >
+            <Edit size={18} />
+          </button>
+          <button
+            onClick={() => {
+              setSelectedUser(user);
+              setShowResetModal(true);
+            }}
+            className="text-yellow-600 hover:text-yellow-800"
+            title={t('users.resetPassword')}
+          >
+            <Key size={18} />
+          </button>
+          <button
+            onClick={() => toggleActiveMutation.mutate({ id: user.id, isActive: !user.is_active, user })}
+            className={user.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}
+            title={user.is_active ? t('users.block') : t('users.unblock')}
+          >
+            {user.is_active ? <Ban size={18} /> : <CheckCircle size={18} />}
+          </button>
+          <button
+            onClick={() => {
+              if (confirm(t('users.confirmDelete'))) {
+                deleteMutation.mutate(user.id);
+              }
+            }}
+            className="text-red-600 hover:text-red-800"
+            title={t('common.delete')}
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
+      ),
+    },
+  ];
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -105,101 +192,25 @@ export default function UserList() {
       </div>
 
       {/* Tableau */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">{t('users.user')}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">{t('common.email')}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">{t('common.department')}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">{t('users.profiles')}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">{t('common.status')}</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">
-                  <div className="font-medium text-gray-900">{user.first_name} {user.last_name}</div>
-                  <div className="text-sm text-gray-500">@{user.username}</div>
-                </td>
-                <td className="px-6 py-4 text-gray-600">{user.email}</td>
-                <td className="px-6 py-4 text-gray-600">{user.department || '-'}</td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-wrap gap-1">
-                    {user.profile_names?.filter(n => n).map((profile, idx) => (
-                      <span key={idx} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-                        {profile}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 text-xs rounded-full ${user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {user.is_active ? t('users.activeOne') : t('users.blockedOne')}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right space-x-2">
-                  <button
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setShowModal(true);
-                    }}
-                    className="text-blue-600 hover:text-blue-800"
-                    title={t('common.edit')}
-                  >
-                    <Edit size={18} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setShowResetModal(true);
-                    }}
-                    className="text-yellow-600 hover:text-yellow-800"
-                    title={t('users.resetPassword')}
-                  >
-                    <Key size={18} />
-                  </button>
-                  <button
-                    onClick={() => toggleActiveMutation.mutate({ id: user.id, isActive: !user.is_active, user })}
-                    className={user.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}
-                    title={user.is_active ? t('users.block') : t('users.unblock')}
-                  >
-                    {user.is_active ? <Ban size={18} /> : <CheckCircle size={18} />}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(t('users.confirmDelete'))) {
-                        deleteMutation.mutate(user.id);
-                      }
-                    }}
-                    className="text-red-600 hover:text-red-800"
-                    title={t('common.delete')}
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="bg-white rounded-lg shadow overflow-hidden" data-testid="users-table">
+        <Table
+          rowKey="id"
+          size="middle"
+          columns={columns}
+          dataSource={users}
+          loading={isLoading}
+          scroll={{ x: 'max-content' }}
+          pagination={{
+            current: filters.page,
+            pageSize: filters.limit,
+            total: pagination?.total || users.length,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
+            showTotal: (total) => t('users.total', { count: total }),
+            onChange: (page, limit) => setFilters(prev => ({ ...prev, page: limit !== prev.limit ? 1 : page, limit })),
+          }}
+        />
       </div>
-
-      {/* Pagination */}
-      {pagination && pagination.pages > 1 && (
-        <div className="flex justify-center gap-2">
-          {Array.from({ length: pagination.pages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => setFilters({ ...filters, page: i + 1 })}
-              className={`px-3 py-1 rounded ${filters.page === i + 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-            >
-              {i + 1}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Modal Création/Modification */}
       <Modal

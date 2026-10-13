@@ -408,6 +408,11 @@ Tous préfixés `po_` pour éviter les conflits avec les helpers de `Requisition
 | `prof_requester` | `requester` | Création réquisition, SAN |
 | `prof_supplier` | — | Fournisseur externe : portail AO uniquement |
 
+## Tableaux antd
+
+- `antd` (v5) : `Table` pour la liste des utilisateurs (`Admin/UserList`) et des réquisitions (`Requisitions/RequisitionList`) — colonnes déclarées dans le composant (`columns`, `render`), pagination **côté serveur** (`current` / `pageSize` / `total` → `page` / `limit` de l'API, choix de la taille de page), `size="middle"`, `scroll={{ x: 'max-content' }}` (un seul `<table>` : les tests e2e lisent `table thead th` / `table tbody a`), sélection multiple des réquisitions par `rowSelection`, colonne Actions `fixed: 'right'`
+- `Common/AntdProvider` (dans `index.jsx`) : langue antd suivant la langue de l'interface (`fr_FR` / `en_US`, autre langue → anglais) et thème (bleu `#2563EB` de l'application, police héritée). Nouvelle langue : ajouter sa locale antd dans `ANTD_LOCALES`
+
 ## Listes déroulantes avec recherche
 
 - **Tout `<select>` de l'interface est un `Common/SearchSelect`** (remplaçant direct : mêmes props, mêmes `<option>` / `<optgroup>` enfants). Un vrai `<select>` invisible reste en place sous le bouton (même `id`, `name`, `ref`, `required`, `data-testid`, `onChange`) : react-hook-form (`register`), la validation du navigateur, les `<label htmlFor>` et les tests Playwright (`selectOption`, `select[name=…]`) fonctionnent sans changement. Le choix écrit dans ce `<select>` et déclenche son événement `change`

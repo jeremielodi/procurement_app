@@ -16,8 +16,6 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Calendar,
   DollarSign,
@@ -39,6 +37,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 import { t, withLabel } from '../../i18n'
 import SearchSelect from '../Common/SearchSelect'
+import { Table } from 'antd'
 
 
 
@@ -166,7 +165,6 @@ export default function RequisitionList() {
   })
 
   const requisitions = data?.data || []
-  const totalPages = data?.pagination?.pages || 1
   const totalItems = data?.pagination?.total || 0
 
   const handleFilterChange = (key, value) => {
@@ -185,24 +183,9 @@ export default function RequisitionList() {
       fromDate: '',
       toDate: ''
     })
-    setPagination({ page: 1, limit: 20 })
+    setPagination(prev => ({ ...prev, page: 1 }))
   }
 
-  const handleSelectRequisition = (id) => {
-    setSelectedRequisitions(prev =>
-      prev.includes(id)
-        ? prev.filter(item => item !== id)
-        : [...prev, id]
-    )
-  }
-
-  const handleSelectAll = () => {
-    if (selectedRequisitions.length === requisitions.length) {
-      setSelectedRequisitions([])
-    } else {
-      setSelectedRequisitions(requisitions.map(r => r.id))
-    }
-  }
 
   const handleExport = async (format = 'excel') => {
     try {
@@ -241,6 +224,132 @@ export default function RequisitionList() {
     const dept = departments.find(d => d.id === departmentId)
     return dept ? `${dept.code} - ${dept.name}` : departmentId
   }
+
+  // Colonnes du tableau antd (pagination côté serveur : page / limit envoyés à GET /requisitions)
+  const columns = [
+    {
+      title: t('requisitions.number'),
+      dataIndex: 'requisition_number',
+      key: 'number',
+      render: (number, requisition) => (
+        <Link to={`/requisitions/${requisition.id}`} className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap">
+          {number}
+        </Link>
+      ),
+    },
+    {
+      title: t('requisitions.title'),
+      dataIndex: 'title',
+      key: 'title',
+      render: (title) => <div className="text-sm text-gray-900 max-w-[240px] truncate" title={title}>{title}</div>,
+    },
+    {
+      title: t('common.amount'),
+      dataIndex: 'estimated_amount',
+      key: 'amount',
+      render: (amount, requisition) => (
+        <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">{formatCurrency(amount, requisition.currency)}</div>
+      ),
+    },
+    {
+      title: t('common.date'),
+      dataIndex: 'created_at',
+      key: 'date',
+      render: (date) => (
+        <div className="flex items-center gap-1 text-sm text-gray-500 whitespace-nowrap">
+          <Calendar size={14} />
+          {formatDate(date)}
+        </div>
+      ),
+    },
+    {
+      title: t('requisitions.progress'),
+      dataIndex: 'progress_status',
+      key: 'progress',
+      onCell: () => ({ 'data-testid': 'progress-status' }),
+      render: (progress) => {
+        const p = PROGRESS[progress] || PROGRESS.IN_PROGRESS
+        return <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${p.cls}`}>{p.label}</span>
+      },
+    },
+    {
+      title: t('requisitions.step'),
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => <StatusBadge status={requisitionService.getStatusOptionLabel(status)} size="sm" />,
+    },
+    {
+      title: t('requisitions.priority'),
+      dataIndex: 'priority',
+      key: 'priority',
+      render: (priority) => <StatusBadge status={`PRIORITY_${priority}`} size="sm" />,
+    },
+    {
+      title: t('common.department'),
+      dataIndex: 'department_id',
+      key: 'department',
+      render: (departmentId) => (
+        <div className="flex items-center gap-1 text-sm text-gray-600 whitespace-nowrap">
+          <Building2 size={14} />
+          {getDepartmentName(departmentId)}
+        </div>
+      ),
+    },
+    {
+      title: t('common.actions'),
+      key: 'actions',
+      align: 'right',
+      fixed: 'right', // toujours visible, même quand le tableau défile horizontalement
+      render: (_, requisition) => (
+        <div className="flex items-center justify-end gap-2">
+          <Link
+            to={`/requisitions/${requisition.id}`}
+            className="text-gray-400 hover:text-blue-600 transition-colors"
+            title={t('common.view')}
+          >
+            <Eye size={18} />
+          </Link>
+          <button
+            type="button"
+            onClick={() => setWorkflowFor(requisition)}
+            className="text-gray-400 hover:text-blue-600 transition-colors"
+            title={t('requisitions.workflowTracking')}
+            aria-label={t('requisitions.workflowTrackingOf', { number: requisition.requisition_number })}
+          >
+            <GitBranch size={18} />
+          </button>
+          {requisition.status === 'DRAFT' && (
+            <>
+              <Link
+                to={`/requisitions/${requisition.id}/edit`}
+                className="text-gray-400 hover:text-green-600 transition-colors"
+                title={t('common.edit')}
+              >
+                <Edit size={18} />
+              </Link>
+              <button
+                onClick={() => submitMutation.mutate(requisition.id)}
+                className="text-gray-400 hover:text-purple-600 transition-colors"
+                title={t('common.submit')}
+              >
+                <Send size={18} />
+              </button>
+              <button
+                onClick={() => {
+                  setRequisitionToDelete(requisition)
+                  setShowDeleteModal(true)
+                }}
+                className="text-gray-400 hover:text-red-600 transition-colors"
+                title={t('common.delete')}
+              >
+                <Trash2 size={18} />
+              </button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ]
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -453,221 +562,41 @@ export default function RequisitionList() {
       )}
 
       {/* Tableau des réquisitions */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedRequisitions.length === requisitions.length && requisitions.length > 0}
-                    onChange={handleSelectAll}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('requisitions.number')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('requisitions.title')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('common.amount')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('common.date')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('requisitions.progress')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('requisitions.step')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('requisitions.priority')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('common.department')}
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('common.actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {requisitions.length === 0 ? (
-                <tr>
-                  <td colSpan="10" className="px-6 py-12 text-center text-gray-500">
-                    <FileText className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-                    <p>{t('requisitions.none')}</p>
-                    <Link
-                      to="/requisitions/new"
-                      className="mt-2 inline-flex items-center text-blue-600 hover:text-blue-800"
-                    >
-                      <Plus size={16} className="mr-1" />
-                      {t('requisitions.create')}
-                    </Link>
-                  </td>
-                </tr>
-              ) : (
-                requisitions.map((requisition) => (
-                  <tr key={requisition.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedRequisitions.includes(requisition.id)}
-                        onChange={() => handleSelectRequisition(requisition.id)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        to={`/requisitions/${requisition.id}`}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                      >
-                        {requisition.requisition_number}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 max-w-xs truncate">
-                        {requisition.title}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-gray-900">
-                        {formatCurrency(requisition.estimated_amount, requisition.currency)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
-                        <Calendar size={14} />
-                        {formatDate(requisition.created_at)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap" data-testid="progress-status">
-                      {(() => {
-                        const p = PROGRESS[requisition.progress_status] || PROGRESS.IN_PROGRESS
-                        return <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.cls}`}>{p.label}</span>
-                      })()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={requisitionService.getStatusOptionLabel(requisition.status)} size="sm" />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={`PRIORITY_${requisition.priority}`} size="sm" />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Building2 size={14} />
-                        {getDepartmentName(requisition.department_id)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`/requisitions/${requisition.id}`}
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
-                          title={t('common.view')}
-                        >
-                          <Eye size={18} />
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => setWorkflowFor(requisition)}
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
-                          title={t('requisitions.workflowTracking')}
-                          aria-label={t('requisitions.workflowTrackingOf', { number: requisition.requisition_number })}
-                        >
-                          <GitBranch size={18} />
-                        </button>
-                        {requisition.status === 'DRAFT' && (
-                          <>
-                            <Link
-                              to={`/requisitions/${requisition.id}/edit`}
-                              className="text-gray-400 hover:text-green-600 transition-colors"
-                              title={t('common.edit')}
-                            >
-                              <Edit size={18} />
-                            </Link>
-                            <button
-                              onClick={() => submitMutation.mutate(requisition.id)}
-                              className="text-gray-400 hover:text-purple-600 transition-colors"
-                              title={t('common.submit')}
-                            >
-                              <Send size={18} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setRequisitionToDelete(requisition)
-                                setShowDeleteModal(true)
-                              }}
-                              className="text-gray-400 hover:text-red-600 transition-colors"
-                              title={t('common.delete')}
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-            <div className="text-sm text-gray-500">
-              {t('requisitions.showing', { from: (pagination.page - 1) * pagination.limit + 1, to: Math.min(pagination.page * pagination.limit, totalItems), total: totalItems })}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                disabled={pagination.page === 1}
-                className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <div className="flex gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum
-                  if (totalPages <= 5) {
-                    pageNum = i + 1
-                  } else if (pagination.page <= 3) {
-                    pageNum = i + 1
-                  } else if (pagination.page >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i
-                  } else {
-                    pageNum = pagination.page - 2 + i
-                  }
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setPagination(prev => ({ ...prev, page: pageNum }))}
-                      className={`w-10 h-10 rounded-lg transition-colors ${pagination.page === pageNum
-                          ? 'bg-blue-600 text-white'
-                          : 'border border-gray-300 hover:bg-gray-50'
-                        }`}
-                    >
-                      {pageNum}
-                    </button>
-                  )
-                })}
+      <div className="bg-white rounded-lg shadow overflow-hidden" data-testid="requisitions-table">
+        <Table
+          rowKey="id"
+          size="middle"
+          columns={columns}
+          dataSource={requisitions}
+          loading={isLoading}
+          scroll={{ x: 'max-content' }}
+          rowSelection={{
+            selectedRowKeys: selectedRequisitions,
+            onChange: (keys) => setSelectedRequisitions(keys),
+            preserveSelectedRowKeys: true,
+          }}
+          locale={{
+            emptyText: (
+              <div className="py-8 text-center text-gray-500">
+                <FileText className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                <p>{t('requisitions.none')}</p>
+                <Link to="/requisitions/new" className="mt-2 inline-flex items-center text-blue-600 hover:text-blue-800">
+                  <Plus size={16} className="mr-1" />
+                  {t('requisitions.create')}
+                </Link>
               </div>
-              <button
-                onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                disabled={pagination.page === totalPages}
-                className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
-        )}
+            ),
+          }}
+          pagination={{
+            current: pagination.page,
+            pageSize: pagination.limit,
+            total: totalItems,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
+            showTotal: (total, [from, to]) => t('requisitions.showing', { from, to, total }),
+            onChange: (page, limit) => setPagination(prev => ({ page: limit !== prev.limit ? 1 : page, limit })),
+          }}
+        />
       </div>
 
       {/* Modal de confirmation de suppression */}

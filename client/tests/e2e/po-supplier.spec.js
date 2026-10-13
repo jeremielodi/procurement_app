@@ -18,4 +18,11 @@ test('Bon de commande : fournisseurs préqualifiés puis non préqualifiés, ave
   await expect(page.getByTestId('po-supplier-not-prequalified')).toHaveCount(0);
   await select.selectOption(await others.first().getAttribute('value'));
   await expect(page.getByTestId('po-supplier-not-prequalified')).toContainText('pas encore préqualifié');
+
+  // Recherche dans la liste : saisie d'une partie du nom → seul ce fournisseur reste, choisi au clic
+  const name = (await prequalified.textContent()).trim();
+  await select.locator('xpath=following-sibling::button').click();
+  await page.getByRole('textbox', { name: 'Rechercher dans la liste' }).fill(name.slice(0, 12));
+  await page.getByRole('option', { name, exact: true }).first().click();
+  await expect(select.locator('option:checked')).toHaveText(name);
 });

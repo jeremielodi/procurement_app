@@ -3,7 +3,10 @@
 // - Le texte libre reste toujours possible (ligne non liée → jamais stockée)
 // - Choisir une suggestion lie la ligne à l'article (pastille code · unité, × pour délier)
 // inputProps : props d'un <input> (ex. register(...) de react-hook-form) ; onChange y est chaîné.
-import React, { useEffect, useRef, useState } from 'react';
+// La liste des suggestions est affichée en portail (position fixe) : jamais coupée par un tableau à défilement
+// horizontal ni par une fenêtre ; elle s'ouvre vers le haut s'il manque de place en dessous.
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Package, X } from 'lucide-react';
 import { stockItemService } from '../../services/stockService';
 import { t } from '../../i18n';
@@ -15,16 +18,49 @@ export default function CatalogAutocomplete({
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const [pos, setPos] = useState(null);
   const timer = useRef(null);
   const box = useRef(null);
+  const list = useRef(null);
 
-  // Fermeture au clic extérieur
+  // Position de la liste sous le champ (ou au-dessus s'il manque de place)
+  const place = useCallback(() => {
+    const r = box.current?.querySelector('input')?.getBoundingClientRect();
+    if (!r) return;
+    const below = window.innerHeight - r.bottom;
+    const up = below < 260 && r.top > below;
+    setPos({
+      left: Math.max(8, Math.min(r.left, window.innerWidth - Math.max(r.width, 288) - 8)),
+      width: Math.max(r.width, 288),
+      top: up ? undefined : r.bottom + 4,
+      bottom: up ? window.innerHeight - r.top + 4 : undefined,
+      maxHeight: Math.min(320, (up ? r.top : below) - 12),
+    });
+  }, []);
+
+  // Fermeture au clic extérieur (le champ et la liste, affichée hors du composant, ne ferment pas)
   useEffect(() => {
-    const close = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    const close = (e) => {
+      if (box.current?.contains(e.target) || list.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, []);
   useEffect(() => () => clearTimeout(timer.current), []);
+
+  // Liste ouverte : suit le champ au défilement (page, tableau, fenêtre) et au redimensionnement
+  useEffect(() => {
+    if (!open) return;
+    place();
+    const onScroll = (e) => { if (!list.current?.contains(e.target)) place(); };
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open, place]);
 
   const search = (text) => {
     clearTimeout(timer.current);
@@ -82,8 +118,13 @@ export default function CatalogAutocomplete({
           )}
         </div>
       )}
-      {open && !linked && (
-        <ul role="listbox" className="absolute z-30 mt-1 max-h-64 w-full min-w-[18rem] overflow-auto rounded-lg border border-gray-200 bg-white py-1 text-sm shadow-lg">
+      {open && !linked && pos && createPortal(
+        <ul
+          ref={list}
+          role="listbox"
+          className="fixed z-[1000] overflow-auto rounded-lg border border-gray-200 bg-white py-1 text-sm shadow-lg"
+          style={{ left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom, maxHeight: pos.maxHeight }}
+        >
           {suggestions.length === 0 && <li className="px-3 py-2 text-gray-500">{t('stock.picker.noMatch')}</li>}
           {suggestions.map((s, i) => (
             <li
@@ -106,7 +147,8 @@ export default function CatalogAutocomplete({
             </li>
           ))}
           <li className="border-t border-gray-100 px-3 py-1.5 text-xs text-gray-400">{t('stock.picker.freeTextHint')}</li>
-        </ul>
+        </ul>,
+        document.body,
       )}
     </div>
   );

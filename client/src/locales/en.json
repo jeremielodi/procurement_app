@@ -2669,7 +2669,8 @@
       "restockTitle": "Stock replenishment — {{date}}",
       "restockJustification": "Items below minimum stock (stock / minimum): {{list}}",
       "reorderQuantity": "Reorder quantity",
-      "reorderHint": "Optional: quantity proposed below the minimum"
+      "reorderHint": "Optional: quantity proposed below the minimum",
+      "trackSerialsHint": "At every receipt (goods receipt note), a serial number will be required for each accepted unit — one per line: serial number ; asset tag (optional). Equipment already in stock: Equipment › \"Register existing equipment\"."
     },
     "mv": {
       "title": "Stock movements",
@@ -5001,5 +5002,14 @@
       "movements": "Entry movements",
       "reversals": "Reversing entries"
     }
+  },
+  "serialsHelp": {
+    "title": "How to enter serial numbers",
+    "onePerLine": "One item per line (press Enter between numbers), as many lines as units.",
+    "format": "Format: serial number ; asset tag — the asset tag (internal label) is optional.",
+    "unique": "A serial number cannot be recorded twice for the same item; an asset tag is unique within the company.",
+    "example": "5CD1234XYZ ; INV-0042\n5CD1234XZA ; INV-0043\n5CD1234XZB",
+    "counter": "{{count}} / {{expected}} entered",
+    "entered": "{{count}} entered"
   }
 }

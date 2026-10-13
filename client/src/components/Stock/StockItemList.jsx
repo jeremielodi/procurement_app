@@ -254,6 +254,11 @@ export default function StockItemList() {
                 onChange={e => setEditing({ ...editing, isStockable: e.target.checked, ...(e.target.checked ? {} : { trackLots: false, trackExpiry: false, trackSerials: false }) })} /> {t('stock.items.stockableLabel')}</label>
               <label className={`flex items-center gap-2 ${editing.isStockable && !editing.trackLots ? '' : 'opacity-40'}`}><input type="checkbox" disabled={!editing.isStockable || editing.trackLots} checked={editing.trackSerials}
                 onChange={e => setEditing({ ...editing, trackSerials: e.target.checked })} /> {t('stock.items.trackSerialsLabel')}</label>
+              {editing.isStockable && editing.trackSerials && (
+                <p className="ml-6 rounded-md border border-blue-100 bg-blue-50 px-2 py-1.5 text-xs text-blue-900" data-testid="serials-item-hint">
+                  {t('stock.items.trackSerialsHint')}
+                </p>
+              )}
               <label className={`flex items-center gap-2 ${editing.isStockable && !editing.trackSerials ? '' : 'opacity-40'}`}><input type="checkbox" disabled={!editing.isStockable || editing.trackSerials} checked={editing.trackLots}
                 onChange={e => setEditing({ ...editing, trackLots: e.target.checked, ...(e.target.checked ? {} : { trackExpiry: false }) })} /> {t('stock.items.trackLotsLabel')}</label>
               <label className={`flex items-center gap-2 ${editing.trackLots ? '' : 'opacity-40'}`}><input type="checkbox" disabled={!editing.trackLots} checked={editing.trackExpiry}

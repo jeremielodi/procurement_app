@@ -2669,7 +2669,8 @@
       "restockTitle": "Réapprovisionnement du stock — {{date}}",
       "restockJustification": "Articles sous le stock minimum (stock / minimum) : {{list}}",
       "reorderQuantity": "Quantité de réapprovisionnement",
-      "reorderHint": "Facultatif : quantité proposée sous le minimum"
+      "reorderHint": "Facultatif : quantité proposée sous le minimum",
+      "trackSerialsHint": "À chaque réception (bon de réception), un n° de série sera demandé pour chaque unité acceptée — un par ligne : n° de série ; n° d'inventaire (facultatif). Équipements déjà en stock : Équipements › « Enregistrer le parc existant »."
     },
     "mv": {
       "title": "Mouvements de stock",
@@ -5001,5 +5002,14 @@
       "movements": "Mouvements d'entrée",
       "reversals": "Écritures inverses"
     }
+  },
+  "serialsHelp": {
+    "title": "Comment saisir les n° de série",
+    "onePerLine": "Un équipement par ligne (touche Entrée entre deux numéros), autant de lignes que d'unités.",
+    "format": "Format : n° de série ; n° d'inventaire — le n° d'inventaire (étiquette interne) est facultatif.",
+    "unique": "Un n° de série ne peut pas être enregistré deux fois pour le même article ; un n° d'inventaire est unique dans l'entreprise.",
+    "example": "5CD1234XYZ ; INV-0042\n5CD1234XZA ; INV-0043\n5CD1234XZB",
+    "counter": "{{count}} / {{expected}} saisi(s)",
+    "entered": "{{count}} saisi(s)"
   }
 }

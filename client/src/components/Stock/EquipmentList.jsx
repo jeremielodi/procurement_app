@@ -11,6 +11,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { MovementTable } from './StockMovements';
 import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+import SerialNumbersHelp from './SerialNumbersHelp';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const STATUS_CLS = { IN_STOCK: 'bg-green-100 text-green-800', ASSIGNED: 'bg-blue-100 text-blue-800', IN_TRANSIT: 'bg-violet-100 text-violet-800', LOST: 'bg-red-100 text-red-700', RETIRED: 'bg-gray-200 text-gray-600' };
@@ -180,7 +181,7 @@ export default function EquipmentList() {
             </SearchSelect>
             <textarea rows={8} value={register.text} onChange={e => setRegister({ ...register, text: e.target.value })}
               placeholder={t('grn.serialsPlaceholder')} aria-label={t('grn.serials')} className={`${inputCls} font-mono`} />
-            <p className="text-xs text-gray-500">{t('stock.equipment.lineCount', { count: register.text.split(/\r?\n/).filter(s => s.trim()).length })}</p>
+            <SerialNumbersHelp text={register.text} />
           </div>
         )}
       </Modal>

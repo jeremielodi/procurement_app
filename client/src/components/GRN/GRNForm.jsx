@@ -7,6 +7,7 @@ import { grnService } from '../../services/grnService';
 import { warehouseService } from '../../services/stockService';
 import api from '../../services/api';
 import CatalogAutocomplete from '../Stock/CatalogAutocomplete';
+import SerialNumbersHelp from '../Stock/SerialNumbersHelp';
 import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 
@@ -317,9 +318,12 @@ export default function GRNForm() {
                               value={l.rejection_reason} onChange={e => updateLine(i, { rejection_reason: e.target.value })} />
                           )}
                           {c.toStock && l.stockItem.track_serials && (
-                            <textarea rows={Math.min(Math.max(c.accepted, 2), 6)} className={`${inputCls} w-full font-mono text-xs`}
-                              placeholder={t('grn.serialsPlaceholder')} aria-label={t('grn.serials')} title={t('grn.serialsHint')}
-                              value={l.serialsText} onChange={e => updateLine(i, { serialsText: e.target.value })} />
+                            <div className="grid gap-1">
+                              <textarea rows={Math.min(Math.max(c.accepted, 2), 6)} className={`${inputCls} w-full font-mono text-xs`}
+                                placeholder={t('grn.serialsPlaceholder')} aria-label={t('grn.serials')} title={t('grn.serialsHint')}
+                                value={l.serialsText} onChange={e => updateLine(i, { serialsText: e.target.value })} />
+                              <SerialNumbersHelp text={l.serialsText} expected={Number.isInteger(c.accepted) ? c.accepted : undefined} />
+                            </div>
                           )}
                           {c.toStock && l.stockItem.track_lots && (
                             <div className="grid gap-1">

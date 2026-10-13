@@ -36,7 +36,7 @@ test.describe.serial('API › Gestion de stock', () => {
     for (const [account, profile] of [[logistic, 'prof_logistic'], [requester, 'prof_requester']]) {
       const created = await request.post('/api/users', {
         headers: asAdmin(),
-        data: { username: account.email.split('@')[0], email: account.email, password: account.password, firstName: 'Test', lastName: profile, profileIds: [profile] },
+        data: { username: account.email.split('@')[0], email: account.email, password: account.password, firstName: 'Test', lastName: profile, profileIds: [profile], allProjectsProfileIds: [profile] },
       });
       expect(created.status(), `création ${profile}`).toBe(201);
       if (profile === 'prof_logistic') logisticId = (await created.json()).data.id;

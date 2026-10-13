@@ -3,7 +3,6 @@ const { EventSource } = require('eventsource');
 require('dotenv').config();
 const debug = require('debug');
 const db = require('../config/database');
-const tenant = require('../utils/tenant');
 const RequisitionModel = require('../models/RequisitionModel');
 const UserModel = require('../models/UserModel');
 const notificationService = require('../services/NotificationService');
@@ -125,11 +124,10 @@ async function emitNotification(userId, title, message, type, link) {
 // Multi-entreprise : seuls les utilisateurs de l'entreprise de la réquisition sont notifiés
 async function getUsersByProfile(profileId, requisitionId) {
   try {
-    const row = requisitionId
-      ? await db.one('SELECT enterprise_id FROM requisitions WHERE id = $1', [requisitionId])
-      : null;
-    const users = await tenant.run({ enterpriseId: row?.enterprise_id || null }, () => UserModel.findAll({ profileId }));
-    logInfo('Found %d user(s) with profile %s', users.length, profileId);
+    if (!requisitionId) return [];
+    // Profil exercé SUR LE PROJET de la réquisition (profils BPMN liés au projet), même entreprise, compte actif
+    const users = await getTaskRecipients(profileId, requisitionId);
+    logInfo('Found %d user(s) with profile %s on the project', users.length, profileId);
     return users;
   } catch (error) {
     logError('Failed to get users by profile: %s', error.message);
@@ -160,25 +158,29 @@ async function notifyCandidateGroup(candidateGroup, taskId, taskName, processIns
 }
 
 /**
- * Email aux utilisateurs actifs ayant le profil du candidateGroup ET membres du projet de la réquisition
+ * Email aux utilisateurs actifs ayant le profil du candidateGroup sur le projet de la réquisition
  */
 const escapeHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-/** Utilisateurs actifs ayant le profil du groupe, membres du projet de la réquisition, de la même entreprise */
-async function getTaskEmailRecipients(candidateGroup, requisitionId) {
+/**
+ * Utilisateurs actifs de l'entreprise de la réquisition ayant le profil du groupe SUR SON PROJET : profil attribué
+ * au membre sur ce projet, ou « tous les projets » (fonction SQL user_has_project_profile, migration 24)
+ */
+async function getTaskRecipients(candidateGroup, requisitionId) {
+  const group = String(candidateGroup).replace(/^prof_/, '');
   return db.select(
-    `SELECT DISTINCT u.email, u.first_name, u.language
+    `SELECT u.id, u.email, u.first_name, u.language
      FROM users u
-     JOIN user_profiles up ON up.user_id = u.id
-     JOIN project_members pm ON pm.user_id = u.id
-     JOIN requisitions r ON r.project_id = pm.project_id
-     WHERE r.id = $1
-       AND up.profile_id IN ($2, $3)
-       AND u.is_active = true
+     JOIN requisitions r ON r.id = $1
+     WHERE u.is_active = true
        AND u.enterprise_id = r.enterprise_id
-       AND u.email IS NOT NULL`,
-    [requisitionId, candidateGroup, `prof_${candidateGroup}`]
+       AND (user_has_project_profile(u.id, $2, r.project_id) OR user_has_project_profile(u.id, $3, r.project_id))`,
+    [requisitionId, group, `prof_${group}`]
   );
+}
+
+async function getTaskEmailRecipients(candidateGroup, requisitionId) {
+  return (await getTaskRecipients(candidateGroup, requisitionId)).filter(u => u.email);
 }
 
 async function emailCandidateGroup(candidateGroup, taskName, taskDefinitionKey, requisitionId) {
@@ -196,7 +198,7 @@ async function emailCandidateGroup(candidateGroup, taskName, taskDefinitionKey, 
 
     const recipients = await getTaskEmailRecipients(candidateGroup, requisitionId);
     if (recipients.length === 0) {
-      consoleLog.warn(`Tâche « ${TASK_LABELS[taskDefinitionKey] || taskName} » (${requisition.requisition_number}) : aucun membre du projet avec le profil ${candidateGroup} — aucun email envoyé`);
+      consoleLog.warn(`Tâche « ${TASK_LABELS[taskDefinitionKey] || taskName} » (${requisition.requisition_number}) : personne n'a le profil ${candidateGroup} sur ce projet — aucun email envoyé`);
       return { sent: 0, failed: 0, recipients: [] };
     }
 

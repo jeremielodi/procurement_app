@@ -12,7 +12,7 @@ class UserModel {
    * Créer un nouvel utilisateur
    */
   async create(userData) {
-    const { username, email, password, firstName, lastName, department, position, enterpriseId, language, profileIds = [] } = userData;
+    const { username, email, password, firstName, lastName, department, position, enterpriseId, language, profileIds = [], allProjectsProfileIds = [] } = userData;
     
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
@@ -46,6 +46,8 @@ class UserModel {
           profileTransaction.addInsertQuery('user_profiles', {
             user_id: userId,
             profile_id: profileId,
+            // Profil de workflow exercé sur tous les projets (sinon : projets où il est attribué au membre)
+            all_projects: allProjectsProfileIds.includes(profileId),
             assigned_at: new Date(),
             assigned_by: userId
           });
@@ -75,7 +77,8 @@ class UserModel {
              u.enterprise_id,
              u.last_login, u.created_at,
              array_agg(DISTINCT p.id) as profile_ids,
-             array_agg(DISTINCT p.name) as profile_names
+             array_agg(DISTINCT p.name) as profile_names,
+             COALESCE(array_agg(DISTINCT p.id) FILTER (WHERE up.all_projects), '{}') as all_projects_profile_ids
       FROM users u
       LEFT JOIN user_profiles up ON u.id = up.user_id
       LEFT JOIN profiles p ON up.profile_id = p.id
@@ -174,7 +177,7 @@ class UserModel {
     if (!user) return null;
     
     const profiles = await db.select(`
-      SELECT p.id, p.name, p.description
+      SELECT p.id, p.name, p.description, p.project_scoped, up.all_projects
       FROM user_profiles up
       JOIN profiles p ON up.profile_id = p.id
       WHERE up.user_id = $1
@@ -242,7 +245,7 @@ class UserModel {
    * Mettre à jour un utilisateur
    */
   async update(id, userData) {
-    const { firstName, lastName, department, position, language, profileIds = [] } = userData;
+    const { firstName, lastName, department, position, language, profileIds = [], allProjectsProfileIds } = userData;
     
     const transaction = db.transaction();
     
@@ -257,7 +260,11 @@ class UserModel {
     
     await transaction.execute();
     
-    // Mettre à jour les profils
+    // Mettre à jour les profils — « Tous les projets » : valeur envoyée, sinon celle d'avant
+    const previous = await db.select('SELECT profile_id, all_projects FROM user_profiles WHERE user_id = $1', [id]);
+    const everywhere = new Set(Array.isArray(allProjectsProfileIds)
+      ? allProjectsProfileIds
+      : previous.filter(p => p.all_projects).map(p => p.profile_id));
     await db.delete('user_profiles', 'user_id', id);
     
     if (profileIds.length > 0) {
@@ -266,12 +273,15 @@ class UserModel {
         profileTransaction.addInsertQuery('user_profiles', {
           user_id: id,
           profile_id: profileId,
+          all_projects: everywhere.has(profileId),
           assigned_at: new Date(),
           assigned_by: id
         });
       }
       await profileTransaction.execute();
     }
+    // Profil retiré : retiré aussi de tous les projets
+    await db.exec('DELETE FROM project_member_profiles WHERE user_id = $1 AND NOT (profile_id = ANY($2::varchar[]))', [id, profileIds]);
     
     return { success: true };
   }
@@ -360,6 +370,21 @@ class UserModel {
     await db.update('users', { password_hash: newPasswordHash }, 'id', id);
     
     return { success: true };
+  }
+
+  /** Projets dont l'utilisateur est membre, avec ses profils de workflow exercés sur chacun (fiche utilisateur) */
+  async getProjectAssignments(userId) {
+    return db.select(
+      `SELECT p.id, p.code, p.name, pm.role,
+              COALESCE(array_agg(pmp.profile_id ORDER BY pmp.profile_id) FILTER (WHERE pmp.profile_id IS NOT NULL), '{}') AS profile_ids
+       FROM project_members pm
+       JOIN projects p ON p.id = pm.project_id
+       LEFT JOIN project_member_profiles pmp ON pmp.project_id = pm.project_id AND pmp.user_id = pm.user_id
+       WHERE pm.user_id = $1
+       GROUP BY p.id, p.code, p.name, pm.role
+       ORDER BY p.code`,
+      [userId]
+    );
   }
 
   /**

@@ -44,6 +44,8 @@ const requisitionTimeline = require('../services/RequisitionTimelineService');
 const i18n = require('../i18n');
 const { authenticate, hasPermission, hasAnyPermission } = require('../middleware/auth');
 const { tenantContext, tenantGuard } = require('../middleware/tenant');
+// Profils BPMN liés au projet : la permission doit venir d'un profil de l'utilisateur SUR LE PROJET du document
+const { requireProjectPermission: onProject, from } = require('../utils/projectAccess');
 const { logoMiddleware } = require('../utils/logoUpload');
 
 // Réservé au super administrateur de la plateforme
@@ -138,6 +140,7 @@ router.delete('/currencies/:id', authenticate, hasPermission('MANAGE_CURRENCIES'
 router.post('/requisitions',
   authenticate,
   hasPermission('CREATE_REQUISITIONS'),
+  onProject('CREATE_REQUISITIONS', 'project', from.body('projectId')),
   (req, res) => requisitionController.create(req, res)
 );
 
@@ -327,6 +330,7 @@ router.get('/purchase-orders/:id/pdf',
 router.post('/purchase-orders',
   authenticate,
   hasPermission('CREATE_PURCHASE_ORDERS'),
+  onProject('CREATE_PURCHASE_ORDERS', 'requisition', from.body('requisitionId')),
   purchaseOrderController.create
 );
 
@@ -339,18 +343,21 @@ router.put('/purchase-orders/:id',
 router.post('/purchase-orders/:id/approve',
   authenticate,
   hasPermission('APPROVE_PURCHASE_ORDERS'),
+  onProject('APPROVE_PURCHASE_ORDERS', 'purchaseOrder', from.param('id')),
   purchaseOrderController.approve
 );
 
 router.post('/purchase-orders/:id/reject',
   authenticate,
   hasPermission('APPROVE_PURCHASE_ORDERS'),
+  onProject('APPROVE_PURCHASE_ORDERS', 'purchaseOrder', from.param('id')),
   purchaseOrderController.reject
 );
 
 router.post('/purchase-orders/:id/send',
   authenticate,
   hasPermission('CREATE_PURCHASE_ORDERS'),
+  onProject('CREATE_PURCHASE_ORDERS', 'purchaseOrder', from.param('id')),
   purchaseOrderController.send
 );
 
@@ -358,6 +365,7 @@ router.post('/purchase-orders/:id/send',
 router.post('/purchase-orders/:id/close-delivery',
   authenticate,
   hasPermission('RECORD_GOODS_RECEIPT'),
+  onProject('RECORD_GOODS_RECEIPT', 'purchaseOrder', from.param('id')),
   purchaseOrderController.closeDelivery
 );
 
@@ -365,6 +373,7 @@ router.post('/purchase-orders/:id/close-delivery',
 router.post('/purchase-orders/:id/supplier-response',
   authenticate,
   hasPermission('CREATE_PURCHASE_ORDERS'),
+  onProject('CREATE_PURCHASE_ORDERS', 'purchaseOrder', from.param('id')),
   supplierOrderController.recordResponse
 );
 
@@ -545,6 +554,8 @@ router.put('/projects/:id', hasPermission('MANAGE_PROJECTS'), projectController.
 router.delete('/projects/:id', hasPermission('MANAGE_PROJECTS'), projectController.delete);
 router.post('/projects/members', hasPermission('MANAGE_PROJECTS'), projectController.addMember);
 router.delete('/projects/members/:projectId/:userId', hasPermission('MANAGE_PROJECTS'), projectController.removeMember);
+// Profils de workflow (BPMN) exercés par un membre sur ce projet
+router.put('/projects/:projectId/members/:userId/profiles', hasPermission('MANAGE_PROJECTS'), projectController.setMemberProfiles);
 
 
 
@@ -578,7 +589,7 @@ router.get('/goods-receipts/:id',
   grnController.getById.bind(grnController)
 );
 router.post('/goods-receipts',
-  authenticate, hasPermission('RECORD_GOODS_RECEIPT'),
+  authenticate, hasPermission('RECORD_GOODS_RECEIPT'), onProject('RECORD_GOODS_RECEIPT', 'purchaseOrder', from.body('poId')),
   grnController.create.bind(grnController)
 );
 router.get('/purchase-orders/:poId/goods-receipts',
@@ -586,12 +597,12 @@ router.get('/purchase-orders/:poId/goods-receipts',
   grnController.getByPO.bind(grnController)
 );
 router.patch('/goods-receipts/:id/status',
-  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'), onProject('APPROVE_PURCHASE_ORDERS', 'goodsReceipt', from.param('id')),
   grnController.updateStatus.bind(grnController)
 );
 // Annulation : écritures de stock inverses (refusée si le stock reçu a déjà été sorti)
 router.post('/goods-receipts/:id/cancel',
-  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'),
+  authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'), onProject('APPROVE_PURCHASE_ORDERS', 'goodsReceipt', from.param('id')),
   grnController.cancel.bind(grnController)
 );
 
@@ -676,7 +687,7 @@ router.get('/service-acceptance-notes/:id',
   sanController.getById.bind(sanController)
 );
 router.post('/service-acceptance-notes',
-  authenticate, hasPermission('RECORD_SERVICE_ACCEPTANCE'),
+  authenticate, hasPermission('RECORD_SERVICE_ACCEPTANCE'), onProject('RECORD_SERVICE_ACCEPTANCE', 'purchaseOrder', from.body('poId')),
   sanController.create.bind(sanController)
 );
 router.get('/purchase-orders/:poId/service-acceptance-notes',
@@ -696,19 +707,19 @@ router.get('/invoices/:id',
   invoiceController.getById.bind(invoiceController)
 );
 router.post('/invoices',
-  authenticate, hasPermission('MANAGE_INVOICES'),
+  authenticate, hasPermission('MANAGE_INVOICES'), onProject('MANAGE_INVOICES', 'purchaseOrder', from.body('poId')),
   invoiceController.create.bind(invoiceController)
 );
 router.post('/invoices/:id/match',
-  authenticate, hasPermission('MANAGE_INVOICES'),
+  authenticate, hasPermission('MANAGE_INVOICES'), onProject('MANAGE_INVOICES', 'invoice', from.param('id')),
   invoiceController.runMatch.bind(invoiceController)
 );
 router.post('/invoices/:id/approve',
-  authenticate, hasPermission('MANAGE_INVOICES'),
+  authenticate, hasPermission('MANAGE_INVOICES'), onProject('MANAGE_INVOICES', 'invoice', from.param('id')),
   invoiceController.approve.bind(invoiceController)
 );
 router.post('/invoices/:id/reject',
-  authenticate, hasPermission('MANAGE_INVOICES'),
+  authenticate, hasPermission('MANAGE_INVOICES'), onProject('MANAGE_INVOICES', 'invoice', from.param('id')),
   invoiceController.reject.bind(invoiceController)
 );
 
@@ -724,15 +735,15 @@ router.get('/payments/:id',
   paymentController.getById.bind(paymentController)
 );
 router.post('/payments',
-  authenticate, hasPermission('MANAGE_PAYMENTS'),
+  authenticate, hasPermission('MANAGE_PAYMENTS'), onProject('MANAGE_PAYMENTS', 'invoice', from.body('invoiceId')),
   paymentController.create.bind(paymentController)
 );
 router.post('/payments/:id/approve',
-  authenticate, hasPermission('APPROVE_PAYMENTS'),
+  authenticate, hasPermission('APPROVE_PAYMENTS'), onProject('APPROVE_PAYMENTS', 'payment', from.param('id')),
   paymentController.approve.bind(paymentController)
 );
 router.patch('/payments/:id/status',
-  authenticate, hasPermission('APPROVE_PAYMENTS'),
+  authenticate, hasPermission('APPROVE_PAYMENTS'), onProject('APPROVE_PAYMENTS', 'payment', from.param('id')),
   paymentController.updateStatus.bind(paymentController)
 );
 router.get('/payments/:id/pdf',
@@ -749,11 +760,11 @@ router.get('/tenders/eligible-count', hasPermission('MANAGE_TENDERS'), tenderCon
 router.get('/tenders/by-requisition/:requisitionId', hasPermission('MANAGE_TENDERS'), tenderController.getByRequisition.bind(tenderController));
 router.get('/tenders/:id', hasPermission('MANAGE_TENDERS'), tenderController.getOne.bind(tenderController));
 router.get('/tenders/:id/export/excel', hasPermission('MANAGE_TENDERS'), tenderController.exportExcel.bind(tenderController));
-router.post('/tenders', hasPermission('MANAGE_TENDERS'), tenderController.create.bind(tenderController));
-router.put('/tenders/:id', hasPermission('MANAGE_TENDERS'), tenderController.update.bind(tenderController));
-router.post('/tenders/:id/close', hasPermission('MANAGE_TENDERS'), tenderController.close.bind(tenderController));
-router.post('/tenders/:id/cancel', hasPermission('MANAGE_TENDERS'), tenderController.cancel.bind(tenderController));
-router.post('/tenders/:id/award', hasPermission('MANAGE_TENDERS'), tenderController.award.bind(tenderController));
+router.post('/tenders', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'requisition', from.body('requisitionId')), tenderController.create.bind(tenderController));
+router.put('/tenders/:id', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), tenderController.update.bind(tenderController));
+router.post('/tenders/:id/close', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), tenderController.close.bind(tenderController));
+router.post('/tenders/:id/cancel', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), tenderController.cancel.bind(tenderController));
+router.post('/tenders/:id/award', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), tenderController.award.bind(tenderController));
 
 // ============================================
 // PORTAIL FOURNISSEUR

@@ -815,7 +815,8 @@
     "viewInRequisition": "View in the requisition",
     "noRequisition": "Requisition not found",
     "claimedByMe": "Claimed by you",
-    "toClaim": "To be claimed"
+    "toClaim": "To be claimed",
+    "notOnProject": "You have this profile, but not on this requisition's project: ask your administrator to assign it to you"
   },
   "notifications": {
     "unknownDate": "Unknown date",
@@ -933,7 +934,10 @@
       "profile": "Profile",
       "pendingTasks": "Pending tasks",
       "oldest": "Oldest",
-      "legend": "Status: orange after 3 days of waiting, red (“blocked”) after 7 days."
+      "legend": "Status: orange after 3 days of waiting, red (“blocked”) after 7 days.",
+      "unhandled_one": "{{count}} task with nobody holding this profile on its project",
+      "unhandled_other": "{{count}} tasks with nobody holding this profile on their project",
+      "noHandler": "Nobody has this profile on this project"
     }
   },
   "charts": {
@@ -2312,7 +2316,12 @@
     "holdsEquipmentText_other": "This user still holds {{count}} pieces of equipment. Record their return before deactivating the account.",
     "recoverEquipment": "Record the return of the equipment",
     "deactivateAnyway": "Deactivate anyway",
-    "deactivateAnywayHint": "\"Deactivate anyway\" leaves the equipment assigned to this person (visible in Equipment); the action is logged in the audit trail."
+    "deactivateAnywayHint": "\"Deactivate anyway\" leaves the equipment assigned to this person (visible in Equipment); the action is logged in the audit trail.",
+    "allProjects": "All projects",
+    "allProjectsHint": "Workflow profiles: tick \"All projects\" for a cross-functional team (finance, procurement, logistics…). Otherwise the profile only applies to the projects where it is assigned to the member (project record).",
+    "projectsTitle": "Projects and profiles held",
+    "noProjects": "Member of no project",
+    "noProjectProfile": "no workflow profile"
   },
   "profiles": {
     "deleted": "Profile deleted",
@@ -2502,7 +2511,21 @@
     "managerShort": "Manager: {{name}}",
     "memberCount": "{{count}} member(s)",
     "edit": "Edit project",
-    "details": "Project details"
+    "details": "Project details",
+    "workflowProfiles": "Workflow profiles on this project",
+    "workflowProfilesHint": "A workflow profile (manager, finance, procurement, logistics, requester…) only applies to the projects where it is assigned here, unless \"All projects\" is ticked on the user's record. Click a profile to enable or remove it on this project.",
+    "allProjects": "All projects",
+    "allProjectsTitle": "Applies to all projects (user record)",
+    "noWorkflowProfile": "No workflow profile: add one on the user's record",
+    "addProfilesHint": "Their workflow profiles will be enabled on this project (can be changed afterwards).",
+    "profilesUpdated": "Member profiles updated",
+    "profileOn": "{{profile}}: active on this project (click to remove)",
+    "profileOff": "{{profile}}: inactive on this project (click to enable)",
+    "err": {
+      "ALREADY_MEMBER": "This user is already a member of the project",
+      "INVALID_PROFILE": "The user does not hold this profile: add it on their record first",
+      "NOT_MEMBER": "This user is not a member of the project"
+    }
   },
   "enterprises": {
     "notFound": "Company not found",
@@ -3338,7 +3361,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "Profiles are assigned by your company administrator (Administration → Users menu). A user can hold several profiles. GoFlow tasks are sent to people who have the required profile AND are members of the requisition's project."
+            "text": "Profiles are assigned by your company administrator (Administration → Users menu). A user can hold several profiles. Workflow profiles (Requester, Manager, Finance, GM, Procurement, Management, Logistics) apply project by project: see below."
           },
           {
             "type": "table",
@@ -3394,6 +3417,29 @@
             ]
           },
           {
+            "type": "h",
+            "text": "Project-based profiles"
+          },
+          {
+            "type": "p",
+            "text": "A workflow profile only applies to the projects where it is assigned to you. Example: manager on project A and plain requester on project B — you approve project A's requisitions, not project B's."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Project record (Projects → a project): for each member, click their profiles to enable or remove them on this project. When a member is added, all their workflow profiles are enabled there.",
+              "User record: the \"All projects\" box next to a workflow profile makes it valid everywhere (cross-functional teams: finance, procurement, logistics…).",
+              "The profile must first be on the user's record: removing it from the record removes it from every project.",
+              "Enforced by the server: task list, claiming, processing, forms (purchase order, receipt, service acceptance, invoice, payment, call for tenders) and requisition creation (only the projects where you can create one are offered).",
+              "Task emails and notifications only go to people holding the profile on the requisition's project.",
+              "The other profiles (Administrator, Storekeeper, Auditor) remain valid across the whole company."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "A \"reserved\" task showing \"not on this requisition's project\": you hold the profile, but not on this project. Ask the administrator to assign it to you on the project record. Every refused attempt is recorded in the audit log."
+          },
+          {
             "type": "tip",
             "text": "If a menu or button described in this help does not appear for you, your profile does not allow it: ask your administrator. After a profile change, log in again so that your menus are refreshed."
           }
@@ -3405,7 +3451,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "\"My tasks\" lists the actions waiting for you: approvals, choosing the purchasing method, creating the purchase order, goods receipt, service acceptance, invoice, payment… A task appears when GoFlow reaches the corresponding step, for every member of the group concerned. You also receive an email and a notification."
+            "text": "\"My tasks\" lists the actions waiting for you: approvals, choosing the purchasing method, creating the purchase order, goods receipt, service acceptance, invoice, payment… A task appears when GoFlow reaches the corresponding step, for the people holding the required profile on the requisition's project. You also receive an email and a notification."
           },
           {
             "type": "h",
@@ -4554,7 +4600,7 @@
             "type": "list",
             "items": [
               "Users: creation with profiles and language (French or English, used for the interface and emails), password reset, activation / deactivation.",
-              "Projects and departments: a project's members are the people who receive the GoFlow tasks for its requisitions — keep them up to date.",
+              "Projects and departments: on a project's record, add members and choose the workflow profiles each one holds there (manager, finance, procurement…) — they are the ones who receive and process the GoFlow tasks of its requisitions. \"All projects\" is ticked on the user's record.",
               "\"My company\": name, logo, address, contacts, tax ID / trade register, currency. They appear on every PDF.",
               "Warehouses and logistics access (see \"Stock\").",
               "Supplier prequalification and verification of their documents.",
@@ -4878,7 +4924,11 @@
       "STOCK_ADJUSTED": "Stock adjustment",
       "STOCK_COUNT_VALIDATED": "Stock count validated",
       "STOCK_ITEMS_IMPORTED": "Stock catalogue import",
-      "PO_DELIVERY_CLOSED": "Purchase order remaining quantity closed"
+      "PO_DELIVERY_CLOSED": "Purchase order remaining quantity closed",
+      "PROJECT_ACCESS_DENIED": "Action refused: profile not assigned on the project",
+      "PROJECT_MEMBER_ADDED": "Member added to a project",
+      "PROJECT_MEMBER_REMOVED": "Member removed from a project",
+      "PROJECT_MEMBER_PROFILES_CHANGED": "Member profiles changed on a project"
     },
     "groups": {
       "all": "All events",
@@ -4947,7 +4997,8 @@
       "payment": "Payment",
       "stock_issue": "Stock issue",
       "stock_adjustment": "Adjustment",
-      "stock_count": "Stock count"
+      "stock_count": "Stock count",
+      "project": "Project"
     },
     "rule": {
       "SELF_APPROVAL": "approving one's own request / document",

@@ -815,7 +815,8 @@
     "viewInRequisition": "Voir dans la réquisition",
     "noRequisition": "Réquisition introuvable",
     "claimedByMe": "Prise en charge par vous",
-    "toClaim": "À prendre en charge"
+    "toClaim": "À prendre en charge",
+    "notOnProject": "Vous avez ce profil, mais pas sur le projet de cette réquisition : demandez à l'administrateur de vous l'attribuer"
   },
   "notifications": {
     "unknownDate": "Date inconnue",
@@ -933,7 +934,10 @@
       "profile": "Profil",
       "pendingTasks": "Tâches en attente",
       "oldest": "Plus ancienne",
-      "legend": "Statut : en orange à partir de 3 jours d'attente, en rouge (« bloqué ») à partir de 7 jours."
+      "legend": "Statut : en orange à partir de 3 jours d'attente, en rouge (« bloqué ») à partir de 7 jours.",
+      "unhandled_one": "{{count}} tâche sans personne ayant ce profil sur son projet",
+      "unhandled_other": "{{count}} tâches sans personne ayant ce profil sur leur projet",
+      "noHandler": "Personne n'a ce profil sur ce projet"
     }
   },
   "charts": {
@@ -2312,7 +2316,12 @@
     "holdsEquipmentText_other": "Cet utilisateur détient encore {{count}} équipements. Enregistrez leur retour avant de désactiver le compte.",
     "recoverEquipment": "Enregistrer le retour du matériel",
     "deactivateAnyway": "Désactiver quand même",
-    "deactivateAnywayHint": "« Désactiver quand même » laisse le matériel affecté à cette personne (visible dans Équipements) ; l'action est tracée dans le journal d'audit."
+    "deactivateAnywayHint": "« Désactiver quand même » laisse le matériel affecté à cette personne (visible dans Équipements) ; l'action est tracée dans le journal d'audit.",
+    "allProjects": "Tous les projets",
+    "allProjectsHint": "Profils de workflow : cochez « Tous les projets » pour une équipe transverse (finance, achats, logistique…). Sinon, le profil ne s'exerce que sur les projets où il est attribué au membre (fiche du projet).",
+    "projectsTitle": "Projets et profils exercés",
+    "noProjects": "Membre d'aucun projet",
+    "noProjectProfile": "aucun profil de workflow"
   },
   "profiles": {
     "deleted": "Profil supprimé",
@@ -2502,7 +2511,21 @@
     "managerShort": "Chef : {{name}}",
     "memberCount": "{{count}} membre(s)",
     "edit": "Modifier le projet",
-    "details": "Détails du projet"
+    "details": "Détails du projet",
+    "workflowProfiles": "Profils de workflow sur ce projet",
+    "workflowProfilesHint": "Un profil de workflow (manager, finance, achats, logistique, demandeur…) ne s'exerce que sur les projets où il est attribué ici, sauf « Tous les projets » coché sur la fiche de l'utilisateur. Cliquez sur un profil pour l'activer ou le retirer sur ce projet.",
+    "allProjects": "Tous les projets",
+    "allProjectsTitle": "Exercé sur tous les projets (fiche de l'utilisateur)",
+    "noWorkflowProfile": "Aucun profil de workflow : à ajouter sur la fiche de l'utilisateur",
+    "addProfilesHint": "Ses profils de workflow seront activés sur ce projet (modifiable ensuite).",
+    "profilesUpdated": "Profils du membre mis à jour",
+    "profileOn": "{{profile}} : actif sur ce projet (cliquer pour retirer)",
+    "profileOff": "{{profile}} : inactif sur ce projet (cliquer pour activer)",
+    "err": {
+      "ALREADY_MEMBER": "Cet utilisateur est déjà membre du projet",
+      "INVALID_PROFILE": "Profil non détenu par l'utilisateur : ajoutez-le d'abord sur sa fiche",
+      "NOT_MEMBER": "Cet utilisateur n'est pas membre du projet"
+    }
   },
   "enterprises": {
     "notFound": "Entreprise introuvable",
@@ -3338,7 +3361,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "Les profils sont attribués par l'administrateur de votre entreprise (menu Administration → Utilisateurs). Un même utilisateur peut cumuler plusieurs profils. Les tâches GoFlow sont envoyées aux personnes ayant le profil requis ET membres du projet de la réquisition."
+            "text": "Les profils sont attribués par l'administrateur de votre entreprise (menu Administration → Utilisateurs). Un même utilisateur peut cumuler plusieurs profils. Les profils de workflow (Demandeur, Manager, Finance, DG, Achats, Direction, Logistique) s'exercent projet par projet : voir ci-dessous."
           },
           {
             "type": "table",
@@ -3394,6 +3417,29 @@
             ]
           },
           {
+            "type": "h",
+            "text": "Profils liés au projet"
+          },
+          {
+            "type": "p",
+            "text": "Un profil de workflow ne vaut que sur les projets où il vous est attribué. Exemple : manager sur le projet A et simple demandeur sur le projet B — vous approuvez les réquisitions du projet A, pas celles du projet B."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Fiche du projet (Projets → un projet) : pour chaque membre, cliquez sur ses profils pour les activer ou les retirer sur ce projet. À l'ajout d'un membre, tous ses profils de workflow y sont activés.",
+              "Fiche de l'utilisateur : la case « Tous les projets » à côté d'un profil de workflow le rend valable partout (équipes transverses : finance, achats, logistique…).",
+              "Le profil doit d'abord figurer sur la fiche de l'utilisateur : le retirer de sa fiche le retire de tous les projets.",
+              "Contrôlé par le serveur : liste des tâches, prise en charge, traitement, formulaires (bon de commande, réception, acceptation de service, facture, paiement, appel d'offres) et création d'une réquisition (seuls les projets où vous pouvez en créer sont proposés).",
+              "Les emails et notifications de tâche ne vont qu'aux personnes ayant le profil sur le projet de la réquisition.",
+              "Les autres profils (Administrateur, Magasinier, Auditeur) restent valables sur toute l'entreprise."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "Une tâche « réservée » affichant « pas sur le projet de cette réquisition » : vous avez le profil, mais pas sur ce projet. Demandez à l'administrateur de vous l'attribuer sur la fiche du projet. Toute tentative refusée est tracée dans le journal d'audit."
+          },
+          {
             "type": "tip",
             "text": "Si un menu ou un bouton décrit dans cette aide n'apparaît pas chez vous, c'est que votre profil ne le permet pas : demandez à votre administrateur. Après un changement de profil, reconnectez-vous pour que vos menus soient mis à jour."
           }
@@ -3405,7 +3451,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "« Mes tâches » liste les actions qui vous attendent : approbations, choix de la méthode d'achat, création du bon de commande, réception, acceptation de service, facture, paiement… Une tâche apparaît quand GoFlow atteint l'étape correspondante, pour tous les membres du groupe concerné. Vous recevez aussi un email et une notification."
+            "text": "« Mes tâches » liste les actions qui vous attendent : approbations, choix de la méthode d'achat, création du bon de commande, réception, acceptation de service, facture, paiement… Une tâche apparaît quand GoFlow atteint l'étape correspondante, pour les personnes ayant le profil requis sur le projet de la réquisition. Vous recevez aussi un email et une notification."
           },
           {
             "type": "h",
@@ -4554,7 +4600,7 @@
             "type": "list",
             "items": [
               "Utilisateurs : création avec profils et langue (français ou anglais, utilisée pour l'interface et les emails), réinitialisation du mot de passe, activation / désactivation.",
-              "Projets et départements : les membres d'un projet sont ceux qui reçoivent les tâches GoFlow de ses réquisitions — tenez-les à jour.",
+              "Projets et départements : sur la fiche d'un projet, ajoutez les membres et choisissez les profils de workflow que chacun y exerce (manager, finance, achats…) — ce sont eux qui reçoivent et traitent les tâches GoFlow de ses réquisitions. « Tous les projets » se coche sur la fiche de l'utilisateur.",
               "« Mon entreprise » : nom, logo, adresse, contacts, NIF / RCCM, devise. Ils apparaissent sur tous les PDF.",
               "Dépôts et accès de la logistique (voir « Stock »).",
               "Préqualification des fournisseurs et vérification de leurs documents.",
@@ -4878,7 +4924,11 @@
       "STOCK_ADJUSTED": "Ajustement de stock",
       "STOCK_COUNT_VALIDATED": "Inventaire validé",
       "STOCK_ITEMS_IMPORTED": "Import du catalogue de stock",
-      "PO_DELIVERY_CLOSED": "Reliquat d'un bon de commande soldé"
+      "PO_DELIVERY_CLOSED": "Reliquat d'un bon de commande soldé",
+      "PROJECT_ACCESS_DENIED": "Action refusée : profil non attribué sur le projet",
+      "PROJECT_MEMBER_ADDED": "Membre ajouté à un projet",
+      "PROJECT_MEMBER_REMOVED": "Membre retiré d'un projet",
+      "PROJECT_MEMBER_PROFILES_CHANGED": "Profils d'un membre modifiés sur un projet"
     },
     "groups": {
       "all": "Tous les événements",
@@ -4947,7 +4997,8 @@
       "payment": "Paiement",
       "stock_issue": "Sortie de stock",
       "stock_adjustment": "Ajustement",
-      "stock_count": "Inventaire"
+      "stock_count": "Inventaire",
+      "project": "Projet"
     },
     "rule": {
       "SELF_APPROVAL": "approuver sa propre demande / son propre document",

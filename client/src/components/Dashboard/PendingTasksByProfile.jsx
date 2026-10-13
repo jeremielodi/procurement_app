@@ -46,6 +46,12 @@ function ProfileRow({ g, max }) {
             ) : g.users !== null && (
               <div className="text-xs text-gray-500 flex items-center gap-1"><Users size={12} /> {t('dashboard.pending.users', { count: g.users })}</div>
             )}
+            {/* Profils liés au projet : le profil existe, mais personne ne l'a sur le projet de certaines tâches */}
+            {g.users !== 0 && g.unhandled > 0 && (
+              <div className="text-xs font-medium flex items-center gap-1" style={{ color: STATUS.critical.color }} data-testid="pending-unhandled">
+                <AlertTriangle size={12} /> {t('dashboard.pending.unhandled', { count: g.unhandled })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -85,7 +91,14 @@ function ProfileRow({ g, max }) {
                     <Link to={`/requisitions/${tk.requisitionId}`} className="text-blue-600 hover:underline font-medium">{tk.requisitionNumber}</Link>
                     <div className="text-gray-500 truncate max-w-[220px]">{tk.requisitionTitle}</div>
                   </td>
-                  <td className="px-3 py-2 text-gray-700">{tk.projectName || '—'}</td>
+                  <td className="px-3 py-2 text-gray-700">
+                    {tk.projectName || '—'}
+                    {tk.handlers === 0 && (
+                      <div className="flex items-center gap-1 font-medium" style={{ color: STATUS.critical.color }}>
+                        <AlertTriangle size={11} /> {t('dashboard.pending.noHandler')}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-gray-800">{tk.label}</td>
                   <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{fmtDate(tk.since)} <span className="text-gray-500">{t('dashboard.pending.ageDays', { days: tk.ageDays })}</span></td>
                   <td className="px-3 py-2 text-gray-700">{tk.assignee || <span className="text-gray-500 italic">{t('dashboard.pending.nobody')}</span>}</td>

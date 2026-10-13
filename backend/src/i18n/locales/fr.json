@@ -665,7 +665,11 @@
     "STOCK_ADJUSTED": "Ajustement de stock",
     "STOCK_COUNT_VALIDATED": "Inventaire validé",
     "STOCK_ITEMS_IMPORTED": "Import du catalogue de stock",
-    "PO_DELIVERY_CLOSED": "Reliquat d'un bon de commande soldé"
+    "PO_DELIVERY_CLOSED": "Reliquat d'un bon de commande soldé",
+    "PROJECT_ACCESS_DENIED": "Action refusée : profil non attribué sur le projet",
+    "PROJECT_MEMBER_ADDED": "Membre ajouté à un projet",
+    "PROJECT_MEMBER_REMOVED": "Membre retiré d'un projet",
+    "PROJECT_MEMBER_PROFILES_CHANGED": "Profils d'un membre modifiés sur un projet"
   },
   "auditExport": {
     "sheet": "Journal d'audit",

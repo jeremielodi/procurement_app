@@ -450,6 +450,13 @@ export default function RequisitionTasks() {
                               {t('taskList.selfApproval')}
                             </span>
                           )}
+                          {/* Profil détenu, mais pas sur le projet de la réquisition (profils BPMN liés au projet) */}
+                          {task.blockedReason === 'NOT_ON_PROJECT' && (
+                            <span className="inline-flex items-center gap-1 text-amber-700 ml-3" data-testid="task-not-on-project">
+                              <AlertCircle size={14} />
+                              {t('taskList.notOnProject')}
+                            </span>
+                          )}
                           {isUnassigned && !canClaim && !task.blockedReason && task.candidateGroup && (
                             <span className="inline-flex items-center gap-1 text-gray-500 ml-3">
                               <AlertCircle size={14} />

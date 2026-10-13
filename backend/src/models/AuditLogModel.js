@@ -8,7 +8,7 @@ const { AUDIT } = require('../utils/auditLog');
 const EXPORT_LIMIT = 20000;
 // Onglet « Échecs et blocages » : connexions refusées, liens invalides, contrôles internes déclenchés
 const FAILURE_ACTIONS = ['LOGIN_FAILED', 'LOGIN_BLOCKED', 'PASSWORD_CHANGE_FAILED', 'PASSWORD_RESET_INVALID_LINK',
-  'SOD_VIOLATION_BLOCKED', 'TASK_COMPLETION_DENIED', 'PAYMENT_BLOCKED', 'INVOICE_DUPLICATE_BLOCKED'];
+  'SOD_VIOLATION_BLOCKED', 'TASK_COMPLETION_DENIED', 'PROJECT_ACCESS_DENIED', 'PAYMENT_BLOCKED', 'INVOICE_DUPLICATE_BLOCKED'];
 
 class AuditLogModel {
   /** Clause WHERE commune à la liste et à l'export */

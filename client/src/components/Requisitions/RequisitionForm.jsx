@@ -79,9 +79,10 @@ export default function RequisitionForm() {
   const items = watch('items')
 
   // Charger les projets actifs
+  // Projets où l'utilisateur peut créer une réquisition (profils BPMN liés au projet)
   const { data: projectsData, isLoading: projectsLoading } = useQuery({
-    queryKey: ['active-projects'],
-    queryFn: () => projectService.getAll({ is_active: true })
+    queryKey: ['active-projects', 'for-requisition'],
+    queryFn: () => projectService.getAll({ is_active: true, forRequisition: 1 })
   })
 
   // Charger les projets actifs

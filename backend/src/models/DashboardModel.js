@@ -2,6 +2,7 @@
 const db = require('../config/database');
 // Multi-entreprise : toutes les requêtes du tableau de bord sont restreintes à l'entreprise courante
 const { scopedDb } = require('../utils/tenantSql');
+const tenant = require('../utils/tenant');
 const { TASK_GROUPS, TASK_CANDIDATE_GROUPS, taskKey, taskLabel, groupLabel } = require('../utils/workflowLabels');
 const i18n = require('../i18n');
 
@@ -867,7 +868,7 @@ class DashboardModel {
       )
       SELECT c.task_id, c.task_definition_id, c.task_name, c.created_at,
              r.id AS requisition_id, r.requisition_number, r.title AS requisition_title,
-             p.name AS project_name,
+             r.project_id, p.name AS project_name,
              cl.comments AS claim, cl.performed_by AS claimed_by
       FROM created c
       JOIN requisitions r ON r.id = c.entity_id
@@ -889,6 +890,21 @@ class DashboardModel {
                        WHERE u.is_active = true GROUP BY up.profile_id`, []),
       scopedDb.select(`SELECT id, email, TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) AS name FROM users`, []),
     ]);
+    // Personnes pouvant traiter chaque tâche : profil exercé sur le projet de la réquisition (profils BPMN liés au
+    // projet) — une tâche sans personne sur son projet est signalée même si le profil existe ailleurs
+    const pairs = [...new Map(rows.map(r => {
+      const g = TASK_CANDIDATE_GROUPS[taskKey(r)];
+      return g ? [`${r.project_id}|${g}`, { projectId: r.project_id || null, profileId: `prof_${g}` }] : null;
+    }).filter(Boolean)).values()];
+    const handlerParams = [pairs.map(x => x.projectId), pairs.map(x => x.profileId)];
+    const handlers = pairs.length ? await db.select(
+      `SELECT x.project_id, x.profile_id, COUNT(u.id)::int AS n
+       FROM unnest($1::uuid[], $2::varchar[]) AS x(project_id, profile_id)
+       LEFT JOIN users u ON u.is_active = true AND user_has_project_profile(u.id, x.profile_id, x.project_id)${tenant.filter('u.enterprise_id', handlerParams)}
+       GROUP BY x.project_id, x.profile_id`,
+      handlerParams
+    ) : [];
+    const handlersOn = new Map(handlers.map(h => [`${h.project_id}|${h.profile_id}`, h.n]));
     const profileName = new Map(profiles.map(p => [p.id, p.name]));
     const memberCount = new Map(members.map(m => [m.profile_id, m.n]));
     const nameById = new Map(users.map(u => [u.id, u.name || u.email]));
@@ -907,7 +923,7 @@ class DashboardModel {
           // Nom du profil (donnée, en français) ; autre langue : libellé traduit du rôle
           profileName: (lang !== i18n.DEFAULT_LANG && groupLabel(key, lang)) || profileName.get(profileId) || groupLabel(key, lang) || i18n.translator(lang)('workflow.roles.other'),
           users: profileId ? memberCount.get(profileId) || 0 : null,
-          count: 0, claimed: 0,
+          count: 0, claimed: 0, unhandled: 0,
           oldestSince: null,
           tasks: [],
           assignees: {},
@@ -920,6 +936,8 @@ class DashboardModel {
       }
       assignee = assignee || (row.claimed_by && nameById.get(row.claimed_by)) || null;
       g.count++;
+      const handlerCount = profileId ? handlersOn.get(`${row.project_id}|${profileId}`) ?? null : null;
+      if (handlerCount === 0) g.unhandled++;
       if (assignee) { g.claimed++; g.assignees[assignee] = (g.assignees[assignee] || 0) + 1; }
       if (!g.oldestSince || new Date(row.created_at) < new Date(g.oldestSince)) g.oldestSince = row.created_at;
       g.tasks.push({
@@ -929,6 +947,7 @@ class DashboardModel {
         requisitionNumber: row.requisition_number,
         requisitionTitle: row.requisition_title,
         projectName: row.project_name,
+        handlers: handlerCount,
         since: row.created_at,
         ageDays: Math.floor((now - new Date(row.created_at)) / 86400000),
         assignee,

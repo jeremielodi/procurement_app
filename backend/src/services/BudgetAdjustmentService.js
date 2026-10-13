@@ -8,6 +8,7 @@
 const db = require('../config/database');
 const camundaService = require('./CamundaService');
 const userModel = require('../models/UserModel');
+const projectAccess = require('../utils/projectAccess');
 
 const TASK_KEY = 'Activity_BudgetAdjustment';
 const fail = (status, code, message, extra = {}) => Object.assign(new Error(message), { status, code, ...extra });
@@ -30,7 +31,9 @@ async function openTask(processInstanceId) {
 class BudgetAdjustmentService {
   async canAct(req, userId) {
     if (String(req.requester_id) === String(userId)) return true;
-    if (await userModel.hasPermission(userId, 'MANAGE_BUDGET')) return true;
+    // Gestionnaire du budget : profil attribué sur le projet de la réquisition (profils BPMN liés au projet)
+    if (await userModel.hasPermission(userId, 'MANAGE_BUDGET')
+      && await projectAccess.hasProjectPermission(userId, req.project_id, 'MANAGE_BUDGET')) return true;
     const admin = await db.one(`SELECT 1 FROM user_profiles WHERE user_id = $1 AND profile_id = 'prof_admin'`, [userId]);
     return !!admin;
   }

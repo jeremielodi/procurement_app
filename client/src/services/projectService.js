@@ -32,8 +32,15 @@ export const projectService = {
     return response.data;
   },
 
-  addMember: async (projectId, userId, role) => {
-    const response = await api.post('/projects/members', { projectId, userId, role });
+  // profileIds absent : tous ses profils de workflow sont activés sur le projet
+  addMember: async (projectId, userId, role, profileIds) => {
+    const response = await api.post('/projects/members', { projectId, userId, role, profileIds }, { skipErrorToast: true });
+    return response.data;
+  },
+
+  // Profils de workflow (BPMN) exercés par un membre sur ce projet
+  setMemberProfiles: async (projectId, userId, profileIds) => {
+    const response = await api.put(`/projects/${projectId}/members/${userId}/profiles`, { profileIds }, { skipErrorToast: true });
     return response.data;
   },
 

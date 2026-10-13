@@ -17,7 +17,9 @@ export default function UserForm({ user, onClose }) {
     department: '',
     position: '',
     language: LANGUAGES[0].code,
-    profileIds: []
+    profileIds: [],
+    // Profils de workflow exercés sur tous les projets (sinon : projets où ils sont attribués au membre)
+    allProjectsProfileIds: []
   });
 
   const { data: profilesData } = useQuery({
@@ -30,6 +32,16 @@ export default function UserForm({ user, onClose }) {
   if(profiles.data) {
     profiles = profiles.data;
   }
+  const profileName = new Map(profiles.map(p => [p.id, p.name]));
+  const selectedScoped = profiles.filter(p => p.project_scoped && formData.profileIds.includes(p.id));
+
+  // Fiche existante : projets et profils de workflow exercés sur chacun (lecture seule, modifiés sur la fiche du projet)
+  const { data: detailData } = useQuery({
+    queryKey: ['user-detail', user?.id],
+    queryFn: () => api.get(`/users/${user.id}`),
+    enabled: !!user?.id
+  });
+  const userProjects = detailData?.data?.data?.projects || [];
   useEffect(() => {
     if (user) {
       setFormData({
@@ -41,7 +53,8 @@ export default function UserForm({ user, onClose }) {
         department: user.department || '',
         position: user.position || '',
         language: user.language || LANGUAGES[0].code,
-        profileIds: user.profile_ids?.filter(id => id) || []
+        profileIds: user.profile_ids?.filter(id => id) || [],
+        allProjectsProfileIds: user.all_projects_profile_ids?.filter(id => id) || []
       });
     }
   }, [user]);
@@ -74,11 +87,22 @@ export default function UserForm({ user, onClose }) {
   };
 
   const toggleProfile = (profileId) => {
+    setFormData(prev => {
+      const removing = prev.profileIds.includes(profileId);
+      return {
+        ...prev,
+        profileIds: removing ? prev.profileIds.filter(id => id !== profileId) : [...prev.profileIds, profileId],
+        allProjectsProfileIds: removing ? prev.allProjectsProfileIds.filter(id => id !== profileId) : prev.allProjectsProfileIds
+      };
+    });
+  };
+
+  const toggleAllProjects = (profileId) => {
     setFormData(prev => ({
       ...prev,
-      profileIds: prev.profileIds.includes(profileId)
-        ? prev.profileIds.filter(id => id !== profileId)
-        : [...prev.profileIds, profileId]
+      allProjectsProfileIds: prev.allProjectsProfileIds.includes(profileId)
+        ? prev.allProjectsProfileIds.filter(id => id !== profileId)
+        : [...prev.allProjectsProfileIds, profileId]
     }));
   };
 
@@ -182,6 +206,45 @@ export default function UserForm({ user, onClose }) {
             </button>
           ))}
         </div>
+
+        {selectedScoped.length > 0 && (
+          <div className="mt-3 rounded-lg border border-gray-200 p-3" data-testid="all-projects-options">
+            <p className="text-xs text-gray-500 mb-2">{t('users.allProjectsHint')}</p>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {selectedScoped.map(profile => (
+                <label key={profile.id} className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    data-testid={`all-projects-${profile.id}`}
+                    checked={formData.allProjectsProfileIds.includes(profile.id)}
+                    onChange={() => toggleAllProjects(profile.id)}
+                  />
+                  {profile.name} — {t('users.allProjects')}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {user && (
+          <div className="mt-3">
+            <p className="text-sm font-medium mb-1">{t('users.projectsTitle')}</p>
+            {userProjects.length === 0 ? (
+              <p className="text-xs text-gray-500">{t('users.noProjects')}</p>
+            ) : (
+              <ul className="text-xs text-gray-700 space-y-1" data-testid="user-projects">
+                {userProjects.map(p => (
+                  <li key={p.id}>
+                    <span className="font-medium">{p.code}</span> — {p.name} :{' '}
+                    {p.profile_ids.length
+                      ? p.profile_ids.map(id => profileName.get(id) || id).join(', ')
+                      : <span className="italic text-gray-500">{t('users.noProjectProfile')}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 pt-4">

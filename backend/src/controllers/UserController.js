@@ -47,7 +47,7 @@ class UserController {
    */
   async create(req, res) {
     try {
-      const { username, email, password, firstName, lastName, department, position, language, profileIds } = req.body;
+      const { username, email, password, firstName, lastName, department, position, language, profileIds, allProjectsProfileIds } = req.body;
       if (hasReservedProfile(profileIds)) {
         return res.status(403).json({ success: false, message: 'Profil réservé à la plateforme (super admin / fournisseur)' });
       }
@@ -71,12 +71,13 @@ class UserController {
         position,
         language,
         profileIds: profileIds || [],
+        allProjectsProfileIds: Array.isArray(allProjectsProfileIds) ? allProjectsProfileIds : [],
         enterpriseId: req.enterpriseId,
       });
       
       await audit(req, AUDIT.USER_CREATED, {
         target: { id: result.id, email: result.email, enterprise_id: req.enterpriseId },
-        details: { username, email, firstName, lastName, language, profileIds: profileIds || [] },
+        details: { username, email, firstName, lastName, language, profileIds: profileIds || [], allProjectsProfileIds: allProjectsProfileIds || [] },
       });
       res.status(201).json({ success: true, data: result });
     } catch (error) {
@@ -97,7 +98,8 @@ class UserController {
         return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
       }
       
-      res.json({ success: true, data: user });
+      // Projets et profils de workflow exercés sur chacun (profils BPMN liés au projet)
+      res.json({ success: true, data: { ...user, projects: await userModel.getProjectAssignments(id) } });
     } catch (error) {
       console.error('Error getting user:', error);
       res.status(500).json({ success: false, message: error.message });
@@ -110,7 +112,7 @@ class UserController {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const { firstName, lastName, department, position, language, profileIds } = req.body;
+      const { firstName, lastName, department, position, language, profileIds, allProjectsProfileIds } = req.body;
       if (hasReservedProfile(profileIds)) {
         return res.status(403).json({ success: false, message: 'Profil réservé à la plateforme (super admin / fournisseur)' });
       }
@@ -126,12 +128,13 @@ class UserController {
         department,
         position,
         language,
-        profileIds: profileIds || []
+        profileIds: profileIds || [],
+        allProjectsProfileIds
       });
       await audit(req, AUDIT.USER_UPDATED, {
         target: { id, email: existing.email, enterprise_id: existing.enterpriseId },
-        oldValue: { firstName: existing.firstName, lastName: existing.lastName, department: existing.department, position: existing.position, language: existing.language, profileIds: (existing.profiles || []).map(p => p.id) },
-        details: { firstName, lastName, department, position, language, profileIds: profileIds || [] },
+        oldValue: { firstName: existing.firstName, lastName: existing.lastName, department: existing.department, position: existing.position, language: existing.language, profileIds: (existing.profiles || []).map(p => p.id), allProjectsProfileIds: (existing.profiles || []).filter(p => p.all_projects).map(p => p.id) },
+        details: { firstName, lastName, department, position, language, profileIds: profileIds || [], ...(Array.isArray(allProjectsProfileIds) ? { allProjectsProfileIds } : {}) },
       });
       
       res.json({ success: true, message: 'Utilisateur mis à jour' });

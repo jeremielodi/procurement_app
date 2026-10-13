@@ -8,24 +8,26 @@ const segregation = require('../utils/segregation');
 const { taskLabel } = require('../utils/workflowLabels');
 const supplierBankService = require('../services/SupplierBankService');
 const { audit, AUDIT } = require('../utils/auditLog');
+const projectAccess = require('../utils/projectAccess');
 
-/** Process GoFlow appartenant à l'entreprise courante (via la réquisition liée) */
-async function processIdsOfEnterprise(processIds) {
-  if (!processIds.length) return new Set();
+/** Réquisitions de l'entreprise courante liées à ces process GoFlow → Map(processInstanceId → réquisition) */
+async function requisitionsOfEnterprise(processIds) {
+  if (!processIds.length) return new Map();
   const params = [processIds];
   const rows = await db.select(
-    `SELECT process_instance_id FROM requisitions WHERE process_instance_id = ANY($1)${tenant.filter('enterprise_id', params)}`,
+    `SELECT id, requisition_number, title, project_id, process_instance_id FROM requisitions
+     WHERE process_instance_id = ANY($1)${tenant.filter('enterprise_id', params)}`,
     params
   );
-  return new Set(rows.map(r => r.process_instance_id));
+  return new Map(rows.map(r => [r.process_instance_id, r]));
 }
 
-/** Tâche active de l'entreprise courante, sinon null (on ne révèle pas les tâches des autres entreprises) */
+/** Tâche active de l'entreprise courante (+ projectId de sa réquisition), sinon null (on ne révèle pas les tâches des autres entreprises) */
 async function findEnterpriseTask(taskId) {
   const task = ((await camundaService.getProcessTasks()) || []).find(t => t.id === taskId);
   if (!task) return null;
-  const allowed = await processIdsOfEnterprise([task.processInstanceId].filter(Boolean));
-  return allowed.has(task.processInstanceId) ? task : null;
+  const requisition = (await requisitionsOfEnterprise([task.processInstanceId].filter(Boolean))).get(task.processInstanceId);
+  return requisition ? { ...task, projectId: requisition.project_id || null } : null;
 }
 const supplierConfirmationService = require('../services/SupplierConfirmationService');
 const invoiceModel = require('../models/InvoiceModel');
@@ -56,13 +58,21 @@ function isFinalApprovalLevel(taskDefinitionKey, estimatedAmount) {
 
 /**
  * Charger l'utilisateur courant avec ses groupes Camunda.
- * 'prof_manager' → 'manager' (correspond au candidateGroup BPMN)
+ * 'prof_manager' → 'manager' (correspond au candidateGroup BPMN). groups = tous ses profils ; scope = où ils
+ * s'exercent (profils de workflow liés au projet : utils/projectAccess)
  */
 async function getCurrentUserContext(userId) {
-  const user = await UserModel.findById(userId);
+  const [user, scope] = await Promise.all([UserModel.findById(userId), projectAccess.loadScope(userId)]);
   const groups = (user?.profiles || []).map(p => p.id.replace('prof_', ''));
-  return { id: userId, email: user?.email, groups, isAdmin: groups.includes('admin') };
+  return { id: userId, email: user?.email, groups, isAdmin: groups.includes('admin'), scope };
 }
+
+/** L'utilisateur a le groupe de la tâche sur le projet de sa réquisition */
+const inGroupOnProject = (task, currentUser, projectId) =>
+  projectAccess.groupsOnProject(currentUser.scope, projectId).has(task.candidateGroup);
+
+// Tâche attribuée par le processus à une personne (assignee ${requester}) : elle la traite sans le profil
+const PERSONAL_TASKS = ['Activity_BudgetAdjustment'];
 
 // GoFlow stocke l'assignee par email (cf. claim) ; l'id est accepté pour les anciennes tâches
 function isMine(task, currentUser) {
@@ -73,16 +83,20 @@ function isMine(task, currentUser) {
  * Droits d'un utilisateur sur une tâche. conflict = code de séparation des tâches (utils/segregation, ex. SELF_APPROVAL :
  * approuver sa propre réquisition) → ni prise en charge ni complétion, raison renvoyée dans blockedReason.
  */
-function getTaskPermissions(task, currentUser, conflict = null) {
+function getTaskPermissions(task, currentUser, conflict = null, projectId = null) {
   const isCompleted = task.status === 'completed';
-  const inGroup = currentUser.isAdmin || currentUser.groups.includes(task.candidateGroup);
+  const onProject = inGroupOnProject(task, currentUser, projectId);
+  const inGroup = currentUser.isAdmin || onProject;
+  // Profil détenu, mais pas sur le projet de cette réquisition (profils BPMN liés au projet)
+  const notOnProject = !isCompleted && !currentUser.isAdmin && !onProject && currentUser.groups.includes(task.candidateGroup);
+  const mine = isMine(task, currentUser);
   return {
-    isMine: isMine(task, currentUser),
+    isMine: mine,
     canClaim: !isCompleted && !task.assignee && inGroup && !conflict,
     // Libérer : la personne qui l'a prise, ou un admin (ex. collègue absent)
-    canUnclaim: !isCompleted && !!task.assignee && (isMine(task, currentUser) || currentUser.isAdmin),
-    canComplete: !isCompleted && isMine(task, currentUser) && !conflict,
-    blockedReason: conflict || null,
+    canUnclaim: !isCompleted && !!task.assignee && (mine || currentUser.isAdmin),
+    canComplete: !isCompleted && mine && !conflict && (inGroup || PERSONAL_TASKS.includes(task.taskDefinitionKey)),
+    blockedReason: conflict || (notOnProject ? 'NOT_ON_PROJECT' : null),
   };
 }
 
@@ -102,35 +116,21 @@ async function getUserTasks(req, res) {
       camundaService.getCompletedTasks({ assignee: currentUser.email, processInstanceId })
     ]);
 
-    // Tâches actives visibles : celles de ses groupes (ou toutes pour l'admin) ;
+    // Réquisition de chaque tâche, lue en base (les variables GoFlow peuvent manquer) : seulement les réquisitions
+    // existantes de l'entreprise courante. « Mes tâches » renvoie vers l'onglet tâches de la réquisition, seul
+    // endroit où une tâche est prise en charge et traitée
+    const reqByProcess = await requisitionsOfEnterprise(
+      [...new Set([...(activeTasks || []), ...(completedTasks || [])].map(t => t.processInstanceId).filter(Boolean))]
+    );
+    const projectOfTask = (t) => reqByProcess.get(t.processInstanceId)?.project_id || null;
+
+    // Tâches actives visibles : celles de ses groupes SUR LE PROJET de la réquisition (ou toutes pour l'admin) ;
     // tâches terminées : uniquement celles qu'il a lui-même traitées
-    let userTasks = [
-      ...(activeTasks || []).filter(t => currentUser.isAdmin || isMine(t, currentUser) || currentUser.groups.includes(t.candidateGroup)),
+    const userTasks = [
+      ...(activeTasks || []).filter(t => currentUser.isAdmin || isMine(t, currentUser) || inGroupOnProject(t, currentUser, projectOfTask(t))),
       ...(completedTasks || [])
-    ];
+    ].filter(t => reqByProcess.has(t.processInstanceId));
 
-    // Garder uniquement les tâches dont le processInstanceId correspond
-    // à une réquisition existante en base
-    if ((userTasks || []).length > 0) {
-      const processIds = [...new Set(userTasks.map(t => t.processInstanceId).filter(Boolean))];
-      if (processIds.length > 0) {
-        // Réquisitions existantes ET de l'entreprise courante
-        const validIds = await processIdsOfEnterprise(processIds);
-        userTasks = userTasks.filter(t => validIds.has(t.processInstanceId));
-      } else {
-        userTasks = [];
-      }
-    }
-
-    // Réquisition de chaque tâche, lue en base (les variables GoFlow peuvent manquer) : « Mes tâches » renvoie
-    // vers l'onglet tâches de la réquisition, seul endroit où une tâche est prise en charge et traitée
-    const reqRows = userTasks.length
-      ? await db.select(
-        'SELECT id, requisition_number, title, process_instance_id FROM requisitions WHERE process_instance_id = ANY($1)',
-        [[...new Set(userTasks.map(t => t.processInstanceId).filter(Boolean))]]
-      )
-      : [];
-    const reqByProcess = new Map(reqRows.map(r => [r.process_instance_id, r]));
     const conflicts = await segregation.taskConflicts((userTasks || []).filter(t => t.status !== 'completed'), currentUser.id);
     const enrichedTasks = await Promise.all(
       (userTasks || []).map(async (task) => {
@@ -160,7 +160,7 @@ async function getUserTasks(req, res) {
           requisitionId: reqByProcess.get(task.processInstanceId)?.id || null,
           requisitionNumber: reqByProcess.get(task.processInstanceId)?.requisition_number || null,
           requisitionTitle: reqByProcess.get(task.processInstanceId)?.title || null,
-          ...getTaskPermissions(task, currentUser, conflictOf(conflicts, task))
+          ...getTaskPermissions(task, currentUser, conflictOf(conflicts, task), projectOfTask(task))
         };
       })
     );
@@ -187,9 +187,14 @@ async function getGroupTasks(req, res) {
       return res.status(400).json({ success: false, message: 'candidateGroup est requis' });
     }
 
-    const all = (await camundaService.getGroupTasks(candidateGroup, processInstanceId)) || [];
-    const allowed = await processIdsOfEnterprise([...new Set(all.map(t => t.processInstanceId).filter(Boolean))]);
-    const tasks = all.filter(t => allowed.has(t.processInstanceId));
+    const [all, currentUser] = await Promise.all([
+      camundaService.getGroupTasks(candidateGroup, processInstanceId),
+      getCurrentUserContext(req.user.id),
+    ]);
+    const reqByProcess = await requisitionsOfEnterprise([...new Set((all || []).map(t => t.processInstanceId).filter(Boolean))]);
+    // Entreprise courante, et groupe de l'utilisateur sur le projet de chaque réquisition (admin : tout)
+    const tasks = (all || []).filter(t => reqByProcess.has(t.processInstanceId)
+      && (currentUser.isAdmin || inGroupOnProject(t, currentUser, reqByProcess.get(t.processInstanceId).project_id)));
     res.json({ success: true, data: tasks, count: tasks.length });
   } catch (error) {
     console.error('Error getting group tasks:', error);
@@ -245,7 +250,12 @@ async function claimTask(req, res) {
       });
       return res.status(error.status).json({ success: false, code: error.code, message: error.message });
     }
-    if (!getTaskPermissions(task, currentUser).canClaim) {
+    const permissions = getTaskPermissions(task, currentUser, null, task.projectId);
+    if (permissions.blockedReason === 'NOT_ON_PROJECT') {
+      const error = await projectAccess.deny(req, { projectId: task.projectId, candidateGroup: task.candidateGroup, taskId });
+      return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
+    }
+    if (!permissions.canClaim) {
       return res.status(403).json({
         success: false,
         message: `Cette tâche est réservée au groupe « ${task.candidateGroup} »`
@@ -280,7 +290,7 @@ async function unclaimTask(req, res) {
     if (!task.assignee) {
       return res.status(409).json({ success: false, message: 'Cette tâche n\'est prise en charge par personne' });
     }
-    if (!getTaskPermissions(task, currentUser).canUnclaim) {
+    if (!getTaskPermissions(task, currentUser, null, task.projectId).canUnclaim) {
       return res.status(403).json({ success: false, message: `Seul(e) ${task.assignee} ou un administrateur peut libérer cette tâche` });
     }
 
@@ -347,7 +357,15 @@ async function completeTask(req, res) {
     // séparation des tâches. La clé et la réquisition viennent de GoFlow / de la base.
     const taskDefinitionKey = task.taskDefinitionKey || bodyTaskKey;
     const currentUser = await getCurrentUserContext(userId);
-    if (!(currentUser.isAdmin || currentUser.groups.includes(task.candidateGroup) || isMine(task, currentUser))) {
+    // Groupe de la tâche SUR LE PROJET de la réquisition (profils BPMN liés au projet) ; tâche personnelle
+    // (ajustement budgétaire du demandeur) : la personne désignée
+    const onProject = inGroupOnProject(task, currentUser, task.projectId);
+    const personal = PERSONAL_TASKS.includes(taskDefinitionKey) && isMine(task, currentUser);
+    if (!currentUser.isAdmin && !onProject && !personal && currentUser.groups.includes(task.candidateGroup)) {
+      const error = await projectAccess.deny(req, { projectId: task.projectId, candidateGroup: task.candidateGroup, taskId });
+      return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
+    }
+    if (!(currentUser.isAdmin || onProject || personal)) {
       await audit(req, AUDIT.TASK_COMPLETION_DENIED, {
         entity: { type: 'task', id: taskDefinitionKey, label: taskLabel(task.taskDefinitionKey || taskDefinitionKey) || task.taskName || task.name },
         details: { taskId, reason: 'NOT_IN_GROUP', candidateGroup: task.candidateGroup },
@@ -601,11 +619,13 @@ async function getTasksByProcess(req, res) {
       return res.status(400).json({ success: false, message: 'processInstanceId est requis' });
     }
 
-    const [currentUser, activeTasks, completedTasks] = await Promise.all([
+    const [currentUser, activeTasks, completedTasks, requisition] = await Promise.all([
       getCurrentUserContext(req.user.id),
       camundaService.getProcessTasks(processInstanceId),
-      camundaService.getCompletedTasks({ processInstanceId })
+      camundaService.getCompletedTasks({ processInstanceId }),
+      db.one('SELECT project_id FROM requisitions WHERE process_instance_id = $1', [processInstanceId])
     ]);
+    const projectId = requisition?.project_id || null;
 
     const conflicts = await segregation.taskConflicts(activeTasks || [], currentUser.id);
     const allTasks = [...(activeTasks || []), ...(completedTasks || [])].map(task => ({
@@ -622,7 +642,7 @@ async function getTasksByProcess(req, res) {
       priority: task.priority,
       completedAt: task.completedAt,
       status: task.status === 'completed' ? 'COMPLETED' : 'PENDING',
-      ...getTaskPermissions(task, currentUser, task.status === 'completed' ? null : conflictOf(conflicts, task))
+      ...getTaskPermissions(task, currentUser, task.status === 'completed' ? null : conflictOf(conflicts, task), projectId)
     }));
 
     res.json({ success: true, data: allTasks, count: allTasks.length, processInstanceId });

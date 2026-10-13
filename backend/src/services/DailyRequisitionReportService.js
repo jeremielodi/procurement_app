@@ -66,7 +66,8 @@ class DailyRequisitionReportService {
     let scope = '';
     if (!user.is_admin) {
       params.push(user.id);
-      scope = ` AND (p.project_manager_id = $2 OR EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = $2))`;
+      // Manager : projets dont il est responsable, ou où il exerce le profil manager (profils BPMN liés au projet)
+      scope = ` AND (p.project_manager_id = $2 OR user_has_project_profile($2, 'prof_manager', p.id))`;
     }
     return db.select(
       `SELECT p.id, p.code, p.name,

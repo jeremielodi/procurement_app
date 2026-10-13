@@ -27,7 +27,7 @@ test.describe.serial('API › Types de sortie de stock (transfert, département)
       ['/api/public/locations', '/api/departments', '/api/projects', '/api/suppliers', '/api/public/market-categories'].map(get)
     );
     for (const [key, account, profile] of [['log', logistic, 'prof_logistic'], ['kep', keeper, 'prof_logistic'], ['mgr', manager, 'prof_requester']]) {
-      const created = await request.post('/api/users', { headers: H, data: { username: account.email.split('@')[0], email: account.email, password: account.password, firstName: key, lastName: profile, profileIds: [profile] } });
+      const created = await request.post('/api/users', { headers: H, data: { username: account.email.split('@')[0], email: account.email, password: account.password, firstName: key, lastName: profile, profileIds: [profile], allProjectsProfileIds: [profile] } });
       expect(created.status()).toBe(201);
       ids[key] = (await created.json()).data.id;
       tokens[key] = (await (await request.post('/api/auth/login', { data: account })).json()).data.token;

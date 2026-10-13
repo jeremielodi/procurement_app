@@ -27,7 +27,7 @@ test.describe.serial('API › Sorties de stock vers un utilisateur', () => {
       ['/api/public/locations', '/api/departments', '/api/projects', '/api/suppliers', '/api/public/market-categories'].map(get)
     );
     for (const [account, profile] of [[logistic, 'prof_logistic'], [requester, 'prof_requester']]) {
-      const created = await request.post('/api/users', { headers: H, data: { username: account.email.split('@')[0], email: account.email, password: account.password, firstName: profile === 'prof_logistic' ? 'Lucie' : 'Rémi', lastName: profile, profileIds: [profile] } });
+      const created = await request.post('/api/users', { headers: H, data: { username: account.email.split('@')[0], email: account.email, password: account.password, firstName: profile === 'prof_logistic' ? 'Lucie' : 'Rémi', lastName: profile, profileIds: [profile], allProjectsProfileIds: [profile] } });
       expect(created.status()).toBe(201);
       if (profile === 'prof_logistic') logisticId = (await created.json()).data.id; else requesterId = (await created.json()).data.id;
     }

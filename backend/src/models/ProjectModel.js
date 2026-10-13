@@ -53,6 +53,13 @@ class ProjectModel {
       paramCount++;
     }
     
+    // Formulaire de réquisition : projets où l'utilisateur peut créer une réquisition (profils BPMN liés au projet)
+    if (['1', 'true', true].includes(filters.forRequisition) && filters.userId) {
+      sql += ` AND user_has_project_permission($${paramCount}, p.id, 'CREATE_REQUISITIONS')`;
+      params.push(filters.userId);
+      paramCount++;
+    }
+
     if (filters.search) {
       sql += ` AND (p.code ILIKE $${paramCount} OR p.name ILIKE $${paramCount})`;
       params.push(`%${filters.search}%`);
@@ -76,14 +83,9 @@ class ProjectModel {
     
     if (!project) return null;
     
-    // Récupérer les membres du projet
-    const members = await db.select(`
-      SELECT pm.*, u.first_name, u.last_name, u.email, u.username
-      FROM project_members pm
-      JOIN users u ON pm.user_id = u.id
-      WHERE pm.project_id = $1
-    `, [id]);
-    
+    // Membres du projet et leurs profils de workflow sur ce projet
+    const members = await this.getProjectMembers(id);
+
     return { ...project, members };
   }
 
@@ -108,30 +110,113 @@ class ProjectModel {
     return await db.delete('projects', 'id', id);
   }
 
-  async addMember(projectId, userId, role, assignedBy) {
-    await db.insert('project_members', {
-      project_id: projectId,
-      user_id: userId,
-      role,
-      assigned_at: new Date(),
-      assigned_by: assignedBy
+  /**
+   * Profils de workflow de l'utilisateur (profiles.project_scoped) : ceux qu'on peut lui attribuer sur un projet.
+   * all_projects = déjà exercé sur tous les projets (case de la fiche utilisateur)
+   */
+  async scopedProfilesOf(userId) {
+    return db.select(
+      `SELECT up.profile_id AS id, p.name, up.all_projects
+       FROM user_profiles up JOIN profiles p ON p.id = up.profile_id
+       WHERE up.user_id = $1 AND p.project_scoped ORDER BY p.name`,
+      [userId]
+    );
+  }
+
+  /**
+   * Ajouter un membre. profileIds : profils de workflow exercés sur ce projet (défaut : tous ses profils de workflow
+   * qui ne sont pas déjà « tous les projets »). Membre déjà présent : 409 ALREADY_MEMBER.
+   */
+  async addMember(projectId, userId, role, assignedBy, profileIds) {
+    return db.withTransaction(async (tx) => {
+      const existing = await tx.one('SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2', [projectId, userId]);
+      if (existing) throw Object.assign(new Error('Cet utilisateur est déjà membre du projet'), { status: 409, code: 'ALREADY_MEMBER' });
+      await tx.exec(
+        `INSERT INTO project_members (project_id, user_id, role, assigned_at, assigned_by) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)`,
+        [projectId, userId, role || 'MEMBER', assignedBy]
+      );
+      const available = await tx.select(
+        `SELECT up.profile_id, up.all_projects FROM user_profiles up JOIN profiles p ON p.id = up.profile_id
+         WHERE up.user_id = $1 AND p.project_scoped`,
+        [userId]
+      );
+      const wanted = Array.isArray(profileIds)
+        ? available.filter(a => profileIds.includes(a.profile_id))
+        : available.filter(a => !a.all_projects);
+      for (const a of wanted) {
+        await tx.exec(
+          `INSERT INTO project_member_profiles (project_id, user_id, profile_id, assigned_by) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+          [projectId, userId, a.profile_id, assignedBy]
+        );
+      }
+      return { success: true, profileIds: wanted.map(a => a.profile_id) };
     });
-    
-    return { success: true };
   }
 
   async removeMember(projectId, userId) {
+    // project_member_profiles : supprimés en cascade
     await db.delete('project_members', { project_id: projectId, user_id: userId });
     return { success: true };
   }
 
+  /**
+   * Profils de workflow d'un membre sur ce projet (remplace l'attribution). Seuls ses profils globaux de workflow
+   * sont acceptés (400 INVALID_PROFILE). → { before, after }
+   */
+  async setMemberProfiles(projectId, userId, profileIds, assignedBy) {
+    return db.withTransaction(async (tx) => {
+      const member = await tx.one('SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2', [projectId, userId]);
+      if (!member) throw Object.assign(new Error("Cet utilisateur n'est pas membre du projet"), { status: 404, code: 'NOT_MEMBER' });
+      const available = (await tx.select(
+        `SELECT up.profile_id FROM user_profiles up JOIN profiles p ON p.id = up.profile_id WHERE up.user_id = $1 AND p.project_scoped`,
+        [userId]
+      )).map(r => r.profile_id);
+      const wanted = [...new Set((profileIds || []).map(String))];
+      const invalid = wanted.filter(p => !available.includes(p));
+      if (invalid.length) {
+        throw Object.assign(new Error("Profil non détenu par l'utilisateur (à ajouter d'abord sur sa fiche)"), { status: 400, code: 'INVALID_PROFILE', details: { invalid } });
+      }
+      const before = (await tx.select(
+        'SELECT profile_id FROM project_member_profiles WHERE project_id = $1 AND user_id = $2 ORDER BY profile_id', [projectId, userId]
+      )).map(r => r.profile_id);
+      await tx.exec('DELETE FROM project_member_profiles WHERE project_id = $1 AND user_id = $2', [projectId, userId]);
+      for (const profileId of wanted) {
+        await tx.exec(
+          'INSERT INTO project_member_profiles (project_id, user_id, profile_id, assigned_by) VALUES ($1, $2, $3, $4)',
+          [projectId, userId, profileId, assignedBy]
+        );
+      }
+      return { before, after: wanted.sort() };
+    });
+  }
+
+  /** Membres + leurs profils de workflow : { id, name, allProjects, assigned } (assigned = exercé sur ce projet) */
   async getProjectMembers(projectId) {
-    return await db.select(`
-      SELECT u.id, u.username, u.email, u.first_name, u.last_name, pm.role
-      FROM project_members pm
-      JOIN users u ON pm.user_id = u.id
-      WHERE pm.project_id = $1
-    `, [projectId]);
+    const [members, profiles] = await Promise.all([
+      db.select(`
+        SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.is_active, pm.role
+        FROM project_members pm
+        JOIN users u ON pm.user_id = u.id
+        WHERE pm.project_id = $1
+        ORDER BY u.first_name, u.last_name
+      `, [projectId]),
+      db.select(`
+        SELECT pm.user_id, up.profile_id, p.name, up.all_projects,
+               EXISTS (SELECT 1 FROM project_member_profiles pmp
+                       WHERE pmp.project_id = pm.project_id AND pmp.user_id = pm.user_id AND pmp.profile_id = up.profile_id) AS assigned
+        FROM project_members pm
+        JOIN user_profiles up ON up.user_id = pm.user_id
+        JOIN profiles p ON p.id = up.profile_id AND p.project_scoped
+        WHERE pm.project_id = $1
+        ORDER BY p.name
+      `, [projectId]),
+    ]);
+    const byUser = new Map();
+    for (const p of profiles) {
+      if (!byUser.has(p.user_id)) byUser.set(p.user_id, []);
+      byUser.get(p.user_id).push({ id: p.profile_id, name: p.name, allProjects: p.all_projects, assigned: p.assigned });
+    }
+    return members.map(m => ({ ...m, profiles: byUser.get(m.id) || [] }));
   }
 
   async getAvailableUsers() {

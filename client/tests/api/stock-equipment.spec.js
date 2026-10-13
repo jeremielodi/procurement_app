@@ -28,7 +28,7 @@ test.describe.serial('API › Équipements affectés et retours', () => {
       ['/api/public/locations', '/api/departments', '/api/projects', '/api/suppliers', '/api/public/market-categories'].map(get)
     );
     for (const [account, profile, first] of [[logistic, 'prof_logistic', 'Léa'], [employee, 'prof_requester', 'Eric']]) {
-      const created = await request.post('/api/users', { headers: H, data: { username: account.email.split('@')[0], email: account.email, password: account.password, firstName: first, lastName: `Test${stamp}`, profileIds: [profile] } });
+      const created = await request.post('/api/users', { headers: H, data: { username: account.email.split('@')[0], email: account.email, password: account.password, firstName: first, lastName: `Test${stamp}`, profileIds: [profile], allProjectsProfileIds: [profile] } });
       expect(created.status()).toBe(201);
       if (profile === 'prof_logistic') logisticId = (await created.json()).data.id; else employeeId = (await created.json()).data.id;
     }

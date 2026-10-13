@@ -92,6 +92,7 @@ const PATH_RESOURCES = [
   { re: new RegExp(`^/departments/(${UUID})(/|$)`), table: 'departments' },
   { re: new RegExp(`^/projects/(${UUID})(/|$)`), table: 'projects' },
   { re: new RegExp(`^/projects/members/(${UUID})/(${UUID})$`), table: 'projects', second: 'users' },
+  { re: new RegExp(`^/projects/(${UUID})/members/(${UUID})/profiles$`), table: 'projects', second: 'users' },
   { re: new RegExp(`^/users/(${UUID})(/|$)`), table: 'users' },
   { re: /^\/workflow\/process\/([^/]+)/, table: 'requisitions', column: 'process_instance_id' },
   { re: /^\/tasks\/process\/([^/]+)/, table: 'requisitions', column: 'process_instance_id' },

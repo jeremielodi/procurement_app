@@ -1,11 +1,47 @@
 // src/components/Projects/ProjectDetail.jsx
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, UserMinus, Users, Calendar, Building2, User } from 'lucide-react';
+import { UserPlus, UserMinus, Users, Calendar, Building2, User, Check, Globe, Info } from 'lucide-react';
 import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
 import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+
+const apiError = (error) => {
+  const code = error?.response?.data?.code;
+  const key = code && `projects.err.${code}`;
+  const translated = key && t(key);
+  return translated && translated !== key ? translated : (error?.response?.data?.message || t('common.errorOccurred'));
+};
+
+/**
+ * Profils de workflow d'un membre sur ce projet (profils BPMN liés au projet) : un clic active / retire le profil ;
+ * « Tous les projets » (fiche de l'utilisateur) : affiché, non modifiable ici
+ */
+function MemberProfiles({ member, pending, onToggle }) {
+  if (!member.profiles?.length) {
+    return <p className="text-xs text-gray-400 italic mt-1">{t('projects.noWorkflowProfile')}</p>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2" data-testid="member-profiles" role="group" aria-label={t('projects.workflowProfiles')}>
+      {member.profiles.map(p => p.allProjects ? (
+        <span key={p.id} title={t('projects.allProjectsTitle')}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200">
+          <Globe size={12} /> {p.name} · {t('projects.allProjects')}
+        </span>
+      ) : (
+        <button key={p.id} type="button" disabled={pending} onClick={() => onToggle(p)}
+          aria-pressed={p.assigned} data-testid={`member-profile-${p.id}`}
+          title={t(p.assigned ? 'projects.profileOn' : 'projects.profileOff', { profile: p.name })}
+          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+            p.assigned ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-600 ring-1 ring-gray-200 hover:bg-gray-200'
+          }`}>
+          {p.assigned && <Check size={12} />} {p.name}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function ProjectDetail({ project, onClose }) {
   const queryClient = useQueryClient();
@@ -31,8 +67,24 @@ export default function ProjectDetail({ project, onClose }) {
       toast.success(t('projects.memberAdded'));
       setShowAddMember(false);
       setSelectedUser('');
-    }
+    },
+    onError: (error) => toast.error(apiError(error))
   });
+
+  const profilesMutation = useMutation({
+    mutationFn: ({ userId, profileIds }) => projectService.setMemberProfiles(project.id, userId, profileIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['project-members', project?.id]);
+      toast.success(t('projects.profilesUpdated'));
+    },
+    onError: (error) => toast.error(apiError(error))
+  });
+
+  const toggleProfile = (member, profile) => {
+    const current = member.profiles.filter(p => p.assigned && !p.allProjects).map(p => p.id);
+    const profileIds = profile.assigned ? current.filter(id => id !== profile.id) : [...current, profile.id];
+    profilesMutation.mutate({ userId: member.id, profileIds });
+  };
 
   const removeMemberMutation = useMutation({
     mutationFn: ({ projectId, userId }) => projectService.removeMember(projectId, userId),
@@ -89,8 +141,10 @@ export default function ProjectDetail({ project, onClose }) {
           </button>
         </div>
 
+        <p className="text-xs text-gray-500 mb-3 flex gap-1.5"><Info size={14} className="shrink-0 mt-0.5" /> {t('projects.workflowProfilesHint')}</p>
+
         {showAddMember && (
-          <div className="bg-gray-50 rounded-lg p-4 mb-4 flex gap-3">
+          <div className="bg-gray-50 rounded-lg p-4 mb-4 flex flex-wrap gap-3">
             <SearchSelect
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
@@ -119,16 +173,18 @@ export default function ProjectDetail({ project, onClose }) {
             >
               {t('common.add')}
             </button>
+            <p className="w-full text-xs text-gray-500">{t('projects.addProfilesHint')}</p>
           </div>
         )}
 
         <div className="space-y-2">
           {members.map((member) => (
-            <div key={member.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <div>
+            <div key={member.id} className="flex justify-between items-start gap-3 p-3 bg-gray-50 rounded-lg" data-testid="project-member">
+              <div className="min-w-0">
                 <p className="font-medium">{member.first_name} {member.last_name}</p>
                 <p className="text-sm text-gray-500">{member.email}</p>
                 <span className="text-xs text-blue-600">{t(`projects.roles.${member.role}`, { defaultValue: member.role })}</span>
+                <MemberProfiles member={member} pending={profilesMutation.isPending} onToggle={(p) => toggleProfile(member, p)} />
               </div>
               <button
                 onClick={() => {

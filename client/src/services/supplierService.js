@@ -12,6 +12,12 @@ export const supplierService = {
     return response.data
   },
 
+  // Bon de commande : tous les fournisseurs actifs (is_prequalified, awarded = attributaire de l'AO de la réquisition)
+  getForPurchaseOrder: async (requisitionId) => {
+    const response = await api.get('/suppliers', { params: { forPurchaseOrder: 1, ...(requisitionId ? { requisitionId } : {}) } })
+    return response.data
+  },
+
   getPrequalified: async () => {
     const response = await api.get('/suppliers')
     return response.data

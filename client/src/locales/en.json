@@ -1435,7 +1435,12 @@
         "DATE_IN_PAST": "The planned delivery date is already past"
       }
     },
-    "selfApproval": "You created this order (or requested the purchase): another approver must validate it"
+    "selfApproval": "You created this order (or requested the purchase): another approver must validate it",
+    "awardedSupplier": "tender award winner",
+    "suppliersPrequalified": "Prequalified by your company",
+    "suppliersNotPrequalified": "Not prequalified",
+    "notPrequalifiedWarning": "This supplier is not yet prequalified by your company (registered on the portal, file to be checked).",
+    "openPrequalification": "View prequalification"
   },
   "grnStatus": {
     "DRAFT": "Draft",

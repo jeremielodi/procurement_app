@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, ShoppingCart, Plus, Trash2 } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Save, ShoppingCart, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { purchaseOrderService } from '../../services/purchaseOrderService';
 import requisitionService from '../../services/requisitionService';
@@ -28,11 +28,24 @@ export default function POForm() {
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    // Bons de commande : fournisseurs préqualifiés uniquement (comportement inchangé)
-    supplierService.getAll({ prequalifiedOnly: true })
-      .then(r => setSuppliers(r.data || r || []))
+    // Tous les fournisseurs actifs, préqualifiés en tête ; l'attributaire de l'appel d'offres de la réquisition
+    // est choisi d'office
+    supplierService.getForPurchaseOrder(requisitionId)
+      .then(r => {
+        const list = r.data || r || [];
+        setSuppliers(list);
+        const awarded = list.find(s => s.awarded);
+        if (awarded) setSupplierId(id => id || String(awarded.id));
+      })
       .catch(() => toast.error(t('po.loadSuppliersError')));
-  }, []);
+  }, [requisitionId]);
+
+  const prequalifiedSuppliers = suppliers.filter(s => s.is_prequalified);
+  const otherSuppliers = suppliers.filter(s => !s.is_prequalified);
+  const selectedSupplier = suppliers.find(s => String(s.id) === String(supplierId));
+  const supplierOption = (s) => (
+    <option key={s.id} value={s.id}>{s.name}{s.awarded ? ` — ${t('po.awardedSupplier')}` : ''}</option>
+  );
 
   useEffect(() => {
     if (!requisitionId) return;
@@ -174,10 +187,24 @@ export default function POForm() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">{t('po.selectSupplierPlaceholder')}</option>
-                {suppliers.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
+                {prequalifiedSuppliers.length > 0 && (
+                  <optgroup label={t('po.suppliersPrequalified')}>{prequalifiedSuppliers.map(supplierOption)}</optgroup>
+                )}
+                {otherSuppliers.length > 0 && (
+                  <optgroup label={t('po.suppliersNotPrequalified')}>{otherSuppliers.map(supplierOption)}</optgroup>
+                )}
               </SearchSelect>
+              {selectedSupplier && !selectedSupplier.is_prequalified && (
+                <p className="mt-1 flex items-start gap-1 text-xs text-amber-700" data-testid="po-supplier-not-prequalified">
+                  <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                  <span>
+                    {t('po.notPrequalifiedWarning')}{' '}
+                    <Link to={`/suppliers/${selectedSupplier.id}?tab=prequalification`} className="underline" target="_blank" rel="noreferrer">
+                      {t('po.openPrequalification')}
+                    </Link>
+                  </span>
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('po.orderDate')}</label>

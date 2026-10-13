@@ -1435,7 +1435,12 @@
         "DATE_IN_PAST": "La date de livraison prévue est déjà passée"
       }
     },
-    "selfApproval": "Vous avez créé ce bon (ou demandé l'achat) : un autre approbateur doit le valider"
+    "selfApproval": "Vous avez créé ce bon (ou demandé l'achat) : un autre approbateur doit le valider",
+    "awardedSupplier": "attributaire de l'appel d'offres",
+    "suppliersPrequalified": "Préqualifiés par votre entreprise",
+    "suppliersNotPrequalified": "Non préqualifiés",
+    "notPrequalifiedWarning": "Ce fournisseur n'est pas encore préqualifié par votre entreprise (inscrit sur le portail, dossier à vérifier).",
+    "openPrequalification": "Voir sa préqualification"
   },
   "grnStatus": {
     "DRAFT": "Brouillon",

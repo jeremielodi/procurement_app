@@ -140,6 +140,30 @@ class SupplierModel {
     );
   }
 
+  /**
+   * Choix du fournisseur d'un bon de commande : TOUS les fournisseurs actifs (un fournisseur inscrit sur le
+   * portail n'est pas préqualifié d'office), préqualifiés en tête (is_prequalified : même règle que
+   * getPrequalifiedSuppliers) ; awarded = attributaire de l'appel d'offres de la réquisition.
+   */
+  async getForPurchaseOrder(requisitionId = null) {
+    const params = [];
+    const preqFilter = tenant.filter('sp.enterprise_id', params);
+    params.push(requisitionId || null);
+    const reqParam = `$${params.length}::uuid`;
+    return db.select(
+      `SELECT s.id, s.name, s.email, s.self_registered,
+              (s.prequalified = true OR EXISTS (
+                 SELECT 1 FROM supplier_prequalifications sp
+                 WHERE sp.supplier_id = s.id AND sp.status = 'APPROVED'${preqFilter})) AS is_prequalified,
+              EXISTS (SELECT 1 FROM tenders td WHERE td.requisition_id = ${reqParam} AND td.status = 'AWARDED'
+                        AND td.awarded_supplier_id = s.id) AS awarded
+       FROM suppliers s
+       WHERE s.status = 'ACTIVE'
+       ORDER BY is_prequalified DESC, s.name`,
+      params
+    );
+  }
+
   // ---------------- Localisations / catégories déclarées ----------------
 
   async getLocations(supplierId) {

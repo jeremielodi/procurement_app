@@ -229,6 +229,19 @@ test.describe.serial('API › Préqualification des fournisseurs', () => {
     expect(xlsx.headers()['content-type']).toContain('spreadsheetml');
   });
 
+  test('Bon de commande : tous les fournisseurs actifs, préqualifiés en tête', async ({ request }) => {
+    const list = (await (await request.get('/api/suppliers?forPurchaseOrder=1', { headers: auth(adminToken) })).json()).data;
+    const company = list.find(s => s.id === companyId);
+    const bare = list.find(s => s.id === bareId); // inscrit sur le portail, non préqualifié
+    expect(company).toMatchObject({ is_prequalified: true, awarded: false });
+    expect(bare).toMatchObject({ is_prequalified: false, self_registered: true });
+    const firstOther = list.findIndex(s => !s.is_prequalified);
+    expect(list.slice(firstOther).every(s => !s.is_prequalified)).toBe(true);
+    // Liste par défaut (autres écrans) inchangée : préqualifiés seulement
+    const prequalifiedOnly = (await (await request.get('/api/suppliers', { headers: auth(adminToken) })).json()).data;
+    expect(prequalifiedOnly.map(s => s.id)).not.toContain(bareId);
+  });
+
   test('Appel d\'offres réservé : seuls les préqualifiés sélectionnés le voient et peuvent soumettre', async ({ request }) => {
     const list = await (await request.get('/api/requisitions?limit=100', { headers: auth(adminToken) })).json();
     for (const r of list.data) {

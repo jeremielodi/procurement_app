@@ -178,6 +178,18 @@ test.describe.serial('API › Portail fournisseur & appels d\'offres', () => {
     expect(xlsx.headers()['content-type']).toContain('spreadsheetml');
   });
 
+  test('Attribution → l\'attributaire (inscrit, non préqualifié) est proposé d\'office dans le bon de commande', async ({ request }) => {
+    test.skip(!tenderId);
+    const tender = (await (await request.get(`/api/tenders/${tenderId}`, { headers: auth(adminToken) })).json()).data;
+    const winnerId = tender.submissions[0].supplier_id;
+    const award = await request.post(`/api/tenders/${tenderId}/award`, { headers: auth(adminToken), data: { supplierId: winnerId } });
+    expect(award.status()).toBe(200);
+
+    const list = (await (await request.get(`/api/suppliers?forPurchaseOrder=1&requisitionId=${requisitionId}`, { headers: auth(adminToken) })).json()).data;
+    expect(list.filter(s => s.awarded).map(s => s.id)).toEqual([winnerId]);
+    expect(list.find(s => s.id === winnerId)).toMatchObject({ is_prequalified: false, self_registered: true });
+  });
+
   test.afterAll(async ({ request }) => {
     // Libère la réquisition pour les prochains runs
     if (tenderId) await request.post(`/api/tenders/${tenderId}/cancel`, { headers: auth(adminToken) });

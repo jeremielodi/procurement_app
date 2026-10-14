@@ -9,6 +9,7 @@ const {
   TASK_CANDIDATE_GROUPS, taskKey, taskLabel: rawTaskLabel, groupLabel, methodLabel, reasonLabel, matchLabel,
 } = require('../utils/workflowLabels');
 
+const approvalPolicy = require('../utils/approvalPolicy');
 const DECISION_WORDS = { REJECTED: 'timeline.rejectedWord', RETURNED: 'timeline.returnedWord', WITHDRAWN: 'timeline.withdrawnWord' };
 const APPROVAL_KEYS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
 const SOURCING_KEYS = ['Activity_DirectPurchase', 'Activity_RequestQuotations', 'Activity_RFPProcess', 'Activity_SoleSource'];
@@ -81,9 +82,12 @@ class RequisitionTimelineService {
     const T = i18n.translator(lang);
     const taskLabel = (k) => rawTaskLabel(k, lang);
     const role = (k) => groupLabel(k, lang);
+    const levelRole = (level) => role(approvalPolicy.LEVEL_TASKS[level]) || '';
+    const policyText = (p) => T(`timeline.approvalLevel.source.${p.source || 'DEFAULT'}`, { n1: fmtNum(p.n1Max, lang), n2: fmtNum(p.n2Max, lang) })
+      + (Number(p.n1Max) === Number(p.n2Max) ? T('timeline.approvalLevel.noN2') : '');
     const req = await db.one(
       `SELECT r.id, r.requisition_number, r.title, r.status, r.estimated_amount, r.created_at,
-              r.process_instance_id, r.rejected_reason,
+              r.process_instance_id, r.rejected_reason, r.approval_level, r.approval_policy,
               u.first_name || ' ' || u.last_name AS requester_name
        FROM requisitions r LEFT JOIN users u ON u.id = r.requester_id WHERE r.id = $1`,
       [requisitionId]
@@ -264,6 +268,15 @@ class RequisitionTimelineService {
           title: T('timeline.matching', { status: matchLabel(action, lang) }), actor: T('timeline.system'),
           details: row.comments ? [row.comments] : [], links: [],
         });
+      } else if (action.startsWith('APPROVAL_LEVEL_')) {
+        // Niveau d'approbation retenu à la vérification du budget (politique du projet / de l'entreprise / défaut)
+        const info = json || {};
+        events.push({
+          date: row.performed_at, kind: 'info',
+          title: T('timeline.approvalLevel.title', { level: info.level, role: levelRole(info.level) }),
+          actor: T('timeline.system'),
+          details: info.policy ? [policyText(info.policy)] : [], links: [],
+        });
       } else if (REVISION_ACTIONS[action]) {
         const info = json || {};
         const details = [];
@@ -359,6 +372,8 @@ class RequisitionTimelineService {
         info: [
           approvals.map(t => T('timeline.approvalInfo', { task: T('workflow.approvalPrefix') ? t.label.replace(T('workflow.approvalPrefix'), '') : t.label, decision: T(DECISION_WORDS[t.decision] || 'timeline.approvedWord') })).join(' · '),
           req.status === 'RETURNED' ? T('timeline.revision.toCorrect') : null,
+          // Niveau retenu selon la politique du projet (quand l'approbation n'a pas encore été donnée)
+          !approvals.length && req.approval_level ? T('timeline.approvalLevel.info', { level: req.approval_level, role: levelRole(req.approval_level) }) : null,
         ].filter(Boolean).join(' · ') || null,
       },
       { key: 'method', label: T('timeline.steps.method'), status: classification ? 'done' : 'pending', date: classification?.date, info: classification ? methodLabel(classification.method, lang) : null },

@@ -9,6 +9,8 @@ const i18n = require('../i18n');
 const { renderPdf } = require('../utils/pdfRenderer');
 const { pdfContext, labels, rootLocale } = require('../utils/pdfI18n');
 const db = require('../config/database');
+const approvalPolicy = require('../utils/approvalPolicy');
+const { groupLabel } = require('../utils/workflowLabels');
 
 // Couleurs des badges (étape = statut technique, avancement = cycle complet)
 const STATUS_COLORS = {
@@ -81,6 +83,7 @@ const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
       <div class="badges">
         <span class="badge" style="background: {{stepColor}}"><small>{{L.step}}</small>{{stepLabel}}</span>
         {{#if progressLabel}}<span class="badge" style="background: {{progressColor}}"><small>{{L.progress}}</small>{{progressLabel}}</span>{{/if}}
+        {{#if approvalText}}<span class="badge" style="background: #4B5563"><small>{{L.approvalLevel}}</small>{{approvalText}}</span>{{/if}}
       </div>
     </div>
   </div>
@@ -506,7 +509,7 @@ class RequisitionExportService {
           date: date(now),
           time: now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
         }),
-        title: t('requisition.title'), step: t('requisition.step'), progress: t('requisition.progress'),
+        title: t('requisition.title'), step: t('requisition.step'), progress: t('requisition.progress'), approvalLevel: t('requisition.approvalLevel'),
         department: t('requisition.department'), project: t('requisition.project'),
         estimatedAmount: t('requisition.estimatedAmount'), priority: t('requisition.priority'),
         requester: t('requisition.requester'), createdAt: t('requisition.createdAt'),
@@ -525,6 +528,10 @@ class RequisitionExportService {
       stepColor: STATUS_COLORS[requisition.status] || '#6B7280',
       progressLabel: progress ? t(`progress.${progress}`) : null,
       progressColor: PROGRESS_COLORS[progress] || '#6B7280',
+      // Niveau d'approbation retenu (politique du projet), ex. « N2 — Finance »
+      approvalText: requisition.approval_level
+        ? `${requisition.approval_level} — ${groupLabel(approvalPolicy.LEVEL_TASKS[requisition.approval_level], lang) || ''}`
+        : null,
       // (nom distinct du helper Handlebars « priorityLabel »)
       priorityText: requisition.priority ? t(`priority.${requisition.priority}`) : '—',
       createdAt: date(requisition.created_at),

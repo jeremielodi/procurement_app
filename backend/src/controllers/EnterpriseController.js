@@ -11,6 +11,7 @@ const i18n = require('../i18n');
 const enterpriseModel = require('../models/EnterpriseModel');
 const { saveLogo, removeLogo, sendLogo } = require('../utils/logoUpload');
 const dailyReportService = require('../services/DailyRequisitionReportService');
+const approvalPolicy = require('../utils/approvalPolicy');
 
 // Journal d'audit : champs suivis d'une entreprise
 const ENTERPRISE_FIELDS = ['name', 'code', 'address', 'phone', 'email', 'website', 'tax_id', 'registration_number', 'currency_id', 'is_active'];
@@ -176,6 +177,45 @@ class EnterpriseController {
   }
 
   // ---------- Rapport quotidien des réquisitions (administrateur d'entreprise) ----------
+
+  /**
+   * GET /enterprises/current/approval-policy — seuils de l'entreprise (null = valeurs par défaut) et politique effective
+   * → { n1Max, n2Max, effective: { n1Max, n2Max, source }, defaults }
+   */
+  async getApprovalPolicy(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      const row = await db.one('SELECT approval_n1_max, approval_n2_max FROM enterprise WHERE id = $1', [req.enterpriseId]);
+      res.json({ success: true, data: {
+        n1Max: row?.approval_n1_max != null ? Number(row.approval_n1_max) : null,
+        n2Max: row?.approval_n2_max != null ? Number(row.approval_n2_max) : null,
+        effective: await approvalPolicy.enterprisePolicy(req.enterpriseId),
+        defaults: approvalPolicy.DEFAULT_POLICY,
+      } });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /** PUT /enterprises/current/approval-policy { n1Max, n2Max } (vides = valeurs par défaut) — tracé APPROVAL_POLICY_CHANGED */
+  async setApprovalPolicy(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      const policy = approvalPolicy.parsePolicy(req.body?.n1Max, req.body?.n2Max);
+      const before = await db.one('SELECT name, approval_n1_max, approval_n2_max FROM enterprise WHERE id = $1', [req.enterpriseId]);
+      const old = { n1Max: before?.approval_n1_max != null ? Number(before.approval_n1_max) : null, n2Max: before?.approval_n2_max != null ? Number(before.approval_n2_max) : null };
+      await db.exec('UPDATE enterprise SET approval_n1_max = $2, approval_n2_max = $3, last_update = CURRENT_TIMESTAMP WHERE id = $1', [req.enterpriseId, policy.n1Max, policy.n2Max]);
+      if (old.n1Max !== policy.n1Max || old.n2Max !== policy.n2Max) {
+        await audit(req, AUDIT.APPROVAL_POLICY_CHANGED, {
+          entity: { type: 'enterprise', id: req.enterpriseId, label: before?.name }, oldValue: old, details: policy,
+        });
+      }
+      return this.getApprovalPolicy(req, res);
+    } catch (error) {
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
 
   /** GET /enterprises/current/daily-report — option, destinataires, dernier envoi */
   async dailyReportStatus(req, res) {

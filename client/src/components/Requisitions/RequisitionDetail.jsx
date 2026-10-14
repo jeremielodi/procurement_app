@@ -53,6 +53,7 @@ import { t } from '../../i18n'
 import BudgetAdjustmentPanel from './BudgetAdjustmentPanel'
 import RevisionPanel from './RevisionPanel'
 import RequisitionVersions from './RequisitionVersions'
+import { levelLabel, policySummary } from '../../utils/approvalPolicy'
 
 export default function RequisitionDetail() {
   const { id } = useParams()
@@ -617,6 +618,18 @@ const handleGeneratePDF = async () => {
                       {formatCurrency(requisition.estimated_amount, requisition.currency)}
                     </span>
                   </div>
+                  {/* Niveau d'approbation retenu à la vérification du budget (politique du projet / de l'entreprise) */}
+                  {requisition.approval_level && (
+                    <div className="flex justify-between gap-3" data-testid="requisition-approval-level">
+                      <span className="text-sm text-gray-500">{t('approvalPolicy.levelLabel')}</span>
+                      <span className="text-sm font-medium text-right" title={policySummary(requisition.approval_policy)}>
+                        {levelLabel(requisition.approval_level)}
+                        {requisition.approval_policy?.source && (
+                          <span className="block text-xs font-normal text-gray-500">{t(`approvalPolicy.source.${requisition.approval_policy.source}`)}</span>
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -1,11 +1,12 @@
 // src/components/Projects/ProjectDetail.jsx
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, UserMinus, Users, Calendar, Building2, User, Check, Globe, Info } from 'lucide-react';
+import { UserPlus, UserMinus, Users, Calendar, Building2, User, Check, Globe, Info, ShieldCheck } from 'lucide-react';
 import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
 import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+import { policySummary } from '../../utils/approvalPolicy';
 
 const apiError = (error) => {
   const code = error?.response?.data?.code;
@@ -54,6 +55,14 @@ export default function ProjectDetail({ project, onClose }) {
     queryFn: () => projectService.getMembers(project?.id),
     enabled: !!project?.id
   });
+
+  // Seuils d'approbation effectifs du projet (propres, sinon de l'entreprise, sinon par défaut)
+  const { data: policyData } = useQuery({
+    queryKey: ['project-approval-policy', project?.id],
+    queryFn: () => projectService.getApprovalPolicy(project.id),
+    enabled: !!project?.id
+  });
+  const approvalPolicy = policyData?.data || null;
 
   const { data: usersData } = useQuery({
     queryKey: ['available-users'],
@@ -113,6 +122,12 @@ export default function ProjectDetail({ project, onClose }) {
             <User size={14} />
             <span>{t('projects.manager', { name: `${project?.manager_first_name || ''} ${project?.manager_last_name || ''}`.trim() })}</span>
           </div>
+          {approvalPolicy && (
+            <div className="flex items-start gap-2 text-gray-500 col-span-2" data-testid="project-approval-policy-summary">
+              <ShieldCheck size={14} className="mt-0.5" />
+              <span>{t('approvalPolicy.projectLine', { summary: policySummary(approvalPolicy), source: t(`approvalPolicy.source.${approvalPolicy.source}`) })}</span>
+            </div>
+          )}
           {(project?.start_date || project?.end_date) && (
             <div className="flex items-center gap-2 text-gray-500 col-span-2">
               <Calendar size={14} />

@@ -5,6 +5,9 @@ import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
 import { t } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+import ApprovalPolicyFields from '../Common/ApprovalPolicyFields';
+import { enterpriseService } from '../../services/enterpriseService';
+import { policyError } from '../../utils/approvalPolicy';
 
 export default function ProjectForm({ project, onClose }) {
   const [formData, setFormData] = useState({
@@ -17,6 +20,13 @@ export default function ProjectForm({ project, onClose }) {
     status: 'ACTIVE'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Seuils d'approbation : politique de l'entreprise (héritée) ou propre au projet
+  const [policy, setPolicy] = useState({ custom: false, n1Max: '', n2Max: '' });
+  const { data: enterprisePolicyData } = useQuery({
+    queryKey: ['enterprise-approval-policy'],
+    queryFn: () => enterpriseService.getApprovalPolicy()
+  });
+  const enterprisePolicy = enterprisePolicyData?.data?.effective || null;
 
 
   const { data: usersData } = useQuery({
@@ -38,18 +48,30 @@ export default function ProjectForm({ project, onClose }) {
         isActive: project.is_active,
         status: project.status || 'ACTIVE'
       });
+      setPolicy(project.approval_n1_max != null
+        ? { custom: true, n1Max: Number(project.approval_n1_max), n2Max: Number(project.approval_n2_max) }
+        : { custom: false, n1Max: '', n2Max: '' });
     }
   }, [project]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (policy.custom && policyError(policy.n1Max, policy.n2Max)) {
+      toast.error(policyError(policy.n1Max, policy.n2Max));
+      return;
+    }
+    const data = {
+      ...formData,
+      approvalN1Max: policy.custom ? Number(policy.n1Max) : null,
+      approvalN2Max: policy.custom ? Number(policy.n2Max) : null,
+    };
     setIsSubmitting(true);
     try {
       if (project) {
-        await projectService.update(project.id, formData);
+        await projectService.update(project.id, data);
         toast.success(t('projects.updated'));
       } else {
-        await projectService.create(formData);
+        await projectService.create(data);
         toast.success(t('projects.created'));
       }
       onClose();
@@ -146,6 +168,14 @@ export default function ProjectForm({ project, onClose }) {
           {['ACTIVE', 'COMPLETED', 'ON_HOLD', 'CANCELLED'].map(s => <option key={s} value={s}>{t(`projects.status.${s}`)}</option>)}
         </SearchSelect>
       </div>
+
+      <ApprovalPolicyFields
+        value={policy}
+        onChange={setPolicy}
+        inherited={enterprisePolicy}
+        inheritLabel={t('approvalPolicy.inheritEnterprise')}
+        testId="project-approval-policy"
+      />
 
       <div className="flex justify-end gap-3 pt-4">
         <button

@@ -59,7 +59,8 @@
     "bytes": "octets",
     "footer": "{enterprise} — document généré automatiquement par {app}",
     "taxId": "NIF",
-    "registration": "RCCM"
+    "registration": "RCCM",
+    "approvalLevel": "Approbation"
   },
   "workflow": {
     "task": "Tâche",
@@ -217,6 +218,16 @@
       "noChange": "Aucune modification par rapport à la version précédente",
       "seeChanges": "Voir les modifications",
       "toCorrect": "à corriger par le demandeur"
+    },
+    "approvalLevel": {
+      "title": "Niveau d'approbation : {level} ({role})",
+      "info": "niveau {level} ({role})",
+      "noN2": " — pas de niveau N2",
+      "source": {
+        "PROJECT": "Politique du projet : N1 en dessous de {n1}, N2 en dessous de {n2}, N3 au-delà",
+        "ENTERPRISE": "Politique de l'entreprise : N1 en dessous de {n1}, N2 en dessous de {n2}, N3 au-delà",
+        "DEFAULT": "Seuils par défaut : N1 en dessous de {n1}, N2 en dessous de {n2}, N3 au-delà"
+      }
     }
   },
   "supplierProfile": {
@@ -687,7 +698,8 @@
     "PROJECT_ACCESS_DENIED": "Action refusée : profil non attribué sur le projet",
     "PROJECT_MEMBER_ADDED": "Membre ajouté à un projet",
     "PROJECT_MEMBER_REMOVED": "Membre retiré d'un projet",
-    "PROJECT_MEMBER_PROFILES_CHANGED": "Profils d'un membre modifiés sur un projet"
+    "PROJECT_MEMBER_PROFILES_CHANGED": "Profils d'un membre modifiés sur un projet",
+    "APPROVAL_POLICY_CHANGED": "Seuils d'approbation modifiés"
   },
   "auditExport": {
     "sheet": "Journal d'audit",

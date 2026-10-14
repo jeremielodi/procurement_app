@@ -434,7 +434,7 @@
         },
         {
           "title": "Budget et approbations",
-          "desc": "Budget vérifié automatiquement ; en cas de manque, ajustement puis nouvelle vérification sans ressaisie. Validation multi-niveaux selon le montant, avec renvoi pour correction et historique des versions."
+          "desc": "Budget vérifié automatiquement ; en cas de manque, ajustement puis nouvelle vérification sans ressaisie. Validation multi-niveaux selon le montant, avec des seuils propres à chaque projet, le renvoi pour correction et l'historique des versions."
         },
         {
           "title": "Appels d'offres",
@@ -3386,15 +3386,15 @@
               ],
               [
                 "Manager",
-                "Approuve ou rejette les réquisitions de moins de 25 000 (niveau N1)."
+                "Approuve ou rejette les réquisitions du niveau N1 (par défaut moins de 25 000 ; seuils propres à chaque projet possibles)."
               ],
               [
                 "Finance",
-                "Approuve les réquisitions de 25 000 à 99 999 (N2), saisit les factures, enregistre les paiements, gère le budget."
+                "Approuve les réquisitions du niveau N2 (par défaut de 25 000 à 99 999), saisit les factures, enregistre les paiements, gère le budget."
               ],
               [
                 "DG (Direction générale)",
-                "Approuve les réquisitions de 100 000 et plus (N3)."
+                "Approuve les réquisitions du niveau N3 (par défaut 100 000 et plus)."
               ],
               [
                 "Achats (Procurement)",
@@ -3633,7 +3633,7 @@
             "rows": [
               [
                 "Montant estimé",
-                "Niveau d'approbation"
+                "Niveau d'approbation (seuils par défaut)"
               ],
               [
                 "moins de 25 000",
@@ -3651,7 +3651,25 @@
           },
           {
             "type": "p",
-            "text": "Un seul niveau intervient, celui correspondant au montant. L'approbateur peut approuver ou rejeter, avec un commentaire qui apparaît dans le suivi du workflow. Un rejet arrête le circuit (statut « Rejeté ») et le demandeur est notifié."
+            "text": "Un seul niveau intervient, celui correspondant au montant. L'approbateur peut approuver, rejeter ou renvoyer pour correction, avec un commentaire qui apparaît dans le suivi du workflow. Un rejet arrête le circuit (statut « Rejeté ») et le demandeur est notifié."
+          },
+          {
+            "type": "h",
+            "text": "Seuils propres à chaque projet"
+          },
+          {
+            "type": "p",
+            "text": "Chaque projet peut avoir sa politique : fiche du projet → « Seuils d'approbation » → « Seuils propres » (N1 en dessous de…, N2 en dessous de…, N3 au-delà). Sans politique propre, le projet reprend celle de l'entreprise (« Mon entreprise » → « Seuils d'approbation »), sinon les seuils par défaut ci-dessus."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Le formulaire de réquisition affiche « Approbation prévue » selon le projet et le montant saisi.",
+              "Le niveau est fixé à la vérification du budget (et de nouveau après une correction) ; il apparaît sur la fiche, dans le suivi du workflow et sur le PDF, avec la politique appliquée.",
+              "Changer une politique ne modifie pas une réquisition déjà en attente d'approbation.",
+              "Même valeur pour N1 et N2 : pas de niveau N2 (de N1 on passe directement à N3).",
+              "Seul l'administrateur d'entreprise modifie les seuils ; chaque changement est tracé dans le journal d'audit."
+            ]
           },
           {
             "type": "warn",
@@ -4957,7 +4975,8 @@
       "PROJECT_ACCESS_DENIED": "Action refusée : profil non attribué sur le projet",
       "PROJECT_MEMBER_ADDED": "Membre ajouté à un projet",
       "PROJECT_MEMBER_REMOVED": "Membre retiré d'un projet",
-      "PROJECT_MEMBER_PROFILES_CHANGED": "Profils d'un membre modifiés sur un projet"
+      "PROJECT_MEMBER_PROFILES_CHANGED": "Profils d'un membre modifiés sur un projet",
+      "APPROVAL_POLICY_CHANGED": "Seuils d'approbation modifiés"
     },
     "groups": {
       "all": "Tous les événements",
@@ -5300,5 +5319,36 @@
       "RETURN_NOT_SUPPORTED": "Réquisition démarrée avant la mise à jour du circuit : le renvoi pour correction n'est pas possible (approuvez-la ou rejetez-la)"
     },
     "returnNotSupported": "Renvoi pour correction indisponible : réquisition démarrée avant la mise à jour du circuit d'approbation."
+  },
+  "approvalPolicy": {
+    "title": "Seuils d'approbation (N1 / N2 / N3)",
+    "custom": "Seuils propres",
+    "n1Label": "N1 (Manager) en dessous de",
+    "n2Label": "N2 (Finance) en dessous de",
+    "hint": "Au-delà du seuil N2 : N3 (Direction générale). Même valeur pour N1 et N2 : pas de niveau N2.",
+    "applies": "S'applique : {{summary}}",
+    "inheritEnterprise": "Politique de l'entreprise",
+    "inheritDefault": "Seuils par défaut",
+    "enterpriseTitle": "Seuils d'approbation",
+    "enterpriseHint": "Repris par les projets qui n'ont pas leur propre politique (fiche du projet). Le niveau d'une réquisition est fixé à la vérification du budget : une réquisition déjà en attente d'approbation garde le sien.",
+    "saved": "Seuils d'approbation enregistrés",
+    "levels": {
+      "N1": "N1 — Manager",
+      "N2": "N2 — Finance",
+      "N3": "N3 — Direction générale"
+    },
+    "summary": "N1 en dessous de {{n1}} · N2 en dessous de {{n2}} · N3 au-delà",
+    "summaryNoN2": "N1 en dessous de {{n1}} · N3 au-delà (pas de niveau N2)",
+    "errBoth": "Indiquez les deux seuils (N1 et N2)",
+    "errPositive": "Les seuils doivent être des montants positifs",
+    "errOrder": "Le seuil N2 doit être supérieur ou égal au seuil N1",
+    "projectLine": "Approbation : {{summary}} ({{source}})",
+    "source": {
+      "PROJECT": "politique du projet",
+      "ENTERPRISE": "politique de l'entreprise",
+      "DEFAULT": "seuils par défaut"
+    },
+    "expected": "Approbation prévue : {{level}} ({{source}})",
+    "levelLabel": "Niveau d'approbation"
   }
 }

@@ -7,6 +7,7 @@ const tenant = require('../utils/tenant');
 const segregation = require('../utils/segregation');
 const { taskLabel, PERSONAL_TASKS } = require('../utils/workflowLabels');
 const revisionService = require('../services/RequisitionRevisionService');
+const approvalPolicy = require('../utils/approvalPolicy');
 const supplierBankService = require('../services/SupplierBankService');
 const { audit, AUDIT } = require('../utils/auditLog');
 const projectAccess = require('../utils/projectAccess');
@@ -41,20 +42,14 @@ const REQUISITION_APPROVAL_TASKS = [
   'Activity_ValidationN3_DG'
 ];
 
-// Amount thresholds matching the BPMN gateways
-const THRESHOLD_N1 = 25000;
-const THRESHOLD_N2 = 100000;
-
 /**
- * Determine if this approval level is the final one for this amount,
- * i.e. approved=true here means the requisition is fully approved.
+ * Cette approbation est-elle la dernière (approved = true → réquisition approuvée) ? Niveau retenu pour la réquisition
+ * (approval_level, calculé par check_budget selon la politique du projet) ; réquisition antérieure : seuils de la
+ * politique effective appliqués au montant.
  */
-function isFinalApprovalLevel(taskDefinitionKey, estimatedAmount) {
-  const amount = parseFloat(estimatedAmount) || 0;
-  if (taskDefinitionKey === 'Activity_ValidationN1_Manager' && amount < THRESHOLD_N1) return true;
-  if (taskDefinitionKey === 'Activity_ValidationN2_Finance' && amount >= THRESHOLD_N1 && amount < THRESHOLD_N2) return true;
-  if (taskDefinitionKey === 'Activity_ValidationN3_DG') return true;
-  return false;
+function isFinalApprovalLevel(taskDefinitionKey, { approvalLevel, amount, policy }) {
+  const level = approvalLevel || approvalPolicy.levelFor(amount, policy || approvalPolicy.DEFAULT_POLICY);
+  return approvalPolicy.LEVEL_TASKS[level] === taskDefinitionKey || taskDefinitionKey === 'Activity_ValidationN3_DG';
 }
 
 /**
@@ -497,9 +492,15 @@ async function completeTask(req, res) {
               rejected_at: new Date(),
               updated_at: new Date()
             }, 'id', requisitionId);
-          } else if (approved === true && isFinalApprovalLevel(taskDefinitionKey,
-            // Montant en base (il a pu changer après une correction), à défaut celui envoyé par le client
-            (await db.one('SELECT estimated_amount FROM requisitions WHERE id = $1', [requisitionId]))?.estimated_amount ?? estimatedAmount)) {
+          } else if (approved === true && isFinalApprovalLevel(taskDefinitionKey, await (async () => {
+            // Niveau et montant en base (ils ont pu changer après une correction), à défaut le montant du client
+            const r = await db.one('SELECT approval_level, estimated_amount, project_id, enterprise_id FROM requisitions WHERE id = $1', [requisitionId]);
+            return {
+              approvalLevel: r?.approval_level,
+              amount: r?.estimated_amount ?? estimatedAmount,
+              policy: r ? await approvalPolicy.projectPolicy(r.project_id, r.enterprise_id) : null,
+            };
+          })())) {
             await db.update('requisitions', {
               status: 'APPROVED',
               approved_at: new Date(),

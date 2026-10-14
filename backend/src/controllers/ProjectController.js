@@ -2,10 +2,28 @@
 const projectModel = require('../models/ProjectModel');
 const db = require('../config/database');
 const { audit, AUDIT } = require('../utils/auditLog');
+const approvalPolicy = require('../utils/approvalPolicy');
 
 const sendError = (res, error) => (error.status
   ? res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details })
   : res.status(500).json({ success: false, message: error.message }));
+
+/**
+ * Seuils d'approbation envoyés avec le projet (approvalN1Max / approvalN2Max, vides = politique de l'entreprise) :
+ * enregistrés et tracés s'ils changent. Absents de la requête : inchangés.
+ */
+async function saveApprovalPolicy(req, projectId) {
+  if (!('approvalN1Max' in (req.body || {})) && !('approvalN2Max' in (req.body || {}))) return;
+  const policy = approvalPolicy.parsePolicy(req.body.approvalN1Max, req.body.approvalN2Max);
+  const before = await db.one('SELECT code, name, approval_n1_max, approval_n2_max FROM projects WHERE id = $1', [projectId]);
+  const old = { n1Max: before?.approval_n1_max != null ? Number(before.approval_n1_max) : null, n2Max: before?.approval_n2_max != null ? Number(before.approval_n2_max) : null };
+  if (old.n1Max === policy.n1Max && old.n2Max === policy.n2Max) return;
+  await db.exec('UPDATE projects SET approval_n1_max = $2, approval_n2_max = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [projectId, policy.n1Max, policy.n2Max]);
+  await audit(req, AUDIT.APPROVAL_POLICY_CHANGED, {
+    entity: { type: 'project', id: projectId, label: before ? `${before.code} — ${before.name}` : null },
+    oldValue: old, details: policy,
+  });
+}
 
 /** Libellés pour le journal d'audit : « CODE — Nom » du projet, email du membre */
 async function auditLabels(projectId, userId) {
@@ -32,7 +50,8 @@ class ProjectController {
       if (!project) {
         return res.status(404).json({ success: false, message: 'Projet non trouvé' });
       }
-      res.json({ success: true, data: project });
+      // Politique d'approbation effective (projet, sinon entreprise, sinon défaut)
+      res.json({ success: true, data: { ...project, effective_approval_policy: await approvalPolicy.projectPolicy(project.id, project.enterprise_id) } });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
@@ -43,13 +62,16 @@ class ProjectController {
       const { code, name, description, projectManagerId, startDate, endDate } = req.body;
       const createdBy = req.user.id;
       
+      // Seuils contrôlés avant la création (400 APPROVAL_POLICY_INVALID)
+      if ('approvalN1Max' in req.body || 'approvalN2Max' in req.body) approvalPolicy.parsePolicy(req.body.approvalN1Max, req.body.approvalN2Max);
       const result = await projectModel.create({
         code, name, description, projectManagerId, startDate, endDate, createdBy
       });
-      
+      await saveApprovalPolicy(req, result.id);
+
       res.status(201).json({ success: true, data: result });
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      sendError(res, error);
     }
   }
 
@@ -58,10 +80,12 @@ class ProjectController {
       const { id } = req.params;
       const { name, description, projectManagerId, status, startDate, endDate, isActive } = req.body;
       
+      if ('approvalN1Max' in req.body || 'approvalN2Max' in req.body) approvalPolicy.parsePolicy(req.body.approvalN1Max, req.body.approvalN2Max);
       await projectModel.update(id, { name, description, projectManagerId, status, startDate, endDate, isActive });
+      await saveApprovalPolicy(req, id);
       res.json({ success: true, message: 'Projet mis à jour' });
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      sendError(res, error);
     }
   }
 
@@ -127,6 +151,17 @@ class ProjectController {
       res.json({ success: true, data: members });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /** GET /projects/:id/approval-policy — politique effective (formulaire de réquisition : niveau prévu) */
+  async getApprovalPolicy(req, res) {
+    try {
+      const project = await db.one('SELECT id, enterprise_id FROM projects WHERE id = $1', [req.params.id]);
+      if (!project) return res.status(404).json({ success: false, message: 'Projet non trouvé' });
+      res.json({ success: true, data: await approvalPolicy.projectPolicy(project.id, project.enterprise_id) });
+    } catch (error) {
+      sendError(res, error);
     }
   }
 

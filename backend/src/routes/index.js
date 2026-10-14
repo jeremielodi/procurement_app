@@ -98,6 +98,9 @@ router.get('/enterprises/default', e.getCurrent.bind(e)); // ancien nom, conserv
 router.put('/enterprises/current', hasPermission('MANAGE_USERS'), logoMiddleware, e.update.bind(e));
 // Rapport quotidien des réquisitions (administrateur d'entreprise) : état, activation, exemple immédiat
 router.get('/enterprises/current/daily-report', hasPermission('MANAGE_USERS'), e.dailyReportStatus.bind(e));
+// Politique d'approbation de l'entreprise (seuils N1 / N2), reprise par les projets sans politique propre
+router.get('/enterprises/current/approval-policy', e.getApprovalPolicy.bind(e));
+router.put('/enterprises/current/approval-policy', hasPermission('MANAGE_USERS'), e.setApprovalPolicy.bind(e));
 router.put('/enterprises/current/daily-report', hasPermission('MANAGE_USERS'), e.setDailyReport.bind(e));
 router.post('/enterprises/current/daily-report/test', hasPermission('MANAGE_USERS'), e.sendDailyReportTest.bind(e));
 router.post('/enterprises/current/daily-report/send-now', hasPermission('MANAGE_USERS'), e.sendDailyReportNow.bind(e));
@@ -571,6 +574,8 @@ router.get('/projects', hasPermission('VIEW_PROJECTS'), projectController.list);
 router.get('/projects/users', hasPermission('VIEW_PROJECTS'), projectController.getAvailableUsers);
 router.get('/projects/:id', hasPermission('VIEW_PROJECTS'), projectController.getOne);
 router.get('/projects/:projectId/members', hasPermission('VIEW_PROJECTS'), projectController.getMembers);
+// Seuils d'approbation N1 / N2 / N3 effectifs (projet, sinon entreprise, sinon défaut) : niveau prévu dans le formulaire
+router.get('/projects/:id/approval-policy', hasPermission('VIEW_PROJECTS'), projectController.getApprovalPolicy);
 router.post('/projects/', hasPermission('MANAGE_PROJECTS'), projectController.create);
 router.put('/projects/:id', hasPermission('MANAGE_PROJECTS'), projectController.update);
 router.delete('/projects/:id', hasPermission('MANAGE_PROJECTS'), projectController.delete);

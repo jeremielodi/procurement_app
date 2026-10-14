@@ -49,6 +49,9 @@ export const projectService = {
     return response.data;
   },
 
+  // Seuils d'approbation effectifs (projet, sinon entreprise, sinon défaut)
+  getApprovalPolicy: async (projectId) => (await api.get(`/projects/${projectId}/approval-policy`)).data,
+
   getMembers: async (projectId) => {
     const response = await api.get(`/projects/${projectId}/members`);
     return response.data;

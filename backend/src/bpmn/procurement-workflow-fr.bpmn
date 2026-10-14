@@ -235,13 +235,13 @@
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${budgetAdjusted == false}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Amount_N1" sourceRef="Gateway_AmountDecision" targetRef="Activity_ValidationN1_Manager">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${estimatedAmount &lt; 25000}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approvalLevel == 'N1'}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Amount_N2" sourceRef="Gateway_AmountDecision" targetRef="Activity_ValidationN2_Finance">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${estimatedAmount &gt;= 25000 &amp;&amp; estimatedAmount &lt; 100000}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approvalLevel == 'N2'}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Amount_N3" sourceRef="Gateway_AmountDecision" targetRef="Activity_ValidationN3_DG">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${estimatedAmount &gt;= 100000}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approvalLevel == 'N3'}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:userTask id="Activity_ReviseRequisition" name="Corriger la réquisition" camunda:assignee="${requester}" camunda:candidateGroups="requester">
       <bpmn:incoming>Flow_Approval_Returned</bpmn:incoming>

@@ -18,6 +18,7 @@ const i18n = require('../i18n');
 const { appLink } = require('../utils/appUrl');
 const notificationService = require('../services/NotificationService');
 const db = require('../config/database');
+const approvalPolicy = require('../utils/approvalPolicy');
 const EmailNotificationService = require('../services/EmailNotificationService');
 
 const CAMUNDA_REST_URL = process.env.CAMUNDA_REST_URL || 'http://localhost:8080/engine-rest';
@@ -336,10 +337,22 @@ async function processCheckBudget(task) {
     );
   }
 
+  // Niveau d'approbation selon la politique du projet (sinon de l'entreprise), sur le montant ACTUEL des articles
+  // (il a pu changer après une correction) : Gateway_AmountDecision lit approvalLevel
+  const approval = await approvalPolicy.assignRequisitionLevel(requisitionId);
+  await addWorkflowHistory(
+    processInstanceId, 'requisition', requisitionId, task.id, 'Approval Level', `APPROVAL_LEVEL_${approval.level}`,
+    JSON.stringify({ level: approval.level, amount: approval.amount, policy: approval.policy })
+  );
+
   return {
     budgetAvailable: true,
     allBudgetsAvailable: true,
-    budgetResults
+    budgetResults,
+    approvalLevel: approval.level,
+    estimatedAmount: approval.amount,
+    approvalN1Max: approval.policy.n1Max,
+    approvalN2Max: approval.policy.n2Max
   };
 }
 

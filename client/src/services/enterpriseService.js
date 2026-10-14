@@ -31,6 +31,9 @@ export const enterpriseService = {
     const response = await api.put('/enterprises/current', toFormData(data, logo), multipart);
     return response.data;
   },
+  // --- Seuils d'approbation N1 / N2 de l'entreprise (projets sans politique propre) ---
+  getApprovalPolicy: async () => (await api.get('/enterprises/current/approval-policy')).data,
+  setApprovalPolicy: async (policy) => (await api.put('/enterprises/current/approval-policy', policy)).data,
   // --- Rapport quotidien des réquisitions (administrateur d'entreprise) ---
   getDailyReport: async () => {
     const response = await api.get('/enterprises/current/daily-report');

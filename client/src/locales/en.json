@@ -434,7 +434,7 @@
         },
         {
           "title": "Budget and approvals",
-          "desc": "Budget checked automatically; if it falls short, adjust and re-check without re-entering anything. Multi-level approval based on the amount, with return for correction and version history."
+          "desc": "Budget checked automatically; if it falls short, adjust and re-check without re-entering anything. Multi-level approval based on the amount, with thresholds specific to each project, return for correction and version history."
         },
         {
           "title": "Tenders",
@@ -3386,15 +3386,15 @@
               ],
               [
                 "Manager",
-                "Approves or rejects requisitions below 25,000 (level N1)."
+                "Approves or rejects level N1 requisitions (by default below 25,000; each project can set its own thresholds)."
               ],
               [
                 "Finance",
-                "Approves requisitions from 25,000 to 99,999 (N2), records invoices and payments, manages the budget."
+                "Approves level N2 requisitions (by default 25,000 to 99,999), records invoices and payments, manages the budget."
               ],
               [
                 "GM (General Management)",
-                "Approves requisitions of 100,000 and above (N3)."
+                "Approves level N3 requisitions (by default 100,000 and above)."
               ],
               [
                 "Procurement",
@@ -3633,25 +3633,43 @@
             "rows": [
               [
                 "Estimated amount",
-                "Approval level"
+                "Approval level (default thresholds)"
               ],
               [
                 "below 25,000",
                 "N1 — Manager"
               ],
               [
-                "25,000 to 99,999",
+                "from 25,000 to 99,999",
                 "N2 — Finance"
               ],
               [
                 "100,000 and above",
-                "N3 — General Management"
+                "N3 — General management"
               ]
             ]
           },
           {
             "type": "p",
-            "text": "Only one level is involved, the one matching the amount. The approver can approve or reject, with a comment that appears in the workflow tracking. A rejection stops the process (\"Rejected\" status) and the requester is notified."
+            "text": "Only one level is involved, the one matching the amount. The approver can approve, reject or return for correction, with a comment shown in the workflow tracking. A rejection stops the circuit (\"Rejected\" status) and the requester is notified."
+          },
+          {
+            "type": "h",
+            "text": "Thresholds specific to each project"
+          },
+          {
+            "type": "p",
+            "text": "Each project can have its own policy: project record → \"Approval thresholds\" → \"Own thresholds\" (N1 below…, N2 below…, N3 above). Without its own policy, the project uses the company's (\"My company\" → \"Approval thresholds\"), otherwise the default thresholds above."
+          },
+          {
+            "type": "list",
+            "items": [
+              "The requisition form shows the \"Expected approval\" based on the project and the amount entered.",
+              "The level is set at the budget check (and again after a correction); it appears on the record, in the workflow tracking and on the PDF, with the policy applied.",
+              "Changing a policy does not affect a requisition already awaiting approval.",
+              "Same value for N1 and N2: no N2 level (N1 goes straight to N3).",
+              "Only the company administrator changes the thresholds; every change is recorded in the audit log."
+            ]
           },
           {
             "type": "warn",
@@ -4957,7 +4975,8 @@
       "PROJECT_ACCESS_DENIED": "Action refused: profile not assigned on the project",
       "PROJECT_MEMBER_ADDED": "Member added to a project",
       "PROJECT_MEMBER_REMOVED": "Member removed from a project",
-      "PROJECT_MEMBER_PROFILES_CHANGED": "Member profiles changed on a project"
+      "PROJECT_MEMBER_PROFILES_CHANGED": "Member profiles changed on a project",
+      "APPROVAL_POLICY_CHANGED": "Approval thresholds changed"
     },
     "groups": {
       "all": "All events",
@@ -5300,5 +5319,36 @@
       "RETURN_NOT_SUPPORTED": "Requisition started before the circuit was updated: it cannot be returned for correction (approve or reject it)"
     },
     "returnNotSupported": "Return for correction unavailable: requisition started before the approval circuit was updated."
+  },
+  "approvalPolicy": {
+    "title": "Approval thresholds (N1 / N2 / N3)",
+    "custom": "Own thresholds",
+    "n1Label": "N1 (Manager) below",
+    "n2Label": "N2 (Finance) below",
+    "hint": "Above the N2 threshold: N3 (General management). Same value for N1 and N2: no N2 level.",
+    "applies": "Applies: {{summary}}",
+    "inheritEnterprise": "Company policy",
+    "inheritDefault": "Default thresholds",
+    "enterpriseTitle": "Approval thresholds",
+    "enterpriseHint": "Used by projects that have no policy of their own (project record). A requisition's level is set at the budget check: a requisition already awaiting approval keeps its own.",
+    "saved": "Approval thresholds saved",
+    "levels": {
+      "N1": "N1 — Manager",
+      "N2": "N2 — Finance",
+      "N3": "N3 — General management"
+    },
+    "summary": "N1 below {{n1}} · N2 below {{n2}} · N3 above",
+    "summaryNoN2": "N1 below {{n1}} · N3 above (no N2 level)",
+    "errBoth": "Enter both thresholds (N1 and N2)",
+    "errPositive": "Thresholds must be positive amounts",
+    "errOrder": "The N2 threshold must be greater than or equal to the N1 threshold",
+    "projectLine": "Approval: {{summary}} ({{source}})",
+    "source": {
+      "PROJECT": "project policy",
+      "ENTERPRISE": "company policy",
+      "DEFAULT": "default thresholds"
+    },
+    "expected": "Expected approval: {{level}} ({{source}})",
+    "levelLabel": "Approval level"
   }
 }

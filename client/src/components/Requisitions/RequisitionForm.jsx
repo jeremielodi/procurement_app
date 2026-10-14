@@ -18,6 +18,7 @@ import CatalogAutocomplete from '../Stock/CatalogAutocomplete'
 import { t, getLocale } from '../../i18n'
 import SearchSelect from '../Common/SearchSelect'
 import { revisionError } from './RevisionPanel'
+import { levelFor, levelLabel } from '../../utils/approvalPolicy'
 
 const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
 const priorityLabel = (p) => t(`priority.${p}`)
@@ -101,6 +102,15 @@ export default function RequisitionForm() {
     queryKey: ['active-departments'],
     queryFn: () => departmentService.getAll({ is_active: true })
   })
+
+  // Seuils d'approbation du projet choisi : niveau prévu selon le montant saisi (calculé de nouveau par le serveur
+  // à la vérification du budget)
+  const { data: projectPolicyData } = useQuery({
+    queryKey: ['project-approval-policy', projectId],
+    queryFn: () => projectService.getApprovalPolicy(projectId),
+    enabled: !!projectId,
+  })
+  const projectPolicy = projectPolicyData?.data || null
 
   // Réquisition à corriger : valeurs actuelles + droits (seul le demandeur, seulement « À corriger »)
   const { data: editData, isLoading: editLoading } = useQuery({
@@ -448,8 +458,15 @@ export default function RequisitionForm() {
               {t('reqForm.itemsComplete', { done: completedItemsCount, total: totalItemsCount })}
             </div>
           </div>
-          <div className="text-lg font-semibold text-blue-600">
-            {t('reqForm.total', { amount: formatCurrency(totalAmount) })}
+          <div className="text-right">
+            <div className="text-lg font-semibold text-blue-600">
+              {t('reqForm.total', { amount: formatCurrency(totalAmount) })}
+            </div>
+            {projectPolicy && (
+              <div className="text-xs text-gray-600" data-testid="expected-approval-level">
+                {t('approvalPolicy.expected', { level: levelLabel(levelFor(totalAmount, projectPolicy)), source: t(`approvalPolicy.source.${projectPolicy.source}`) })}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -41,7 +41,7 @@ Le fichier `backend/src/services/CamundaService.js` montre comment appeler GoFlo
 ## Cycle procure-to-pay (objectif)
 1. **Réquisition** — employé crée une demande avec items + lignes budgétaires
 2. **Vérification budget** — automatique (Camunda service task `check_budget`)
-3. **Circuit d'approbation** — multi-niveaux selon le montant :
+3. **Circuit d'approbation** — un niveau selon le montant, **seuils par projet** (sinon de l'entreprise, sinon par défaut — voir « Seuils d'approbation par projet ») :
    - < 25 000 → Manager (N1)
    - 25 000–99 999 → Finance (N2)
    - ≥ 100 000 → DG (N3)
@@ -146,6 +146,16 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - **Recherche globale** : `GET /search?q=` (`GlobalSearchService`) — réquisitions, PO, réceptions, factures, fournisseurs, AO, articles ; chaque groupe seulement avec la permission de la liste correspondante, cloisonné par entreprise. Front : `Layout/GlobalSearch` dans l'en-tête (pas pour fournisseur ni super admin). Tests : `tests/api/global-search.spec.js`
 
 - **Méthode d'achat choisie** (2026-10-13) : `Activity_DetermineType` exige `procurementMethod` (400 `PROCUREMENT_METHOD_REQUIRED`), au moins aussi exigeant que le montant (≤ 5 000 achat direct, ≤ 25 000 devis, au-delà RFP ; sinon 400 `METHOD_BELOW_THRESHOLD` + `requiredMethod`), source unique toujours possible avec `justification` (400 `JUSTIFICATION_REQUIRED`) — `RequisitionModel.checkChosenMethod`. Le worker `classify_procurement` **reprend ce choix** (avant : recalcul par montant, ex. source unique → achat direct) ; sans choix (ancien processus) : calcul par montant. Front : `RequisitionTasks` choisit le formulaire de la fenêtre par `taskDefinitionKey` (`TASK_FORMS`) — par le nom, le BPMN français n'affichait pas le choix de la méthode. Tests : `tests/api/procurement-method.spec.js` (cycle complet GoFlow, source unique et achat direct)
+
+## Seuils d'approbation par projet (2026-10-14) — migration `26_approval_policies.sql`
+
+- Colonnes `approval_n1_max` / `approval_n2_max` sur `projects` et `enterprise` (les deux ou aucun, N2 ≥ N1 > 0 ; N1 = N2 : pas de niveau N2) ; `requisitions.approval_level` (N1 / N2 / N3) + `approval_policy` (politique appliquée `{ n1Max, n2Max, source: PROJECT | ENTERPRISE | DEFAULT }`)
+- `utils/approvalPolicy.js` : `projectPolicy` (projet → entreprise → `DEFAULT_POLICY` 25 000 / 100 000), `levelFor` (< n1 → N1, < n2 → N2, sinon N3), `parsePolicy` (400 `APPROVAL_POLICY_INVALID`), `assignRequisitionLevel`. Même règle côté client : `client/src/utils/approvalPolicy.js`
+- **Le BPMN ne contient plus de montants** : `Gateway_AmountDecision` lit `${approvalLevel == 'N1' | 'N2' | 'N3'}`, renvoyé par le worker `check_budget` (calcul sur le montant ACTUEL des articles — aussi après correction / ajustement — avec `estimatedAmount`, `approvalN1Max`, `approvalN2Max` ; historique `APPROVAL_LEVEL_Nx`). **BPMN EN + FR à redéployer** ; changer une politique ne demande ensuite aucun redéploiement. Une réquisition déjà en attente garde son niveau. `TaskController.isFinalApprovalLevel` : niveau de la réquisition (`approval_level`)
+- API : `POST /projects` / `PUT /projects/:id { approvalN1Max, approvalN2Max }` (null = politique de l'entreprise ; absents = inchangés), `GET /projects/:id` → `effective_approval_policy`, `GET /projects/:id/approval-policy` (`VIEW_PROJECTS`), `GET|PUT /enterprises/current/approval-policy` (PUT : `MANAGE_USERS`). Audit `APPROVAL_POLICY_CHANGED` (avant / après, projet ou entreprise)
+- Front : `Common/ApprovalPolicyFields` (hériter / seuils propres, contrôles, résumé), `Projects/ProjectForm` + résumé dans `ProjectDetail`, `Enterprises/ApprovalPolicySettings` (« Mon entreprise »), « Approbation prévue » dans `RequisitionForm`, « Niveau d'approbation » dans `RequisitionDetail`, badge du PDF de réquisition (`requisition.approvalLevel`), événement et info de l'étape Approbation du suivi (`timeline.approvalLevel.*`). Aide : rubriques `approval` et `roles`
+- Non fait (choix de l'utilisateur en attente) : chaîne d'approbation cumulative (Manager puis Finance puis DG) ; seuils de méthode d'achat (5 000 / 25 000) par projet — toujours fixes
+- Tests : `tests/api/approval-policy.spec.js` (GoFlow), `tests/e2e/approval-policy.spec.js`
 
 ## Correction des réquisitions : renvoi, retrait, versions (2026-10-13) — migration `25_requisition_revisions.sql`
 
@@ -448,4 +458,4 @@ npx playwright test tests/e2e/      # Tests navigateur — 60 pass avec GoFlow (
 - Variables d'env : `API_URL` (backend), `APP_URL` (frontend, qui doit tourner ; le port 3000 est parfois pris par le frontend GoFlow)
 - **GoFlow local** : conteneur `goflow-app` sur `http://localhost:8080` (`CAMUNDA_URL` / `CAMUNDA_REST_URL`). Sans GoFlow, les tests qui attendent des tâches s'ignorent (skip) au lieu d'échouer
 - Un **PO est créé directement en `PO_PENDING`** (pas d'étape brouillon : il part aussitôt en approbation `Activity_POApproval`) et n'est plus modifiable par `PUT` — les tests vérifient ce statut, ils ne « soumettent » plus le PO
-- Aiguillage d'approbation **direct selon le montant** (BPMN) : < 25 000 → N1 Manager, < 100 000 → N2 Finance, sinon N3 DG. Le `process_instance_id` arrive juste après la création : relire la réquisition (`refreshProcess`) avant d'attendre une tâche ; `waitForTaskOrStop` s'arrête si le budget est insuffisant. `workflow-extended.spec.js` crée une ligne budgétaire neuve à chaque passage (une ligne réutilisée finit épuisée)
+- Aiguillage d'approbation **direct selon le niveau calculé par `check_budget`** (variable `approvalLevel`, seuils du projet / de l'entreprise, défaut < 25 000 → N1 Manager, < 100 000 → N2 Finance, sinon N3 DG). Un test qui change la politique de l'entreprise doit la remettre à `null` (`approval-policy.spec.js`, afterAll). Le `process_instance_id` arrive juste après la création : relire la réquisition (`refreshProcess`) avant d'attendre une tâche ; `waitForTaskOrStop` s'arrête si le budget est insuffisant. `workflow-extended.spec.js` crée une ligne budgétaire neuve à chaque passage (une ligne réutilisée finit épuisée)

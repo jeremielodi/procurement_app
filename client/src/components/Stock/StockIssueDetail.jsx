@@ -167,6 +167,7 @@ export default function StockIssueDetail() {
               <tr key={l.id}>
                 <td className="px-4 py-2"><span className="mr-1 font-mono font-semibold">{l.item_code}</span>{l.item_name}
                   {l.serial_number && <div className="font-mono text-xs text-indigo-700">{t('stock.equipment.serialLabel', { serial: l.serial_number })}{l.asset_tag && ` · ${l.asset_tag}`}</div>}
+                  {l.project_id && <div className="text-xs text-gray-500" data-testid="issue-line-project">{t('stock.funding.fundedBy', { project: `${l.project_code} — ${l.project_name}` })}</div>}
                 </td>
                 <td className="px-4 py-2 text-xs">{l.lot_number ? <>{l.lot_number}{l.expiry_date && <div className="text-gray-400">{new Date(l.expiry_date).toLocaleDateString(getLocale())}</div>}</> : '—'}</td>
                 <td className="px-4 py-2 text-right font-medium">{fmtQty(l.quantity)} <span className="text-xs text-gray-400">{l.unit}</span></td>

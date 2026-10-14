@@ -642,7 +642,10 @@
       "VALUED": "Valorisé",
       "NO_COST": "Non valorisé (aucun coût connu)",
       "MIXED_CURRENCY": "Non valorisé (plusieurs devises)"
-    }
+    },
+    "sheetProject": "Par projet",
+    "project": "Projet (financement)",
+    "noProject": "Sans projet"
   },
   "auditActions": {
     "LOGIN_SUCCESS": "Connexion réussie",

@@ -18,6 +18,20 @@ const fail = (status, code, message, extra = {}) => Object.assign(new Error(mess
 const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
 const name = (first, last) => `TRIM(COALESCE(${first}, '') || ' ' || COALESCE(${last}, ''))`;
 
+/**
+ * Sortie d'ajustement répartie sur les soldes par projet (une écriture par projet touché).
+ * projectId : uuid / 'none' = ce stock seulement ; absent = stock sans projet d'abord. null si le stock ne suffit pas.
+ */
+async function outByProject(tx, base, quantity, projectId) {
+  const { allocations, complete } = await stockModel.takeByProject(tx, { ...base, quantity, projectId });
+  if (!complete) return null;
+  const movements = [];
+  for (const a of allocations) {
+    movements.push(await stockModel.addMovement(tx, { ...base, type: 'ADJUSTMENT_OUT', quantity: -a.quantity, projectId: a.projectId }));
+  }
+  return movements;
+}
+
 async function warehouseFor(userId, warehouseId) {
   const w = (await warehouseModel.accessibleFor(userId)).find(x => String(x.id) === String(warehouseId));
   if (!w) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès à ce dépôt');
@@ -38,8 +52,10 @@ class StockCountModel {
         const params = categoryId ? [warehouse.id, categoryId] : [warehouse.id];
         // Articles en quantité (lots compris)
         const balances = await tx.select(
-          `SELECT b.stock_item_id, b.lot_id, b.quantity FROM stock_balances b JOIN stock_items si ON si.id = b.stock_item_id
-           WHERE b.warehouse_id = $1 AND b.quantity > 0 AND NOT si.track_serials${cat}`,
+          // Le comptage ne distingue pas les projets : une ligne par article × lot (somme des soldes par projet)
+          `SELECT b.stock_item_id, b.lot_id, SUM(b.quantity) AS quantity FROM stock_balances b JOIN stock_items si ON si.id = b.stock_item_id
+           WHERE b.warehouse_id = $1 AND b.quantity > 0 AND NOT si.track_serials${cat}
+           GROUP BY b.stock_item_id, b.lot_id`,
           params
         );
         for (const b of balances) {
@@ -223,14 +239,16 @@ class StockCountModel {
           }
           continue;
         }
+        // Surplus : stock sans projet ; manque : pris sur le stock sans projet d'abord, puis sur les projets
         let m;
-        try {
-          m = await stockModel.addMovement(tx, { ...base, type: delta > 0 ? 'ADJUSTMENT_IN' : 'ADJUSTMENT_OUT', quantity: delta });
-        } catch (error) {
-          if (/STOCK_INSUFFICIENT/.test(error.message)) {
+        if (delta > 0) {
+          m = await stockModel.addMovement(tx, { ...base, type: 'ADJUSTMENT_IN', quantity: delta });
+        } else {
+          const out = await outByProject(tx, base, -delta);
+          if (!out) {
             throw fail(409, 'BALANCE_CHANGED', `${l.item_name} : le stock a baissé depuis l'ouverture de l'inventaire, l'écart ne peut plus être appliqué — recomptez cet article`);
           }
-          throw error;
+          [m] = out;
         }
         await tx.exec('UPDATE stock_count_lines SET adjustment_movement_id = $1 WHERE id = $2', [m.id, l.id]);
         adjusted++;
@@ -256,7 +274,8 @@ class StockCountModel {
   // ------------------------------------------------------------------
   /**
    * { warehouseId, stockItemId, lotId, unitId, quantity (signée ; équipement : -1), reason, comment, projectId }
-   * projectId : projet qui a financé le stock ajouté (entrée uniquement, facultatif)
+   * projectId : entrée = projet qui a financé le stock ajouté (facultatif) ; sortie = stock de ce projet ('none' = stock
+   * sans projet ; absent = stock sans projet d'abord, puis les projets — une écriture par projet touché)
    */
   async createAdjustment({ warehouseId, stockItemId, lotId, unitId, quantity, reason, comment, projectId }, { userId }) {
     const warehouse = await warehouseFor(userId, warehouseId);
@@ -282,23 +301,26 @@ class StockCountModel {
       if (item.track_lots && !lotId) throw fail(400, 'LOT_REQUIRED', `${item.name} : choisissez le lot`);
       const lot = lotId ? await tx.one('SELECT id FROM stock_lots WHERE id::text = $1 AND stock_item_id = $2', [String(lotId), item.id]) : null;
       if (lotId && !lot) throw fail(400, 'LOT_NOT_FOUND', 'Lot introuvable');
-      const fundingProjectId = qty > 0 ? await stockModel.fundingProject(tx, projectId, warehouse.enterprise_id) : null;
+      const fundingProjectId = projectId === 'none' ? null : await stockModel.fundingProject(tx, projectId, warehouse.enterprise_id);
 
       const adj = await tx.one(
         `INSERT INTO stock_adjustments (enterprise_id, warehouse_id, stock_item_id, lot_id, unit_id, quantity, reason, comment, created_by)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, adjustment_number`,
         [warehouse.enterprise_id, warehouse.id, item.id, lot?.id || null, unit?.id || null, qty, r, note.slice(0, 2000), userId]
       );
+      const base = {
+        enterpriseId: warehouse.enterprise_id, stockItemId: item.id, warehouseId: warehouse.id, lotId: lot?.id || null, unitId: unit?.id || null,
+        sourceType: 'ADJUSTMENT', sourceId: adj.id, comment: `${adj.adjustment_number} — ${note.slice(0, 500)}`, performedBy: userId,
+      };
       let movement;
-      try {
-        movement = await stockModel.addMovement(tx, {
-          enterpriseId: warehouse.enterprise_id, stockItemId: item.id, warehouseId: warehouse.id, lotId: lot?.id || null, unitId: unit?.id || null,
-          type: qty > 0 ? 'ADJUSTMENT_IN' : 'ADJUSTMENT_OUT', quantity: qty, sourceType: 'ADJUSTMENT', sourceId: adj.id, projectId: fundingProjectId,
-          comment: `${adj.adjustment_number} — ${note.slice(0, 500)}`, performedBy: userId,
-        });
-      } catch (error) {
-        if (/STOCK_INSUFFICIENT/.test(error.message)) throw fail(409, 'STOCK_INSUFFICIENT', `${item.name} : stock insuffisant pour cette sortie`);
-        throw error;
+      if (qty > 0) {
+        movement = await stockModel.addMovement(tx, { ...base, type: 'ADJUSTMENT_IN', quantity: qty, projectId: fundingProjectId });
+      } else if (unit) {
+        movement = await stockModel.addMovement(tx, { ...base, type: 'ADJUSTMENT_OUT', quantity: qty }); // projet de l'unité (trigger)
+      } else {
+        const out = await outByProject(tx, base, -qty, projectId === 'none' ? 'none' : fundingProjectId);
+        if (!out) throw fail(409, 'STOCK_INSUFFICIENT', `${item.name} : stock insuffisant pour cette sortie`);
+        [movement] = out;
       }
       if (unit) {
         await tx.exec(`UPDATE stock_units SET status = $2, warehouse_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,

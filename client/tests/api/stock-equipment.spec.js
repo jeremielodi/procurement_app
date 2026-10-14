@@ -16,7 +16,7 @@ test.describe.serial('API › Équipements affectés et retours', () => {
   const L = () => auth(logToken);
   const balance = async (request, itemId, whId) => {
     const rows = (await (await request.get(`/api/stock/balances?warehouseId=${whId}&stockItemId=${itemId}&includeEmpty=1`, { headers: L() })).json()).data;
-    return Number(rows[0]?.quantity ?? 0);
+    return rows.reduce((s, r) => s + Number(r.quantity), 0); // un solde par projet
   };
   const unitsOf = async (request, query = '') => (await (await request.get(`/api/stock-units?stockItemId=${laptop.id}${query}`, { headers: L() })).json()).data;
 

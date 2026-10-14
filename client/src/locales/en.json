@@ -486,7 +486,7 @@
         },
         {
           "title": "Receipt → stock entry",
-          "desc": "The quantity accepted on the goods receipt enters stock in the chosen warehouse; over-deliveries are refused."
+          "desc": "The quantity accepted on the goods receipt enters stock in the chosen warehouse, linked to the project that paid for it: stock levels can be viewed project by project. Over-deliveries are refused."
         },
         {
           "title": "Delivery tracking",
@@ -2924,7 +2924,9 @@
       "receiveInvalid": "Invalid received quantity: between 0 and the shipped quantity",
       "receiveShortWarning_one": "{{count}} line received short: the difference will be recorded as lost in transit (equipment not received = \"lost\").",
       "receiveShortWarning_other": "{{count}} lines received short: the difference will be recorded as lost in transit (equipment not received = \"lost\").",
-      "cancelReceivedTransferText": "The received quantities will move back from the destination warehouse to the source warehouse (reversing entries); losses in transit stay recorded. Not possible if part of it was already used at the destination."
+      "cancelReceivedTransferText": "The received quantities will move back from the destination warehouse to the source warehouse (reversing entries); losses in transit stay recorded. Not possible if part of it was already used at the destination.",
+      "projectStockHint": "This project's stock is used first, then stock without a project — never another project's stock.",
+      "noProjectStockHint": "No project: stock without a project is used first, then project stock."
     },
     "return": {
       "title": "Stock returns",
@@ -3156,7 +3158,8 @@
         "MIXED_CURRENCY": "Not valued: several currencies",
         "VALUED": "Valued"
       },
-      "method": "WAC recomputed from the movement log: each receipt (at the purchase order price) updates the average cost; issues go out at the average cost; transfers between warehouses have no effect. An item received in several currencies, or without any known cost (opening stock, adjustment), is not valued."
+      "method": "WAC recomputed from the movement log: each receipt (at the purchase order price) updates the average cost; issues go out at the average cost; transfers between warehouses have no effect. An item received in several currencies, or without any known cost (opening stock, adjustment), is not valued.",
+      "projectNoDate": "By project: current stock only (no date)."
     },
     "import": {
       "button": "Import",
@@ -3274,7 +3277,9 @@
       "none": "No project (not assigned)",
       "allProjects": "All projects",
       "unassigned": "No project",
-      "fundedBy": "Funded by {{project}}"
+      "fundedBy": "Funded by {{project}}",
+      "outLabel": "Stock to remove",
+      "outAuto": "Automatic: stock without a project first, then project stock"
     }
   },
   "help": {
@@ -4298,7 +4303,24 @@
             "items": [
               "Goods receipt: project of the purchase order's requisition, taken automatically — including received equipment.",
               "Imported opening stock (\"Project code\" column), existing equipment (\"Register existing equipment\") and stock-in adjustments: project to choose, optional (empty = not assigned).",
-              "Issues, transfers and returns move stock already received: they do not change the funding project."
+              "Issues, transfers, returns and cancellations move stock already received: each quantity keeps its funding project."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Stock by project"
+          },
+          {
+            "type": "p",
+            "text": "Each item's stock is tracked by warehouse, lot and project. In \"Stock levels\", the \"All projects\" filter shows one project's stock or the stock \"No project\"; the \"Project (funding)\" column gives the breakdown. The Excel export adds a \"By project\" sheet and the valuation can be filtered by project (current stock only)."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Stock issue with a project: this project's stock is used first, then stock without a project — never another project's stock. Without a project: stock without a project first, then project stock. The issue details show the project of each line.",
+              "Transfer between warehouses: the project follows the goods to the destination warehouse.",
+              "Stock-out adjustment: \"Stock to remove\" — a project, \"No project\" or automatic (stock without a project first).",
+              "Stock count: the item is counted without distinguishing projects; a surplus enters without a project, a shortage is taken from stock without a project first, then from projects."
             ]
           },
           {

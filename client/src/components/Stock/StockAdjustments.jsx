@@ -64,8 +64,8 @@ export default function StockAdjustments() {
       const res = await stockAdjustmentService.create({
         warehouseId: form.warehouseId, stockItemId: form.item.id, lotId: form.lotId || undefined, unitId: form.unitId || undefined,
         quantity: qty, reason: form.reason, comment: form.comment.trim(),
-        // Entrée : projet qui a financé le stock ajouté (facultatif)
-        projectId: qty > 0 && form.projectId ? form.projectId : undefined,
+        // Entrée : projet qui a financé le stock ajouté (facultatif) ; sortie : stock de ce projet (absent : stock sans projet d'abord)
+        projectId: !form.item.track_serials && form.projectId ? form.projectId : undefined,
       });
       toast.success(t('stock.adjust.created', { number: res.data.adjustmentNumber }));
       setOpen(false);
@@ -153,7 +153,7 @@ export default function StockAdjustments() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="inline-flex rounded-lg border border-gray-300 p-0.5" role="radiogroup">
                   {['OUT', 'IN'].map(d => (
-                    <button key={d} type="button" role="radio" aria-checked={form.direction === d} onClick={() => setForm(f => ({ ...f, direction: d, reason: d === 'IN' ? 'FOUND' : 'DAMAGE' }))}
+                    <button key={d} type="button" role="radio" aria-checked={form.direction === d} onClick={() => setForm(f => ({ ...f, direction: d, projectId: '', reason: d === 'IN' ? 'FOUND' : 'DAMAGE' }))}
                       className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium ${form.direction === d ? (d === 'OUT' ? 'bg-red-600 text-white' : 'bg-green-600 text-white') : 'text-gray-600'}`}>
                       {t(`stock.adjust.direction.${d}`)}
                     </button>
@@ -161,10 +161,16 @@ export default function StockAdjustments() {
                 </div>
                 <input type="number" min="0" step="any" value={form.quantity} onChange={set('quantity')} placeholder={t('stock.quantity')} className={inputCls} aria-label={t('stock.quantity')} />
               </div>
-              {form.direction === 'IN' && (
+              {form.direction === 'IN' ? (
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">{t('stock.funding.label')}</label>
                   <FundingProjectSelect value={form.projectId} onChange={(v) => setForm(f => ({ ...f, projectId: v }))} className={inputCls} />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{t('stock.funding.outLabel')}</label>
+                  <FundingProjectSelect value={form.projectId} onChange={(v) => setForm(f => ({ ...f, projectId: v }))} className={inputCls}
+                    emptyLabel={t('stock.funding.outAuto')} withUnassigned />
                 </div>
               )}
             </>

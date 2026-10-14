@@ -16,7 +16,7 @@ test.describe.serial('API › Sorties de stock vers un utilisateur', () => {
   const json = async (res) => ({ status: res.status(), body: await res.json() });
   const balance = async (request, itemId, lotId = null) => {
     const rows = (await (await request.get(`/api/stock/balances?warehouseId=${wh.id}&stockItemId=${itemId}&includeEmpty=1`, { headers: auth(logToken) })).json()).data;
-    return Number(rows.find(r => (r.lot_id || null) === lotId)?.quantity ?? 0);
+    return rows.filter(r => (r.lot_id || null) === lotId).reduce((s, r) => s + Number(r.quantity), 0); // un solde par projet
   };
 
   test.beforeAll(async ({ request }) => {

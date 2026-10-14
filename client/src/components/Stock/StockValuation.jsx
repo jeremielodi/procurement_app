@@ -1,11 +1,13 @@
 // src/components/Stock/StockValuation.jsx
 // Valorisation du stock au coût moyen unitaire pondéré (CMUP) : à date, par dépôt (répartition) ou toute l'entreprise,
 // totaux par devise, articles non valorisés (aucun coût connu / plusieurs devises), export Excel.
+// Par projet : stock actuel du projet × CMUP (pas de date : les sorties anciennes n'ont pas de projet).
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Coins, RefreshCw, Download } from 'lucide-react';
 import SearchSelect from '../Common/SearchSelect';
 import { stockService, warehouseService } from '../../services/stockService';
+import { projectService } from '../../services/projectService';
 import { t, getLocale } from '../../i18n';
 
 const inputCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -16,9 +18,13 @@ export default function StockValuation() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [warehouses, setWarehouses] = useState([]);
-  const [filters, setFilters] = useState({ asOf: '', warehouseId: '' });
+  const [projects, setProjects] = useState([]);
+  const [filters, setFilters] = useState({ asOf: '', warehouseId: '', projectId: '' });
 
-  useEffect(() => { warehouseService.list({ all: 1 }).then(r => setWarehouses(r.data || [])).catch(() => {}); }, []);
+  useEffect(() => {
+    warehouseService.list({ all: 1 }).then(r => setWarehouses(r.data || [])).catch(() => {});
+    projectService.getAll().then(r => setProjects(r.data || [])).catch(() => {});
+  }, []);
   const load = () => {
     setLoading(true);
     const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
@@ -49,12 +55,20 @@ export default function StockValuation() {
 
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
         <label className="flex items-center gap-2 text-sm text-gray-700">{t('stock.valuation.asOf')}
-          <input type="date" value={filters.asOf} max={new Date().toISOString().slice(0, 10)} onChange={e => setFilters(f => ({ ...f, asOf: e.target.value }))} className={inputCls} />
+          <input type="date" value={filters.asOf} max={new Date().toISOString().slice(0, 10)} onChange={e => setFilters(f => ({ ...f, asOf: e.target.value }))} className={inputCls}
+            disabled={!!filters.projectId} title={filters.projectId ? t('stock.valuation.projectNoDate') : undefined} />
         </label>
         <SearchSelect value={filters.warehouseId} onChange={e => setFilters(f => ({ ...f, warehouseId: e.target.value }))} className={inputCls} aria-label={t('stock.warehouse')}>
           <option value="">{t('stock.valuation.allWarehouses')}</option>
           {warehouses.map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name}</option>)}
         </SearchSelect>
+        <SearchSelect value={filters.projectId} onChange={e => setFilters(f => ({ ...f, projectId: e.target.value, asOf: e.target.value ? '' : f.asOf }))} className={inputCls}
+          aria-label={t('stock.funding.column')} data-testid="valuation-project-filter">
+          <option value="">{t('stock.funding.allProjects')}</option>
+          <option value="none">{t('stock.funding.unassigned')}</option>
+          {projects.map(p => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
+        </SearchSelect>
+        {filters.projectId && <span className="text-xs text-gray-500">{t('stock.valuation.projectNoDate')}</span>}
       </div>
 
       {loading ? <div className="flex justify-center p-10"><RefreshCw className="animate-spin text-blue-500" /></div> : !data ? null : (

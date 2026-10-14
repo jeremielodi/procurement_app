@@ -7,8 +7,11 @@ const tenant = require('../utils/tenant');
 const { localizedSql } = require('../utils/requestLang');
 
 class StockModel {
-  /** Soldes, une ligne par article × dépôt × lot (quantité > 0 sauf includeEmpty) */
-  async balances({ warehouseId, stockItemId, categoryId, locationId, search, expiringWithinDays, includeEmpty = false } = {}) {
+  /**
+   * Soldes, une ligne par article × dépôt × lot × projet (quantité > 0 sauf includeEmpty).
+   * projectId : stock d'un projet, ou 'none' = stock sans projet (migration 29)
+   */
+  async balances({ warehouseId, stockItemId, categoryId, locationId, projectId, search, expiringWithinDays, includeEmpty = false } = {}) {
     const params = [];
     let sql = `
       SELECT b.id, b.quantity, b.updated_at,
@@ -16,15 +19,19 @@ class StockModel {
              si.track_lots, si.track_expiry, ${localizedSql('mc')} AS category_name,
              w.id AS warehouse_id, w.code AS warehouse_code, w.name AS warehouse_name,
              l.id AS location_id, l.name AS location_name,
-             lt.id AS lot_id, lt.lot_number, lt.expiry_date
+             lt.id AS lot_id, lt.lot_number, lt.expiry_date,
+             p.id AS project_id, p.code AS project_code, p.name AS project_name
       FROM stock_balances b
       JOIN stock_items si ON si.id = b.stock_item_id
       JOIN warehouses w ON w.id = b.warehouse_id
       JOIN locations l ON l.id = w.location_id
       LEFT JOIN stock_lots lt ON lt.id = b.lot_id
       LEFT JOIN market_categories mc ON mc.id = si.category_id
+      LEFT JOIN projects p ON p.id = b.project_id
       WHERE 1=1${tenant.filter('b.enterprise_id', params)}`;
     if (!includeEmpty) sql += ' AND b.quantity > 0';
+    if (projectId === 'none') sql += ' AND b.project_id IS NULL';
+    else if (projectId) { params.push(projectId); sql += ` AND b.project_id = $${params.length}`; }
     if (warehouseId) { params.push(warehouseId); sql += ` AND b.warehouse_id = $${params.length}`; }
     if (stockItemId) { params.push(stockItemId); sql += ` AND b.stock_item_id = $${params.length}`; }
     if (categoryId) { params.push(categoryId); sql += ` AND si.category_id = $${params.length}`; }
@@ -37,7 +44,30 @@ class StockModel {
       params.push(parseInt(expiringWithinDays) || 0);
       sql += ` AND lt.expiry_date IS NOT NULL AND lt.expiry_date <= CURRENT_DATE + $${params.length}::int`;
     }
-    return db.select(`${sql} ORDER BY si.name, l.name, w.name, lt.expiry_date NULLS LAST, lt.lot_number`, params);
+    return db.select(`${sql} ORDER BY si.name, l.name, w.name, lt.expiry_date NULLS LAST, lt.lot_number, p.code NULLS FIRST`, params);
+  }
+
+  /**
+   * Prend une quantité d'un article × dépôt × lot, projet par projet (soldes verrouillés FOR UPDATE).
+   * projectId : uuid = ce projet seulement ; 'none' = stock sans projet ; undefined = n'importe lequel (stock sans projet d'abord, puis les projets
+   * les mieux pourvus). → { allocations: [{ projectId, quantity }], available }. Rien n'est écrit.
+   */
+  async takeByProject(tx, { stockItemId, warehouseId, lotId = null, quantity, projectId }) {
+    const params = [stockItemId, warehouseId, lotId];
+    let sql = `SELECT project_id, quantity::float8 AS quantity FROM stock_balances
+               WHERE stock_item_id = $1 AND warehouse_id = $2 AND lot_id IS NOT DISTINCT FROM $3::uuid AND quantity > 0`;
+    if (projectId === 'none') sql += ' AND project_id IS NULL';
+    else if (projectId) { params.push(projectId); sql += ` AND project_id = $${params.length}`; }
+    const rows = await tx.select(`${sql} ORDER BY (project_id IS NOT NULL), quantity DESC FOR UPDATE`, params);
+    const allocations = [];
+    let remaining = Number(quantity);
+    for (const r of rows) {
+      if (remaining <= 1e-9) break;
+      const take = Math.min(r.quantity, remaining);
+      allocations.push({ projectId: r.project_id, quantity: take });
+      remaining -= take;
+    }
+    return { allocations, available: Number(quantity) - Math.max(remaining, 0), complete: remaining <= 1e-9 };
   }
 
   /** Journal des mouvements (filtres + pagination) */

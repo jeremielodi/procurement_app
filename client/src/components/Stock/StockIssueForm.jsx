@@ -129,12 +129,16 @@ export default function StockIssueForm() {
 
   const updateLine = (key, patch) => setLines(prev => prev.map(l => (l.key === key ? { ...l, ...patch } : l)));
 
+  // Projet choisi (hors transfert) : son stock et le stock sans projet, jamais celui d'un autre projet
+  const issueProject = !isTransfer && projectId ? projectId : null;
+  const projectRows = (balances) => (balances || []).filter(b => !issueProject || !b.project_id || b.project_id === issueProject);
+
   // Disponible : non périmé (FEFO) ou lot imposé ; cumul des lignes du même article
   const computed = useMemo(() => {
     const requestedByItem = new Map();
     return lines.map(l => {
       const qty = l.item?.track_serials ? l.unitIds.length : parseFloat(String(l.quantity).replace(',', '.')) || 0;
-      const rows = l.balances || [];
+      const rows = projectRows(l.balances);
       // Lot imposé : tout son stock (un lot périmé n'est imposable que pour un transfert) ; sinon lots non périmés
       const usable = rows.filter(b => (l.lotId ? b.lot_id === l.lotId : !b.expiry_date || String(b.expiry_date).slice(0, 10) >= today()));
       const available = usable.reduce((s, b) => s + Number(b.quantity), 0);
@@ -145,9 +149,15 @@ export default function StockIssueForm() {
       if (l.item && !(qty > 0)) errors.push(l.item.track_serials ? t('stock.issue.err.units') : t('stock.issue.err.quantity'));
       if (l.item && l.balances && already + qty - available > 1e-9) errors.push(t('stock.issue.err.available', { qty: fmtQty(Math.max(available - already, 0)), unit: l.item.unit }));
       if (l.item && l.item.is_stockable === false) errors.push(t('stock.issue.err.notStockable'));
-      return { qty, available, errors, expiredStock: rows.some(b => b.expiry_date && String(b.expiry_date).slice(0, 10) < today()) };
+      // Lots proposés : un par lot (soldes des projets utilisables additionnés)
+      const lots = [...rows.filter(b => b.lot_id).reduce((m, b) => {
+        const lot = m.get(b.lot_id) || { ...b, quantity: 0 };
+        lot.quantity += Number(b.quantity);
+        return m.set(b.lot_id, lot);
+      }, new Map()).values()];
+      return { qty, available, errors, lots, expiredStock: rows.some(b => b.expiry_date && String(b.expiry_date).slice(0, 10) < today()) };
     });
-  }, [lines]);
+  }, [lines, issueProject]);
 
   const filledLines = lines.filter(l => l.item);
   const hasErrors = computed.some((c, i) => lines[i].item && c.errors.length);
@@ -258,6 +268,7 @@ export default function StockIssueForm() {
                 <option value="">—</option>
                 {projects.map(p => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
               </SearchSelect>
+              <span className="mt-1 block text-xs text-gray-500">{t(projectId ? 'stock.issue.projectStockHint' : 'stock.issue.noProjectStockHint')}</span>
             </label>
           )}
           <label className="text-sm">
@@ -284,7 +295,7 @@ export default function StockIssueForm() {
             <tbody className="divide-y divide-gray-100">
               {lines.map((l, i) => {
                 const c = computed[i];
-                const lots = (l.balances || []).filter(b => b.lot_id);
+                const { lots } = c;
                 return (
                   <tr key={l.key} className={submitted && c.errors.length ? 'bg-red-50/60' : ''}>
                     <td className="px-3 py-2 align-top">

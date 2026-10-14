@@ -1,6 +1,6 @@
 // src/components/Stock/StockOverview.jsx
 // État du stock : synthèse (articles en stock, sous le minimum, lots qui expirent) et soldes
-// par article × dépôt × lot, filtres (dépôt, localisation, catégorie, recherche, péremption), export Excel.
+// par article × dépôt × lot × projet, filtres (dépôt, catégorie, projet de financement, recherche, péremption), export Excel.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Warehouse, Download, RefreshCw, Search, Package, AlertTriangle, CalendarClock, Boxes } from 'lucide-react';
@@ -9,6 +9,7 @@ import { categoryService } from '../../services/referenceService';
 import { t, getLocale, useTranslation } from '../../i18n';
 import { usePermissions } from '../../hooks/usePermissions';
 import SearchSelect from '../Common/SearchSelect';
+import { projectService } from '../../services/projectService';
 
 const inputCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
@@ -22,6 +23,7 @@ export default function StockOverview() {
   const [rows, setRows] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState(params.get('search') || '');
@@ -31,6 +33,7 @@ export default function StockOverview() {
     warehouseId: params.get('warehouseId') || '',
     categoryId: params.get('categoryId') || '',
     expiringWithinDays: params.get('expiring') || '',
+    projectId: params.get('projectId') || '',
   };
   const setFilter = (key, value) => {
     const next = new URLSearchParams(params);
@@ -40,6 +43,7 @@ export default function StockOverview() {
 
   useEffect(() => {
     warehouseService.list().then(r => setWarehouses(r.data || [])).catch(() => {});
+    projectService.getAll().then(r => setProjects(r.data || [])).catch(() => {});
     stockService.summary().then(r => setSummary(r.data)).catch(() => {});
   }, []);
   useEffect(() => { categoryService.listPublic().then(r => setCategories(r.data || [])).catch(() => {}); }, [lang]);
@@ -48,6 +52,7 @@ export default function StockOverview() {
     warehouseId: filters.warehouseId || undefined,
     categoryId: filters.categoryId || undefined,
     expiringWithinDays: filters.expiringWithinDays || undefined,
+    projectId: filters.projectId || undefined,
     search: params.get('search') || undefined,
   }), [params]);
 
@@ -140,6 +145,12 @@ export default function StockOverview() {
           <option value="">{t('stock.allCategories')}</option>
           {categories.filter(c => c.is_stockable).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </SearchSelect>
+        {/* État du stock par projet (projet qui a financé le stock ; « non attribué » : stock sans projet) */}
+        <SearchSelect value={filters.projectId} onChange={e => setFilter('projectId', e.target.value)} className={inputCls} aria-label={t('stock.funding.column')} data-testid="overview-project-filter">
+          <option value="">{t('stock.funding.allProjects')}</option>
+          <option value="none">{t('stock.funding.unassigned')}</option>
+          {projects.map(p => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
+        </SearchSelect>
         <SearchSelect value={filters.expiringWithinDays} onChange={e => setFilter('expiring', e.target.value)} className={inputCls} aria-label={t('stock.overview.expiryFilter')}>
           <option value="">{t('stock.overview.anyExpiry')}</option>
           <option value="0">{t('stock.overview.expiredOnly')}</option>
@@ -165,6 +176,7 @@ export default function StockOverview() {
                 <th className="px-4 py-2">{t('stock.warehouse')}</th>
                 <th className="px-4 py-2">{t('stock.lot')}</th>
                 <th className="px-4 py-2">{t('stock.expiry')}</th>
+                <th className="px-4 py-2">{t('stock.funding.column')}</th>
                 <th className="px-4 py-2 text-right">{t('stock.quantity')}</th>
                 <th className="px-4 py-2 text-right">{t('stock.overview.itemTotal')}</th>
               </tr>
@@ -190,6 +202,9 @@ export default function StockOverview() {
                     <td className={`px-4 py-2 ${days !== null && days < 0 ? 'text-red-600 font-semibold' : days !== null && days <= 90 ? 'text-amber-600' : ''}`}>
                       {fmtDate(r.expiry_date)}
                       {days !== null && days < 0 && <span className="ml-1 text-xs">({t('stock.expired')})</span>}
+                    </td>
+                    <td className="px-4 py-2 text-xs" data-testid="balance-project">
+                      {r.project_id ? <span title={r.project_name}><span className="font-mono">{r.project_code}</span> — {r.project_name}</span> : <span className="text-gray-400">{t('stock.funding.unassigned')}</span>}
                     </td>
                     <td className="px-4 py-2 text-right font-medium">{fmtQty(r.quantity)} <span className="text-xs text-gray-400">{r.unit}</span></td>
                     <td className={`px-4 py-2 text-right ${low ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>

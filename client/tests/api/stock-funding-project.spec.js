@@ -3,7 +3,7 @@ import { getToken, auth } from './helpers.js';
 
 // Projet qui a financé chaque entrée en stock (migration 28_stock_funding_project.sql) :
 //  - réception (GRN) : projet de la réquisition du bon de commande, automatique (équipements compris)
-//  - ajustement d'entrée, parc existant, stock initial importé : projet saisi, facultatif
+//  - ajustement d'entrée, parc existant, stock initial importé : projet saisi, facultatif (sortie : stock du projet choisi)
 //  - journal des mouvements et équipements : projet affiché, filtre par projet ou « sans projet »
 test.describe.serial('API › Stock — projet de financement', () => {
   const stamp = Date.now().toString(36).toUpperCase();
@@ -63,7 +63,7 @@ test.describe.serial('API › Stock — projet de financement', () => {
     expect(units.find(u => u.serial_number === `SN-SF-${stamp}`)?.project_code).toBe(projectA.code);
   });
 
-  test('Ajustement d\'entrée : projet facultatif, contrôlé ; sortie : jamais de projet', async ({ request }) => {
+  test('Ajustement d\'entrée : projet facultatif, contrôlé ; sortie : sur le stock du projet choisi', async ({ request }) => {
     const adjust = (data) => request.post('/api/stock-adjustments', { headers: H(), data: { warehouseId: warehouse.id, stockItemId: paper.id, reason: 'FOUND', comment: 'Trouvé', ...data } });
     const bad = await json(await adjust({ quantity: 3, projectId: '00000000-0000-0000-0000-000000000000' }));
     expect([bad.status, bad.body.code]).toEqual([400, 'PROJECT_NOT_FOUND']);
@@ -73,9 +73,9 @@ test.describe.serial('API › Stock — projet de financement', () => {
 
     const all = await movements(request, `stockItemId=${paper.id}&sourceType=ADJUSTMENT`);
     const byQty = Object.fromEntries(all.map(m => [Number(m.quantity), m.project_code || null]));
-    expect(byQty).toEqual({ 5: projectB.code, 2: null, '-1': null });
+    expect(byQty).toEqual({ 5: projectB.code, 2: null, '-1': projectB.code });
     // Filtres : par projet, et « sans projet »
-    expect((await movements(request, `stockItemId=${paper.id}&projectId=${projectB.id}`)).map(m => Number(m.quantity))).toEqual([5]);
+    expect((await movements(request, `stockItemId=${paper.id}&projectId=${projectB.id}`)).map(m => Number(m.quantity)).sort()).toEqual([-1, 5]);
     const none = await movements(request, `stockItemId=${paper.id}&projectId=none`);
     expect(none.every(m => !m.project_code)).toBe(true);
     expect(none.some(m => Number(m.quantity) === 2)).toBe(true);

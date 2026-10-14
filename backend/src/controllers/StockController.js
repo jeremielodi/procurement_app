@@ -291,11 +291,11 @@ const stock = {
     } catch (error) { return serverError(res, error, 'Erreur lors du chargement de la synthèse'); }
   },
 
-  /** GET /stock/valuation?asOf=&categoryId=&warehouseId= — valorisation au CMUP */
+  /** GET /stock/valuation?asOf=&categoryId=&warehouseId=&projectId= — valorisation au CMUP */
   async valuation(req, res) {
     try {
       const asOf = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.asOf || '')) ? req.query.asOf : undefined;
-      res.json({ success: true, data: await valuationService.valuation({ asOf, categoryId: req.query.categoryId, warehouseId: req.query.warehouseId }) });
+      res.json({ success: true, data: await valuationService.valuation({ asOf, categoryId: req.query.categoryId, warehouseId: req.query.warehouseId, projectId: req.query.projectId }) });
     } catch (error) { return serverError(res, error, 'Erreur lors de la valorisation du stock'); }
   },
 
@@ -325,7 +325,7 @@ const stock = {
     try {
       const T = i18n.translator(i18n.fromRequest(req));
       const asOf = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.asOf || '')) ? req.query.asOf : undefined;
-      const data = await valuationService.valuation({ asOf, categoryId: req.query.categoryId, warehouseId: req.query.warehouseId });
+      const data = await valuationService.valuation({ asOf, categoryId: req.query.categoryId, warehouseId: req.query.warehouseId, projectId: req.query.projectId });
       const wb = new ExcelJS.Workbook();
       wb.creator = 'procureApp';
       const ws = wb.addWorksheet(T('stockExport.sheetValuation'));
@@ -355,7 +355,7 @@ const stock = {
     } catch (error) { return serverError(res, error, "Erreur lors de l'export de la valorisation"); }
   },
 
-  /** GET /stock/balances/export — Excel (feuille « Stock » détaillée par lot + « Par article ») */
+  /** GET /stock/balances/export — Excel (feuille « Stock » détaillée par lot et projet + « Par article » + « Par projet ») */
   async exportBalances(req, res) {
     try {
       const T = i18n.translator(i18n.fromRequest(req));
@@ -379,11 +379,13 @@ const stock = {
         { header: T('stockExport.warehouse'), key: 'warehouse_name', width: 28 },
         { header: T('stockExport.lot'), key: 'lot_number', width: 16 },
         { header: T('stockExport.expiry'), key: 'expiry_date', width: 14, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: T('stockExport.project'), key: 'project', width: 30 },
         { header: T('stockExport.quantity'), key: 'quantity', width: 14, style: { numFmt: '#,##0.####' } },
         { header: T('stockExport.unit'), key: 'unit', width: 10 },
       ];
+      const projectLabel = (r) => (r.project_id ? `${r.project_code} — ${r.project_name}` : T('stockExport.noProject'));
       for (const r of rows) {
-        detail.addRow({ ...r, quantity: Number(r.quantity), expiry_date: r.expiry_date ? new Date(r.expiry_date) : null, lot_number: r.lot_number || '' });
+        detail.addRow({ ...r, quantity: Number(r.quantity), expiry_date: r.expiry_date ? new Date(r.expiry_date) : null, lot_number: r.lot_number || '', project: projectLabel(r) });
       }
       header(detail);
 
@@ -410,6 +412,28 @@ const stock = {
         if (a.min_quantity !== null && a.quantity < Number(a.min_quantity)) row.getCell('quantity').font = { color: { argb: 'FFDC2626' }, bold: true };
       }
       header(summary);
+
+      // Par projet : quantité de chaque article par projet de financement (tous dépôts)
+      const byProject = new Map();
+      for (const r of rows) {
+        const key = `${r.project_id || ''}|${r.stock_item_id}`;
+        const agg = byProject.get(key) || { project: projectLabel(r), project_code: r.project_code || '', item_code: r.item_code, item_name: r.item_name, unit: r.unit, quantity: 0, warehouses: new Set() };
+        agg.quantity += Number(r.quantity);
+        agg.warehouses.add(r.warehouse_name);
+        byProject.set(key, agg);
+      }
+      const projects = wb.addWorksheet(T('stockExport.sheetProject'));
+      projects.columns = [
+        { header: T('stockExport.project'), key: 'project', width: 34 },
+        { header: T('stockExport.code'), key: 'item_code', width: 16 },
+        { header: T('stockExport.item'), key: 'item_name', width: 40 },
+        { header: T('stockExport.quantity'), key: 'quantity', width: 14, style: { numFmt: '#,##0.####' } },
+        { header: T('stockExport.unit'), key: 'unit', width: 10 },
+        { header: T('stockExport.warehouses'), key: 'warehouses', width: 50 },
+      ];
+      const sorted = [...byProject.values()].sort((a, b) => (!a.project_code) - (!b.project_code) || a.project_code.localeCompare(b.project_code) || a.item_name.localeCompare(b.item_name));
+      for (const a of sorted) projects.addRow({ ...a, warehouses: [...a.warehouses].join(', ') });
+      header(projects);
 
       const stamp = new Date().toLocaleDateString(locale).replace(/\//g, '-');
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

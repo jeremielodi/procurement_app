@@ -87,7 +87,7 @@ class StockEquipmentModel {
         if (seen.has(String(raw.issueLineId))) throw fail(400, 'DUPLICATE_LINE', 'Ligne en double', { line: index });
         seen.add(String(raw.issueLineId));
         const line = await tx.one(
-          `SELECT il.id, il.stock_item_id, il.lot_id, il.unit_id, il.quantity, il.returned_quantity,
+          `SELECT il.id, il.stock_item_id, il.lot_id, il.unit_id, il.project_id, il.quantity, il.returned_quantity,
                   si.id AS issue_id, si.status, si.recipient_id, si.department_id, si.destination_type, si.enterprise_id, it.name AS item_name
            FROM stock_issue_lines il
            JOIN stock_issues si ON si.id = il.issue_id
@@ -119,6 +119,7 @@ class StockEquipmentModel {
           const movement = await stockModel.addMovement(tx, {
             enterpriseId: warehouse.enterprise_id, stockItemId: p.line.stock_item_id, warehouseId: warehouse.id,
             lotId: p.line.lot_id, unitId: p.line.unit_id, type: 'RETURN', quantity: p.quantity,
+            projectId: p.line.project_id,
             sourceType: 'RETURN', sourceId: ret.id, sourceLineId: p.line.id,
             comment: `${ret.return_number}${p.condition === 'DAMAGED' ? ' — endommagé' : ''}`, performedBy: userId,
           });

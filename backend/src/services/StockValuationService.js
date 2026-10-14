@@ -9,6 +9,8 @@
 //  - autres sorties (ISSUE, ADJUSTMENT_OUT…) : au CMUP courant ; autres entrées sans coût (retour, ajustement) : au CMUP courant
 // Devise : celle des réceptions. Un article reçu dans plusieurs devises n'est pas valorisé (pas de taux de change) ;
 // un article sans aucun coût connu (stock initial, ajustements) non plus.
+// Par projet (projectId, 'none' = stock sans projet) : quantité = soldes actuels du projet × CMUP de l'article (le CMUP
+// reste celui de l'entreprise) — à la date du jour seulement (les sorties antérieures à la migration 29 n'ont pas de projet).
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
 
@@ -18,10 +20,17 @@ const round = (n, d = 4) => Math.round(n * 10 ** d) / 10 ** d;
 
 class StockValuationService {
   /**
-   * @param {object} opts { asOf (date ISO, inclus), categoryId, warehouseId (répartition : valeur = quantité du dépôt × CMUP) }
+   * @param {object} opts { asOf (date ISO, inclus), categoryId, warehouseId (répartition : valeur = quantité du dépôt × CMUP),
+   *                        projectId (uuid | 'none' : soldes actuels du projet × CMUP ; incompatible avec asOf) }
    * @returns {{ items: Array, totals: Array<{ currency, value }>, notValued: number, mixedCurrency: number, asOf }}
    */
-  async valuation({ asOf, categoryId, warehouseId } = {}) {
+  async valuation({ asOf, categoryId, warehouseId, projectId } = {}) {
+    if (projectId && asOf) {
+      const err = new Error('La valorisation par projet n\'est disponible qu\'à la date du jour');
+      err.status = 400;
+      err.code = 'PROJECT_AS_OF_UNSUPPORTED';
+      throw err;
+    }
     const params = [];
     let where = `WHERE si.is_stockable${tenant.filter('si.enterprise_id', params)}`;
     if (categoryId) { params.push(categoryId); where += ` AND si.category_id = $${params.length}`; }
@@ -78,12 +87,25 @@ class StockValuationService {
       }
     }
 
+    // Quantités du projet : soldes actuels (tous dépôts ou le dépôt choisi)
+    let projectQty = null;
+    if (projectId) {
+      const pParams = [items.map(i => i.id)];
+      let pWhere = 'WHERE b.stock_item_id = ANY($1::uuid[]) AND b.quantity > 0';
+      if (projectId === 'none') pWhere += ' AND b.project_id IS NULL';
+      else { pParams.push(projectId); pWhere += ` AND b.project_id = $${pParams.length}`; }
+      if (warehouseId) { pParams.push(warehouseId); pWhere += ` AND b.warehouse_id = $${pParams.length}`; }
+      const sums = await db.select(`SELECT b.stock_item_id, SUM(b.quantity)::float8 AS qty FROM stock_balances b ${pWhere} GROUP BY b.stock_item_id`, pParams);
+      projectQty = new Map(sums.map(r => [r.stock_item_id, r.qty]));
+    }
+
     const rows = [];
     const totals = new Map();
     let notValued = 0, mixedCurrency = 0;
     for (const it of items) {
       const s = state.get(it.id);
-      const qty = warehouseId ? Math.max(s.byWarehouse.get(warehouseId) || 0, 0) : Math.max(s.qty, 0);
+      const qty = projectQty ? projectQty.get(it.id) || 0
+        : warehouseId ? Math.max(s.byWarehouse.get(warehouseId) || 0, 0) : Math.max(s.qty, 0);
       if (qty <= EPS) continue;
       const mixed = s.currencies.size > 1;
       const valued = s.costed && !mixed;

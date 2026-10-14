@@ -117,7 +117,7 @@ class StockIssueModel {
           const unitIds = [...new Set((raw.unitIds || []).map(String))];
           if (!unitIds.length) throw fail(400, 'UNITS_REQUIRED', `${item.name} : choisissez les équipements (n° de série) à remettre`, { line: index });
           const units = await tx.select(
-            `SELECT id, serial_number, status, condition, warehouse_id, stock_item_id FROM stock_units
+            `SELECT id, serial_number, status, condition, warehouse_id, stock_item_id, project_id FROM stock_units
              WHERE id::text = ANY($1::text[]) FOR UPDATE`,
             [unitIds]
           );
@@ -129,7 +129,7 @@ class StockIssueModel {
               throw fail(400, 'UNIT_UNAVAILABLE', `${item.name} : équipement ${u?.serial_number || id} indisponible (pas en stock dans ce dépôt, endommagé ou déjà choisi)`, { line: index });
             }
             used.set(`unit:${id}`, 1);
-            allocations.push({ item, lotId: null, unitId: u.id, quantity: 1 });
+            allocations.push({ item, lotId: null, unitId: u.id, quantity: 1, projectId: u.project_id || null });
           }
           continue;
         }
@@ -137,21 +137,26 @@ class StockIssueModel {
         const quantity = num(raw.quantity);
         if (!(quantity > EPS)) throw fail(400, 'INVALID_QUANTITY', 'Quantité invalide', { line: index });
 
-        const params = [item.id, warehouse.id];
+        // Projet du bon : son stock puis le stock sans projet (jamais celui d'un autre projet) ;
+        // sans projet : stock sans projet d'abord, puis celui des projets
+        const params = [item.id, warehouse.id, projectId || null];
         let sql = `
-          SELECT b.id, b.lot_id, b.quantity, lt.lot_number, lt.expiry_date
+          SELECT b.id, b.lot_id, b.project_id, b.quantity, lt.lot_number, lt.expiry_date
           FROM stock_balances b LEFT JOIN stock_lots lt ON lt.id = b.lot_id
-          WHERE b.stock_item_id = $1 AND b.warehouse_id = $2 AND b.quantity > 0`;
+          WHERE b.stock_item_id = $1 AND b.warehouse_id = $2 AND b.quantity > 0
+            AND ($3::uuid IS NULL OR b.project_id IS NULL OR b.project_id = $3::uuid)`;
         if (raw.lotId) {
           params.push(raw.lotId);
-          sql += ' AND b.lot_id = $3';
+          sql += ' AND b.lot_id = $4';
         } else if (item.track_lots) {
           sql += ` AND (lt.expiry_date IS NULL OR lt.expiry_date >= CURRENT_DATE)`;
         } else {
           sql += ' AND b.lot_id IS NULL';
         }
-        // FEFO : péremption la plus proche d'abord, puis lot le plus ancien
-        sql += ' ORDER BY lt.expiry_date NULLS LAST, lt.created_at NULLS LAST FOR UPDATE OF b';
+        // FEFO : péremption la plus proche d'abord, puis lot le plus ancien, puis stock du projet / sans projet / autres projets
+        sql += ` ORDER BY lt.expiry_date NULLS LAST, lt.created_at NULLS LAST,
+                 CASE WHEN b.project_id = $3::uuid THEN 0 WHEN b.project_id IS NULL THEN 1 ELSE 2 END, b.quantity DESC
+                 FOR UPDATE OF b`;
         const balances = await tx.select(sql, params);
 
         // Lot périmé imposé : refusé pour une remise, permis pour un transfert (ex. vers un dépôt de destruction)
@@ -168,7 +173,7 @@ class StockIssueModel {
           if (free <= EPS) continue;
           const take = Math.min(free, remaining);
           used.set(b.id, (used.get(b.id) || 0) + take);
-          allocations.push({ item, lotId: b.lot_id, quantity: take });
+          allocations.push({ item, lotId: b.lot_id, quantity: take, projectId: b.project_id || null });
           remaining -= take;
           if (remaining <= EPS) break;
         }
@@ -190,11 +195,11 @@ class StockIssueModel {
       );
       for (const a of allocations) {
         const line = await tx.one(
-          'INSERT INTO stock_issue_lines (issue_id, stock_item_id, lot_id, quantity, unit_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-          [issue.id, a.item.id, a.lotId, a.quantity, a.unitId || null]
+          'INSERT INTO stock_issue_lines (issue_id, stock_item_id, lot_id, quantity, unit_id, project_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+          [issue.id, a.item.id, a.lotId, a.quantity, a.unitId || null, a.projectId]
         );
         const base = {
-          enterpriseId: warehouse.enterprise_id, stockItemId: a.item.id, lotId: a.lotId, unitId: a.unitId,
+          enterpriseId: warehouse.enterprise_id, stockItemId: a.item.id, lotId: a.lotId, unitId: a.unitId, projectId: a.projectId,
           sourceType: 'ISSUE', sourceId: issue.id, sourceLineId: line.id, performedBy: userId,
         };
         if (isTransfer) {
@@ -311,7 +316,7 @@ class StockIssueModel {
     if (!issue) return null;
     issue.lines = await db.select(
       `SELECT il.id, il.quantity::float8 AS quantity, il.returned_quantity::float8 AS returned_quantity, il.received_quantity::float8 AS received_quantity,
-              il.stock_item_id, il.lot_id, il.unit_id,
+              il.stock_item_id, il.lot_id, il.unit_id, il.project_id, pj.code AS project_code, pj.name AS project_name,
               un.serial_number, un.asset_tag, un.status AS unit_status, it.track_serials,
               it.code AS item_code, it.name AS item_name, it.unit,
               lt.lot_number, lt.expiry_date, m.movement_number, rm.movement_number AS reversal_movement_number,
@@ -324,6 +329,7 @@ class StockIssueModel {
        LEFT JOIN stock_movements tm ON tm.id = il.transfer_in_movement_id
        LEFT JOIN stock_movements rom ON rom.id = il.reversal_out_movement_id
        LEFT JOIN stock_units un ON un.id = il.unit_id
+       LEFT JOIN projects pj ON pj.id = il.project_id
        WHERE il.issue_id = $1
        ORDER BY it.name, lt.expiry_date NULLS LAST`,
       [id]
@@ -370,7 +376,7 @@ class StockIssueModel {
       const issue = await tx.one('SELECT id, issue_number, status, acknowledged_at, enterprise_id, warehouse_id, destination_warehouse_id FROM stock_issues WHERE id = $1 FOR UPDATE', [id]);
       if (issue.status !== 'ISSUED') throw fail(409, 'CANCELLED', 'Transfert annulé');
       if (issue.acknowledged_at) throw fail(409, 'ALREADY_ACKNOWLEDGED', 'Transfert déjà réceptionné');
-      const lines = await tx.select('SELECT id, stock_item_id, lot_id, unit_id, quantity FROM stock_issue_lines WHERE issue_id = $1 FOR UPDATE', [id]);
+      const lines = await tx.select('SELECT id, stock_item_id, lot_id, unit_id, project_id, quantity FROM stock_issue_lines WHERE issue_id = $1 FOR UPDATE', [id]);
       let lost = 0;
       for (const [index, l] of lines.entries()) {
         const sent = num(l.quantity);
@@ -379,7 +385,7 @@ class StockIssueModel {
         let inn = null;
         if (qty > EPS) {
           inn = await stockModel.addMovement(tx, {
-            enterpriseId: issue.enterprise_id, stockItemId: l.stock_item_id, warehouseId: issue.destination_warehouse_id, lotId: l.lot_id, unitId: l.unit_id,
+            enterpriseId: issue.enterprise_id, stockItemId: l.stock_item_id, warehouseId: issue.destination_warehouse_id, lotId: l.lot_id, unitId: l.unit_id, projectId: l.project_id,
             type: 'TRANSFER_IN', quantity: qty, sourceType: 'ISSUE', sourceId: issue.id, sourceLineId: l.id, performedBy: userId,
             comment: `${issue.issue_number} ← ${current.warehouse_name}${qty < sent - EPS ? ` (${qty} / ${sent})` : ''}`,
           });
@@ -417,7 +423,7 @@ class StockIssueModel {
       if (issue.status === 'CANCELLED') throw fail(409, 'ALREADY_CANCELLED', 'Bon de sortie déjà annulé');
       if (!(await warehouseModel.canOperate(userId, issue.warehouse_id))) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès au dépôt de cette sortie');
       const lines = await tx.select(
-        `SELECT il.id, il.stock_item_id, il.lot_id, il.quantity, il.unit_id, il.returned_quantity, il.received_quantity FROM stock_issue_lines il WHERE il.issue_id = $1`,
+        `SELECT il.id, il.stock_item_id, il.lot_id, il.quantity, il.unit_id, il.project_id, il.returned_quantity, il.received_quantity FROM stock_issue_lines il WHERE il.issue_id = $1`,
         [id]
       );
       if (lines.some(l => num(l.returned_quantity) > 0)) {
@@ -428,7 +434,7 @@ class StockIssueModel {
         // En transit : tout revient au dépôt source
         for (const line of lines) {
           const back = await stockModel.addMovement(tx, {
-            enterpriseId: issue.enterprise_id, stockItemId: line.stock_item_id, lotId: line.lot_id, unitId: line.unit_id,
+            enterpriseId: issue.enterprise_id, stockItemId: line.stock_item_id, lotId: line.lot_id, unitId: line.unit_id, projectId: line.project_id,
             warehouseId: issue.warehouse_id, type: 'TRANSFER_IN', quantity: Math.abs(num(line.quantity)),
             sourceType: 'ISSUE', sourceId: issue.id, sourceLineId: line.id, comment: note, performedBy: userId,
           });
@@ -449,7 +455,7 @@ class StockIssueModel {
           const qty = line.received_quantity === null ? Math.abs(num(line.quantity)) : num(line.received_quantity);
           if (qty <= EPS) continue;
           const base = {
-            enterpriseId: issue.enterprise_id, stockItemId: line.stock_item_id, lotId: line.lot_id, unitId: line.unit_id,
+            enterpriseId: issue.enterprise_id, stockItemId: line.stock_item_id, lotId: line.lot_id, unitId: line.unit_id, projectId: line.project_id,
             sourceType: 'ISSUE', sourceId: issue.id, sourceLineId: line.id, comment: note, performedBy: userId,
           };
           if (line.unit_id) {
@@ -492,7 +498,7 @@ class StockIssueModel {
           );
         }
         const movement = await stockModel.addMovement(tx, {
-          enterpriseId: issue.enterprise_id, stockItemId: line.stock_item_id, warehouseId: issue.warehouse_id, lotId: line.lot_id, unitId: line.unit_id,
+          enterpriseId: issue.enterprise_id, stockItemId: line.stock_item_id, warehouseId: issue.warehouse_id, lotId: line.lot_id, unitId: line.unit_id, projectId: line.project_id,
           type: 'ISSUE_REVERSAL', quantity: Math.abs(num(line.quantity)), sourceType: 'ISSUE', sourceId: issue.id, sourceLineId: line.id,
           comment: note, performedBy: userId,
         });

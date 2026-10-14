@@ -642,7 +642,10 @@
       "VALUED": "Valued",
       "NO_COST": "Not valued (no known cost)",
       "MIXED_CURRENCY": "Not valued (several currencies)"
-    }
+    },
+    "sheetProject": "By project",
+    "project": "Project (funding)",
+    "noProject": "No project"
   },
   "auditActions": {
     "LOGIN_SUCCESS": "Successful sign-in",

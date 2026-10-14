@@ -486,7 +486,7 @@
         },
         {
           "title": "Réception → entrée en stock",
-          "desc": "La quantité acceptée au bon de réception entre en stock dans le dépôt choisi ; les sur-livraisons sont refusées."
+          "desc": "La quantité acceptée au bon de réception entre en stock dans le dépôt choisi, rattachée au projet qui l'a financée : l'état du stock se consulte projet par projet. Les sur-livraisons sont refusées."
         },
         {
           "title": "Suivi des livraisons",
@@ -2924,7 +2924,9 @@
       "receiveInvalid": "Quantité reçue invalide : entre 0 et la quantité expédiée",
       "receiveShortWarning_one": "{{count}} ligne reçue en quantité inférieure : la différence sera enregistrée comme perte en transit (équipement non reçu = « perdu »).",
       "receiveShortWarning_other": "{{count}} lignes reçues en quantité inférieure : la différence sera enregistrée comme perte en transit (équipement non reçu = « perdu »).",
-      "cancelReceivedTransferText": "Les quantités reçues repartiront du dépôt de destination vers le dépôt d'origine (écritures inverses) ; les pertes en transit restent enregistrées. Impossible si une partie a déjà été utilisée au dépôt de destination."
+      "cancelReceivedTransferText": "Les quantités reçues repartiront du dépôt de destination vers le dépôt d'origine (écritures inverses) ; les pertes en transit restent enregistrées. Impossible si une partie a déjà été utilisée au dépôt de destination.",
+      "projectStockHint": "Le stock de ce projet est pris en priorité, puis le stock sans projet — jamais celui d'un autre projet.",
+      "noProjectStockHint": "Sans projet : le stock sans projet est pris d'abord, puis celui des projets."
     },
     "return": {
       "title": "Retours en stock",
@@ -3156,7 +3158,8 @@
         "MIXED_CURRENCY": "Non valorisé : plusieurs devises",
         "VALUED": "Valorisé"
       },
-      "method": "CMUP recalculé à partir du journal des mouvements : chaque réception (au prix du bon de commande) met à jour le coût moyen ; les sorties partent au coût moyen ; les transferts entre dépôts sont sans effet. Un article reçu dans plusieurs devises, ou sans aucun coût connu (stock initial, ajustement), n'est pas valorisé."
+      "method": "CMUP recalculé à partir du journal des mouvements : chaque réception (au prix du bon de commande) met à jour le coût moyen ; les sorties partent au coût moyen ; les transferts entre dépôts sont sans effet. Un article reçu dans plusieurs devises, ou sans aucun coût connu (stock initial, ajustement), n'est pas valorisé.",
+      "projectNoDate": "Par projet : valorisation du stock actuel uniquement (pas de date)."
     },
     "import": {
       "button": "Importer",
@@ -3274,7 +3277,9 @@
       "none": "Aucun projet (non attribué)",
       "allProjects": "Tous les projets",
       "unassigned": "Sans projet",
-      "fundedBy": "Financé par {{project}}"
+      "fundedBy": "Financé par {{project}}",
+      "outLabel": "Stock à sortir",
+      "outAuto": "Automatique : stock sans projet d'abord, puis les projets"
     }
   },
   "help": {
@@ -4246,7 +4251,24 @@
             "items": [
               "Réception (bon de réception) : projet de la réquisition du bon de commande, repris automatiquement — y compris pour les équipements reçus.",
               "Stock initial importé (colonne « Code projet »), parc existant (« Enregistrer le parc existant ») et ajustement d'entrée : projet à choisir, facultatif (vide = non attribué).",
-              "Les sorties, transferts et retours déplacent du stock déjà entré : ils ne changent pas le projet de financement."
+              "Les sorties, transferts, retours et annulations déplacent du stock déjà entré : chaque quantité garde son projet de financement."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "État du stock par projet"
+          },
+          {
+            "type": "p",
+            "text": "Le stock de chaque article est suivi par dépôt, par lot et par projet. Dans « État du stock », le filtre « Tous les projets » affiche le stock d'un projet ou le stock « Sans projet » ; la colonne « Projet (financement) » donne la répartition. L'export Excel ajoute une feuille « Par projet » et la valorisation peut être filtrée par projet (stock actuel uniquement)."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Bon de sortie avec un projet : le stock de ce projet est pris en priorité, puis le stock sans projet — jamais celui d'un autre projet. Sans projet : le stock sans projet d'abord, puis celui des projets. Le détail du bon indique le projet de chaque ligne.",
+              "Transfert entre dépôts : le projet suit la marchandise jusqu'au dépôt de destination.",
+              "Ajustement de sortie : « Stock à sortir » — un projet, « Sans projet » ou automatique (stock sans projet d'abord).",
+              "Inventaire : on compte l'article sans distinguer les projets ; un surplus entre sans projet, un manque est retiré du stock sans projet d'abord, puis des projets."
             ]
           },
           {

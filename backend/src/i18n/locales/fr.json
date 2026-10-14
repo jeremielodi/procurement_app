@@ -17,7 +17,8 @@
     "CLASSIFIED_DIRECT_PURCHASE": "Achat direct",
     "CLASSIFIED_MULTIPLE_QUOTATIONS": "Devis multiples",
     "CLASSIFIED_RFP": "Appel d'offres",
-    "CLASSIFIED_SOLE_SOURCE": "Source unique"
+    "CLASSIFIED_SOLE_SOURCE": "Source unique",
+    "RETURNED": "À corriger"
   },
   "progress": {
     "DRAFT": "Brouillon",
@@ -78,7 +79,8 @@
       "Activity_GoodsReceipt": "Bon de réception (GRN)",
       "Activity_ServiceAcceptance": "Acceptation de service (SAN)",
       "Activity_EnterInvoice": "Saisie de la facture fournisseur",
-      "Activity_ProcessPayment": "Traitement du paiement"
+      "Activity_ProcessPayment": "Traitement du paiement",
+      "Activity_ReviseRequisition": "Corriger la réquisition"
     },
     "approvalPrefix": "Approbation hiérarchique ",
     "roles": {
@@ -203,7 +205,19 @@
     },
     "deliveryClosed": "Reliquat soldé — {reason}",
     "deliveries": "{count} réception(s) — livraison en cours",
-    "deliveryClosedEvent": "Reliquat du bon de commande {number} soldé"
+    "deliveryClosedEvent": "Reliquat du bon de commande {number} soldé",
+    "returnedWord": "renvoyée pour correction",
+    "withdrawnWord": "retirée par le demandeur",
+    "revision": {
+      "RETURNED_FOR_CORRECTION": "Renvoyée pour correction ({task})",
+      "WITHDRAWN": "Retirée par le demandeur pour correction",
+      "RESUBMITTED": "Soumise à nouveau — version {version}",
+      "REVISION_ABANDONED": "Abandonnée pendant la correction",
+      "reason": "Motif : « {value} »",
+      "noChange": "Aucune modification par rapport à la version précédente",
+      "seeChanges": "Voir les modifications",
+      "toCorrect": "à corriger par le demandeur"
+    }
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -361,6 +375,10 @@
       "changedMessage": "Les coordonnées bancaires de {supplier} ont changé. Vérifiez-les auprès du fournisseur (contre-appel à un numéro connu) avant tout paiement : les paiements sont bloqués jusqu'à la vérification.",
       "rejectedTitle": "Coordonnées bancaires refusées",
       "rejectedMessage": "Un client a refusé vos nouvelles coordonnées bancaires : {reason}. Corrigez-les dans votre profil ou contactez-le."
+    },
+    "revision": {
+      "returnedTitle": "Réquisition {number} à corriger",
+      "returnedMessage": "Votre réquisition {number} vous est renvoyée pour correction : « {reason} ». Corrigez-la puis soumettez-la à nouveau."
     }
   },
   "pdf": {

@@ -17,7 +17,8 @@
     "CLASSIFIED_DIRECT_PURCHASE": "Direct purchase",
     "CLASSIFIED_MULTIPLE_QUOTATIONS": "Multiple quotations",
     "CLASSIFIED_RFP": "Call for tenders (RFP)",
-    "CLASSIFIED_SOLE_SOURCE": "Sole source"
+    "CLASSIFIED_SOLE_SOURCE": "Sole source",
+    "RETURNED": "To be corrected"
   },
   "progress": {
     "DRAFT": "Draft",
@@ -78,7 +79,8 @@
       "Activity_GoodsReceipt": "Goods receipt note (GRN)",
       "Activity_ServiceAcceptance": "Service acceptance note (SAN)",
       "Activity_EnterInvoice": "Enter supplier invoice",
-      "Activity_ProcessPayment": "Process payment"
+      "Activity_ProcessPayment": "Process payment",
+      "Activity_ReviseRequisition": "Revise the requisition"
     },
     "approvalPrefix": "",
     "roles": {
@@ -203,7 +205,19 @@
     },
     "deliveryClosed": "Remaining quantity closed — {reason}",
     "deliveries": "{count} receipt(s) — delivery in progress",
-    "deliveryClosedEvent": "Remaining quantity of purchase order {number} closed"
+    "deliveryClosedEvent": "Remaining quantity of purchase order {number} closed",
+    "returnedWord": "returned for correction",
+    "withdrawnWord": "withdrawn by the requester",
+    "revision": {
+      "RETURNED_FOR_CORRECTION": "Returned for correction ({task})",
+      "WITHDRAWN": "Withdrawn by the requester for correction",
+      "RESUBMITTED": "Resubmitted — version {version}",
+      "REVISION_ABANDONED": "Abandoned during correction",
+      "reason": "Reason: \"{value}\"",
+      "noChange": "No change from the previous version",
+      "seeChanges": "See the changes",
+      "toCorrect": "to be corrected by the requester"
+    }
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -361,6 +375,10 @@
       "changedMessage": "The bank details of {supplier} have changed. Check them with the supplier (call back a known number) before any payment: payments are blocked until verified.",
       "rejectedTitle": "Bank details refused",
       "rejectedMessage": "A customer refused your new bank details: {reason}. Correct them in your profile or contact them."
+    },
+    "revision": {
+      "returnedTitle": "Requisition {number} to be corrected",
+      "returnedMessage": "Your requisition {number} has been returned for correction: \"{reason}\". Correct it, then resubmit it."
     }
   },
   "pdf": {

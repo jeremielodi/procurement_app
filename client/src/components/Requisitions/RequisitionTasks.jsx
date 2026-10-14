@@ -37,6 +37,7 @@ import { grnService } from '../../services/grnService';
 import { invoiceService } from '../../services/invoiceService';
 import { t, getLocale } from '../../i18n';
 import { TASK_LABELS } from '../../utils/taskLabels';
+import RevisionChanges from './RevisionChanges';
 
 // Statuts de bon de commande par étape
 const PO_PENDING = ['PO_PENDING', 'DRAFT'];
@@ -55,6 +56,9 @@ const TASK_FORMS = {
 // Méthode d'achat minimale selon le montant (même règle que RequisitionModel.requiredProcurementMethod) ;
 // la source unique (justifiée) reste toujours possible
 const METHOD_RIGOR = { DIRECT_PURCHASE: 1, MULTIPLE_QUOTATIONS: 2, RFP: 3 };
+// Processus démarré avec le BPMN « Corriger la réquisition » (variable posée au démarrage)
+const revisionSupported = (task) => task?.variables?.revisionSupported === true || task?.variables?.revisionSupported === 'true';
+
 const methodBelowThreshold = (method, amount) => {
   if (!METHOD_RIGOR[method]) return false;
   const value = parseFloat(amount) || 0;
@@ -77,6 +81,7 @@ export default function RequisitionTasks() {
   const [requisition, setRequisition] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [revisionInfo, setRevisionInfo] = useState(null); // dernière version (corrigée) : changements à montrer à l'approbateur
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [claimingTaskId, setClaimingTaskId] = useState(null);
@@ -174,6 +179,8 @@ export default function RequisitionTasks() {
     if (key === 'Activity_CreatePO') return { url: `/purchase-orders/${id}/${task.id}` };
     if (key === 'Activity_RFPProcess') return { url: `/tenders/new?taskId=${encodeURIComponent(task.id)}&requisitionId=${id}` };
     if (key === 'Activity_BudgetAdjustment') return { url: `/requisitions/${id}` };
+    // Correction demandée par l'approbateur (ou retrait) : formulaire de modification, puis nouvelle soumission
+    if (key === 'Activity_ReviseRequisition') return { url: `/requisitions/${id}/edit` };
     const DOC_TASKS = ['Activity_POApproval', 'Activity_SupplierConfirmation', 'Activity_GoodsReceipt',
       'Activity_ServiceAcceptance', 'Activity_EnterInvoice', 'Activity_ProcessPayment'];
     if (!DOC_TASKS.includes(key)) return null;
@@ -220,6 +227,11 @@ export default function RequisitionTasks() {
     if (target?.missing) { toast.error(t(`reqTasks.missing.${target.missing}`), { duration: 7000 }); return; }
     // Autres tâches (approbations, méthode d'achat…) : fenêtre de décision
     setSelectedTask(task);
+    // Réquisition corrigée (version ≥ 2) : l'approbateur voit ce qui a changé depuis la version précédente
+    setRevisionInfo(null);
+    if (TASK_FORMS[task.taskDefinitionKey] === 'approval' && (requisition?.version || 1) > 1) {
+      requisitionService.getVersions(id).then(r => setRevisionInfo(r.data?.versions?.[0] || null)).catch(() => setRevisionInfo(null));
+    }
     setFormData({
       approved: '',
       comment: '',
@@ -240,11 +252,19 @@ export default function RequisitionTasks() {
         return;
       }
     }
+    // Approbation : décision obligatoire ; renvoi pour correction = motif obligatoire (ce qui doit être corrigé)
+    if (taskForm(selectedTask) === 'approval') {
+      if (!formData.approved) { toast.error(t('revision.decisionRequired')); return; }
+      if (formData.approved === 'return' && !formData.comment.trim()) { toast.error(t('revision.returnReasonRequired')); return; }
+    }
     setSubmitting(true);
     try {
       const variables = {};
 
-      if (formData.approved !== '') variables.approved = formData.approved === 'true';
+      if (formData.approved === 'return') {
+        variables.approved = false;
+        variables.returnedForCorrection = true;
+      } else if (formData.approved !== '') variables.approved = formData.approved === 'true';
       if (formData.comment) variables.comment = formData.comment;
       if (formData.procurementMethod) variables.procurementMethod = formData.procurementMethod;
       if (formData.justification) variables.justification = formData.justification;
@@ -252,7 +272,7 @@ export default function RequisitionTasks() {
       if (formData.adjustmentJustification) variables.adjustmentJustification = formData.adjustmentJustification;
 
       await taskService.completeTask(selectedTask.id, variables);
-      toast.success(t('taskList.completed'));
+      toast.success(formData.approved === 'return' ? t('revision.returnedToast') : t('taskList.completed'));
       setShowTaskModal(false);
       setSelectedTask(null);
       loadData();
@@ -261,7 +281,9 @@ export default function RequisitionTasks() {
       const code = error.response?.data?.code;
       toast.error(code && ['METHOD_BELOW_THRESHOLD', 'PROCUREMENT_METHOD_REQUIRED', 'JUSTIFICATION_REQUIRED'].includes(code)
         ? t(`reqTasks.err.${code}`)
-        : t('reqTasks.completeError'));
+        : code && ['RETURN_REASON_REQUIRED', 'DECISION_REQUIRED', 'RETURN_NOT_SUPPORTED'].includes(code)
+          ? t(`revision.err.${code}`)
+          : (error.response?.data?.message || t('reqTasks.completeError')));
     } finally {
       setSubmitting(false);
     }
@@ -594,6 +616,15 @@ export default function RequisitionTasks() {
             )}
 
 
+            {/* Réquisition corrigée : changements depuis la version précédente */}
+            {taskForm(selectedTask) === 'approval' && revisionInfo?.changes && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4" data-testid="approval-revision-changes">
+                <h4 className="font-medium text-amber-900 mb-1">{t('revision.approverTitle', { version: revisionInfo.version })}</h4>
+                {revisionInfo.comment && <p className="text-sm text-amber-800 mb-2">{t('revision.submitComment', { value: revisionInfo.comment })}</p>}
+                <RevisionChanges changes={revisionInfo.changes} currency={revisionInfo.currency} />
+              </div>
+            )}
+
             {/* Formulaire Validation */}
             {taskForm(selectedTask) === 'approval' && (
                 <>
@@ -624,18 +655,41 @@ export default function RequisitionTasks() {
                         />
                         <span className="text-red-700">{t('taskList.reject')}</span>
                       </label>
+                      {/* Renvoyer pour correction : le demandeur corrige puis soumet à nouveau (nouveau circuit) — seulement
+                          pour les processus démarrés avec le BPMN qui connaît « Corriger la réquisition » */}
+                      {revisionSupported(selectedTask) && (
+                      <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg flex-1 hover:bg-amber-50 transition-colors">
+                        <input
+                          type="radio"
+                          name="approved"
+                          value="return"
+                          data-testid="decision-return"
+                          checked={formData.approved === 'return'}
+                          onChange={(e) => handleInputChange('approved', e.target.value)}
+                          className="w-4 h-4 text-amber-600"
+                        />
+                        <span className="text-amber-700">{t('revision.returnDecision')}</span>
+                      </label>
+                      )}
                     </div>
+                    {!revisionSupported(selectedTask) && (
+                      <p className="mt-2 text-xs text-gray-500">{t('revision.returnNotSupported')}</p>
+                    )}
+                    {formData.approved === 'return' && (
+                      <p className="mt-2 text-xs text-amber-700">{t('revision.returnDecisionHint')}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t('common.comment')}
+                      {formData.approved === 'return' ? t('revision.returnReasonLabel') : t('common.comment')}
                     </label>
                     <textarea
                       value={formData.comment}
                       onChange={(e) => handleInputChange('comment', e.target.value)}
                       rows="4"
+                      data-testid="approval-comment"
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder={t('taskList.commentPlaceholder')}
+                      placeholder={formData.approved === 'return' ? t('revision.returnReasonPlaceholder') : t('taskList.commentPlaceholder')}
                     />
                   </div>
                 </>

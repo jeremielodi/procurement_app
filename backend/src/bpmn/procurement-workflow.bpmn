@@ -7,6 +7,9 @@
         <bpmn:flowNodeRef>Activity_BudgetAdjustment</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Gateway_BudgetAdjustmentDecision</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Event_Rejected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_ReviseRequisition</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ReviseDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_RequisitionAbandoned</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Event_POCancelled</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_ServiceAcceptance</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Gateway_SANDecision</bpmn:flowNodeRef>
@@ -56,6 +59,7 @@
     <bpmn:serviceTask id="Task_CheckBudget" name="Check Budget Availability" camunda:type="external" camunda:topic="check_budget">
       <bpmn:incoming>Flow_Start_CheckBudget</bpmn:incoming>
       <bpmn:incoming>Flow_BudgetAdjusted</bpmn:incoming>
+      <bpmn:incoming>Flow_Resubmitted</bpmn:incoming>
       <bpmn:outgoing>Flow_CheckBudget_Gateway</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:exclusiveGateway id="Gateway_BudgetDecision" name="Budget Available?">
@@ -100,6 +104,7 @@
       <bpmn:incoming>Flow_N3_ApprovalGateway</bpmn:incoming>
       <bpmn:outgoing>Flow_Approved_DetermineType</bpmn:outgoing>
       <bpmn:outgoing>Flow_Approval_Rejected</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Approval_Returned</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:userTask id="Activity_DetermineType" name="Determine Procurement Type" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_Approved_DetermineType</bpmn:incoming>
@@ -238,6 +243,18 @@
     <bpmn:sequenceFlow id="Flow_Amount_N3" sourceRef="Gateway_AmountDecision" targetRef="Activity_ValidationN3_DG">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${estimatedAmount &gt;= 100000}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
+    <bpmn:userTask id="Activity_ReviseRequisition" name="Revise Requisition" camunda:assignee="${requester}" camunda:candidateGroups="requester">
+      <bpmn:incoming>Flow_Approval_Returned</bpmn:incoming>
+      <bpmn:outgoing>Flow_Revise_Decision</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_ReviseDecision" name="Resubmitted?">
+      <bpmn:incoming>Flow_Revise_Decision</bpmn:incoming>
+      <bpmn:outgoing>Flow_Resubmitted</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RevisionAbandoned</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="Event_RequisitionAbandoned" name="Requisition Abandoned">
+      <bpmn:incoming>Flow_RevisionAbandoned</bpmn:incoming>
+    </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_N1_ApprovalGateway" sourceRef="Activity_ValidationN1_Manager" targetRef="Gateway_ApprovalDecision" />
     <bpmn:sequenceFlow id="Flow_N2_ApprovalGateway" sourceRef="Activity_ValidationN2_Finance" targetRef="Gateway_ApprovalDecision" />
     <bpmn:sequenceFlow id="Flow_N3_ApprovalGateway" sourceRef="Activity_ValidationN3_DG" targetRef="Gateway_ApprovalDecision" />
@@ -245,7 +262,17 @@
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == true}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Approval_Rejected" sourceRef="Gateway_ApprovalDecision" targetRef="Event_Rejected">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == false}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == false &amp;&amp; returnedForCorrection == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Approval_Returned" sourceRef="Gateway_ApprovalDecision" targetRef="Activity_ReviseRequisition">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == false &amp;&amp; returnedForCorrection == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Revise_Decision" sourceRef="Activity_ReviseRequisition" targetRef="Gateway_ReviseDecision" />
+    <bpmn:sequenceFlow id="Flow_Resubmitted" sourceRef="Gateway_ReviseDecision" targetRef="Task_CheckBudget">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${resubmitted == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_RevisionAbandoned" sourceRef="Gateway_ReviseDecision" targetRef="Event_RequisitionAbandoned">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${resubmitted == false}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_DetermineType_Classify" sourceRef="Activity_DetermineType" targetRef="Task_ClassifyProcurement" />
     <bpmn:sequenceFlow id="Flow_Classify_Gateway" sourceRef="Task_ClassifyProcurement" targetRef="Gateway_MethodDecision" />
@@ -358,6 +385,21 @@
         <dc:Bounds x="1202" y="97" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="1178" y="140" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_ReviseRequisition_di" bpmnElement="Activity_ReviseRequisition">
+        <dc:Bounds x="1290" y="75" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ReviseDecision_di" bpmnElement="Gateway_ReviseDecision" isMarkerVisible="true">
+        <dc:Bounds x="1445" y="90" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1420" y="147" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_RequisitionAbandoned_di" bpmnElement="Event_RequisitionAbandoned">
+        <dc:Bounds x="1552" y="97" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1525" y="140" width="90" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_AmountDecision_di" bpmnElement="Gateway_AmountDecision" isMarkerVisible="true">
@@ -574,6 +616,26 @@
         <di:waypoint x="1125" y="435" />
         <di:waypoint x="1125" y="810" />
         <di:waypoint x="1200" y="810" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Approval_Returned_di" bpmnElement="Flow_Approval_Returned">
+        <di:waypoint x="1100" y="460" />
+        <di:waypoint x="1100" y="500" />
+        <di:waypoint x="1340" y="500" />
+        <di:waypoint x="1340" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Revise_Decision_di" bpmnElement="Flow_Revise_Decision">
+        <di:waypoint x="1390" y="115" />
+        <di:waypoint x="1445" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Resubmitted_di" bpmnElement="Flow_Resubmitted">
+        <di:waypoint x="1470" y="90" />
+        <di:waypoint x="1470" y="65" />
+        <di:waypoint x="320" y="65" />
+        <di:waypoint x="320" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RevisionAbandoned_di" bpmnElement="Flow_RevisionAbandoned">
+        <di:waypoint x="1495" y="115" />
+        <di:waypoint x="1552" y="115" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Approval_Rejected_di" bpmnElement="Flow_Approval_Rejected">
         <di:waypoint x="1100" y="410" />

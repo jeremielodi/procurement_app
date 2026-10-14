@@ -9,6 +9,7 @@ const {
   TASK_CANDIDATE_GROUPS, taskKey, taskLabel: rawTaskLabel, groupLabel, methodLabel, reasonLabel, matchLabel,
 } = require('../utils/workflowLabels');
 
+const DECISION_WORDS = { REJECTED: 'timeline.rejectedWord', RETURNED: 'timeline.returnedWord', WITHDRAWN: 'timeline.withdrawnWord' };
 const APPROVAL_KEYS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
 const SOURCING_KEYS = ['Activity_DirectPurchase', 'Activity_RequestQuotations', 'Activity_RFPProcess', 'Activity_SoleSource'];
 const PO_APPROVED = ['PO_APPROVED', 'PO_SENT', 'PO_CONFIRMED', 'PO_RECEIVED', 'PO_COMPLETE', 'APPROVED', 'SENT', 'COMPLETED'];
@@ -16,10 +17,13 @@ const PO_REJECTED = ['PO_REJECTED', 'REJECTED', 'CANCELLED'];
 // Événements « document créé depuis une tâche » (TaskController.logDocumentEvent) et écran du document
 const DOCUMENT_ACTIONS = ['GRN_COMPLETE', 'GRN_PARTIAL', 'SERVICE_ACCEPTED', 'SERVICE_REJECTED', 'INVOICE_MATCHED', 'INVOICE_MISMATCH', 'PAYMENT_RECORDED'];
 const DOC_ROUTES = { grn: '/goods-receipts', invoice: '/invoices', payment: '/payments' };
+// Correction de la réquisition (RequisitionRevisionService) : renvoi, retrait, nouvelle soumission, abandon
+const REVISION_ACTIONS = { RETURNED_FOR_CORRECTION: 'warning', WITHDRAWN: 'info', RESUBMITTED: 'info', REVISION_ABANDONED: 'danger' };
 
 // Tâche en attente → étape du workflow
 const TASK_STEP = {
   Activity_ValidationN1_Manager: 'approval', Activity_ValidationN2_Finance: 'approval', Activity_ValidationN3_DG: 'approval',
+  Activity_ReviseRequisition: 'approval', // correction demandée pendant l'approbation
   Activity_DetermineType: 'method',
   Activity_DirectPurchase: 'sourcing', Activity_RequestQuotations: 'sourcing', Activity_RFPProcess: 'sourcing', Activity_SoleSource: 'sourcing',
   Activity_CreatePO: 'po', Activity_POApproval: 'po_approval', Activity_SupplierConfirmation: 'supplier_confirmation',
@@ -52,6 +56,7 @@ function describeVars(vars = {}, links, T, lang) {
   const approved = vars.approved ?? vars.poApproved;
   if (approved === true || approved === 'true') decision = 'APPROVED';
   if (approved === false || approved === 'false') decision = 'REJECTED';
+  if (vars.returnedForCorrection === true || vars.returnedForCorrection === 'true') decision = vars.withdrawnByRequester ? 'WITHDRAWN' : 'RETURNED';
   if (vars.procurementMethod) details.push(T('timeline.method', { value: methodLabel(vars.procurementMethod, lang) }));
   if (vars.poNumber) {
     details.push(T('timeline.po', { value: vars.poNumber }));
@@ -160,6 +165,12 @@ class RequisitionTimelineService {
         t.completedAt = row.performed_at;
         const links = [];
         const { details, decision } = describeVars(json?.user_vars || {}, links, T, lang);
+        // Renvoi / retrait / correction : l'événement vient de RequisitionRevisionService (motif, version)
+        if (['RETURNED', 'WITHDRAWN'].includes(decision) || key === 'Activity_ReviseRequisition') {
+          t.decision = decision;
+          tasks.set(row.task_id, t);
+          continue;
+        }
         // Tâches complétées via leur formulaire : l'auteur est sur le document
         const docActor = key === 'Activity_POApproval' ? nameById.get(pos.find(p => p.approved_by)?.approved_by)
           : key === 'Activity_ProcessPayment' ? nameById.get(payments[0]?.created_by || payments[0]?.approved_by)
@@ -253,6 +264,18 @@ class RequisitionTimelineService {
           title: T('timeline.matching', { status: matchLabel(action, lang) }), actor: T('timeline.system'),
           details: row.comments ? [row.comments] : [], links: [],
         });
+      } else if (REVISION_ACTIONS[action]) {
+        const info = json || {};
+        const details = [];
+        if (info.reason) details.push(T('timeline.revision.reason', { value: info.reason }));
+        if (info.comment) details.push(T('timeline.comment', { value: info.comment }));
+        if (action === 'RESUBMITTED' && info.changed === false) details.push(T('timeline.revision.noChange'));
+        events.push({
+          date: row.performed_at, kind: REVISION_ACTIONS[action],
+          title: T(`timeline.revision.${action}`, { task: taskLabel(row.task_name, lang), version: info.version || '' }),
+          actor: who(row) || T('timeline.system'), details,
+          links: action === 'RESUBMITTED' ? [{ label: T('timeline.revision.seeChanges'), to: `/requisitions/${req.id}?tab=versions` }] : [],
+        });
       } else if (action === 'BUDGET_RECHECK_REQUESTED' || action === 'BUDGET_ADJUSTMENT_ABANDONED') {
         const retry = action === 'BUDGET_RECHECK_REQUESTED';
         events.push({
@@ -329,9 +352,14 @@ class RequisitionTimelineService {
       { key: 'budget', label: T('timeline.steps.budget'), status: budget ? (budget.ok ? 'done' : 'failed') : 'pending', date: budget?.date },
       {
         key: 'approval', label: T('timeline.steps.approval'),
-        status: approvalRejected ? 'failed' : approvals.length ? 'done' : 'pending',
+        // Dernière décision « renvoyée / retirée » : l'approbation est à refaire après correction
+        status: approvalRejected ? 'failed'
+          : approvals.length && !['RETURNED', 'WITHDRAWN'].includes(approvals.at(-1).decision) && req.status !== 'RETURNED' ? 'done' : 'pending',
         date: approvals.at(-1)?.completedAt,
-        info: approvals.map(t => T('timeline.approvalInfo', { task: T('workflow.approvalPrefix') ? t.label.replace(T('workflow.approvalPrefix'), '') : t.label, decision: T(t.decision === 'REJECTED' ? 'timeline.rejectedWord' : 'timeline.approvedWord') })).join(' · ') || null,
+        info: [
+          approvals.map(t => T('timeline.approvalInfo', { task: T('workflow.approvalPrefix') ? t.label.replace(T('workflow.approvalPrefix'), '') : t.label, decision: T(DECISION_WORDS[t.decision] || 'timeline.approvedWord') })).join(' · '),
+          req.status === 'RETURNED' ? T('timeline.revision.toCorrect') : null,
+        ].filter(Boolean).join(' · ') || null,
       },
       { key: 'method', label: T('timeline.steps.method'), status: classification ? 'done' : 'pending', date: classification?.date, info: classification ? methodLabel(classification.method, lang) : null },
       {

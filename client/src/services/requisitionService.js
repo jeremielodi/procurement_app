@@ -79,7 +79,7 @@ class RequisitionService {
 
   // Mettre à jour une réquisition
   async update(id, data) {
-    const response = await api.put(`/requisitions/${id}`, data)
+    const response = await api.put(`/requisitions/${id}`, data, { skipErrorToast: true })
     return response.data
   }
 
@@ -130,11 +130,21 @@ class RequisitionService {
   getStatusOptions() {
     return [
       { value: 'all', label: t('requisitions.allStatuses') },
-      ...['DRAFT', 'PENDING', 'BUDGET_CHECKED', 'APPROVED', 'REJECTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED',
+      ...['DRAFT', 'PENDING', 'BUDGET_CHECKED', 'RETURNED', 'APPROVED', 'REJECTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED',
         'CLASSIFIED_DIRECT_PURCHASE', 'CLASSIFIED_MULTIPLE_QUOTATIONS', 'CLASSIFIED_RFP', 'CLASSIFIED_SOLE_SOURCE']
         .map(value => ({ value, label: t(`requisitionStatus.${value}`) }))
     ];
   }
+
+  // Badge : « À corriger » garde son code (couleur dédiée de StatusBadge), les autres statuts leur libellé
+  badgeStatus = (val) => (val === 'RETURNED' ? val : this.getStatusOptionLabel(val))
+
+  // Correction (renvoi / retrait) : état, versions, modification, nouvelle soumission, abandon
+  getRevisionState = async (id) => (await api.get(`/requisitions/${id}/revision`)).data
+  getVersions = async (id) => (await api.get(`/requisitions/${id}/versions`)).data
+  withdraw = async (id, reason) => (await api.post(`/requisitions/${id}/withdraw`, { reason }, { skipErrorToast: true })).data
+  resubmit = async (id, comment) => (await api.post(`/requisitions/${id}/resubmit`, { comment }, { skipErrorToast: true })).data
+  abandon = async (id, reason) => (await api.post(`/requisitions/${id}/abandon`, { reason }, { skipErrorToast: true })).data
 
   getStatusOptionLabel = (val) => {
     let list = this.getStatusOptions().filter(op => op.value === val);

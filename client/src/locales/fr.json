@@ -191,7 +191,8 @@
     "INACTIVE": "Inactif",
     "LOCKED": "Verrouillé",
     "ARCHIVED": "Archivé",
-    "PO_CONFIRMED": "Confirmée"
+    "PO_CONFIRMED": "Confirmée",
+    "RETURNED": "À corriger"
   },
   "requisitionStatus": {
     "DRAFT": "Brouillon",
@@ -207,7 +208,8 @@
     "CLASSIFIED_DIRECT_PURCHASE": "Achat direct",
     "CLASSIFIED_MULTIPLE_QUOTATIONS": "Devis multiples",
     "CLASSIFIED_RFP": "Appel d'offres",
-    "CLASSIFIED_SOLE_SOURCE": "Source unique"
+    "CLASSIFIED_SOLE_SOURCE": "Source unique",
+    "RETURNED": "À corriger"
   },
   "procurementMethod": {
     "DIRECT_PURCHASE": "Achat direct",
@@ -233,7 +235,8 @@
       "Activity_GoodsReceipt": "Bon de réception (GRN)",
       "Activity_ServiceAcceptance": "Acceptation de service (SAN)",
       "Activity_EnterInvoice": "Saisie de la facture fournisseur",
-      "Activity_ProcessPayment": "Traitement du paiement"
+      "Activity_ProcessPayment": "Traitement du paiement",
+      "Activity_ReviseRequisition": "Corriger la réquisition"
     }
   },
   "tenderStatus": {
@@ -431,7 +434,7 @@
         },
         {
           "title": "Budget et approbations",
-          "desc": "Budget vérifié automatiquement ; en cas de manque, ajustement puis nouvelle vérification sans ressaisie. Validation multi-niveaux selon le montant."
+          "desc": "Budget vérifié automatiquement ; en cas de manque, ajustement puis nouvelle vérification sans ressaisie. Validation multi-niveaux selon le montant, avec renvoi pour correction et historique des versions."
         },
         {
           "title": "Appels d'offres",
@@ -3655,6 +3658,25 @@
             "text": "Vous ne pouvez pas approuver votre propre réquisition, même si vous avez le profil d'approbateur : un autre membre du groupe doit la traiter."
           },
           {
+            "type": "h",
+            "text": "Renvoyer pour correction, retirer, corriger"
+          },
+          {
+            "type": "p",
+            "text": "Une réquisition se corrige seulement pendant l'approbation, et toujours avec une trace : chaque soumission est conservée (onglet « Versions » de la fiche) et l'approbateur voit ce qui a changé."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Approbateur (N1 / N2 / N3) : en plus de « Approuver » et « Rejeter », la décision « Renvoyer pour correction » (motif obligatoire : ce qui doit être corrigé). La réquisition passe « À corriger » et le demandeur est notifié.",
+              "Demandeur : tant que personne n'a pris l'approbation en charge, « Retirer pour corriger » sur la fiche de la réquisition. Si l'approbation est déjà prise en charge, demandez à l'approbateur de la renvoyer.",
+              "« À corriger » : seul le demandeur peut modifier (bouton « Corriger » de la fiche, ou la tâche « Corriger la réquisition ») — titre, articles, quantités, prix, lignes budgétaires, projet. « Enregistrer » garde les modifications ; « Soumettre à nouveau » crée une nouvelle version.",
+              "Après une nouvelle soumission : le budget est vérifié de nouveau et le circuit d'approbation recommence selon le NOUVEAU montant (passer de 20 000 à 30 000 envoie la demande en N2 Finance).",
+              "« Abandonner » (motif obligatoire) annule la réquisition.",
+              "Après approbation, la réquisition n'est plus modifiable : un changement passe par une nouvelle réquisition, ou par le bon de commande (« Solder le reliquat »)."
+            ]
+          },
+          {
             "type": "tip",
             "text": "Seuls les approbateurs membres du projet de la réquisition reçoivent la tâche. Si personne ne la reçoit, vérifiez les membres du projet (Organisation → Projets)."
           },
@@ -5184,5 +5206,99 @@
     "example": "5CD1234XYZ ; INV-0042\n5CD1234XZA ; INV-0043\n5CD1234XZB",
     "counter": "{{count}} / {{expected}} saisi(s)",
     "entered": "{{count}} saisi(s)"
+  },
+  "revision": {
+    "tab": "Versions (v{{version}})",
+    "empty": "vide",
+    "noChange": "Aucune modification par rapport à la version précédente.",
+    "items": "Articles",
+    "itemLine": "{{quantity}} × {{price}} = {{total}}",
+    "fields": {
+      "title": "Titre",
+      "description": "Description",
+      "justification": "Justification",
+      "priority": "Priorité",
+      "amount": "Montant",
+      "department": "Département",
+      "project": "Projet"
+    },
+    "itemFields": {
+      "description": "Désignation",
+      "quantity": "Quantité",
+      "frequency": "Fréquence",
+      "unitPrice": "Prix unitaire",
+      "total": "Total",
+      "budgetLineCode": "Ligne budgétaire",
+      "specifications": "Spécifications"
+    },
+    "toCorrectTitle": "Votre réquisition est à corriger",
+    "inCorrectionTitle": "Réquisition en cours de correction par le demandeur",
+    "toCorrectHint": "Corrigez-la puis soumettez-la à nouveau : le budget est vérifié de nouveau et le circuit d'approbation recommence (selon le nouveau montant).",
+    "inCorrectionHint": "Le circuit d'approbation reprendra quand le demandeur l'aura soumise à nouveau.",
+    "returnedBy": "Renvoyée pour correction par {{name}} ({{task}}) le {{date}}",
+    "withdrawnBy": "Retirée par {{name}} le {{date}}",
+    "correct": "Corriger",
+    "correctOf": "Corriger la réquisition {{number}}",
+    "abandon": "Abandonner",
+    "abandonTitle": "Abandonner la réquisition",
+    "abandonText": "La réquisition sera annulée et le processus arrêté. Cette action est définitive.",
+    "abandonReason": "Motif (obligatoire)",
+    "withdraw": "Retirer pour corriger",
+    "withdrawTitle": "Retirer la réquisition pour la corriger",
+    "withdrawText": "L'approbation en attente est interrompue : vous pourrez modifier la réquisition, puis la soumettre à nouveau (nouveau circuit d'approbation).",
+    "withdrawReason": "Motif (facultatif)",
+    "canWithdrawHint": "Personne n'a encore pris l'approbation en charge : vous pouvez retirer votre réquisition pour la corriger.",
+    "claimedHint": "Approbation prise en charge par {{name}} : pour corriger la réquisition, demandez-lui de la renvoyer pour correction.",
+    "reasonRequired": "Indiquez le motif",
+    "withdrawn": "Réquisition retirée : vous pouvez la corriger",
+    "abandoned": "Réquisition abandonnée",
+    "pendingTitle": "Modifications pas encore soumises",
+    "noVersions": "Aucune version enregistrée.",
+    "versionTitle": "Version {{version}}",
+    "current": "actuelle",
+    "submittedBy": "Soumise par {{name}} le {{date}}",
+    "submitComment": "Message du demandeur : « {{value}} »",
+    "changesSince": "Changements depuis la version {{version}}",
+    "formTitle": "Corriger la réquisition {{number}}",
+    "formReturned": "Renvoyée pour correction par {{name}}",
+    "formWithdrawn": "Retirée par {{name}} pour correction",
+    "formHint": "« Enregistrer » garde vos modifications sans les soumettre ; « Soumettre à nouveau » crée une nouvelle version et relance la vérification du budget puis l'approbation.",
+    "commentLabel": "Message à l'approbateur (facultatif)",
+    "commentPlaceholder": "Ex. : quantité ajustée, spécifications précisées…",
+    "save": "Enregistrer",
+    "resubmit": "Soumettre à nouveau",
+    "saved": "Modifications enregistrées (pas encore soumises)",
+    "resubmitted": "Réquisition soumise à nouveau (version {{version}})",
+    "notEditableTitle": "Cette réquisition ne peut pas être modifiée",
+    "notEditableText": "Seul le demandeur peut la modifier, et seulement quand elle est « À corriger » (renvoyée par un approbateur ou retirée avant prise en charge de l'approbation).",
+    "backToRequisition": "Retour à la réquisition",
+    "returnDecision": "Renvoyer pour correction",
+    "returnDecisionHint": "Le demandeur corrigera la réquisition puis la soumettra à nouveau ; le circuit d'approbation recommencera.",
+    "returnReasonLabel": "Ce qui doit être corrigé (obligatoire)",
+    "returnReasonPlaceholder": "Ex. : précisez les spécifications, la quantité semble trop élevée…",
+    "returnReasonRequired": "Indiquez ce qui doit être corrigé",
+    "decisionRequired": "Choisissez une décision",
+    "returnedToast": "Réquisition renvoyée au demandeur pour correction",
+    "approverTitle": "Réquisition corrigée — version {{version}} : changements",
+    "err": {
+      "NOT_REQUESTER": "Seul le demandeur peut faire cette action",
+      "NOT_EDITABLE": "La réquisition n'est pas (ou plus) « À corriger »",
+      "NOT_WITHDRAWABLE": "La réquisition n'est pas en attente d'approbation",
+      "APPROVAL_IN_PROGRESS": "Approbation déjà prise en charge par {{assignee}} : demandez-lui de la renvoyer pour correction",
+      "TASK_NOT_FOUND": "Étape introuvable dans GoFlow (moteur injoignable ou processus terminé)",
+      "GOFLOW_ERROR": "GoFlow n'a pas accepté l'action, réessayez",
+      "REASON_REQUIRED": "Motif obligatoire",
+      "TITLE_REQUIRED": "Le titre est obligatoire",
+      "DEPARTMENT_REQUIRED": "Le département est obligatoire",
+      "ITEMS_REQUIRED": "Au moins un article est requis",
+      "ITEM_INVALID": "Un article a une quantité, une fréquence ou un prix invalide",
+      "BUDGET_LINE_REQUIRED": "Chaque article doit avoir une ligne budgétaire",
+      "BUDGET_LINE_INVALID": "Ligne budgétaire introuvable, inactive ou d'un autre projet",
+      "NOT_ON_PROJECT": "Vous n'avez pas le profil requis sur ce projet",
+      "RETURN_REASON_REQUIRED": "Indiquez ce qui doit être corrigé",
+      "DECISION_REQUIRED": "Choisissez une décision",
+      "RETURN_NOT_SUPPORTED": "Réquisition démarrée avant la mise à jour du circuit : le renvoi pour correction n'est pas possible (approuvez-la ou rejetez-la)"
+    },
+    "returnNotSupported": "Renvoi pour correction indisponible : réquisition démarrée avant la mise à jour du circuit d'approbation."
   }
 }

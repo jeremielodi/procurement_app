@@ -7,6 +7,7 @@ import { t, labelMap } from '../i18n';
 const TASK_KEYS = [
   // Circuit d'approbation réquisition
   'Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG', 'Activity_BudgetAdjustment',
+  'Activity_ReviseRequisition',
   // Méthode d'achat
   'Activity_DetermineType', 'Activity_DirectPurchase', 'Activity_RequestQuotations', 'Activity_RFPProcess', 'Activity_SoleSource',
   // Bon de commande

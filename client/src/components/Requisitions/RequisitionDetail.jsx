@@ -1,6 +1,6 @@
 // src/components/Requisitions/RequisitionDetail.jsx
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
@@ -51,6 +51,8 @@ import { tenderService } from '../../services/tenderService'
 import { usePermissions } from '../../hooks/usePermissions'
 import { t } from '../../i18n'
 import BudgetAdjustmentPanel from './BudgetAdjustmentPanel'
+import RevisionPanel from './RevisionPanel'
+import RequisitionVersions from './RequisitionVersions'
 
 export default function RequisitionDetail() {
   const { id } = useParams()
@@ -60,7 +62,9 @@ export default function RequisitionDetail() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showWorkflowModal, setShowWorkflowModal] = useState(false)
   const [cancellationReason, setCancellationReason] = useState('')
-  const [activeTab, setActiveTab] = useState('details')
+  // Onglet initial : ?tab=versions (lien « Voir les modifications » du suivi du workflow)
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'details')
   const [pendingTasksCount, setPendingTasksCount] = useState(0)
   const [viewerAttachmentId, setViewerAttachmentId] = useState(null)
   const [viewerFileName, setViewerFileName] = useState(null)
@@ -308,7 +312,7 @@ const handleGeneratePDF = async () => {
               <h1 className="text-2xl font-bold text-gray-800">
                 {requisition.requisition_number}
               </h1>
-              <StatusBadge status={requisitionService.getStatusOptionLabel(requisition.status)} size="lg" />
+              <StatusBadge status={requisitionService.badgeStatus(requisition.status)} size="lg" />
               {requisition.priority && (
                 <StatusBadge status={`PRIORITY_${requisition.priority}`} size="lg" />
               )}
@@ -411,6 +415,9 @@ const handleGeneratePDF = async () => {
       {/* Budget insuffisant : ajustement puis nouvelle vérification (ou abandon) */}
       <BudgetAdjustmentPanel requisition={requisition} onChanged={() => refetch()} />
 
+      {/* Correction : renvoyée / retirée (« À corriger »), ou retrait possible avant prise en charge de l'approbation */}
+      <RevisionPanel requisition={requisition} onChanged={() => { refetch(); queryClient.invalidateQueries(['requisitions']) }} />
+
       {/* Alertes - Message sur les tâches en attente */}
       {hasActiveProcess && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
@@ -476,6 +483,17 @@ const handleGeneratePDF = async () => {
             }`}
           >
             {t('reqDetail.workflow')}
+          </button>
+          <button
+            onClick={() => setActiveTab('versions')}
+            data-testid="tab-versions"
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'versions'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t('revision.tab', { version: requisition.version || 1 })}
           </button>
         </nav>
       </div>
@@ -720,6 +738,12 @@ const handleGeneratePDF = async () => {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'versions' && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <RequisitionVersions requisitionId={requisition.id} status={requisition.status} />
           </div>
         )}
 

@@ -9,7 +9,7 @@ const notificationService = require('../services/NotificationService');
 const EmailNotificationService = require('../services/EmailNotificationService');
 
 // Libellés français et rôles (candidateGroups) des tâches : module partagé
-const { TASK_LABELS, TASK_CANDIDATE_GROUPS, taskLabel, groupLabel } = require('../utils/workflowLabels');
+const { TASK_LABELS, TASK_CANDIDATE_GROUPS, PERSONAL_TASKS, taskLabel, groupLabel } = require('../utils/workflowLabels');
 const i18n = require('../i18n');
 
 // URL de l'application (servie par le backend) utilisée dans les liens des emails
@@ -122,11 +122,11 @@ async function emitNotification(userId, title, message, type, link) {
 }
 
 // Multi-entreprise : seuls les utilisateurs de l'entreprise de la réquisition sont notifiés
-async function getUsersByProfile(profileId, requisitionId) {
+async function getUsersByProfile(profileId, requisitionId, taskDefinitionKey) {
   try {
     if (!requisitionId) return [];
     // Profil exercé SUR LE PROJET de la réquisition (profils BPMN liés au projet), même entreprise, compte actif
-    const users = await getTaskRecipients(profileId, requisitionId);
+    const users = await getTaskRecipients(profileId, requisitionId, taskDefinitionKey);
     logInfo('Found %d user(s) with profile %s on the project', users.length, profileId);
     return users;
   } catch (error) {
@@ -136,7 +136,7 @@ async function getUsersByProfile(profileId, requisitionId) {
 }
 
 async function notifyCandidateGroup(candidateGroup, taskId, taskName, processInstanceId, requisitionId, taskDefinitionKey) {
-  const users = await getUsersByProfile(candidateGroup, requisitionId);
+  const users = await getUsersByProfile(candidateGroup, requisitionId, taskDefinitionKey);
   if (users.length === 0) {
     logInfo('No users found for candidate group: %s', candidateGroup);
     return;
@@ -166,7 +166,15 @@ const escapeHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp
  * Utilisateurs actifs de l'entreprise de la réquisition ayant le profil du groupe SUR SON PROJET : profil attribué
  * au membre sur ce projet, ou « tous les projets » (fonction SQL user_has_project_profile, migration 24)
  */
-async function getTaskRecipients(candidateGroup, requisitionId) {
+async function getTaskRecipients(candidateGroup, requisitionId, taskDefinitionKey = null) {
+  // Étape personnelle (ajustement budgétaire, correction de la réquisition) : le seul demandeur
+  if (PERSONAL_TASKS.includes(taskDefinitionKey)) {
+    return db.select(
+      `SELECT u.id, u.email, u.first_name, u.language FROM requisitions r JOIN users u ON u.id = r.requester_id
+       WHERE r.id = $1 AND u.is_active = true`,
+      [requisitionId]
+    );
+  }
   const group = String(candidateGroup).replace(/^prof_/, '');
   return db.select(
     `SELECT u.id, u.email, u.first_name, u.language
@@ -179,8 +187,8 @@ async function getTaskRecipients(candidateGroup, requisitionId) {
   );
 }
 
-async function getTaskEmailRecipients(candidateGroup, requisitionId) {
-  return (await getTaskRecipients(candidateGroup, requisitionId)).filter(u => u.email);
+async function getTaskEmailRecipients(candidateGroup, requisitionId, taskDefinitionKey = null) {
+  return (await getTaskRecipients(candidateGroup, requisitionId, taskDefinitionKey)).filter(u => u.email);
 }
 
 async function emailCandidateGroup(candidateGroup, taskName, taskDefinitionKey, requisitionId) {
@@ -196,7 +204,7 @@ async function emailCandidateGroup(candidateGroup, taskName, taskDefinitionKey, 
     );
     if (!requisition) return { sent: 0, failed: 0, recipients: [] };
 
-    const recipients = await getTaskEmailRecipients(candidateGroup, requisitionId);
+    const recipients = await getTaskEmailRecipients(candidateGroup, requisitionId, taskDefinitionKey);
     if (recipients.length === 0) {
       consoleLog.warn(`Tâche « ${TASK_LABELS[taskDefinitionKey] || taskName} » (${requisition.requisition_number}) : personne n'a le profil ${candidateGroup} sur ce projet — aucun email envoyé`);
       return { sent: 0, failed: 0, recipients: [] };

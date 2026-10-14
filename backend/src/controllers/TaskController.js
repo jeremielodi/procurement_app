@@ -5,7 +5,8 @@ const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const segregation = require('../utils/segregation');
-const { taskLabel } = require('../utils/workflowLabels');
+const { taskLabel, PERSONAL_TASKS } = require('../utils/workflowLabels');
+const revisionService = require('../services/RequisitionRevisionService');
 const supplierBankService = require('../services/SupplierBankService');
 const { audit, AUDIT } = require('../utils/auditLog');
 const projectAccess = require('../utils/projectAccess');
@@ -71,8 +72,8 @@ async function getCurrentUserContext(userId) {
 const inGroupOnProject = (task, currentUser, projectId) =>
   projectAccess.groupsOnProject(currentUser.scope, projectId).has(task.candidateGroup);
 
-// Tâche attribuée par le processus à une personne (assignee ${requester}) : elle la traite sans le profil
-const PERSONAL_TASKS = ['Activity_BudgetAdjustment'];
+// Tâches attribuées par le processus à une personne (assignee ${requester}) : elle les traite sans le profil
+// (PERSONAL_TASKS : ajustement budgétaire, correction de la réquisition)
 
 // GoFlow stocke l'assignee par email (cf. claim) ; l'id est accepté pour les anciennes tâches
 function isMine(task, currentUser) {
@@ -422,8 +423,33 @@ async function completeTask(req, res) {
       await supplierBankService.assertPayable(req, { invoiceId: variables.invoiceId || null, poId: variables.poId || null });
     }
 
+    // Approbation N1 / N2 / N3 : approuver, rejeter ou renvoyer pour correction (motif obligatoire). Le BPMN attend
+    // toujours approved ET returnedForCorrection (Gateway_ApprovalDecision)
+    const returnedForCorrection = REQUISITION_APPROVAL_TASKS.includes(taskDefinitionKey)
+      && (variables.returnedForCorrection === true || variables.returnedForCorrection === 'true');
+    if (REQUISITION_APPROVAL_TASKS.includes(taskDefinitionKey)) {
+      if (returnedForCorrection && !String(comment || variables.comment || '').trim()) {
+        return res.status(400).json({ success: false, code: 'RETURN_REASON_REQUIRED', message: 'Indiquez ce qui doit être corrigé' });
+      }
+      if (!returnedForCorrection && typeof variables.approved !== 'boolean') {
+        return res.status(400).json({ success: false, code: 'DECISION_REQUIRED', message: 'Choisissez une décision' });
+      }
+      // Processus démarré avant la mise à jour du BPMN : le renvoi y partirait au rejet
+      if (returnedForCorrection && !(await revisionService.supportsRevision(task.processInstanceId))) {
+        const error = revisionService.notSupported();
+        return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+      }
+    }
+
     // Réception et acceptation de service : uniquement par leurs formulaires (le document est créé et le BPMN reçoit
-    // grnCompliant / serviceAccepted / deliveryComplete) — jamais d'étape terminée sans son document
+    // grnCompliant / serviceAccepted / deliveryComplete) — jamais d'étape terminée sans son document ; correction de
+    // la réquisition : depuis le formulaire de modification (nouvelle version, resubmitted)
+    if (taskDefinitionKey === revisionService.REVISE_TASK) {
+      return res.status(400).json({
+        success: false, code: 'FORM_REQUIRED',
+        message: 'Corrigez la réquisition depuis sa fiche (« Corriger »), puis soumettez-la à nouveau'
+      });
+    }
     if (['Activity_GoodsReceipt', 'Activity_ServiceAcceptance'].includes(taskDefinitionKey)) {
       return res.status(400).json({
         success: false, code: 'FORM_REQUIRED',
@@ -434,6 +460,10 @@ async function completeTask(req, res) {
     // Build Camunda variables
     const taskVariables = { ...variables };
     if (comment) taskVariables.comment = comment;
+    if (REQUISITION_APPROVAL_TASKS.includes(taskDefinitionKey)) {
+      taskVariables.returnedForCorrection = returnedForCorrection;
+      if (returnedForCorrection) taskVariables.approved = false;
+    }
     // Ajustement budgétaire terminé sans décision explicite (ancienne fenêtre générique) : abandon, comme avant —
     // la relance de la vérification passe par POST /requisitions/:id/budget-adjustment
     if (taskDefinitionKey === 'Activity_BudgetAdjustment' && typeof taskVariables.budgetAdjusted !== 'boolean') {
@@ -453,7 +483,12 @@ async function completeTask(req, res) {
     if (taskDefinitionKey && requisitionId) {
       try {
         // --- Requisition approval tasks (N1 / N2 / N3) ---
-        if (REQUISITION_APPROVAL_TASKS.includes(taskDefinitionKey)) {
+        if (REQUISITION_APPROVAL_TASKS.includes(taskDefinitionKey) && returnedForCorrection) {
+          // Renvoyée pour correction : « À corriger », version close avec le motif, demandeur notifié
+          await revisionService.markReturned(requisitionId, {
+            kind: 'RETURNED', reason: comment || variables.comment, userId, taskKey: taskDefinitionKey, io: req.io,
+          });
+        } else if (REQUISITION_APPROVAL_TASKS.includes(taskDefinitionKey)) {
           const approved = variables.approved;
 
           if (approved === false) {
@@ -462,7 +497,9 @@ async function completeTask(req, res) {
               rejected_at: new Date(),
               updated_at: new Date()
             }, 'id', requisitionId);
-          } else if (approved === true && isFinalApprovalLevel(taskDefinitionKey, estimatedAmount)) {
+          } else if (approved === true && isFinalApprovalLevel(taskDefinitionKey,
+            // Montant en base (il a pu changer après une correction), à défaut celui envoyé par le client
+            (await db.one('SELECT estimated_amount FROM requisitions WHERE id = $1', [requisitionId]))?.estimated_amount ?? estimatedAmount)) {
             await db.update('requisitions', {
               status: 'APPROVED',
               approved_at: new Date(),

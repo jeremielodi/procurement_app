@@ -59,6 +59,15 @@ const statusConfig = {
     icon: DollarSign,
     iconColor: 'text-blue-500'
   },
+  // Renvoyée pour correction / retirée : le demandeur doit corriger puis soumettre à nouveau
+  RETURNED: {
+    color: 'amber',
+    bgColor: 'bg-amber-100',
+    textColor: 'text-amber-800',
+    borderColor: 'border-amber-200',
+    icon: FileDiff,
+    iconColor: 'text-amber-600'
+  },
   BUDGET_INSUFFICIENT: {
     color: 'red',
     bgColor: 'bg-red-100',

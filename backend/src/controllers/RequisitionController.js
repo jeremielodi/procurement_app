@@ -11,6 +11,7 @@ const requisitionExportService = require('../services/RequisitionExportService')
 const i18n = require('../i18n');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { audit, AUDIT } = require('../utils/auditLog');
+const revisionService = require('../services/RequisitionRevisionService');
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -187,6 +188,9 @@ async create(req, res) {
     });
 
     if (result.success) {
+      // Version 1 (photo de la réquisition soumise) : base de comparaison en cas de correction
+      await revisionService.recordInitialVersion(result.id);
+
       // Émettre une notification de création
       this.emitNotification(
         io, userId,
@@ -252,6 +256,10 @@ async create(req, res) {
           totalItems: itemsWithDetails.length,
           totalQuantity: totalQuantity,
           
+          // === CIRCUIT ===
+          // BPMN avec « Corriger la réquisition » (migration 25) : les processus démarrés avant ne l'ont pas
+          revisionSupported: true,
+
           // === TIMESTAMPS ===
           createdAt: new Date().toISOString(),
           createdBy: userEmail || userId.toString()

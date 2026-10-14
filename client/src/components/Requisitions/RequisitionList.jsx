@@ -24,7 +24,8 @@ import {
   MoreVertical,
   FileSpreadsheet,
   Printer,
-  GitBranch
+  GitBranch,
+  PencilLine
 } from 'lucide-react'
 import requisitionService from '../../services/requisitionService'
 import WorkflowTrackerModal from './WorkflowTrackerModal'
@@ -276,7 +277,7 @@ export default function RequisitionList() {
       title: t('requisitions.step'),
       dataIndex: 'status',
       key: 'status',
-      render: (status) => <StatusBadge status={requisitionService.getStatusOptionLabel(status)} size="sm" />,
+      render: (status) => <StatusBadge status={requisitionService.badgeStatus(status)} size="sm" />,
     },
     {
       title: t('requisitions.priority'),
@@ -318,6 +319,17 @@ export default function RequisitionList() {
           >
             <GitBranch size={18} />
           </button>
+          {/* À corriger : correction par le demandeur (le serveur refuse les autres) */}
+          {requisition.status === 'RETURNED' && (
+            <Link
+              to={`/requisitions/${requisition.id}/edit`}
+              className="text-amber-500 hover:text-amber-700 transition-colors"
+              title={t('revision.correct')}
+              aria-label={t('revision.correctOf', { number: requisition.requisition_number })}
+            >
+              <PencilLine size={18} />
+            </Link>
+          )}
           {requisition.status === 'DRAFT' && (
             <>
               <Link

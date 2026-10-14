@@ -140,6 +140,15 @@ function App() {
           </ProtectedRoute>
         } />
 
+        {/* Correction d'une réquisition « À corriger » (demandeur) */}
+        <Route path="/requisitions/:id/edit" element={
+          <ProtectedRoute>
+            <Layout>
+              <RequisitionForm />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
         <Route path="/requisitions/:id" element={
           <ProtectedRoute>
             <Layout>

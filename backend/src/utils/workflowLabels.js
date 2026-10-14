@@ -20,6 +20,7 @@ const TASK_CANDIDATE_GROUPS = {
   Activity_SupplierConfirmation: 'procurement',
   Activity_GoodsReceipt:         'logistic',
   Activity_ServiceAcceptance:    'requester',
+  Activity_ReviseRequisition:    'requester', // étape personnelle : le demandeur de la réquisition (PERSONAL_TASKS)
   Activity_EnterInvoice:         'finance',
   Activity_ProcessPayment:       'finance',
 };
@@ -46,6 +47,7 @@ const TASK_NAME_EN = {
   'Service Acceptance Note (SAN)': 'Activity_ServiceAcceptance',
   'Enter Supplier Invoice':       'Activity_EnterInvoice',
   'Process Payment':              'Activity_ProcessPayment',
+  'Revise Requisition':           'Activity_ReviseRequisition',
 };
 
 const isTaskKey = (k) => TASK_KEYS.includes(k);
@@ -81,7 +83,12 @@ const fr = i18n.translator('fr');
 const METHOD_LABELS = Object.fromEntries(['DIRECT_PURCHASE', 'MULTIPLE_QUOTATIONS', 'RFP', 'SOLE_SOURCE'].map(m => [m, fr(`workflow.methods.${m}`)]));
 const MATCH_LABELS = Object.fromEntries(['MATCHED', 'MISMATCH', 'PARTIAL', 'PENDING'].map(m => [m, fr(`workflow.match.${m}`)]));
 
+// Tâches attribuées par le processus à UNE personne (assignee ${requester}) : notifiées au seul demandeur, traitées
+// par lui sans dépendre de son profil
+const PERSONAL_TASKS = ['Activity_BudgetAdjustment', 'Activity_ReviseRequisition'];
+
 module.exports = {
+  PERSONAL_TASKS,
   TASK_LABELS, TASK_NAME_EN, TASK_GROUPS, TASK_CANDIDATE_GROUPS, METHOD_LABELS, MATCH_LABELS,
   taskKey, taskLabel, groupLabel, methodLabel, reasonLabel, matchLabel,
 };

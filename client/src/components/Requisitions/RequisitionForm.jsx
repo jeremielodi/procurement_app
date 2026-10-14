@@ -1,9 +1,9 @@
 // src/components/Requisitions/RequisitionForm.jsx
-import React, { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useLocation, useParams, Link } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Save, X, Search, AlertCircle, CheckCircle, Paperclip, Upload, Tag } from 'lucide-react'
+import { Plus, Trash2, Save, X, Search, AlertCircle, CheckCircle, Paperclip, Upload, Tag, Send, FileDiff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import requisitionService from '../../services/requisitionService'
 import { projectService } from '../../services/projectService'
@@ -17,12 +17,17 @@ import FileUpload from '../Common/FileUpload'
 import CatalogAutocomplete from '../Stock/CatalogAutocomplete'
 import { t, getLocale } from '../../i18n'
 import SearchSelect from '../Common/SearchSelect'
+import { revisionError } from './RevisionPanel'
 
 const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
 const priorityLabel = (p) => t(`priority.${p}`)
 
 export default function RequisitionForm() {
   const navigate = useNavigate()
+  // Mode correction (/requisitions/:id/edit) : réquisition « À corriger », modifiée par son demandeur puis soumise à nouveau
+  const { id: editId } = useParams()
+  const isEdit = !!editId
+  const [resubmitComment, setResubmitComment] = useState('')
   // Pré-remplissage (ex. réapprovisionnement depuis le stock : articles du catalogue sous le seuil minimum)
   const prefill = useLocation().state?.prefill || null
   const queryClient = useQueryClient()
@@ -45,6 +50,7 @@ export default function RequisitionForm() {
     watch,
     setValue,
     getValues,
+    reset,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -96,7 +102,48 @@ export default function RequisitionForm() {
     queryFn: () => departmentService.getAll({ is_active: true })
   })
 
-  const projects = projectsData?.data || []
+  // Réquisition à corriger : valeurs actuelles + droits (seul le demandeur, seulement « À corriger »)
+  const { data: editData, isLoading: editLoading } = useQuery({
+    queryKey: ['requisition-edit', editId],
+    queryFn: () => requisitionService.getById(editId),
+    enabled: isEdit,
+  })
+  const { data: revisionData, isLoading: revisionLoading } = useQuery({
+    queryKey: ['requisition-revision', editId],
+    queryFn: () => requisitionService.getRevisionState(editId),
+    enabled: isEdit,
+  })
+  const editing = editData?.data || null
+  const revision = revisionData?.data || null
+  useEffect(() => {
+    if (!editing) return
+    reset({
+      title: editing.title || '',
+      description: editing.description || '',
+      justification: editing.justification || '',
+      priority: editing.priority || 'MEDIUM',
+      departmentId: editing.department_id || '',
+      projectId: editing.project_id || '',
+      items: (editing.items || []).map(it => ({
+        itemId: it.id,
+        description: it.item_description || '',
+        quantity: parseFloat(it.quantity) || 0,
+        frequency: parseFloat(it.frequency) || 1,
+        unitPrice: parseFloat(it.unit_price) || 0,
+        specifications: it.specifications || null,
+        budgetLineId: it.budget_line_id || '',
+        budgetLineInfo: it.budget_line_id ? { id: it.budget_line_id, entity_code: it.budget_line_code, description: it.budget_line_description } : null,
+        stockItem: it.stock_item_id ? { id: it.stock_item_id, name: it.item_name, code: it.item_code, unit: it.unit } : null,
+      })),
+    })
+  }, [editing, reset])
+
+  // Projet actuel toujours proposé, même s'il ne figure plus dans la liste filtrée
+  const projects = [
+    ...(projectsData?.data || []),
+    ...(editing?.project_id && !(projectsData?.data || []).some(p => p.id === editing.project_id)
+      ? [{ id: editing.project_id, code: editing.project_code, name: editing.project_name }] : []),
+  ]
   const departments = departmentsData?.data || []
   const enterprises = enterprisesData?.data || [];
   let currency = {};
@@ -173,7 +220,50 @@ export default function RequisitionForm() {
     }, 0)
   }
 
+  // Correction : enregistrer les modifications, puis (resubmit) soumettre à nouveau → nouvelle version, nouveau circuit
+  const saveCorrection = async (data, resubmit) => {
+    if (!isFormValid()) {
+      toast.error(t('reqForm.fillRequired'))
+      return
+    }
+    setIsSubmitting(true)
+    try {
+      await requisitionService.update(editId, {
+        title: data.title,
+        description: data.description,
+        justification: data.justification || '',
+        priority: data.priority,
+        departmentId: data.departmentId,
+        projectId: data.projectId,
+        items: data.items.map(item => ({
+          id: item.itemId || undefined,
+          description: item.description,
+          quantity: item.quantity,
+          frequency: item.frequency,
+          unitPrice: item.unitPrice,
+          budgetLineId: item.budgetLineId,
+          specifications: item.specifications || null,
+          stockItemId: item.stockItem?.id || null,
+        })),
+      })
+      if (resubmit) {
+        const result = await requisitionService.resubmit(editId, resubmitComment.trim())
+        toast.success(t('revision.resubmitted', { version: result.data?.version }))
+        queryClient.invalidateQueries(['requisitions'])
+        navigate(`/requisitions/${editId}`)
+      } else {
+        toast.success(t('revision.saved'))
+        queryClient.invalidateQueries(['requisition-edit', editId])
+      }
+    } catch (error) {
+      toast.error(revisionError(error), { duration: 7000 })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const onSubmit = async (data) => {
+    if (isEdit) return saveCorrection(data, true)
     if (!isFormValid()) {
       toast.error(t('reqForm.fillRequired'))
       return
@@ -300,21 +390,49 @@ export default function RequisitionForm() {
 
   const totalAmount = calculateTotal()
   const formValid = isFormValid()
+
+  // Correction impossible (autre utilisateur, réquisition plus « À corriger ») : explication, aucun formulaire
+  if (isEdit && (editLoading || revisionLoading)) {
+    return <div className="max-w-7xl mx-auto py-12 text-center text-gray-500">{t('common.loading')}</div>
+  }
+  if (isEdit && (!editing || !revision?.canEdit)) {
+    return (
+      <div className="max-w-3xl mx-auto bg-white rounded-lg shadow p-8 text-center space-y-3" data-testid="revision-not-editable">
+        <AlertCircle className="mx-auto h-10 w-10 text-amber-500" />
+        <p className="font-medium text-gray-800">{t('revision.notEditableTitle')}</p>
+        <p className="text-sm text-gray-600">{t('revision.notEditableText')}</p>
+        <Link to={editId ? `/requisitions/${editId}` : '/requisitions'} className="inline-block text-blue-600 hover:underline">{t('revision.backToRequisition')}</Link>
+      </div>
+    )
+  }
   const completedItemsCount = items?.filter(i => isItemComplete(i)).length || 0
   const totalItemsCount = items?.length || 0
 
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">{t('reqForm.title')}</h1>
+        <h1 className="text-2xl font-bold text-gray-800">
+          {isEdit ? t('revision.formTitle', { number: editing.requisition_number }) : t('reqForm.title')}
+        </h1>
         <button
-          onClick={() => navigate('/requisitions')}
+          onClick={() => navigate(isEdit ? `/requisitions/${editId}` : '/requisitions')}
           className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800"
         >
           <X size={20} className="mr-2" />
           {t('common.cancel')}
         </button>
       </div>
+
+      {isEdit && revision?.lastReturn && (
+        <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 flex gap-3" data-testid="revision-form-reason">
+          <FileDiff className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-amber-900">{t(revision.lastReturn.kind === 'WITHDRAWN' ? 'revision.formWithdrawn' : 'revision.formReturned', { name: revision.lastReturn.by_name || revision.lastReturn.by_email || '—' })}</p>
+            {revision.lastReturn.reason && <p className="text-sm text-amber-900 mt-1 whitespace-pre-line">« {revision.lastReturn.reason} »</p>}
+            <p className="text-xs text-amber-700 mt-1">{t('revision.formHint')}</p>
+          </div>
+        </div>
+      )}
 
       {/* Barre de progression / validation */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
@@ -669,28 +787,51 @@ export default function RequisitionForm() {
           </div>
           <FileUpload
             entityType="requisition"
-            entityId={createdRequisitionId}
+            entityId={createdRequisitionId || editId}
             onUploadComplete={setAttachments}
             existingFiles={attachments}
           />
         </div>
 
+        {/* Correction : message facultatif à l'approbateur, joint à la nouvelle version */}
+        {isEdit && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('revision.commentLabel')}</label>
+            <textarea value={resubmitComment} onChange={(e) => setResubmitComment(e.target.value)} rows={2} data-testid="resubmit-comment"
+              placeholder={t('revision.commentPlaceholder')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex justify-end gap-3">
           <button
             type="button"
-            onClick={() => navigate('/requisitions')}
+            onClick={() => navigate(isEdit ? `/requisitions/${editId}` : '/requisitions')}
             className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             {t('common.cancel')}
           </button>
+          {isEdit && (
+            <button
+              type="button"
+              disabled={isSubmitting || !formValid}
+              onClick={handleSubmit((data) => saveCorrection(data, false))}
+              data-testid="revision-save"
+              className="flex items-center px-6 py-2 border border-blue-600 text-blue-700 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save size={20} className="mr-2" />
+              {t('revision.save')}
+            </button>
+          )}
           <button
             type="submit"
             disabled={isSubmitting || !formValid}
+            data-testid={isEdit ? 'revision-resubmit' : undefined}
             className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save size={20} className="mr-2" />
-            {isSubmitting ? t('reqForm.creating') : t('reqForm.create')}
+            {isEdit ? <Send size={20} className="mr-2" /> : <Save size={20} className="mr-2" />}
+            {isEdit ? t('revision.resubmit') : (isSubmitting ? t('reqForm.creating') : t('reqForm.create'))}
           </button>
         </div>
       </form>

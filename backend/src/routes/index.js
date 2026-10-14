@@ -170,6 +170,28 @@ router.post('/requisitions/:id/budget-adjustment', hasPermission('VIEW_REQUISITI
   catch (error) { budgetAdjustmentError(res, error); }
 });
 
+// Correction d'une réquisition (migration 25) : renvoyée par un approbateur ou retirée par le demandeur → « À corriger »,
+// modifiée par le demandeur seul, puis soumise à nouveau (nouvelle version, nouveau circuit) ou abandonnée.
+// Les droits (demandeur, état) sont contrôlés par RequisitionRevisionService.
+const revisionService = require('../services/RequisitionRevisionService');
+const revisionRoute = (fn) => async (req, res) => {
+  try { res.json({ success: true, data: await fn(req) }); }
+  catch (error) {
+    if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, line: error.line, assignee: error.assignee });
+    console.error('Correction de réquisition :', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la correction de la réquisition' });
+  }
+};
+router.get('/requisitions/:id/revision', hasPermission('VIEW_REQUISITIONS'), revisionRoute((req) => revisionService.state(req.params.id, req.user.id)));
+router.get('/requisitions/:id/versions', hasPermission('VIEW_REQUISITIONS'), revisionRoute((req) => revisionService.versions(req.params.id)));
+router.put('/requisitions/:id',
+  hasPermission('CREATE_REQUISITIONS'),
+  onProject('CREATE_REQUISITIONS', 'project', from.body('projectId')),
+  revisionRoute((req) => revisionService.update(req.params.id, req.body || {}, req.user.id)));
+router.post('/requisitions/:id/withdraw', hasPermission('VIEW_REQUISITIONS'), revisionRoute((req) => revisionService.withdraw(req.params.id, req.body || {}, req.user.id, req.io)));
+router.post('/requisitions/:id/resubmit', hasPermission('VIEW_REQUISITIONS'), revisionRoute((req) => revisionService.resubmit(req.params.id, req.body || {}, req.user.id, req.io)));
+router.post('/requisitions/:id/abandon', hasPermission('VIEW_REQUISITIONS'), revisionRoute((req) => revisionService.abandon(req.params.id, req.body || {}, req.user.id)));
+
 // Suivi lisible du workflow (étapes + historique dans la langue de la requête : Accept-Language / ?lang=)
 router.get('/requisitions/:id/timeline',
   hasPermission('VIEW_REQUISITIONS'),

@@ -191,7 +191,8 @@
     "INACTIVE": "Inactive",
     "LOCKED": "Locked",
     "ARCHIVED": "Archived",
-    "PO_CONFIRMED": "Confirmed"
+    "PO_CONFIRMED": "Confirmed",
+    "RETURNED": "To be corrected"
   },
   "requisitionStatus": {
     "DRAFT": "Draft",
@@ -207,7 +208,8 @@
     "CLASSIFIED_DIRECT_PURCHASE": "Direct purchase",
     "CLASSIFIED_MULTIPLE_QUOTATIONS": "Multiple quotations",
     "CLASSIFIED_RFP": "Call for tenders (RFP)",
-    "CLASSIFIED_SOLE_SOURCE": "Sole source"
+    "CLASSIFIED_SOLE_SOURCE": "Sole source",
+    "RETURNED": "To be corrected"
   },
   "procurementMethod": {
     "DIRECT_PURCHASE": "Direct purchase",
@@ -233,7 +235,8 @@
       "Activity_GoodsReceipt": "Goods receipt note (GRN)",
       "Activity_ServiceAcceptance": "Service acceptance note (SAN)",
       "Activity_EnterInvoice": "Enter supplier invoice",
-      "Activity_ProcessPayment": "Process payment"
+      "Activity_ProcessPayment": "Process payment",
+      "Activity_ReviseRequisition": "Revise the requisition"
     }
   },
   "tenderStatus": {
@@ -431,7 +434,7 @@
         },
         {
           "title": "Budget and approvals",
-          "desc": "Budget checked automatically; if it falls short, adjust and re-check without re-entering anything. Multi-level approval based on the amount."
+          "desc": "Budget checked automatically; if it falls short, adjust and re-check without re-entering anything. Multi-level approval based on the amount, with return for correction and version history."
         },
         {
           "title": "Tenders",
@@ -3655,6 +3658,25 @@
             "text": "You cannot approve your own requisition, even with an approver profile: another member of the group must process it."
           },
           {
+            "type": "h",
+            "text": "Return for correction, withdraw, correct"
+          },
+          {
+            "type": "p",
+            "text": "A requisition can only be corrected during approval, and always with a trail: every submission is kept (the requisition's \"Versions\" tab) and the approver sees what changed."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Approver (N1 / N2 / N3): besides \"Approve\" and \"Reject\", the \"Return for correction\" decision (reason required: what needs to be corrected). The requisition becomes \"To be corrected\" and the requester is notified.",
+              "Requester: as long as nobody has claimed the approval, \"Withdraw to correct\" on the requisition record. If the approval is already claimed, ask the approver to return it.",
+              "\"To be corrected\": only the requester can edit (the record's \"Correct\" button, or the \"Revise the requisition\" task) — title, items, quantities, prices, budget lines, project. \"Save\" keeps the changes; \"Resubmit\" creates a new version.",
+              "After resubmission: the budget is checked again and the approval circuit starts over based on the NEW amount (going from 20,000 to 30,000 sends it to N2 Finance).",
+              "\"Abandon\" (reason required) cancels the requisition.",
+              "Once approved, the requisition can no longer be edited: a change goes through a new requisition, or through the purchase order (\"Close the remaining quantity\")."
+            ]
+          },
+          {
             "type": "tip",
             "text": "Only approvers who are members of the requisition's project receive the task. If nobody receives it, check the project members (Organisation → Projects)."
           },
@@ -5184,5 +5206,99 @@
     "example": "5CD1234XYZ ; INV-0042\n5CD1234XZA ; INV-0043\n5CD1234XZB",
     "counter": "{{count}} / {{expected}} entered",
     "entered": "{{count}} entered"
+  },
+  "revision": {
+    "tab": "Versions (v{{version}})",
+    "empty": "empty",
+    "noChange": "No change from the previous version.",
+    "items": "Items",
+    "itemLine": "{{quantity}} × {{price}} = {{total}}",
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "justification": "Justification",
+      "priority": "Priority",
+      "amount": "Amount",
+      "department": "Department",
+      "project": "Project"
+    },
+    "itemFields": {
+      "description": "Description",
+      "quantity": "Quantity",
+      "frequency": "Frequency",
+      "unitPrice": "Unit price",
+      "total": "Total",
+      "budgetLineCode": "Budget line",
+      "specifications": "Specifications"
+    },
+    "toCorrectTitle": "Your requisition needs to be corrected",
+    "inCorrectionTitle": "Requisition being corrected by the requester",
+    "toCorrectHint": "Correct it, then resubmit it: the budget is checked again and the approval circuit starts over (based on the new amount).",
+    "inCorrectionHint": "The approval circuit will resume once the requester resubmits it.",
+    "returnedBy": "Returned for correction by {{name}} ({{task}}) on {{date}}",
+    "withdrawnBy": "Withdrawn by {{name}} on {{date}}",
+    "correct": "Correct",
+    "correctOf": "Correct requisition {{number}}",
+    "abandon": "Abandon",
+    "abandonTitle": "Abandon the requisition",
+    "abandonText": "The requisition will be cancelled and the process stopped. This cannot be undone.",
+    "abandonReason": "Reason (required)",
+    "withdraw": "Withdraw to correct",
+    "withdrawTitle": "Withdraw the requisition to correct it",
+    "withdrawText": "The pending approval is interrupted: you can edit the requisition, then resubmit it (new approval circuit).",
+    "withdrawReason": "Reason (optional)",
+    "canWithdrawHint": "Nobody has claimed the approval yet: you can withdraw your requisition to correct it.",
+    "claimedHint": "Approval claimed by {{name}}: to correct the requisition, ask them to return it for correction.",
+    "reasonRequired": "Enter the reason",
+    "withdrawn": "Requisition withdrawn: you can correct it",
+    "abandoned": "Requisition abandoned",
+    "pendingTitle": "Changes not yet submitted",
+    "noVersions": "No version recorded.",
+    "versionTitle": "Version {{version}}",
+    "current": "current",
+    "submittedBy": "Submitted by {{name}} on {{date}}",
+    "submitComment": "Requester's message: \"{{value}}\"",
+    "changesSince": "Changes since version {{version}}",
+    "formTitle": "Correct requisition {{number}}",
+    "formReturned": "Returned for correction by {{name}}",
+    "formWithdrawn": "Withdrawn by {{name}} for correction",
+    "formHint": "\"Save\" keeps your changes without submitting them; \"Resubmit\" creates a new version and runs the budget check and approval again.",
+    "commentLabel": "Message to the approver (optional)",
+    "commentPlaceholder": "E.g. quantity adjusted, specifications clarified…",
+    "save": "Save",
+    "resubmit": "Resubmit",
+    "saved": "Changes saved (not yet submitted)",
+    "resubmitted": "Requisition resubmitted (version {{version}})",
+    "notEditableTitle": "This requisition cannot be edited",
+    "notEditableText": "Only the requester can edit it, and only when it is \"To be corrected\" (returned by an approver or withdrawn before the approval was claimed).",
+    "backToRequisition": "Back to the requisition",
+    "returnDecision": "Return for correction",
+    "returnDecisionHint": "The requester will correct the requisition, then resubmit it; the approval circuit will start over.",
+    "returnReasonLabel": "What needs to be corrected (required)",
+    "returnReasonPlaceholder": "E.g. clarify the specifications, the quantity looks too high…",
+    "returnReasonRequired": "Say what needs to be corrected",
+    "decisionRequired": "Choose a decision",
+    "returnedToast": "Requisition returned to the requester for correction",
+    "approverTitle": "Corrected requisition — version {{version}}: changes",
+    "err": {
+      "NOT_REQUESTER": "Only the requester can do this",
+      "NOT_EDITABLE": "The requisition is not (or no longer) \"To be corrected\"",
+      "NOT_WITHDRAWABLE": "The requisition is not awaiting approval",
+      "APPROVAL_IN_PROGRESS": "Approval already claimed by {{assignee}}: ask them to return it for correction",
+      "TASK_NOT_FOUND": "Step not found in GoFlow (engine unreachable or process ended)",
+      "GOFLOW_ERROR": "GoFlow did not accept the action, try again",
+      "REASON_REQUIRED": "Reason required",
+      "TITLE_REQUIRED": "The title is required",
+      "DEPARTMENT_REQUIRED": "The department is required",
+      "ITEMS_REQUIRED": "At least one item is required",
+      "ITEM_INVALID": "An item has an invalid quantity, frequency or price",
+      "BUDGET_LINE_REQUIRED": "Every item needs a budget line",
+      "BUDGET_LINE_INVALID": "Budget line not found, inactive or from another project",
+      "NOT_ON_PROJECT": "You do not hold the required profile on this project",
+      "RETURN_REASON_REQUIRED": "Say what needs to be corrected",
+      "DECISION_REQUIRED": "Choose a decision",
+      "RETURN_NOT_SUPPORTED": "Requisition started before the circuit was updated: it cannot be returned for correction (approve or reject it)"
+    },
+    "returnNotSupported": "Return for correction unavailable: requisition started before the approval circuit was updated."
   }
 }

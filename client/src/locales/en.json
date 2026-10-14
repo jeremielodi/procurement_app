@@ -3136,7 +3136,8 @@
         "UNIT_UNAVAILABLE": "Equipment not found in this warehouse",
         "INVALID_QUANTITY": "Invalid quantity",
         "WAREHOUSE_FORBIDDEN": "You do not have access to this warehouse",
-        "ITEM_NOT_STOCKABLE": "Item not stocked"
+        "ITEM_NOT_STOCKABLE": "Item not stocked",
+        "PROJECT_NOT_FOUND": "Funding project not found"
       }
     },
     "valuation": {
@@ -3223,7 +3224,8 @@
         "unitCost": "Unit cost",
         "currency": "Currency",
         "lotNumber": "Lot number",
-        "expiryDate": "Expiry date"
+        "expiryDate": "Expiry date",
+        "project": "Project code"
       },
       "err": {
         "CODE_REQUIRED": "empty code",
@@ -3254,7 +3256,8 @@
         "CURRENCY_UNKNOWN": "unknown currency \"{{value}}\"",
         "OPENING_EXISTS": "the item already has stock or movements in warehouse {{warehouse}}: use a stock count or an adjustment",
         "LOT_EXPIRY_MISMATCH": "lot {{lot}} already exists with expiry date {{expiry}}",
-        "DUPLICATE_OPENING": "same item, warehouse and lot as row {{line}}"
+        "DUPLICATE_OPENING": "same item, warehouse and lot as row {{line}}",
+        "PROJECT_UNKNOWN": "Unknown project: \"{{value}}\" (code of a company project)"
       },
       "fileErr": {
         "UNREADABLE": "Unreadable file: make sure it is an .xlsx or .csv file",
@@ -3264,6 +3267,14 @@
         "NOTHING_TO_IMPORT": "No valid rows to import",
         "NO_FILE": "No file received"
       }
+    },
+    "funding": {
+      "column": "Project (funding)",
+      "label": "Project that funded this stock (optional)",
+      "none": "No project (not assigned)",
+      "allProjects": "All projects",
+      "unassigned": "No project",
+      "fundedBy": "Funded by {{project}}"
     }
   },
   "help": {
@@ -4273,6 +4284,22 @@
           {
             "type": "p",
             "text": "Stock › \"Receipt reconciliation\" compares each goods receipt line with the stock movements it produced: quantity accepted = quantity entered, same warehouse, same lot, cost = purchase order price, cancelled receipt properly reversed, number of serial numbers = quantity accepted. By default only discrepancies are shown; \"Export (Excel)\" produces a summary and the line-by-line detail (movement numbers, reversing entries)."
+          },
+          {
+            "type": "h",
+            "text": "Project that funded the stock"
+          },
+          {
+            "type": "p",
+            "text": "Every stock entry keeps the project that paid for the item: \"Project (funding)\" column of the movement log (filter by project or \"No project\"), of the item record and of the equipment list (\"Funded by…\")."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Goods receipt: project of the purchase order's requisition, taken automatically — including received equipment.",
+              "Imported opening stock (\"Project code\" column), existing equipment (\"Register existing equipment\") and stock-in adjustments: project to choose, optional (empty = not assigned).",
+              "Issues, transfers and returns move stock already received: they do not change the funding project."
+            ]
           },
           {
             "type": "links",

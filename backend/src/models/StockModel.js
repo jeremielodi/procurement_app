@@ -41,13 +41,15 @@ class StockModel {
   }
 
   /** Journal des mouvements (filtres + pagination) */
-  async movements({ warehouseId, stockItemId, lotId, unitId, type, sourceType, sourceId, fromDate, toDate, search, limit = 50, offset = 0 } = {}) {
+  async movements({ warehouseId, stockItemId, lotId, unitId, projectId, type, sourceType, sourceId, fromDate, toDate, search, limit = 50, offset = 0 } = {}) {
     const params = [];
     let where = `WHERE 1=1${tenant.filter('m.enterprise_id', params)}`;
     if (warehouseId) { params.push(warehouseId); where += ` AND m.warehouse_id = $${params.length}`; }
     if (stockItemId) { params.push(stockItemId); where += ` AND m.stock_item_id = $${params.length}`; }
     if (lotId) { params.push(lotId); where += ` AND m.lot_id = $${params.length}`; }
     if (unitId) { params.push(unitId); where += ` AND m.unit_id = $${params.length}`; }
+    if (projectId === 'none') where += ' AND m.project_id IS NULL';
+    else if (projectId) { params.push(projectId); where += ` AND m.project_id = $${params.length}`; }
     if (type) { params.push(type); where += ` AND m.movement_type = $${params.length}`; }
     if (sourceType) { params.push(sourceType); where += ` AND m.source_type = $${params.length}`; }
     if (sourceId) { params.push(String(sourceId)); where += ` AND m.source_id = $${params.length}`; }
@@ -78,6 +80,7 @@ class StockModel {
       LEFT JOIN stock_returns sr ON m.source_type = 'RETURN' AND sr.id::text = m.source_id
       LEFT JOIN stock_counts sct ON m.source_type = 'COUNT' AND sct.id::text = m.source_id
       LEFT JOIN stock_adjustments sad ON m.source_type = 'ADJUSTMENT' AND sad.id::text = m.source_id
+      LEFT JOIN projects fp ON fp.id = m.project_id
       ${where}`;
     const total = (await db.one(`SELECT COUNT(*)::int AS n ${from}`, params)).n;
     params.push(Math.min(parseInt(limit) || 50, 500), parseInt(offset) || 0);
@@ -88,6 +91,7 @@ class StockModel {
               w.id AS warehouse_id, w.code AS warehouse_code, w.name AS warehouse_name,
               lt.id AS lot_id, lt.lot_number, lt.expiry_date,
               g.grn_number, po.id AS po_id, po.po_number,
+              fp.id AS project_id, fp.code AS project_code, fp.name AS project_name,
               sis.issue_number, sis.destination_type,
               -- Destination de la sortie ; transfert (et son annulation) : l'autre dépôt du mouvement
               CASE
@@ -168,18 +172,38 @@ class StockModel {
     return row.id;
   }
 
-  /** Écrit un mouvement (le trigger contrôle la cohérence et met à jour le solde) */
+  /**
+   * Écrit un mouvement (le trigger contrôle la cohérence et met à jour le solde). projectId : projet qui a financé
+   * une ENTRÉE en stock (réception, stock initial, ajustement d'entrée — migration 28) ; vide pour les autres
+   */
   async addMovement(tx, m) {
     return tx.one(
       `INSERT INTO stock_movements
          (enterprise_id, stock_item_id, warehouse_id, lot_id, movement_type, quantity, unit_cost, currency_id,
-          source_type, source_id, source_line_id, comment, performed_by, unit_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          source_type, source_id, source_line_id, comment, performed_by, unit_id, project_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING id, movement_number`,
       [m.enterpriseId, m.stockItemId, m.warehouseId, m.lotId || null, m.type, m.quantity, m.unitCost ?? null,
        m.currencyId || null, m.sourceType || null, m.sourceId != null ? String(m.sourceId) : null,
-       m.sourceLineId != null ? String(m.sourceLineId) : null, m.comment || null, m.performedBy || null, m.unitId || null]
+       m.sourceLineId != null ? String(m.sourceLineId) : null, m.comment || null, m.performedBy || null, m.unitId || null,
+       m.projectId || null]
     );
+  }
+
+  /**
+   * Projet de financement saisi pour une entrée manuelle (facultatif) : projet de l'entreprise, sinon erreur
+   * 400 PROJECT_NOT_FOUND. Retourne l'id ou null.
+   */
+  async fundingProject(tx, projectId, enterpriseId) {
+    if (!projectId) return null;
+    const p = await tx.one('SELECT id FROM projects WHERE id::text = $1 AND enterprise_id = $2', [String(projectId), enterpriseId]);
+    if (!p) {
+      const err = new Error('Projet de financement introuvable');
+      err.status = 400;
+      err.code = 'PROJECT_NOT_FOUND';
+      throw err;
+    }
+    return p.id;
   }
 }
 

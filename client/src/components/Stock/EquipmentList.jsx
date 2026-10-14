@@ -12,6 +12,7 @@ import { MovementTable } from './StockMovements';
 import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 import SerialNumbersHelp from './SerialNumbersHelp';
+import FundingProjectSelect from './FundingProjectSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const STATUS_CLS = { IN_STOCK: 'bg-green-100 text-green-800', ASSIGNED: 'bg-blue-100 text-blue-800', IN_TRANSIT: 'bg-violet-100 text-violet-800', LOST: 'bg-red-100 text-red-700', RETIRED: 'bg-gray-200 text-gray-600' };
@@ -58,7 +59,7 @@ export default function EquipmentList() {
     if (!register.stockItemId || !register.warehouseId || !units.length) { toast.error(t('stock.equipment.registerRequired')); return; }
     setSaving(true);
     try {
-      const res = await equipmentService.register({ stockItemId: register.stockItemId, warehouseId: register.warehouseId, units });
+      const res = await equipmentService.register({ stockItemId: register.stockItemId, warehouseId: register.warehouseId, units, projectId: register.projectId || undefined });
       toast.success(t('stock.equipment.registered', { count: res.data.created }));
       setRegister(null);
       load();
@@ -91,7 +92,7 @@ export default function EquipmentList() {
         <div className="flex gap-2">
           <button onClick={load} className="rounded-lg border border-gray-300 p-2 hover:bg-gray-50" title={t('common.refresh')} aria-label={t('common.refresh')}><RefreshCw size={16} /></button>
           {hasPermission('MANAGE_STOCK_ITEMS') && (
-            <button onClick={() => setRegister({ stockItemId: '', warehouseId: warehouses.length === 1 ? warehouses[0].id : '', text: '' })} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700" data-testid="register-units">
+            <button onClick={() => setRegister({ stockItemId: '', warehouseId: warehouses.length === 1 ? warehouses[0].id : '', text: '', projectId: '' })} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700" data-testid="register-units">
               <Plus size={16} /> {t('stock.equipment.register')}
             </button>
           )}
@@ -131,6 +132,7 @@ export default function EquipmentList() {
                   <th className="px-4 py-2">{t('common.status')}</th>
                   <th className="px-4 py-2">{t('stock.equipment.where')}</th>
                   <th className="px-4 py-2">{t('stock.equipment.since')}</th>
+                  <th className="px-4 py-2">{t('stock.funding.column')}</th>
                   <th className="px-4 py-2" />
                 </tr>
               </thead>
@@ -155,6 +157,7 @@ export default function EquipmentList() {
                       ) : (u.warehouse_name || '—')}
                     </td>
                     <td className="px-4 py-2 text-xs text-gray-500">{u.status === 'ASSIGNED' ? fmtDate(u.assigned_at) : fmtDate(u.updated_at)}</td>
+                    <td className="px-4 py-2 text-xs" title={u.project_name || undefined}>{u.project_code || <span className="text-gray-400">—</span>}</td>
                     <td className="px-4 py-2 text-right">
                       <button onClick={() => openDetail(u.id)} className="rounded p-1.5 text-gray-600 hover:bg-gray-100" title={t('stock.equipment.history')} aria-label={t('stock.equipment.history')}><History size={16} /></button>
                     </td>
@@ -182,6 +185,10 @@ export default function EquipmentList() {
             <textarea rows={8} value={register.text} onChange={e => setRegister({ ...register, text: e.target.value })}
               placeholder={t('grn.serialsPlaceholder')} aria-label={t('grn.serials')} className={`${inputCls} font-mono`} />
             <SerialNumbersHelp text={register.text} />
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('stock.funding.label')}</label>
+              <FundingProjectSelect value={register.projectId} onChange={(v) => setRegister({ ...register, projectId: v })} className={inputCls} />
+            </div>
           </div>
         )}
       </Modal>
@@ -193,6 +200,7 @@ export default function EquipmentList() {
               <UnitStatusBadge status={detail.status} />
               <span>{t(`stock.equipment.condition.${detail.condition}`)}</span>
               {detail.asset_tag && <span className="font-mono text-gray-500">{detail.asset_tag}</span>}
+              {detail.project_code && <span className="text-gray-600" data-testid="unit-funding-project">{t('stock.funding.fundedBy', { project: `${detail.project_code} — ${detail.project_name}` })}</span>}
               <span className="text-gray-500">{detail.status === 'ASSIGNED' ? t('stock.equipment.heldBy', { name: detail.department_name ? t('stock.equipment.departmentHolder', { name: detail.department_name }) : detail.holder_name }) : detail.warehouse_name}</span>
             </div>
             {detail.notes && <p className="rounded bg-gray-50 p-2 text-gray-700">{detail.notes}</p>}

@@ -241,6 +241,7 @@ export default function ImportStockItemsModal({ isOpen, onClose, onImported }) {
                           <th className="px-2 py-2 text-right">{column('unitCost')}</th>
                           <th className="px-2 py-2">{column('lotNumber')}</th>
                           <th className="px-2 py-2">{column('expiryDate')}</th>
+                          <th className="px-2 py-2">{column('project')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -253,9 +254,10 @@ export default function ImportStockItemsModal({ isOpen, onClose, onImported }) {
                             <td className="px-2 py-1 text-right">{o.unitCost !== null ? `${fmtQty(o.unitCost)} ${o.currency || ''}` : '—'}</td>
                             <td className="px-2 py-1">{o.lotNumber || '—'}</td>
                             <td className="px-2 py-1">{o.expiryDate ? new Date(`${o.expiryDate}T00:00:00Z`).toLocaleDateString(getLocale(), { timeZone: 'UTC' }) : '—'}</td>
+                            <td className="px-2 py-1" title={o.project?.name}>{o.project?.code || '—'}</td>
                           </tr>
                         ))}
-                        {preview.openings.length === 0 && <tr><td colSpan={7} className="px-2 py-4 text-center text-gray-500">{t('stock.import.noOpenings')}</td></tr>}
+                        {preview.openings.length === 0 && <tr><td colSpan={8} className="px-2 py-4 text-center text-gray-500">{t('stock.import.noOpenings')}</td></tr>}
                       </tbody>
                     </table>
                   )}

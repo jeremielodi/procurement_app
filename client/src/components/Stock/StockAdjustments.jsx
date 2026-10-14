@@ -6,6 +6,7 @@ import { SlidersHorizontal, Plus, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
 import SearchSelect from '../Common/SearchSelect';
+import FundingProjectSelect from './FundingProjectSelect';
 import CatalogAutocomplete from './CatalogAutocomplete';
 import { stockAdjustmentService, stockService, equipmentService, warehouseService } from '../../services/stockService';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -14,8 +15,8 @@ import { t, getLocale } from '../../i18n';
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const REASONS = ['DAMAGE', 'LOSS', 'THEFT', 'EXPIRED', 'FOUND', 'CORRECTION', 'OTHER'];
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
-const ERROR_CODES = ['STOCK_INSUFFICIENT', 'COMMENT_REQUIRED', 'INVALID_REASON', 'LOT_REQUIRED', 'UNIT_REQUIRED', 'UNIT_UNAVAILABLE', 'INVALID_QUANTITY', 'WAREHOUSE_FORBIDDEN', 'ITEM_NOT_STOCKABLE'];
-const empty = { warehouseId: '', item: null, text: '', lotId: '', unitId: '', direction: 'OUT', quantity: '', reason: 'DAMAGE', comment: '' };
+const ERROR_CODES = ['PROJECT_NOT_FOUND', 'STOCK_INSUFFICIENT', 'COMMENT_REQUIRED', 'INVALID_REASON', 'LOT_REQUIRED', 'UNIT_REQUIRED', 'UNIT_UNAVAILABLE', 'INVALID_QUANTITY', 'WAREHOUSE_FORBIDDEN', 'ITEM_NOT_STOCKABLE'];
+const empty = { warehouseId: '', item: null, text: '', lotId: '', unitId: '', direction: 'OUT', quantity: '', reason: 'DAMAGE', comment: '', projectId: '' };
 
 export default function StockAdjustments() {
   const { hasPermission } = usePermissions();
@@ -63,6 +64,8 @@ export default function StockAdjustments() {
       const res = await stockAdjustmentService.create({
         warehouseId: form.warehouseId, stockItemId: form.item.id, lotId: form.lotId || undefined, unitId: form.unitId || undefined,
         quantity: qty, reason: form.reason, comment: form.comment.trim(),
+        // Entrée : projet qui a financé le stock ajouté (facultatif)
+        projectId: qty > 0 && form.projectId ? form.projectId : undefined,
       });
       toast.success(t('stock.adjust.created', { number: res.data.adjustmentNumber }));
       setOpen(false);
@@ -158,6 +161,12 @@ export default function StockAdjustments() {
                 </div>
                 <input type="number" min="0" step="any" value={form.quantity} onChange={set('quantity')} placeholder={t('stock.quantity')} className={inputCls} aria-label={t('stock.quantity')} />
               </div>
+              {form.direction === 'IN' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{t('stock.funding.label')}</label>
+                  <FundingProjectSelect value={form.projectId} onChange={(v) => setForm(f => ({ ...f, projectId: v }))} className={inputCls} />
+                </div>
+              )}
             </>
           )}
           <SearchSelect value={form.reason} onChange={set('reason')} className={inputCls} aria-label={t('stock.adjust.reason')}>

@@ -6,6 +6,7 @@ import { History, RefreshCw, Search } from 'lucide-react';
 import { stockService, warehouseService } from '../../services/stockService';
 import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+import { projectService } from '../../services/projectService';
 
 const inputCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4, signDisplay: 'exceptZero' }).format(Number(n) || 0);
@@ -25,6 +26,7 @@ export function MovementTable({ rows, showItem = true }) {
           <th className="px-4 py-2">{t('stock.lot')}</th>
           <th className="px-4 py-2 text-right">{t('stock.quantity')}</th>
           <th className="px-4 py-2">{t('stock.mv.source')}</th>
+          <th className="px-4 py-2">{t('stock.funding.column')}</th>
           <th className="px-4 py-2">{t('stock.mv.by')}</th>
         </tr>
       </thead>
@@ -55,6 +57,10 @@ export function MovementTable({ rows, showItem = true }) {
                         ? <><Link to="/stock/adjustments" className="text-blue-600 hover:underline">{m.adjustment_number}</Link>{m.adjustment_reason && <span className="text-gray-400"> · {t(`stock.adjust.reasons.${m.adjustment_reason}`)}</span>}</>
                         : (m.comment || '—')}
             </td>
+            {/* Projet qui a financé l'entrée en stock (réception : projet de la réquisition ; entrée manuelle : saisi) */}
+            <td className="px-4 py-2 text-xs" data-testid="movement-project">
+              {m.project_code ? <span title={m.project_name}>{m.project_code}</span> : <span className="text-gray-400">—</span>}
+            </td>
             <td className="px-4 py-2 text-xs text-gray-500">{m.performed_by_name || '—'}</td>
           </tr>
         ))}
@@ -67,12 +73,14 @@ export default function StockMovements() {
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({});
   const [warehouses, setWarehouses] = useState([]);
-  const [filters, setFilters] = useState({ search: '', warehouseId: '', type: '', fromDate: '', toDate: '' });
+  const [projects, setProjects] = useState([]);
+  const [filters, setFilters] = useState({ search: '', warehouseId: '', projectId: '', type: '', fromDate: '', toDate: '' });
   const [debounced, setDebounced] = useState(filters);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { warehouseService.list({ all: 1 }).then(r => setWarehouses(r.data || [])).catch(() => {}); }, []);
+  useEffect(() => { projectService.getAll().then(r => setProjects(r.data || [])).catch(() => {}); }, []);
   useEffect(() => { const id = setTimeout(() => { setDebounced(filters); setPage(1); }, 300); return () => clearTimeout(id); }, [filters]);
 
   const load = async () => {
@@ -102,6 +110,12 @@ export default function StockMovements() {
         <SearchSelect value={filters.warehouseId} onChange={set('warehouseId')} className={inputCls} aria-label={t('stock.warehouse')}>
           <option value="">{t('stock.allWarehouses')}</option>
           {warehouses.map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name}</option>)}
+        </SearchSelect>
+        {/* Projet qui a financé l'entrée (« non attribué » : entrées sans projet) */}
+        <SearchSelect value={filters.projectId} onChange={set('projectId')} className={inputCls} aria-label={t('stock.funding.column')} data-testid="movements-project-filter">
+          <option value="">{t('stock.funding.allProjects')}</option>
+          <option value="none">{t('stock.funding.unassigned')}</option>
+          {projects.map(p => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
         </SearchSelect>
         <SearchSelect value={filters.type} onChange={set('type')} className={inputCls} aria-label={t('stock.mv.type')}>
           <option value="">{t('stock.mv.allTypes')}</option>

@@ -254,8 +254,11 @@ class StockCountModel {
   // ------------------------------------------------------------------
   // Ajustements ponctuels
   // ------------------------------------------------------------------
-  /** { warehouseId, stockItemId, lotId, unitId, quantity (signée ; équipement : -1), reason, comment } */
-  async createAdjustment({ warehouseId, stockItemId, lotId, unitId, quantity, reason, comment }, { userId }) {
+  /**
+   * { warehouseId, stockItemId, lotId, unitId, quantity (signée ; équipement : -1), reason, comment, projectId }
+   * projectId : projet qui a financé le stock ajouté (entrée uniquement, facultatif)
+   */
+  async createAdjustment({ warehouseId, stockItemId, lotId, unitId, quantity, reason, comment, projectId }, { userId }) {
     const warehouse = await warehouseFor(userId, warehouseId);
     const r = String(reason || '').toUpperCase();
     if (!REASONS.includes(r)) throw fail(400, 'INVALID_REASON', 'Motif invalide');
@@ -279,6 +282,7 @@ class StockCountModel {
       if (item.track_lots && !lotId) throw fail(400, 'LOT_REQUIRED', `${item.name} : choisissez le lot`);
       const lot = lotId ? await tx.one('SELECT id FROM stock_lots WHERE id::text = $1 AND stock_item_id = $2', [String(lotId), item.id]) : null;
       if (lotId && !lot) throw fail(400, 'LOT_NOT_FOUND', 'Lot introuvable');
+      const fundingProjectId = qty > 0 ? await stockModel.fundingProject(tx, projectId, warehouse.enterprise_id) : null;
 
       const adj = await tx.one(
         `INSERT INTO stock_adjustments (enterprise_id, warehouse_id, stock_item_id, lot_id, unit_id, quantity, reason, comment, created_by)
@@ -289,7 +293,7 @@ class StockCountModel {
       try {
         movement = await stockModel.addMovement(tx, {
           enterpriseId: warehouse.enterprise_id, stockItemId: item.id, warehouseId: warehouse.id, lotId: lot?.id || null, unitId: unit?.id || null,
-          type: qty > 0 ? 'ADJUSTMENT_IN' : 'ADJUSTMENT_OUT', quantity: qty, sourceType: 'ADJUSTMENT', sourceId: adj.id,
+          type: qty > 0 ? 'ADJUSTMENT_IN' : 'ADJUSTMENT_OUT', quantity: qty, sourceType: 'ADJUSTMENT', sourceId: adj.id, projectId: fundingProjectId,
           comment: `${adj.adjustment_number} — ${note.slice(0, 500)}`, performedBy: userId,
         });
       } catch (error) {

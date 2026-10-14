@@ -3136,7 +3136,8 @@
         "UNIT_UNAVAILABLE": "Équipement introuvable dans ce dépôt",
         "INVALID_QUANTITY": "Quantité invalide",
         "WAREHOUSE_FORBIDDEN": "Vous n'avez pas accès à ce dépôt",
-        "ITEM_NOT_STOCKABLE": "Article non stocké"
+        "ITEM_NOT_STOCKABLE": "Article non stocké",
+        "PROJECT_NOT_FOUND": "Projet de financement introuvable"
       }
     },
     "valuation": {
@@ -3223,7 +3224,8 @@
         "unitCost": "Coût unitaire",
         "currency": "Devise",
         "lotNumber": "N° de lot",
-        "expiryDate": "Date de péremption"
+        "expiryDate": "Date de péremption",
+        "project": "Code projet"
       },
       "err": {
         "CODE_REQUIRED": "code vide",
@@ -3254,7 +3256,8 @@
         "CURRENCY_UNKNOWN": "devise « {{value}} » inconnue",
         "OPENING_EXISTS": "l'article a déjà du stock ou des mouvements dans le dépôt {{warehouse}} : utilisez un inventaire ou un ajustement",
         "LOT_EXPIRY_MISMATCH": "le lot {{lot}} existe déjà avec la date de péremption {{expiry}}",
-        "DUPLICATE_OPENING": "même article, dépôt et lot que la ligne {{line}}"
+        "DUPLICATE_OPENING": "même article, dépôt et lot que la ligne {{line}}",
+        "PROJECT_UNKNOWN": "Projet inconnu : « {{value}} » (code d'un projet de l'entreprise)"
       },
       "fileErr": {
         "UNREADABLE": "Fichier illisible : vérifiez qu'il s'agit bien d'un .xlsx ou d'un .csv",
@@ -3264,6 +3267,14 @@
         "NOTHING_TO_IMPORT": "Aucune ligne valide à importer",
         "NO_FILE": "Aucun fichier reçu"
       }
+    },
+    "funding": {
+      "column": "Projet (financement)",
+      "label": "Projet qui a financé ce stock (facultatif)",
+      "none": "Aucun projet (non attribué)",
+      "allProjects": "Tous les projets",
+      "unassigned": "Sans projet",
+      "fundedBy": "Financé par {{project}}"
     }
   },
   "help": {
@@ -4220,6 +4231,22 @@
               "« État du stock » : quantités par article, dépôt et lot, avec alertes (sous le minimum, lots qui expirent sous 90 jours, lots périmés) et export Excel.",
               "« Mouvements » : journal de toutes les entrées et sorties (réception, sortie, retour, annulation, stock initial, réforme), avec son origine et son auteur.",
               "Le journal est immuable : une erreur se corrige par une écriture inverse, jamais par une modification. Un stock ne peut jamais devenir négatif."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Projet qui a financé le stock"
+          },
+          {
+            "type": "p",
+            "text": "Chaque entrée en stock garde le projet qui a payé l'article : colonne « Projet (financement) » du journal des mouvements (filtre par projet ou « Sans projet »), de la fiche article et de la liste des équipements (« Financé par… »)."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Réception (bon de réception) : projet de la réquisition du bon de commande, repris automatiquement — y compris pour les équipements reçus.",
+              "Stock initial importé (colonne « Code projet »), parc existant (« Enregistrer le parc existant ») et ajustement d'entrée : projet à choisir, facultatif (vide = non attribué).",
+              "Les sorties, transferts et retours déplacent du stock déjà entré : ils ne changent pas le projet de financement."
             ]
           },
           {

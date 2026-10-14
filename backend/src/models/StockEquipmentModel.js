@@ -201,7 +201,7 @@ class StockEquipmentModel {
   // ------------------------------------------------------------------
   // Unités (équipements)
   // ------------------------------------------------------------------
-  async units({ status, stockItemId, warehouseId, holderId, departmentId, search, limit = 100, offset = 0 } = {}) {
+  async units({ status, stockItemId, warehouseId, holderId, departmentId, projectId, search, limit = 100, offset = 0 } = {}) {
     const params = [];
     let where = `WHERE un.status <> 'VOID'${tenant.filter('un.enterprise_id', params)}`;
     if (status) { params.push(status); where += ` AND un.status = $${params.length}`; }
@@ -209,6 +209,8 @@ class StockEquipmentModel {
     if (warehouseId) { params.push(warehouseId); where += ` AND un.warehouse_id = $${params.length}`; }
     if (holderId) { params.push(holderId); where += ` AND un.holder_id = $${params.length}`; }
     if (departmentId) { params.push(departmentId); where += ` AND un.department_id = $${params.length}`; }
+    if (projectId === 'none') where += ' AND un.project_id IS NULL';
+    else if (projectId) { params.push(projectId); where += ` AND un.project_id = $${params.length}`; }
     if (search) {
       params.push(`%${String(search).trim()}%`);
       where += ` AND (un.serial_number ILIKE $${params.length} OR un.asset_tag ILIKE $${params.length} OR it.name ILIKE $${params.length}
@@ -221,6 +223,7 @@ class StockEquipmentModel {
       LEFT JOIN warehouses w ON w.id = un.warehouse_id
       LEFT JOIN users h ON h.id = un.holder_id
       LEFT JOIN departments hd ON hd.id = un.department_id
+      LEFT JOIN projects fp ON fp.id = un.project_id
       ${where}`;
     const total = (await db.one(`SELECT COUNT(*)::int AS n ${from}`, params)).n;
     params.push(Math.min(parseInt(limit) || 100, 500), parseInt(offset) || 0);
@@ -230,6 +233,7 @@ class StockEquipmentModel {
               w.id AS warehouse_id, w.name AS warehouse_name,
               h.id AS holder_id, TRIM(COALESCE(h.first_name, '') || ' ' || COALESCE(h.last_name, '')) AS holder_name, h.email AS holder_email,
               h.is_active AS holder_active, hd.id AS department_id, hd.name AS department_name,
+              fp.id AS project_id, fp.code AS project_code, fp.name AS project_name,
               (SELECT si.issued_at FROM stock_issue_lines il JOIN stock_issues si ON si.id = il.issue_id
                 WHERE il.unit_id = un.id AND si.status = 'ISSUED' AND il.returned_quantity < il.quantity ORDER BY si.issued_at DESC LIMIT 1) AS assigned_at
        ${from}
@@ -243,17 +247,21 @@ class StockEquipmentModel {
     return db.one(
       `SELECT un.*, it.code AS item_code, it.name AS item_name, w.name AS warehouse_name,
               TRIM(COALESCE(h.first_name, '') || ' ' || COALESCE(h.last_name, '')) AS holder_name, h.email AS holder_email,
-              hd.name AS department_name
+              hd.name AS department_name, fp.code AS project_code, fp.name AS project_name
        FROM stock_units un JOIN stock_items it ON it.id = un.stock_item_id
        LEFT JOIN warehouses w ON w.id = un.warehouse_id LEFT JOIN users h ON h.id = un.holder_id
        LEFT JOIN departments hd ON hd.id = un.department_id
+       LEFT JOIN projects fp ON fp.id = un.project_id
        WHERE un.id = $1`,
       [id]
     );
   }
 
-  /** Parc existant (déjà acheté) : enregistre des unités en stock dans un dépôt (mouvement OPENING) */
-  async registerUnits({ stockItemId, warehouseId, units = [] }, { userId }) {
+  /**
+   * Parc existant (déjà acheté) : enregistre des unités en stock dans un dépôt (mouvement OPENING).
+   * projectId : projet qui a financé ces équipements (facultatif)
+   */
+  async registerUnits({ stockItemId, warehouseId, units = [], projectId = null }, { userId }) {
     const warehouse = (await warehouseModel.accessibleFor(userId)).find(w => String(w.id) === String(warehouseId));
     if (!warehouse) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès à ce dépôt');
     const list = units.map(u => (typeof u === 'string' ? { serialNumber: u } : u))
@@ -272,16 +280,17 @@ class StockEquipmentModel {
       );
       if (known.length) throw fail(400, 'SERIAL_EXISTS', `N° de série déjà enregistré : ${known.map(k => k.serial_number).join(', ')}`);
       await checkAssetTags(tx, item.enterprise_id, list);
+      const fundingProjectId = await stockModel.fundingProject(tx, projectId, item.enterprise_id);
       const created = [];
       for (const u of list) {
         const unit = await tx.one(
-          `INSERT INTO stock_units (enterprise_id, stock_item_id, serial_number, asset_tag, status, warehouse_id, created_by)
-           VALUES ($1, $2, $3, $4, 'IN_STOCK', $5, $6) RETURNING id`,
-          [item.enterprise_id, item.id, u.serialNumber, u.assetTag, warehouse.id, userId]
+          `INSERT INTO stock_units (enterprise_id, stock_item_id, serial_number, asset_tag, status, warehouse_id, created_by, project_id)
+           VALUES ($1, $2, $3, $4, 'IN_STOCK', $5, $6, $7) RETURNING id`,
+          [item.enterprise_id, item.id, u.serialNumber, u.assetTag, warehouse.id, userId, fundingProjectId]
         );
         await stockModel.addMovement(tx, {
           enterpriseId: item.enterprise_id, stockItemId: item.id, warehouseId: warehouse.id, unitId: unit.id,
-          type: 'OPENING', quantity: 1, sourceType: 'OPENING', comment: 'Parc existant', performedBy: userId,
+          type: 'OPENING', quantity: 1, sourceType: 'OPENING', comment: 'Parc existant', performedBy: userId, projectId: fundingProjectId,
         });
         created.push(unit.id);
       }

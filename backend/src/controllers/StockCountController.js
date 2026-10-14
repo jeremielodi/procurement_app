@@ -86,7 +86,7 @@ module.exports = {
       const b = req.body || {};
       await audit(req, AUDIT.STOCK_ADJUSTED, {
         entity: { type: 'stock_adjustment', id: result.id, label: result.adjustmentNumber },
-        details: { reason: b.reason, comment: b.comment || null, quantity: b.quantity, stockItemId: b.stockItemId, warehouseId: b.warehouseId, unitId: b.unitId || null, movement: result.movementNumber },
+        details: { reason: b.reason, comment: b.comment || null, quantity: b.quantity, stockItemId: b.stockItemId, warehouseId: b.warehouseId, unitId: b.unitId || null, projectId: b.projectId || null, movement: result.movementNumber },
       });
       res.status(201).json({ success: true, data: result, message: 'Ajustement enregistré' });
     } catch (error) { return sendError(res, error, 'Erreur lors de l\'ajustement'); }

@@ -813,7 +813,8 @@
       "unitCost": "Coût unitaire",
       "currency": "Devise",
       "lotNumber": "N° de lot",
-      "expiryDate": "Date de péremption"
+      "expiryDate": "Date de péremption",
+      "project": "Code projet"
     },
     "help": {
       "code": "Code unique de l'article dans l'entreprise (lettres, chiffres, . - _). Un code existant met à jour l'article : seules les cellules remplies sont modifiées.",
@@ -832,7 +833,8 @@
       "unitCost": "Stock initial : coût d'achat unitaire (sert à la valorisation CMUP). Facultatif.",
       "currency": "Stock initial : code de la devise du coût (USD, EUR, CDF…). Vide = devise de l'entreprise.",
       "lotNumber": "Stock initial : n° de lot (obligatoire si l'article est suivi par lot). Une ligne par lot.",
-      "expiryDate": "Stock initial : date de péremption du lot, AAAA-MM-JJ ou JJ/MM/AAAA (obligatoire si la péremption est suivie)."
+      "expiryDate": "Stock initial : date de péremption du lot, AAAA-MM-JJ ou JJ/MM/AAAA (obligatoire si la péremption est suivie).",
+      "project": "Projet qui a financé ce stock initial (code du projet, feuille Référentiels). Facultatif : vide = non attribué."
     },
     "ref": {
       "categoryCode": "Code catégorie",
@@ -842,7 +844,9 @@
       "yesNo": "Oui / Non",
       "column": "Colonne",
       "required": "Obligatoire",
-      "description": "Contenu attendu"
+      "description": "Contenu attendu",
+      "projectCode": "Code projet",
+      "projectName": "Projet"
     },
     "rules1": "1. Remplacez les lignes d'exemple (codes EX-…) par vos articles, une ligne par article. Les colonnes peuvent être dans n'importe quel ordre.",
     "rules2": "2. Pour un stock initial dans plusieurs dépôts ou plusieurs lots, répétez le code sur une ligne par dépôt / lot (la fiche article est lue sur la première ligne).",

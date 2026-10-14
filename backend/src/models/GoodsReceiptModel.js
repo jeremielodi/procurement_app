@@ -43,7 +43,7 @@ class GoodsReceiptModel {
     return db.withTransaction(async (tx) => {
       // Verrou du PO : deux réceptions simultanées du même PO sont sérialisées (cumuls exacts)
       const po = await tx.one(
-        'SELECT id, enterprise_id, currency_id, supplier_id, delivery_closed_at FROM purchase_orders WHERE id = $1 FOR UPDATE',
+        'SELECT id, enterprise_id, currency_id, supplier_id, delivery_closed_at, requisition_id FROM purchase_orders WHERE id = $1 FOR UPDATE',
         [poId]
       );
       if (!po) throw fail(404, 'PO_NOT_FOUND', 'Commande introuvable');
@@ -200,6 +200,7 @@ class GoodsReceiptModel {
 
       // ---- 4. Lignes, lots, mouvements
       let movementCount = 0;
+      let fundingProjectId; // projet de la réquisition (lu à la première ligne stockée)
       for (const l of lines) {
         let lotId = null;
         if (l.toStock && l.stockItem.track_lots) {
@@ -220,18 +221,24 @@ class GoodsReceiptModel {
         if (l.poItem && !l.poItem.stock_item_id && l.stockItem) {
           await tx.exec('UPDATE purchase_order_items SET stock_item_id = $1 WHERE id = $2 AND stock_item_id IS NULL', [l.stockItem.id, l.poItem.id]);
         }
+        // Projet qui a financé l'entrée en stock : celui de la réquisition du bon de commande (migration 28)
+        if (fundingProjectId === undefined) {
+          fundingProjectId = po.requisition_id
+            ? (await tx.one('SELECT project_id FROM requisitions WHERE id = $1', [po.requisition_id]))?.project_id || null
+            : null;
+        }
         if (l.toStock && l.stockItem.track_serials) {
           let first = null;
           for (const s of l.serials) {
             const unit = await tx.one(
-              `INSERT INTO stock_units (enterprise_id, stock_item_id, serial_number, asset_tag, status, warehouse_id, grn_item_id, created_by)
-               VALUES ($1, $2, $3, $4, 'IN_STOCK', $5, $6, $7) RETURNING id`,
-              [po.enterprise_id, l.stockItem.id, s.serialNumber, s.assetTag, warehouse.id, item.id, userId || receivedBy || null]
+              `INSERT INTO stock_units (enterprise_id, stock_item_id, serial_number, asset_tag, status, warehouse_id, grn_item_id, created_by, project_id)
+               VALUES ($1, $2, $3, $4, 'IN_STOCK', $5, $6, $7, $8) RETURNING id`,
+              [po.enterprise_id, l.stockItem.id, s.serialNumber, s.assetTag, warehouse.id, item.id, userId || receivedBy || null, fundingProjectId]
             );
             const movement = await stockModel.addMovement(tx, {
               enterpriseId: po.enterprise_id, stockItemId: l.stockItem.id, warehouseId: warehouse.id, unitId: unit.id,
               type: 'RECEIPT', quantity: 1, unitCost: l.poItem?.unit_price ?? null, currencyId: po.currency_id,
-              sourceType: 'GRN', sourceId: grn.id, sourceLineId: item.id,
+              sourceType: 'GRN', sourceId: grn.id, sourceLineId: item.id, projectId: fundingProjectId,
               comment: grnNumber, performedBy: userId || receivedBy || null,
             });
             first = first || movement;
@@ -242,7 +249,7 @@ class GoodsReceiptModel {
           const movement = await stockModel.addMovement(tx, {
             enterpriseId: po.enterprise_id, stockItemId: l.stockItem.id, warehouseId: warehouse.id, lotId,
             type: 'RECEIPT', quantity: l.accepted, unitCost: l.poItem?.unit_price ?? null, currencyId: po.currency_id,
-            sourceType: 'GRN', sourceId: grn.id, sourceLineId: item.id,
+            sourceType: 'GRN', sourceId: grn.id, sourceLineId: item.id, projectId: fundingProjectId,
             comment: grnNumber, performedBy: userId || receivedBy || null,
           });
           await tx.exec('UPDATE goods_receipt_items SET stock_movement_id = $1 WHERE id = $2', [movement.id, item.id]);
@@ -392,7 +399,7 @@ class GoodsReceiptModel {
       if (grn.status === 'CANCELLED') throw fail(409, 'ALREADY_CANCELLED', 'GRN déjà annulé');
 
       const entries = await tx.select(
-        `SELECT m.id, m.stock_item_id, m.warehouse_id, m.lot_id, m.unit_id, m.quantity, m.unit_cost, m.currency_id, m.source_line_id AS line_id
+        `SELECT m.id, m.stock_item_id, m.warehouse_id, m.lot_id, m.unit_id, m.quantity, m.unit_cost, m.currency_id, m.source_line_id AS line_id, m.project_id
          FROM stock_movements m
          WHERE m.source_type = 'GRN' AND m.source_id = $1 AND m.movement_type = 'RECEIPT'`,
         [String(id)]
@@ -416,7 +423,7 @@ class GoodsReceiptModel {
           await stockModel.addMovement(tx, {
             enterpriseId: grn.enterprise_id, stockItemId: e.stock_item_id, warehouseId: e.warehouse_id, lotId: e.lot_id, unitId: e.unit_id,
             type: 'RECEIPT_REVERSAL', quantity: -Math.abs(parseFloat(e.quantity)), unitCost: e.unit_cost, currencyId: e.currency_id,
-            sourceType: 'GRN', sourceId: grn.id, sourceLineId: e.line_id,
+            sourceType: 'GRN', sourceId: grn.id, sourceLineId: e.line_id, projectId: e.project_id,
             comment: `Annulation ${grn.grn_number}${reason ? ` — ${reason}` : ''}`, performedBy: userId || null,
           });
         } catch (error) {

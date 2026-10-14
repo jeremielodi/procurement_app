@@ -29,6 +29,8 @@ const FIELDS = [
   { key: 'trackExpiry', bool: true }, { key: 'trackSerials', bool: true }, { key: 'minQuantity' }, { key: 'reorderQuantity' },
   { key: 'warehouse', opening: true }, { key: 'openingQuantity', opening: true }, { key: 'unitCost', opening: true },
   { key: 'currency', opening: true }, { key: 'lotNumber', opening: true }, { key: 'expiryDate', opening: true },
+  // Projet qui a financé le stock initial (facultatif, migration 28)
+  { key: 'project', opening: true },
 ];
 
 // En-têtes acceptés en plus de ceux du modèle (toutes langues : stockImport.headers.*)
@@ -50,6 +52,7 @@ const ALIASES = {
   currency: ['devise', 'currency'],
   lotNumber: ['n° de lot', 'numero de lot', 'lot', 'lot number'],
   expiryDate: ['date de peremption', 'peremption', 'expiry date', 'expiry', 'expiration date'],
+  project: ['code projet', 'projet', 'projet de financement', 'project code', 'project', 'funding project'],
 };
 
 const columnAliases = () => {
@@ -97,7 +100,9 @@ async function loadContext(userId, codes) {
     params
   );
   const ids = items.map(i => i.id);
-  const [moved, lots, categories, accessible, allWarehouses, currencies] = await Promise.all([
+  const projectParams = [];
+  const projectScope = tenant.filter('p.enterprise_id', projectParams);
+  const [moved, lots, categories, accessible, allWarehouses, currencies, projects] = await Promise.all([
     ids.length ? db.select('SELECT DISTINCT stock_item_id, warehouse_id FROM stock_movements WHERE stock_item_id = ANY($1::uuid[])', [ids]) : [],
     ids.length ? db.select(`SELECT stock_item_id, UPPER(lot_number) AS lot, to_char(expiry_date, 'YYYY-MM-DD') AS expiry
                             FROM stock_lots WHERE stock_item_id = ANY($1::uuid[])`, [ids]) : [],
@@ -105,6 +110,7 @@ async function loadContext(userId, codes) {
     warehouseModel.accessibleFor(userId),
     warehouseModel.list({ activeOnly: true }),
     db.select('SELECT id, format_key FROM currency'),
+    db.select(`SELECT p.id, p.code, p.name FROM projects p WHERE 1=1${projectScope}`, projectParams),
   ]);
   const ent = (enterpriseId && await db.one('SELECT id, currency_id FROM enterprise WHERE id = $1', [enterpriseId]))
     || { id: enterpriseId, currency_id: null };
@@ -125,6 +131,7 @@ async function loadContext(userId, codes) {
     accessibleBy: new Map(accessible.map(w => [w.code.toUpperCase(), w])),
     warehouseBy: new Map(allWarehouses.map(w => [w.code.toUpperCase(), w])),
     currencyBy: new Map(currencies.map(c => [c.format_key.toUpperCase(), c])),
+    projectBy: new Map(projects.map(p => [String(p.code).toUpperCase(), p])),
     currencyById: new Map(currencies.map(c => [c.id, c])),
   };
 }
@@ -266,7 +273,7 @@ async function analyze(file, { userId }) {
     }
 
     // ---- Stock initial (facultatif)
-    const hasOpening = ['warehouse', 'openingQuantity', 'unitCost', 'currency', 'lotNumber', 'expiryDate'].some(k => text(r, k));
+    const hasOpening = ['warehouse', 'openingQuantity', 'unitCost', 'currency', 'lotNumber', 'expiryDate', 'project'].some(k => text(r, k));
     if (!hasOpening) continue;
     const opening = [];
     const whCode = text(r, 'warehouse').toUpperCase();
@@ -303,6 +310,12 @@ async function analyze(file, { userId }) {
     } else if (unitCost !== null) {
       currency = ctx.currencyById.get(ctx.defaultCurrencyId) || null;
     }
+    let project = null;
+    const projectCode = text(r, 'project').toUpperCase();
+    if (projectCode) {
+      project = ctx.projectBy.get(projectCode) || null;
+      if (!project) opening.push(fail(line, 'PROJECT_UNKNOWN', { value: projectCode }));
+    }
     if (entry.existing && warehouse && ctx.movedPairs.has(`${entry.existing.id}|${warehouse.id}`)) {
       opening.push(fail(line, 'OPENING_EXISTS', { warehouse: warehouse.code }));
     }
@@ -322,6 +335,7 @@ async function analyze(file, { userId }) {
       line, code, name: entry.name, unit: entry.unit, warehouse: { id: warehouse.id, code: warehouse.code, name: warehouse.name },
       quantity, unitCost, currency: currency?.format_key || null, currencyId: currency?.id || null,
       lotNumber: rules.lots ? lotNumber : null, expiryDate: rules.lots ? expiryDate : null,
+      project: project ? { id: project.id, code: project.code, name: project.name } : null,
     });
   }
 
@@ -335,7 +349,9 @@ async function preview(file, { userId }) {
   const count = (a) => items.filter(i => i.action === a).length;
   return {
     items: items.map(({ fields, id, ...rest }) => rest),
-    openings: openings.map(({ currencyId, warehouse, ...rest }) => ({ ...rest, warehouse: { code: warehouse.code, name: warehouse.name } })),
+    openings: openings.map(({ currencyId, warehouse, project, ...rest }) => ({
+      ...rest, warehouse: { code: warehouse.code, name: warehouse.name }, project: project && { code: project.code, name: project.name },
+    })),
     errors,
     summary: { totalLines, create: count('CREATE'), update: count('UPDATE'), unchanged: count('UNCHANGED'), openings: openings.length, errors: errors.length },
   };
@@ -383,7 +399,7 @@ async function apply(file, { userId }) {
       await stockModel.addMovement(tx, {
         enterpriseId, stockItemId, warehouseId: o.warehouse.id, lotId, type: 'OPENING', quantity: o.quantity,
         unitCost: o.unitCost, currencyId: o.unitCost !== null ? o.currencyId : null,
-        sourceType: 'IMPORT', comment: 'Stock initial (import)', performedBy: userId,
+        sourceType: 'IMPORT', comment: 'Stock initial (import)', performedBy: userId, projectId: o.project?.id || null,
       });
       quantity += o.quantity;
     }
@@ -398,10 +414,14 @@ async function apply(file, { userId }) {
  */
 async function template({ userId, lang, format = 'xlsx' }) {
   const T = i18n.translator(lang);
-  const [categories, warehouses] = await Promise.all([
+  const projectParams = [];
+  const projectScope = tenant.filter('p.enterprise_id', projectParams);
+  const [categories, warehouses, projects] = await Promise.all([
     db.select('SELECT code, name, translations, is_stockable FROM market_categories WHERE is_active ORDER BY name'),
     warehouseModel.accessibleFor(userId),
+    db.select(`SELECT p.code, p.name FROM projects p WHERE p.is_active${projectScope} ORDER BY p.code`, projectParams),
   ]);
+  const prj = projects[0]?.code || '';
   const catName = (c) => (lang !== 'fr' && c.translations?.[lang]?.name) || c.name;
   const stockCat = categories.find(c => c.is_stockable) || categories[0];
   const wh = warehouses[0]?.code || 'DEP-01';
@@ -409,9 +429,9 @@ async function template({ userId, lang, format = 'xlsx' }) {
   const headers = FIELDS.map(f => T(`stockImport.headers.${f.key}`));
   // Exemples : consommable avec stock initial, médicament suivi par lot / péremption, équipement (sans stock initial)
   const examples = [
-    ['EX-PAPER-A4', T('stockImport.example.paper'), T('stockImport.example.paperUnit'), stockCat?.code || '', '', yes, no, no, no, 20, 50, wh, 120, 4.5, '', '', ''],
-    ['EX-PARACETAMOL', T('stockImport.example.drug'), T('stockImport.example.drugUnit'), stockCat?.code || '', '', yes, yes, yes, no, 10, 40, wh, 30, 2.1, '', 'L2026-01', '2027-06-30'],
-    ['EX-LAPTOP', T('stockImport.example.laptop'), T('stockImport.example.laptopUnit'), stockCat?.code || '', T('stockImport.example.laptopDesc'), yes, no, no, yes, '', '', '', '', '', '', '', ''],
+    ['EX-PAPER-A4', T('stockImport.example.paper'), T('stockImport.example.paperUnit'), stockCat?.code || '', '', yes, no, no, no, 20, 50, wh, 120, 4.5, '', '', '', prj],
+    ['EX-PARACETAMOL', T('stockImport.example.drug'), T('stockImport.example.drugUnit'), stockCat?.code || '', '', yes, yes, yes, no, 10, 40, wh, 30, 2.1, '', 'L2026-01', '2027-06-30', ''],
+    ['EX-LAPTOP', T('stockImport.example.laptop'), T('stockImport.example.laptopUnit'), stockCat?.code || '', T('stockImport.example.laptopDesc'), yes, no, no, yes, '', '', '', '', '', '', '', '', ''],
   ];
 
   if (format === 'csv') {
@@ -439,19 +459,22 @@ async function template({ userId, lang, format = 'xlsx' }) {
   ref.columns = [
     { header: T('stockImport.ref.categoryCode'), width: 18 }, { header: T('stockImport.ref.categoryName'), width: 40 }, { width: 4 },
     { header: T('stockImport.ref.warehouseCode'), width: 18 }, { header: T('stockImport.ref.warehouseName'), width: 36 }, { width: 4 },
-    { header: T('stockImport.ref.yesNo'), width: 10 },
+    { header: T('stockImport.ref.yesNo'), width: 10 }, { width: 4 },
+    { header: T('stockImport.ref.projectCode'), width: 18 }, { header: T('stockImport.ref.projectName'), width: 40 },
   ];
   ref.getRow(1).font = { bold: true };
-  const rowsCount = Math.max(categories.length, warehouses.length, 2);
+  const rowsCount = Math.max(categories.length, warehouses.length, projects.length, 2);
   for (let i = 0; i < rowsCount; i++) {
-    const c = categories[i], w = warehouses[i];
-    ref.addRow([c?.code || null, c ? catName(c) : null, null, w?.code || null, w ? `${w.name} (${w.location_name})` : null, null, [yes, no][i] ?? null]);
+    const c = categories[i], w = warehouses[i], p = projects[i];
+    ref.addRow([c?.code || null, c ? catName(c) : null, null, w?.code || null, w ? `${w.name} (${w.location_name})` : null, null, [yes, no][i] ?? null,
+      null, p?.code || null, p?.name || null]);
   }
   const sheetRef = `'${T('stockImport.sheets.references').replace(/'/g, "''")}'`;
   const listOf = (column, count) => (count ? [`${sheetRef}!$${column}$2:$${column}$${count + 1}`] : null);
   const validations = {
     category: listOf('A', categories.length), warehouse: listOf('D', warehouses.length),
     stockable: listOf('G', 2), trackLots: listOf('G', 2), trackExpiry: listOf('G', 2), trackSerials: listOf('G', 2),
+    project: listOf('I', projects.length),
   };
   FIELDS.forEach((f, i) => {
     const formulae = validations[f.key];

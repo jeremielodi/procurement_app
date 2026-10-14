@@ -813,7 +813,8 @@
       "unitCost": "Unit cost",
       "currency": "Currency",
       "lotNumber": "Lot number",
-      "expiryDate": "Expiry date"
+      "expiryDate": "Expiry date",
+      "project": "Project code"
     },
     "help": {
       "code": "Unique item code within the company (letters, digits, . - _). An existing code updates the item: only filled cells are changed.",
@@ -832,7 +833,8 @@
       "unitCost": "Opening stock: unit purchase cost (used for weighted average cost valuation). Optional.",
       "currency": "Opening stock: currency code of the cost (USD, EUR, CDF…). Empty = company currency.",
       "lotNumber": "Opening stock: lot number (required if the item is lot-tracked). One row per lot.",
-      "expiryDate": "Opening stock: lot expiry date, YYYY-MM-DD or DD/MM/YYYY (required if expiry is tracked)."
+      "expiryDate": "Opening stock: lot expiry date, YYYY-MM-DD or DD/MM/YYYY (required if expiry is tracked).",
+      "project": "Project that funded this opening stock (project code, References sheet). Optional: empty = not assigned."
     },
     "ref": {
       "categoryCode": "Category code",
@@ -842,7 +844,9 @@
       "yesNo": "Yes / No",
       "column": "Column",
       "required": "Required",
-      "description": "Expected content"
+      "description": "Expected content",
+      "projectCode": "Project code",
+      "projectName": "Project"
     },
     "rules1": "1. Replace the sample rows (EX-… codes) with your items, one row per item. Columns may be in any order.",
     "rules2": "2. For opening stock in several warehouses or lots, repeat the code on one row per warehouse / lot (the item details are read from the first row).",

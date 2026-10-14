@@ -122,7 +122,7 @@ module.exports = {
   async registerUnits(req, res) {
     try {
       const b = req.body || {};
-      const result = await equipmentModel.registerUnits({ stockItemId: b.stockItemId, warehouseId: b.warehouseId, units: b.units || [] }, { userId: req.user.id });
+      const result = await equipmentModel.registerUnits({ stockItemId: b.stockItemId, warehouseId: b.warehouseId, units: b.units || [], projectId: b.projectId || null }, { userId: req.user.id });
       res.status(201).json({ success: true, data: result, message: 'Équipements enregistrés' });
     } catch (error) { return sendError(res, error, 'Erreur lors de l\'enregistrement des équipements'); }
   },

@@ -241,7 +241,7 @@ docker compose up -d --build
 Les scripts SQL de `database/` ne sont exécutés automatiquement **qu'à la création de la base**. Sur une base existante, appliquer les nouvelles migrations à la main (elles sont idempotentes, on peut les relancer) :
 
 ```bash
-for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations 12_audit_logs 13_stock_management 14_stock_issues 15_stock_equipment 16_stock_issue_destinations 17_supplier_order_confirmation 18_stock_counts 19_stock_transfers_in_transit 20_audit_log_access 21_internal_control 22_daily_requisition_report 23_po_delivery_closure 24_project_profiles 25_requisition_revisions 26_approval_policies; do
+for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations 12_audit_logs 13_stock_management 14_stock_issues 15_stock_equipment 16_stock_issue_destinations 17_supplier_order_confirmation 18_stock_counts 19_stock_transfers_in_transit 20_audit_log_access 21_internal_control 22_daily_requisition_report 23_po_delivery_closure 24_project_profiles 25_requisition_revisions 26_approval_policies 27_manager_approval_levels; do
   docker exec -i wwf_postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < database/$f.sql
 done
 ```
@@ -249,6 +249,8 @@ done
 > `08_supplier_prequalification.sql` et `09_tender_invitations.sql` ajoutent la préqualification des fournisseurs, la vérification des documents et les appels d'offres sur invitation : à appliquer **avant** de démarrer la nouvelle version de l'application.
 >
 > `21_internal_control.sql` (contrôle interne) peut signaler des **factures déjà en double** : l'index d'unicité n'est alors pas créé (le contrôle applicatif reste actif). Les lister : `SELECT enterprise_id, supplier_id, LOWER(TRIM(supplier_invoice_number)), COUNT(*) FROM invoices WHERE supplier_invoice_number IS NOT NULL AND status NOT IN ('REJECTED','CANCELLED') GROUP BY 1,2,3 HAVING COUNT(*) > 1;`, rejeter les doublons, puis rejouer la migration. Après la mise à jour, **attribuer les profils** : au moins deux approbateurs par niveau (séparation des tâches), et le profil « Auditeur » aux auditeurs.
+>
+> `27_manager_approval_levels.sql` : les réquisitions sont approuvées par **Manager niveau 1 / 2 / 3** (N1 / N2 / N3, une seule approbation selon le montant) au lieu de Manager / Finance / DG. **Redéployer `procurement-workflow.bpmn` dans GoFlow**, puis attribuer les profils « Manager niveau 2 » et « Manager niveau 3 » aux approbateurs concernés, sur leurs projets. Les réquisitions déjà en attente d'approbation N2 / N3 restent dans les groupes Finance / DG.
 >
 > `26_approval_policies.sql` (seuils d'approbation par projet) : **redéployer `backend/src/bpmn/procurement-workflow.bpmn` dans GoFlow** — le niveau N1 / N2 / N3 est désormais calculé par le serveur (variable `approvalLevel`) ; sans redéploiement, les nouveaux processus resteraient sur les seuils fixes 25 000 / 100 000. Par défaut (aucune politique saisie), rien ne change.
 >

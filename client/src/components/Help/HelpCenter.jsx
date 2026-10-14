@@ -16,7 +16,7 @@ const SECTIONS = [
   { id: 'roles', roles: ['*'] },
   { id: 'tasks', roles: ['*'] },
   { id: 'requisitions', roles: ['requester'] },
-  { id: 'approval', roles: ['manager', 'finance', 'dg', 'requester'] },
+  { id: 'approval', roles: ['manager', 'manager_n2', 'manager_n3', 'requester'] },
   { id: 'sourcing', roles: ['procurement'] },
   { id: 'tenders', roles: ['procurement'] },
   { id: 'suppliers', roles: ['procurement'] },

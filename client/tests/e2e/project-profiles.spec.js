@@ -14,7 +14,7 @@ test('Fiche utilisateur : Manager sur un projet, Demandeur sur un autre', async 
   await form.locator('input[name="password"]').fill('Secret123');
   await form.locator('input[name="firstName"]').fill('E2E');
   await form.locator('input[name="lastName"]').fill(`Projet ${stamp}`);
-  await form.getByRole('button', { name: 'Manager', exact: true }).click();
+  await form.getByRole('button', { name: 'Manager niveau 1', exact: true }).click();
   await form.getByRole('button', { name: 'Demandeur', exact: true }).click();
 
   // Ligne 1 : premier projet, Manager seulement ; ligne 2 : projet suivant, Demandeur seulement

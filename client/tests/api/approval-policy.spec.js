@@ -79,7 +79,7 @@ test.describe.serial('API › Seuils d\'approbation par projet', () => {
     expect((await (await request.get(`/api/projects/${projectA.id}/approval-policy`, { headers: H() })).json()).data.source).toBe('PROJECT');
   });
 
-  test('2 000 sur le projet A (N1 < 1 000, N2 < 5 000) → N2 Finance ; l\'approbation N2 est la dernière', async ({ request }) => {
+  test('2 000 sur le projet A (N1 < 1 000, N2 < 5 000) → N2 : Manager niveau 2 (Finance ne l\'approuve plus) ; une seule approbation', async ({ request }) => {
     const req = await requisition(request, projectA, 2000, 'N2');
     const found = await approvalTask(request, req);
     test.skip(!found, 'GoFlow indisponible');
@@ -89,6 +89,25 @@ test.describe.serial('API › Seuils d\'approbation par projet', () => {
     const timeline = (await (await request.get(`/api/requisitions/${req.id}/timeline`, { headers: H() })).json()).data;
     const event = timeline.events.find(e => e.title.startsWith("Niveau d'approbation : N2"));
     expect(event?.details?.[0]).toContain('Politique du projet');
+    expect(event?.title).toContain('Manager niveau 2');
+
+    // Groupe GoFlow manager_n2 (migration 27) : un compte Finance ne peut plus prendre l'approbation N2,
+    // un « Manager niveau 2 » si (profils valables sur tous les projets pour ce test)
+    const mk = async (key, profile) => {
+      const u = { email: `ap.${key}.${stamp}@nowhere.test`, password: 'Secret123' };
+      const res = await request.post('/api/users', { headers: H(), data: {
+        username: `ap${key}${stamp}`, email: u.email, password: u.password, firstName: key, lastName: stamp,
+        profileIds: [profile], allProjectsProfileIds: [profile],
+      } });
+      expect(res.status(), await res.text()).toBe(201);
+      return (await (await request.post('/api/auth/login', { data: u })).json()).data.token;
+    };
+    const [financeToken, managerN2Token] = await Promise.all([mk('fin', 'prof_finance'), mk('mn2', 'prof_manager_n2')]);
+    const asFinance = ((await (await request.get(`/api/tasks/process/${found.requisition.process_instance_id}`, { headers: auth(financeToken) })).json()).data || []).find(tk => tk.id === found.task.id);
+    expect([found.task.candidateGroup, asFinance?.canClaim]).toEqual(['manager_n2', false]);
+    expect((await request.post(`/api/tasks/${found.task.id}/claim`, { headers: auth(financeToken) })).status()).toBe(403);
+    expect((await request.post(`/api/tasks/${found.task.id}/claim`, { headers: auth(managerN2Token) })).status()).toBe(200);
+    expect((await request.post(`/api/tasks/${found.task.id}/unclaim`, { headers: auth(managerN2Token) })).status()).toBe(200);
 
     const ok = await json(await request.post(`/api/tasks/${found.task.id}/complete`, { headers: auth(approver), data: { variables: { approved: true } } }));
     expect(ok.status, JSON.stringify(ok.body)).toBe(200);

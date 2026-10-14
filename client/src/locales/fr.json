@@ -220,9 +220,9 @@
   },
   "tasks": {
     "labels": {
-      "Activity_ValidationN1_Manager": "Approbation hiérarchique N1 (Manager)",
-      "Activity_ValidationN2_Finance": "Approbation hiérarchique N2 (Finance)",
-      "Activity_ValidationN3_DG": "Approbation hiérarchique N3 (Direction Générale)",
+      "Activity_ValidationN1_Manager": "Approbation Manager niveau 1 (N1)",
+      "Activity_ValidationN2_Finance": "Approbation Manager niveau 2 (N2)",
+      "Activity_ValidationN3_DG": "Approbation Manager niveau 3 (N3)",
       "Activity_BudgetAdjustment": "Ajustement budgétaire",
       "Activity_DetermineType": "Déterminer la méthode d'achat",
       "Activity_DirectPurchase": "Achat direct",
@@ -3304,7 +3304,7 @@
             "items": [
               "Réquisition (REQ-AAAA-NNNN) : le demandeur décrit ce qu'il faut acheter, les quantités, les prix estimés et la ligne budgétaire à imputer.",
               "Vérification du budget : automatique. Si une ligne budgétaire n'a pas assez de disponible, la réquisition passe « Budget insuffisant » : le demandeur change de ligne ou fait augmenter le budget, puis relance la vérification (ou abandonne la réquisition).",
-              "Approbation : un seul niveau, choisi selon le montant — Manager (N1), Finance (N2) ou Direction générale (N3).",
+              "Approbation : un seul niveau, choisi selon le montant — Manager niveau 1 (N1), Manager niveau 2 (N2) ou Manager niveau 3 (N3).",
               "Méthode d'achat : choisie par les achats — au moins celle imposée par le montant (achat direct, devis multiples, appel d'offres) ou source unique justifiée.",
               "Choix du fournisseur : devis, appel d'offres publié sur le portail fournisseurs, ou fournisseur unique.",
               "Bon de commande (PO-AAAA-NNNN) : créé par les achats, approuvé par la direction, puis envoyé automatiquement par email au fournisseur.",
@@ -3385,16 +3385,24 @@
                 "Crée les réquisitions, suit leur avancement, accepte les services (SAN), reçoit des articles du stock et confirme leur réception."
               ],
               [
-                "Manager",
-                "Approuve ou rejette les réquisitions du niveau N1 (par défaut moins de 25 000 ; seuils propres à chaque projet possibles)."
+                "Manager niveau 1",
+                "Approuve ou rejette les réquisitions de niveau N1 de ses projets (par défaut moins de 25 000 ; seuils propres à chaque projet possibles)."
+              ],
+              [
+                "Manager niveau 2",
+                "Approuve ou rejette les réquisitions de niveau N2 (par défaut de 25 000 à 99 999)."
+              ],
+              [
+                "Manager niveau 3",
+                "Approuve ou rejette les réquisitions de niveau N3 (par défaut 100 000 et plus)."
               ],
               [
                 "Finance",
-                "Approuve les réquisitions du niveau N2 (par défaut de 25 000 à 99 999), saisit les factures, enregistre les paiements, gère le budget."
+                "Saisit les factures, enregistre et approuve les paiements, vérifie les coordonnées bancaires des fournisseurs, gère le budget."
               ],
               [
                 "DG (Direction générale)",
-                "Approuve les réquisitions du niveau N3 (par défaut 100 000 et plus)."
+                "Approuve les paiements."
               ],
               [
                 "Achats (Procurement)",
@@ -3632,20 +3640,20 @@
             "type": "table",
             "rows": [
               [
-                "Montant estimé",
-                "Niveau d'approbation (seuils par défaut)"
+                "Montant estimé (seuils par défaut)",
+                "Approbation"
               ],
               [
                 "moins de 25 000",
-                "N1 — Manager"
+                "Manager niveau 1 (N1)"
               ],
               [
                 "de 25 000 à 99 999",
-                "N2 — Finance"
+                "Manager niveau 2 (N2)"
               ],
               [
                 "100 000 et plus",
-                "N3 — Direction générale"
+                "Manager niveau 3 (N3)"
               ]
             ]
           },
@@ -3689,7 +3697,7 @@
               "Approbateur (N1 / N2 / N3) : en plus de « Approuver » et « Rejeter », la décision « Renvoyer pour correction » (motif obligatoire : ce qui doit être corrigé). La réquisition passe « À corriger » et le demandeur est notifié.",
               "Demandeur : tant que personne n'a pris l'approbation en charge, « Retirer pour corriger » sur la fiche de la réquisition. Si l'approbation est déjà prise en charge, demandez à l'approbateur de la renvoyer.",
               "« À corriger » : seul le demandeur peut modifier (bouton « Corriger » de la fiche, ou la tâche « Corriger la réquisition ») — titre, articles, quantités, prix, lignes budgétaires, projet. « Enregistrer » garde les modifications ; « Soumettre à nouveau » crée une nouvelle version.",
-              "Après une nouvelle soumission : le budget est vérifié de nouveau et le circuit d'approbation recommence selon le NOUVEAU montant (passer de 20 000 à 30 000 envoie la demande en N2 Finance).",
+              "Après une nouvelle soumission : le budget est vérifié de nouveau et le circuit d'approbation recommence selon le NOUVEAU montant (passer de 20 000 à 30 000 envoie la demande au Manager niveau 2).",
               "« Abandonner » (motif obligatoire) annule la réquisition.",
               "Après approbation, la réquisition n'est plus modifiable : un changement passe par une nouvelle réquisition, ou par le bon de commande (« Solder le reliquat »)."
             ]
@@ -5323,9 +5331,9 @@
   "approvalPolicy": {
     "title": "Seuils d'approbation (N1 / N2 / N3)",
     "custom": "Seuils propres",
-    "n1Label": "N1 (Manager) en dessous de",
-    "n2Label": "N2 (Finance) en dessous de",
-    "hint": "Au-delà du seuil N2 : N3 (Direction générale). Même valeur pour N1 et N2 : pas de niveau N2.",
+    "n1Label": "N1 (Manager niveau 1) en dessous de",
+    "n2Label": "N2 (Manager niveau 2) en dessous de",
+    "hint": "Au-delà du seuil N2 : N3 (Manager niveau 3). Même valeur pour N1 et N2 : pas de niveau N2.",
     "applies": "S'applique : {{summary}}",
     "inheritEnterprise": "Politique de l'entreprise",
     "inheritDefault": "Seuils par défaut",
@@ -5333,9 +5341,9 @@
     "enterpriseHint": "Repris par les projets qui n'ont pas leur propre politique (fiche du projet). Le niveau d'une réquisition est fixé à la vérification du budget : une réquisition déjà en attente d'approbation garde le sien.",
     "saved": "Seuils d'approbation enregistrés",
     "levels": {
-      "N1": "N1 — Manager",
-      "N2": "N2 — Finance",
-      "N3": "N3 — Direction générale"
+      "N1": "N1 — Manager niveau 1",
+      "N2": "N2 — Manager niveau 2",
+      "N3": "N3 — Manager niveau 3"
     },
     "summary": "N1 en dessous de {{n1}} · N2 en dessous de {{n2}} · N3 au-delà",
     "summaryNoN2": "N1 en dessous de {{n1}} · N3 au-delà (pas de niveau N2)",

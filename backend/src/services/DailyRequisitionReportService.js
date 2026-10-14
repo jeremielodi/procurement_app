@@ -1,7 +1,7 @@
 // backend/src/services/DailyRequisitionReportService.js
 // Rapport quotidien des réquisitions par email (migration 22_daily_requisition_report.sql).
 //  - Option par entreprise : enterprise.daily_report_enabled (« Mon entreprise », administrateur)
-//  - Chaque nuit à minuit (fuseau APP_TIMEZONE) : un email à chaque administrateur (prof_admin) et manager (prof_manager)
+//  - Chaque nuit à minuit (fuseau APP_TIMEZONE) : un email à chaque administrateur (prof_admin) et manager (prof_manager, niveaux 2 et 3 compris)
 //    actif de l'entreprise, dans SA langue (users.language) ; administrateur = tous les projets, manager = les projets
 //    dont il est membre ou responsable
 //  - Projet par projet : synthèse + les 20 dernières réquisitions (statut, avancement, étape GoFlow en cours et
@@ -53,7 +53,7 @@ class DailyRequisitionReportService {
     return db.select(
       `SELECT u.id, u.email, u.first_name, u.last_name, u.language,
               BOOL_OR(up.profile_id = 'prof_admin') AS is_admin
-       FROM users u JOIN user_profiles up ON up.user_id = u.id AND up.profile_id IN ('prof_admin', 'prof_manager')
+       FROM users u JOIN user_profiles up ON up.user_id = u.id AND up.profile_id IN ('prof_admin', 'prof_manager', 'prof_manager_n2', 'prof_manager_n3')
        WHERE u.enterprise_id = $1 AND u.is_active AND u.email IS NOT NULL${extra}
        GROUP BY u.id ORDER BY u.email`,
       params
@@ -67,7 +67,8 @@ class DailyRequisitionReportService {
     if (!user.is_admin) {
       params.push(user.id);
       // Manager : projets dont il est responsable, ou où il exerce le profil manager (profils BPMN liés au projet)
-      scope = ` AND (p.project_manager_id = $2 OR user_has_project_profile($2, 'prof_manager', p.id))`;
+      scope = ` AND (p.project_manager_id = $2 OR user_has_project_profile($2, 'prof_manager', p.id)
+        OR user_has_project_profile($2, 'prof_manager_n2', p.id) OR user_has_project_profile($2, 'prof_manager_n3', p.id))`;
     }
     return db.select(
       `SELECT p.id, p.code, p.name,

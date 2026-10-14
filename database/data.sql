@@ -58,15 +58,16 @@ WHERE NOT EXISTS (
 INSERT INTO profiles (id, name, description)
 SELECT * FROM (VALUES
     ('prof_admin', 'Administrateur', 'Accès complet au système'),
-    ('prof_manager', 'Manager', 'Gestion et approbation N1 (< 25 000)'),
-    ('prof_manager_n2', 'Manager N2', 'Gestion et approbation de plus 10.000'),
+    ('prof_manager', 'Manager niveau 1', 'Approbation des réquisitions de niveau N1'),
+    ('prof_manager_n2', 'Manager niveau 2', 'Approbation des réquisitions de niveau N2'),
+    ('prof_manager_n3', 'Manager niveau 3', 'Approbation des réquisitions de niveau N3'),
     ('prof_user', 'Utilisateur', 'Utilisateur standard'),
     ('prof_requester', 'Demandeur', 'Peut créer des réquisitions'),
     ('prof_approver', 'Approbateur', 'Peut approuver les réquisitions'),
     ('prof_procurement', 'Agent d''achat', 'Gère les achats'),
-    ('prof_finance', 'Finance', 'Gère les aspects financiers N2 (25 000 – 100 000)'),
+    ('prof_finance', 'Finance', 'Factures, paiements et budget'),
     ('prof_store_keeper', 'Magasinier', 'Gère les stocks'),
-    ('prof_dg', 'Directeur Général', 'Approbation N3 (≥ 100 000)'),
+    ('prof_dg', 'Directeur Général', 'Direction générale (approbation des paiements)'),
     ('prof_logistic', 'Logistique', 'Réception marchandises et bon de livraison (GRN)'),
     ('prof_management', 'Direction', 'Approbation des bons de commande'),
     ('prof_supplier', 'Fournisseur', 'Fournisseur inscrit : répond aux appels d''offres')
@@ -364,6 +365,18 @@ INSERT INTO profile_permissions (profile_id, permission_id)
 SELECT 'prof_supplier', p.id FROM permissions p
 WHERE p.name = 'SUPPLIER_PORTAL'
 AND NOT EXISTS (SELECT 1 FROM profile_permissions pp WHERE pp.profile_id = 'prof_supplier' AND pp.permission_id = p.id);
+
+-- Approbation des réquisitions : Manager niveau 1 / 2 / 3 (migration 27) — mêmes permissions que le niveau 1
+INSERT INTO profile_permissions (profile_id, permission_id)
+SELECT lvl.id, pp.permission_id
+FROM (VALUES ('prof_manager_n2'), ('prof_manager_n3')) AS lvl(id)
+JOIN profile_permissions pp ON pp.profile_id = 'prof_manager'
+WHERE NOT EXISTS (SELECT 1 FROM profile_permissions x WHERE x.profile_id = lvl.id AND x.permission_id = pp.permission_id);
+
+-- Profils de workflow liés au projet (migration 24 : sur une base neuve, les profils sont créés ici, après elle)
+UPDATE profiles SET project_scoped = true
+WHERE id IN ('prof_manager', 'prof_manager_n2', 'prof_manager_n3', 'prof_finance', 'prof_dg', 'prof_management', 'prof_procurement', 'prof_logistic', 'prof_requester')
+  AND project_scoped = false;
 
 -- procureApp multi-entreprise : rattacher les données sans entreprise à la première entreprise
 SELECT procureapp_assign_orphans();

@@ -27,14 +27,14 @@ test('Projet avec seuils propres → niveau prévu dans le formulaire de réquis
   const policy = (await (await request.get(`/api/projects/${project.id}/approval-policy`, { headers: auth(admin) })).json()).data;
   expect(policy).toEqual({ n1Max: 1000, n2Max: 5000, source: 'PROJECT' });
 
-  // Formulaire de réquisition : 2 000 sur ce projet → N2 (Finance), politique du projet
+  // Formulaire de réquisition : 2 000 sur ce projet → N2 (Manager niveau 2), politique du projet
   await page.goto('/requisitions/new');
   await page.locator('select').filter({ has: page.locator(`option[value="${project.id}"]`) }).selectOption(project.id);
   await page.locator('input[name="items.0.quantity"]').fill('1');
   await page.locator('input[name="items.0.unitPrice"]').fill('2000');
-  await expect(page.getByTestId('expected-approval-level')).toHaveText('Approbation prévue : N2 — Finance (politique du projet)');
+  await expect(page.getByTestId('expected-approval-level')).toHaveText('Approbation prévue : N2 — Manager niveau 2 (politique du projet)');
   await page.locator('input[name="items.0.unitPrice"]').fill('6000');
-  await expect(page.getByTestId('expected-approval-level')).toContainText('N3 — Direction générale');
+  await expect(page.getByTestId('expected-approval-level')).toContainText('N3 — Manager niveau 3');
 });
 
 test('« Mon entreprise » : carte des seuils d\'approbation', async ({ page }) => {

@@ -220,9 +220,9 @@
   },
   "tasks": {
     "labels": {
-      "Activity_ValidationN1_Manager": "Level 1 approval (Manager)",
-      "Activity_ValidationN2_Finance": "Level 2 approval (Finance)",
-      "Activity_ValidationN3_DG": "Level 3 approval (General Management)",
+      "Activity_ValidationN1_Manager": "Manager level 1 approval (N1)",
+      "Activity_ValidationN2_Finance": "Manager level 2 approval (N2)",
+      "Activity_ValidationN3_DG": "Manager level 3 approval (N3)",
       "Activity_BudgetAdjustment": "Budget adjustment",
       "Activity_DetermineType": "Determine procurement method",
       "Activity_DirectPurchase": "Direct purchase",
@@ -3304,7 +3304,7 @@
             "items": [
               "Requisition (REQ-YYYY-NNNN): the requester describes what to buy, quantities, estimated prices and the budget line to charge.",
               "Budget check: automatic. If a budget line does not have enough available funds, the requisition becomes \"Insufficient budget\": the requester changes the line or has the budget increased, then restarts the check (or abandons the requisition).",
-              "Approval: a single level, chosen according to the amount — Manager (N1), Finance (N2) or General Management (N3).",
+              "Approval: a single level, chosen according to the amount — Manager level 1 (N1), Manager level 2 (N2) or Manager level 3 (N3).",
               "Purchasing method: chosen by Procurement — at least the one required by the amount (direct purchase, multiple quotations, call for tenders) or a justified sole source.",
               "Supplier selection: quotations, a call for tenders published on the supplier portal, or a single supplier.",
               "Purchase order (PO-YYYY-NNNN): created by procurement, approved by management, then sent automatically by email to the supplier.",
@@ -3385,16 +3385,24 @@
                 "Creates requisitions, follows their progress, accepts services (SAN), receives items from stock and confirms receipt."
               ],
               [
-                "Manager",
-                "Approves or rejects level N1 requisitions (by default below 25,000; each project can set its own thresholds)."
+                "Manager level 1",
+                "Approves or rejects level N1 requisitions of their projects (by default below 25,000; each project can set its own thresholds)."
+              ],
+              [
+                "Manager level 2",
+                "Approves or rejects level N2 requisitions (by default 25,000 to 99,999)."
+              ],
+              [
+                "Manager level 3",
+                "Approves or rejects level N3 requisitions (by default 100,000 and above)."
               ],
               [
                 "Finance",
-                "Approves level N2 requisitions (by default 25,000 to 99,999), records invoices and payments, manages the budget."
+                "Records invoices, records and approves payments, checks supplier bank details, manages the budget."
               ],
               [
-                "GM (General Management)",
-                "Approves level N3 requisitions (by default 100,000 and above)."
+                "GM (General management)",
+                "Approves payments."
               ],
               [
                 "Procurement",
@@ -3632,20 +3640,20 @@
             "type": "table",
             "rows": [
               [
-                "Estimated amount",
-                "Approval level (default thresholds)"
+                "Estimated amount (default thresholds)",
+                "Approval"
               ],
               [
                 "below 25,000",
-                "N1 — Manager"
+                "Manager level 1 (N1)"
               ],
               [
                 "from 25,000 to 99,999",
-                "N2 — Finance"
+                "Manager level 2 (N2)"
               ],
               [
                 "100,000 and above",
-                "N3 — General management"
+                "Manager level 3 (N3)"
               ]
             ]
           },
@@ -3689,7 +3697,7 @@
               "Approver (N1 / N2 / N3): besides \"Approve\" and \"Reject\", the \"Return for correction\" decision (reason required: what needs to be corrected). The requisition becomes \"To be corrected\" and the requester is notified.",
               "Requester: as long as nobody has claimed the approval, \"Withdraw to correct\" on the requisition record. If the approval is already claimed, ask the approver to return it.",
               "\"To be corrected\": only the requester can edit (the record's \"Correct\" button, or the \"Revise the requisition\" task) — title, items, quantities, prices, budget lines, project. \"Save\" keeps the changes; \"Resubmit\" creates a new version.",
-              "After resubmission: the budget is checked again and the approval circuit starts over based on the NEW amount (going from 20,000 to 30,000 sends it to N2 Finance).",
+              "After resubmission: the budget is checked again and the approval circuit starts over based on the NEW amount (going from 20,000 to 30,000 sends it to Manager level 2).",
               "\"Abandon\" (reason required) cancels the requisition.",
               "Once approved, the requisition can no longer be edited: a change goes through a new requisition, or through the purchase order (\"Close the remaining quantity\")."
             ]
@@ -5323,9 +5331,9 @@
   "approvalPolicy": {
     "title": "Approval thresholds (N1 / N2 / N3)",
     "custom": "Own thresholds",
-    "n1Label": "N1 (Manager) below",
-    "n2Label": "N2 (Finance) below",
-    "hint": "Above the N2 threshold: N3 (General management). Same value for N1 and N2: no N2 level.",
+    "n1Label": "N1 (Manager level 1) below",
+    "n2Label": "N2 (Manager level 2) below",
+    "hint": "Above the N2 threshold: N3 (Manager level 3). Same value for N1 and N2: no N2 level.",
     "applies": "Applies: {{summary}}",
     "inheritEnterprise": "Company policy",
     "inheritDefault": "Default thresholds",
@@ -5333,9 +5341,9 @@
     "enterpriseHint": "Used by projects that have no policy of their own (project record). A requisition's level is set at the budget check: a requisition already awaiting approval keeps its own.",
     "saved": "Approval thresholds saved",
     "levels": {
-      "N1": "N1 — Manager",
-      "N2": "N2 — Finance",
-      "N3": "N3 — General management"
+      "N1": "N1 — Manager level 1",
+      "N2": "N2 — Manager level 2",
+      "N3": "N3 — Manager level 3"
     },
     "summary": "N1 below {{n1}} · N2 below {{n2}} · N3 above",
     "summaryNoN2": "N1 below {{n1}} · N3 above (no N2 level)",

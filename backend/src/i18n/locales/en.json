@@ -65,9 +65,9 @@
   "workflow": {
     "task": "Task",
     "tasks": {
-      "Activity_ValidationN1_Manager": "Level 1 approval (Manager)",
-      "Activity_ValidationN2_Finance": "Level 2 approval (Finance)",
-      "Activity_ValidationN3_DG": "Level 3 approval (General Management)",
+      "Activity_ValidationN1_Manager": "Manager level 1 approval (N1)",
+      "Activity_ValidationN2_Finance": "Manager level 2 approval (N2)",
+      "Activity_ValidationN3_DG": "Manager level 3 approval (N3)",
       "Activity_BudgetAdjustment": "Budget adjustment",
       "Activity_DetermineType": "Determine procurement method",
       "Activity_DirectPurchase": "Direct purchase",
@@ -85,14 +85,16 @@
     },
     "approvalPrefix": "",
     "roles": {
-      "manager": "Manager",
+      "manager": "Manager level 1",
       "finance": "Finance",
       "dg": "General Management",
       "procurement": "Procurement",
       "management": "Management",
       "logistic": "Logistics",
       "requester": "Requester",
-      "other": "Other"
+      "other": "Other",
+      "manager_n2": "Manager level 2",
+      "manager_n3": "Manager level 3"
     },
     "methods": {
       "DIRECT_PURCHASE": "Direct purchase",

@@ -8,8 +8,8 @@ const i18n = require('../i18n');
 // candidateGroups du BPMN (= profil prof_<groupe>) — utilisé pour « tâches en cours par profil »
 const TASK_CANDIDATE_GROUPS = {
   Activity_ValidationN1_Manager: 'manager',
-  Activity_ValidationN2_Finance: 'finance',
-  Activity_ValidationN3_DG:      'dg',
+  Activity_ValidationN2_Finance: 'manager_n2', // Manager niveau 2 (migration 27 ; avant : Finance)
+  Activity_ValidationN3_DG:      'manager_n3', // Manager niveau 3 (migration 27 ; avant : DG)
   Activity_DetermineType:        'procurement',
   Activity_DirectPurchase:       'procurement',
   Activity_RequestQuotations:    'procurement',

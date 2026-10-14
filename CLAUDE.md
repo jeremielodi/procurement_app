@@ -42,9 +42,10 @@ Le fichier `backend/src/services/CamundaService.js` montre comment appeler GoFlo
 1. **Réquisition** — employé crée une demande avec items + lignes budgétaires
 2. **Vérification budget** — automatique (Camunda service task `check_budget`)
 3. **Circuit d'approbation** — un niveau selon le montant, **seuils par projet** (sinon de l'entreprise, sinon par défaut — voir « Seuils d'approbation par projet ») :
-   - < 25 000 → Manager (N1)
-   - 25 000–99 999 → Finance (N2)
-   - ≥ 100 000 → DG (N3)
+   - < 25 000 → Manager niveau 1 (N1, `prof_manager`)
+   - 25 000–99 999 → Manager niveau 2 (N2, `prof_manager_n2`)
+   - ≥ 100 000 → Manager niveau 3 (N3, `prof_manager_n3`)
+   - Une seule approbation, au niveau donné par le montant (migration `27_manager_approval_levels.sql` : Finance et DG n'approuvent plus les réquisitions)
 4. **Classification méthode d'achat** — automatique (`classify_procurement`) :
    - ≤ 5 000 : Achat direct
    - ≤ 25 000 : Devis multiples
@@ -104,9 +105,9 @@ Process ID : `ProcurementProcess`
 ### User Tasks Camunda (actions humaines)
 | taskDefinitionKey | Nom | candidateGroups | Formulaire frontend |
 |---|---|---|---|
-| `Activity_ValidationN1_Manager` | Manager Approval (N1) | `manager` | Fenêtre (onglet tâches de la réquisition) |
-| `Activity_ValidationN2_Finance` | Finance Approval (N2) | `finance` | Fenêtre (onglet tâches de la réquisition) |
-| `Activity_ValidationN3_DG` | DG Approval (N3) | `dg` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_ValidationN1_Manager` | Manager Level 1 Approval (N1) | `manager` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_ValidationN2_Finance` | Manager Level 2 Approval (N2) — id conservé | `manager_n2` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_ValidationN3_DG` | Manager Level 3 Approval (N3) — id conservé | `manager_n3` | Fenêtre (onglet tâches de la réquisition) |
 | `Activity_DetermineType` | Determine Procurement Type | `procurement` | Fenêtre (onglet tâches de la réquisition) |
 | `Activity_DirectPurchase` | Direct Purchase | `procurement` | Fenêtre (onglet tâches de la réquisition) |
 | `Activity_RequestQuotations` | Request Multiple Quotations | `procurement` | Fenêtre (onglet tâches de la réquisition) |
@@ -422,9 +423,11 @@ Tous préfixés `po_` pour éviter les conflits avec les helpers de `Requisition
 ## Profils → candidateGroups Camunda
 | Profile DB | candidateGroup BPMN | Rôle |
 |------------|--------------------|----|
-| `prof_manager` | `manager` | Approbation N1 (< 25 000) |
-| `prof_finance` | `finance` | Approbation N2 (25k–100k) + Factures + **seul profil avec le module Budget** (`MANAGE_BUDGET`) |
-| `prof_dg` | `dg` | Approbation N3 (≥ 100 000) |
+| `prof_manager` (Manager niveau 1) | `manager` | Approbation N1 (défaut < 25 000) |
+| `prof_manager_n2` (Manager niveau 2) | `manager_n2` | Approbation N2 (défaut 25 000–99 999) |
+| `prof_manager_n3` (Manager niveau 3) | `manager_n3` | Approbation N3 (défaut ≥ 100 000) |
+| `prof_finance` | `finance` | Factures, paiements + **seul profil avec le module Budget** (`MANAGE_BUDGET`) — n'approuve plus les réquisitions |
+| `prof_dg` | — | Approbation des paiements — n'approuve plus les réquisitions |
 | `prof_management` | `management` | Approbation PO |
 | `prof_procurement` | `procurement` | Création PO, méthode d'achat |
 | `prof_logistic` | `logistic` | Réception marchandises (GRN) |

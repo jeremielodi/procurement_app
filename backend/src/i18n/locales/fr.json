@@ -65,9 +65,9 @@
   "workflow": {
     "task": "Tâche",
     "tasks": {
-      "Activity_ValidationN1_Manager": "Approbation hiérarchique N1 (Manager)",
-      "Activity_ValidationN2_Finance": "Approbation hiérarchique N2 (Finance)",
-      "Activity_ValidationN3_DG": "Approbation hiérarchique N3 (Direction Générale)",
+      "Activity_ValidationN1_Manager": "Approbation Manager niveau 1 (N1)",
+      "Activity_ValidationN2_Finance": "Approbation Manager niveau 2 (N2)",
+      "Activity_ValidationN3_DG": "Approbation Manager niveau 3 (N3)",
       "Activity_BudgetAdjustment": "Ajustement budgétaire",
       "Activity_DetermineType": "Déterminer la méthode d'achat",
       "Activity_DirectPurchase": "Achat direct",
@@ -83,16 +83,18 @@
       "Activity_ProcessPayment": "Traitement du paiement",
       "Activity_ReviseRequisition": "Corriger la réquisition"
     },
-    "approvalPrefix": "Approbation hiérarchique ",
+    "approvalPrefix": "Approbation ",
     "roles": {
-      "manager": "Manager",
+      "manager": "Manager niveau 1",
       "finance": "Finance",
       "dg": "Direction Générale",
       "procurement": "Achats",
       "management": "Direction",
       "logistic": "Logistique",
       "requester": "Demandeur",
-      "other": "Autre"
+      "other": "Autre",
+      "manager_n2": "Manager niveau 2",
+      "manager_n3": "Manager niveau 3"
     },
     "methods": {
       "DIRECT_PURCHASE": "Achat direct",

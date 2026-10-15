@@ -68,6 +68,7 @@ export default function RequisitionList() {
     status: 'all',
     priority: 'all',
     departmentId: 'all',
+    requesterId: 'all',
     search: '',
     fromDate: '',
     toDate: ''
@@ -98,6 +99,14 @@ export default function RequisitionList() {
 
   const departments = departmentsData?.data || []
 
+  // Demandeurs proposés : ceux des réquisitions que l'utilisateur peut voir
+  const { data: requestersData, isLoading: requestersLoading } = useQuery({
+    queryKey: ['requisition-requesters'],
+    queryFn: () => requisitionService.getRequesters()
+  })
+  const requesters = requestersData?.data || []
+  const requesterName = (u) => `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email
+
   // Créer les options de département pour le filtre
   const departmentOptions = [
     { value: 'all', label: t('requisitions.allDepartments') },
@@ -117,6 +126,7 @@ export default function RequisitionList() {
       ...(filters.status !== 'all' && { status: filters.status }),
       ...(filters.priority !== 'all' && { priority: filters.priority }),
       ...(filters.departmentId !== 'all' && { departmentId: filters.departmentId }),
+      ...(filters.requesterId !== 'all' && { requesterId: filters.requesterId }),
       ...(filters.search && { search: filters.search }),
       ...(filters.fromDate && { fromDate: filters.fromDate }),
       ...(filters.toDate && { toDate: filters.toDate })
@@ -181,6 +191,7 @@ export default function RequisitionList() {
       status: 'all',
       priority: 'all',
       departmentId: 'all',
+      requesterId: 'all',
       search: '',
       fromDate: '',
       toDate: ''
@@ -533,6 +544,19 @@ export default function RequisitionList() {
               >
                 {departmentOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </SearchSelect>
+              <SearchSelect
+                value={filters.requesterId}
+                onChange={(e) => handleFilterChange('requesterId', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                aria-label={t('requisitions.requester')}
+                data-testid="requisition-requester-filter"
+                disabled={requestersLoading}
+              >
+                <option value="all">{t('requisitions.allRequesters')}</option>
+                {requesters.map(u => (
+                  <option key={u.id} value={u.id}>{t('requisitions.requesterOption', { name: requesterName(u), count: u.count })}</option>
                 ))}
               </SearchSelect>
               <input

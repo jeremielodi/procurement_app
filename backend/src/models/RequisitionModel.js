@@ -386,7 +386,14 @@ class RequisitionModel {
       params.push(filters.priority);
       paramCount++;
     }
-    
+
+    // Demandeur (liste proposée par listRequesters : demandeurs des réquisitions visibles)
+    if (filters.requesterId && filters.requesterId != 'all') {
+      sql += ` AND r.requester_id = $${paramCount}`;
+      params.push(filters.requesterId);
+      paramCount++;
+    }
+
 
      if (filters.processInstanceId && filters.processInstanceId != 'all') {
       sql += ` AND r.process_instance_id = $${paramCount}`;
@@ -424,6 +431,24 @@ class RequisitionModel {
     }
     
     return { where: sql, params };
+  }
+
+  /**
+   * Demandeurs proposés dans le filtre de la liste : uniquement ceux des réquisitions visibles par l'utilisateur
+   * (même cloisonnement que la liste : entreprise + visibilité par projet), avec leur nombre de réquisitions
+   */
+  async listRequesters(viewerId) {
+    const params = [];
+    let where = tenant.filter('r.enterprise_id', params);
+    if (viewerId) where += requisitionVisibilitySql('r', viewerId, params);
+    return db.select(
+      `SELECT u.id, u.first_name, u.last_name, u.email, u.avatar_updated_at AS avatar_version, COUNT(*)::int AS count
+       FROM requisitions r JOIN users u ON u.id = r.requester_id
+       WHERE 1=1${where}
+       GROUP BY u.id, u.first_name, u.last_name, u.email, u.avatar_updated_at
+       ORDER BY LOWER(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')), u.email`,
+      params
+    );
   }
 
   /** Nombre de réquisitions correspondant aux filtres de la liste (sans pagination) */

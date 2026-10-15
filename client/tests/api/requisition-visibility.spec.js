@@ -85,6 +85,26 @@ test.describe.serial('API › Visibilité des réquisitions par projet', () => {
     expect((await request.get(`/api/requisitions/${reqAlice.id}`, { headers: H(users.mgrQ.token) })).status()).toBe(404);
   });
 
+  test('Filtre par demandeur : liste des demandeurs visibles, liste et total filtrés', async ({ request }) => {
+    const requesters = async (token) => (await (await request.get('/api/requisitions/requesters', { headers: H(token) })).json()).data;
+    // Simple demandeuse : elle-même seulement (Bob n'est pas révélé)
+    expect((await requesters(users.alice.token)).map(u => u.id)).toEqual([users.alice.id]);
+    // Manager du projet : Alice et Bob, avec leur nombre de réquisitions
+    const forMgr = (await requesters(users.mgrP.token)).filter(u => [users.alice.id, users.bob.id].includes(u.id));
+    expect(forMgr.map(u => [u.first_name, u.count]).sort()).toEqual([['alice', 1], ['bob', 1]]);
+    expect((await requesters(users.mgrQ.token)).map(u => u.id)).not.toContain(users.alice.id);
+
+    const res = await (await request.get(`/api/requisitions?search=${stamp}&requesterId=${users.bob.id}`, { headers: H(users.mgrP.token) })).json();
+    expect(res.data.map(r => r.id)).toEqual([reqBob.id]);
+    expect(res.pagination.total).toBe(1);
+    // Demandeur d'une autre personne sur un compte qui ne la voit pas : rien (la visibilité s'applique toujours)
+    const hidden = await (await request.get(`/api/requisitions?search=${stamp}&requesterId=${users.bob.id}`, { headers: H(users.alice.token) })).json();
+    expect(hidden.data).toEqual([]);
+    // 'all' = pas de filtre ; export Excel filtré accepté
+    expect((await (await request.get(`/api/requisitions?search=${stamp}&requesterId=all`, { headers: H(users.mgrP.token) })).json()).data).toHaveLength(2);
+    expect((await request.get(`/api/requisitions/export/excel?requesterId=${users.bob.id}`, { headers: H(users.mgrP.token) })).status()).toBe(200);
+  });
+
   test('Profil Manager ajouté à un membre du projet : activé sur ses projets, il voit alors toutes les réquisitions', async ({ request }) => {
     const { alice } = users;
     const res = await request.put(`/api/users/${alice.id}`, { headers: H(), data: {

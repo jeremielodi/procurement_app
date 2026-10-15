@@ -1,7 +1,7 @@
 // backend/src/services/DashboardOverviewService.js
 // Tableau de bord de pilotage, contenu selon le profil (GET /dashboard/overview?period=&projectId=) :
 //   - operations : mes tâches GoFlow en attente, en retard (≥ LATE_DAYS jours dans l'étape actuelle) — tout le monde
-//   - steering   : cycle P2P, délais par étape, complétion, conversion, livraisons, fournisseurs — STEERING_PROFILES
+//   - steering   : cycle P2P, tâches en retard, complétion, conversion, livraisons, fournisseurs — STEERING_PROFILES
 //   - finance    : budget consommé (= PAYÉ), engagements ouverts, délais de paiement — MANAGE_BUDGET ou AUDIT_ACCESS
 //   - control    : rejets / renvois, mise en concurrence, écarts de rapprochement, blocages — AUDIT_ACCESS ou VIEW_AUDIT_LOGS
 // Le serveur ne calcule (et ne renvoie) que les volets autorisés. Toutes les requêtes sont cloisonnées par entreprise
@@ -177,14 +177,13 @@ class DashboardOverviewService {
   // ───────────────────────────── Pilotage (direction) ─────────────────────────────
 
   async steering(tasks, ctx) {
-    const [cycle, stepDurations, completion, conversion, deliveries, urgent, suppliers] = await Promise.all([
-      this.p2pCycle(ctx), this.stepDurations(ctx), this.completion(ctx), this.conversion(ctx),
+    const [cycle, completion, conversion, deliveries, urgent, suppliers] = await Promise.all([
+      this.p2pCycle(ctx), this.completion(ctx), this.conversion(ctx),
       this.deliveries(ctx), this.urgent(ctx), this.supplierConcentration(ctx),
     ]);
-    const lateTasks = tasks.list.filter(t => t.ageDays >= LATE_DAYS).sort((a, b) => b.ageDays - a.ageDays);
     return {
-      tasks: { ...this.summarizeTasks(tasks.list), lateList: lateTasks.slice(0, 10) },
-      cycle, stepDurations, completion, conversion, deliveries, urgent, suppliers,
+      tasks: this.summarizeTasks(tasks.list),
+      cycle, completion, conversion, deliveries, urgent, suppliers,
     };
   }
 
@@ -215,44 +214,6 @@ class DashboardOverviewService {
     `, params);
     const values = rows.map(r => Math.max(0, Number(r.days)));
     return { count: values.length, medianDays: round(median(values)), meanDays: round(mean(values)) };
-  }
-
-  /** Délai par étape : de l'entrée dans l'étape (TASK_CREATED) à sa fin (TASK_COMPLETED), étapes terminées dans la période */
-  async stepDurations(ctx) {
-    const params = [];
-    const since = this.since(ctx, params);
-    const rows = await scopedDb.select(`
-      WITH created AS (
-        SELECT DISTINCT ON (task_id) task_id, task_definition_id, task_name, entity_id, performed_at
-        FROM workflow_history WHERE action = 'TASK_CREATED' AND task_id IS NOT NULL
-        ORDER BY task_id, performed_at
-      ),
-      completed AS (
-        SELECT DISTINCT ON (task_id) task_id, performed_at
-        FROM workflow_history WHERE action = 'TASK_COMPLETED' AND task_id IS NOT NULL
-        ORDER BY task_id, performed_at
-      )
-      SELECT c.task_definition_id, c.task_name,
-             EXTRACT(EPOCH FROM (d.performed_at - c.performed_at)) / 86400 AS days
-      FROM created c
-      JOIN completed d ON d.task_id = c.task_id
-      JOIN requisitions r ON r.id = c.entity_id
-      WHERE d.performed_at >= ${since} ${this.scope('r', ctx, params)}
-    `, params);
-    const byKey = new Map();
-    for (const row of rows) {
-      const key = taskKey(row);
-      if (!key) continue;
-      if (!byKey.has(key)) byKey.set(key, []);
-      byKey.get(key).push(Math.max(0, Number(row.days)));
-    }
-    return [...byKey.entries()]
-      .map(([key, values]) => ({
-        key, label: taskLabel(key, ctx.lang), count: values.length,
-        medianDays: round(median(values)), meanDays: round(mean(values)),
-        lateCount: values.filter(v => v >= LATE_DAYS).length,
-      }))
-      .sort((a, b) => (b.medianDays ?? 0) - (a.medianDays ?? 0));
   }
 
   /**

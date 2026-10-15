@@ -9,6 +9,12 @@ class RequisitionService {
     return response.data
   }
 
+  /** Demandeurs des réquisitions visibles (filtre de la liste) */
+  async getRequesters() {
+    const response = await api.get('/requisitions/requesters')
+    return response.data
+  }
+
   async getProcessVariables(processInstanceId) {
     const response = await api.get(`/workflow/process/${processInstanceId}/variables`)
     return response.data

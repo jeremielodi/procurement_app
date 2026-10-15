@@ -508,14 +508,24 @@ async create(req, res) {
     }
   }
 
+  /** GET /requisitions/requesters — demandeurs des réquisitions visibles (filtre de la liste) */
+  async requesters(req, res) {
+    try {
+      res.json({ success: true, data: await requisitionModel.listRequesters(req.user.id) });
+    } catch (error) {
+      console.error('Error listing requesters:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
   /**
    * Liste des réquisitions
    */
   async list(req, res) {
     try {
-      const { status, progress, departmentId, fromDate, priority, toDate, search, page = 1, limit = 20 } = req.query;
+      const { status, progress, departmentId, requesterId, fromDate, priority, toDate, search, page = 1, limit = 20 } = req.query;
       const offset = (page - 1) * limit;
-      const filters = { status, progress, departmentId, fromDate, toDate, priority, search, viewerId: req.user.id };
+      const filters = { status, progress, departmentId, requesterId, fromDate, toDate, priority, search, viewerId: req.user.id };
 
       const requisitions = await requisitionModel.findAll({
         ...filters,
@@ -802,12 +812,13 @@ async create(req, res) {
  */
 async exportPDF(req, res) {
   try {
-    const { status, departmentId, fromDate, toDate } = req.query;
+    const { status, departmentId, requesterId, fromDate, toDate } = req.query;
     
     const requisitions = await requisitionModel.findAll({
       viewerId: req.user.id,
       status,
       departmentId,
+      requesterId,
       fromDate,
       toDate,
       limit: 1000 // Limite pour performance
@@ -869,12 +880,13 @@ async exportRequisitionPDF(req, res) {
  */
 async exportExcel(req, res) {
   try {
-    const { status, departmentId, fromDate, toDate } = req.query;
+    const { status, departmentId, requesterId, fromDate, toDate } = req.query;
     
     const requisitions = await requisitionModel.findAll({
       viewerId: req.user.id,
       status,
       departmentId,
+      requesterId,
       fromDate,
       toDate,
       limit: 10000

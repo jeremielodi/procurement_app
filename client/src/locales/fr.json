@@ -1014,12 +1014,6 @@
         "urgent": "Achats urgents",
         "urgentSub": "{{urgent}} sur {{total}} réquisitions soumises",
         "urgentHint": "Réquisitions soumises pendant la période avec la priorité Haute ou Urgente : mesure la part des achats imprévus.",
-        "stepsTitle": "Où le processus ralentit-il ?",
-        "stepsSub": "Durée médiane par étape (entrée dans l'étape → fin), étapes terminées pendant la période. Survolez une barre pour le détail.",
-        "stepTooltip": "{{label}} : médiane {{median}}, moyenne {{mean}} — {{count}} étape(s) terminée(s), dont {{late}} en 2 jours ou plus",
-        "lateTitle": "Demandes dépassant le délai cible",
-        "lateSub": "Tâches en attente depuis {{days}} jours ou plus, les plus anciennes d'abord.",
-        "noLate": "Aucune tâche en retard.",
         "suppliersTitle": "Concentration des dépenses fournisseurs",
         "suppliersSub": "Les 5 premiers fournisseurs représentent {{share}} du montant commandé ({{amount}}, {{count}} fournisseur(s)) — commandes actives créées pendant la période.",
         "supplierTooltip": "{{name}} : {{amount}} — {{orders}} commande(s)"
@@ -1207,7 +1201,9 @@
     "irreversible": "Cette action est irréversible.",
     "bulkDeleteTitle": "Supprimer plusieurs réquisitions",
     "bulkDeleteConfirm": "Êtes-vous sûr de vouloir supprimer {{count}} réquisition(s) ?",
-    "requester": "Demandeur"
+    "requester": "Demandeur",
+    "allRequesters": "Tous les demandeurs",
+    "requesterOption": "{{name}} ({{count}})"
   },
   "reqForm": {
     "created": "Réquisition créée avec succès",
@@ -4922,7 +4918,7 @@
               [
                 "Pilotage",
                 "Administrateur, DG, direction, auditeur",
-                "Cycle P2P médian, tâches en retard, complétion, conversion, livraisons complètes, achats urgents, délais par étape, concentration fournisseurs, « Qui bloque ? »"
+                "Cycle P2P médian, tâches en retard, complétion, conversion, livraisons complètes, achats urgents, concentration fournisseurs, « Qui bloque ? »"
               ],
               [
                 "Finance",

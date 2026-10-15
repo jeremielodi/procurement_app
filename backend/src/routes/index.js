@@ -233,6 +233,9 @@ router.get('/requisitions/:id/timeline',
   }
 );
 
+// Demandeurs proposés dans le filtre de la liste (avant /requisitions/:id)
+router.get('/requisitions/requesters', authenticate, hasPermission('VIEW_REQUISITIONS'), (req, res) => requisitionController.requesters(req, res));
+
 router.get('/requisitions/:id',
   authenticate,
   hasPermission('VIEW_REQUISITIONS'),

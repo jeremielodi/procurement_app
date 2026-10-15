@@ -54,7 +54,8 @@ test.describe.serial('API › Tableau de bord selon le profil', () => {
       expect(s.conversion.converted).toBeLessThanOrEqual(s.conversion.approved);
       expect(s.suppliers.top.length).toBeLessThanOrEqual(5);
       if (s.cycle.count) expect(s.cycle.medianDays).toBeGreaterThanOrEqual(0);
-      expect(s.tasks.lateList.every(tk => tk.ageDays >= 2)).toBe(true);
+      expect(s.tasks.late).toBeLessThanOrEqual(s.tasks.total);
+      expect(s).not.toHaveProperty('stepDurations');
 
       // Finance : budget consommé = payé / alloué
       const b = d.finance.budget;

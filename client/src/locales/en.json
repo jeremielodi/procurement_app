@@ -1014,12 +1014,6 @@
         "urgent": "Urgent purchases",
         "urgentSub": "{{urgent}} of {{total}} submitted requisitions",
         "urgentHint": "Requisitions submitted during the period with High or Urgent priority: measures the share of unplanned purchases.",
-        "stepsTitle": "Where does the process slow down?",
-        "stepsSub": "Median duration per step (entering the step → completion), steps completed during the period. Hover a bar for details.",
-        "stepTooltip": "{{label}}: median {{median}}, mean {{mean}} — {{count}} step(s) completed, {{late}} of them in 2 days or more",
-        "lateTitle": "Requests over the target lead time",
-        "lateSub": "Tasks pending for {{days}} days or more, oldest first.",
-        "noLate": "No late task.",
         "suppliersTitle": "Supplier spend concentration",
         "suppliersSub": "The top 5 suppliers account for {{share}} of the ordered amount ({{amount}}, {{count}} supplier(s)) — active orders created during the period.",
         "supplierTooltip": "{{name}}: {{amount}} — {{orders}} order(s)"
@@ -1207,7 +1201,9 @@
     "irreversible": "This action cannot be undone.",
     "bulkDeleteTitle": "Delete several requisitions",
     "bulkDeleteConfirm": "Are you sure you want to delete {{count}} requisition(s)?",
-    "requester": "Requester"
+    "requester": "Requester",
+    "allRequesters": "All requesters",
+    "requesterOption": "{{name}} ({{count}})"
   },
   "reqForm": {
     "created": "Requisition created successfully",
@@ -4922,7 +4918,7 @@
               [
                 "Steering",
                 "Administrator, CEO, management, auditor",
-                "Median P2P cycle, late tasks, completion, conversion, complete deliveries, urgent purchases, lead time per step, supplier concentration, “Who is blocking?”"
+                "Median P2P cycle, late tasks, completion, conversion, complete deliveries, urgent purchases, supplier concentration, “Who is blocking?”"
               ],
               [
                 "Finance",

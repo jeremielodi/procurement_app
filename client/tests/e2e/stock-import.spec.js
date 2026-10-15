@@ -34,10 +34,11 @@ test.describe('Stock › Import des articles (Excel / CSV)', () => {
   });
 });
 
-test('Réquisitions : « Département » en avant-dernière colonne', async ({ page }) => {
+test('Réquisitions : « Demandeur » puis « Département » avant les actions', async ({ page }) => {
   await page.goto('/requisitions');
   await expect(page.locator('table thead th').last()).toBeVisible();
   const headers = (await page.locator('table thead th').allInnerTexts()).map(h => h.trim().toLowerCase());
+  expect(headers[headers.length - 3]).toBe('demandeur');
   expect(headers[headers.length - 2]).toBe('département');
   expect(headers[headers.length - 1]).toBe('actions');
 });

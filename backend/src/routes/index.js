@@ -45,7 +45,7 @@ const i18n = require('../i18n');
 const { authenticate, hasPermission, hasAnyPermission } = require('../middleware/auth');
 const { tenantContext, tenantGuard } = require('../middleware/tenant');
 // Profils BPMN liés au projet : la permission doit venir d'un profil de l'utilisateur SUR LE PROJET du document
-const { requireProjectPermission: onProject, from } = require('../utils/projectAccess');
+const { requireProjectPermission: onProject, from, requisitionVisible } = require('../utils/projectAccess');
 const { logoMiddleware } = require('../utils/logoUpload');
 
 // Réservé au super administrateur de la plateforme
@@ -86,6 +86,8 @@ router.use(authenticate);
 // Multi-entreprise : type de compte + entreprise courante, puis contrôle des identifiants cités
 router.use(tenantContext);
 router.use(tenantGuard);
+// Réquisition d'un autre demandeur sans profil autre que demandeur sur son projet → 404 (migration 30)
+router.use('/requisitions/:id', requisitionVisible);
 
 // Routes publiques (lecture)
 // ============================================

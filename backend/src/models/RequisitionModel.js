@@ -1,5 +1,6 @@
 // backend/src/models/RequisitionModel.js
 const db = require('../config/database');
+const { requisitionVisibilitySql } = require('../utils/projectAccess');
 const tenant = require('../utils/tenant');
 const util = require('../config/util');
 const { v4: uuidv4 } = require('uuid');
@@ -355,7 +356,7 @@ class RequisitionModel {
   }
 
   /**
-   * Filtres de la liste (entreprise, statut, département, priorité, processus, dates, avancement, recherche)
+   * Filtres de la liste (entreprise, visibilité (viewerId), statut, département, priorité, processus, dates, avancement, recherche)
    * — partagés par findAll et countAll pour que le total de la pagination corresponde aux filtres.
    * Alias attendus : r (requisitions), d (departments), p (projects), u (users, demandeur).
    */
@@ -365,6 +366,8 @@ class RequisitionModel {
     let paramCount = 1;
     // Multi-entreprise : uniquement les données de l'entreprise courante
     sql += tenant.filter('r.enterprise_id', params);
+    // viewerId : ses propres réquisitions, plus celles des projets où il a un profil autre que demandeur (migration 30)
+    if (filters.viewerId) sql += requisitionVisibilitySql('r', filters.viewerId, params);
     paramCount = params.length + 1;
     
     if (filters.status && filters.status != 'all') {

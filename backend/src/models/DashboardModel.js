@@ -485,7 +485,8 @@ class DashboardModel {
   /**
    * Récupérer les réquisitions récentes
    */
-  async getRecentRequisitions(limit = 10) {
+  /** viewerId : seulement les réquisitions visibles par cet utilisateur (migration 30) */
+  async getRecentRequisitions(limit = 10, viewerId = null) {
     try {
       return await scopedDb.select(`
         SELECT 
@@ -510,9 +511,10 @@ class DashboardModel {
         LEFT JOIN departments d ON r.department_id = d.id
         LEFT JOIN projects p ON r.project_id = p.id
         LEFT JOIN currency c ON r.currency_id = c.id
+        WHERE ($2::uuid IS NULL OR r.requester_id = $2::uuid OR user_sees_project_requisitions($2::uuid, r.project_id))
         ORDER BY r.created_at DESC
         LIMIT $1
-      `, [limit]);
+      `, [limit, viewerId]);
     } catch (error) {
       console.error('Error in getRecentRequisitions:', error);
       throw error;

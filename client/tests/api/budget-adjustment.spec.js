@@ -73,7 +73,7 @@ test.describe.serial('API › Ajustement budgétaire', () => {
     const retry = await json(await request.post(`/api/requisitions/${reqRetry.id}/budget-adjustment`, { headers: H(), data: { decision: 'RETRY' } }));
     expect([retry.status, retry.body.code]).toEqual([409, 'STILL_INSUFFICIENT']);
     const out = await json(await request.post(`/api/requisitions/${reqRetry.id}/budget-adjustment`, { headers: auth(outsiderToken), data: { decision: 'ABANDON' } }));
-    expect(out.status).toBe(403);
+    expect(out.status).toBe(404); // simple demandeur : la réquisition d'un autre lui est invisible (migration 30)
     const item = (await (await request.get(`/api/requisitions/${reqRetry.id}/budget-adjustment`, { headers: H() })).json()).data.items[0];
     const bogus = await json(await request.patch(`/api/requisitions/${reqRetry.id}/budget-lines`, { headers: H(), data: { changes: [{ itemId: item.id, budgetLineId: '00000000-0000-0000-0000-000000000000' }] } }));
     expect([bogus.status, bogus.body.code]).toEqual([400, 'BUDGET_LINE_INVALID']);

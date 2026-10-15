@@ -13,6 +13,7 @@ class ProjectModel {
       code,
       name,
       description,
+      project_manager_id: projectManagerId || null,
       status: 'ACTIVE',
       start_date: startDate,
       end_date: endDate,

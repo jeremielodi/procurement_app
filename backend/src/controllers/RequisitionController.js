@@ -515,7 +515,7 @@ async create(req, res) {
     try {
       const { status, progress, departmentId, fromDate, priority, toDate, search, page = 1, limit = 20 } = req.query;
       const offset = (page - 1) * limit;
-      const filters = { status, progress, departmentId, fromDate, toDate, priority, search };
+      const filters = { status, progress, departmentId, fromDate, toDate, priority, search, viewerId: req.user.id };
 
       const requisitions = await requisitionModel.findAll({
         ...filters,
@@ -805,6 +805,7 @@ async exportPDF(req, res) {
     const { status, departmentId, fromDate, toDate } = req.query;
     
     const requisitions = await requisitionModel.findAll({
+      viewerId: req.user.id,
       status,
       departmentId,
       fromDate,
@@ -871,6 +872,7 @@ async exportExcel(req, res) {
     const { status, departmentId, fromDate, toDate } = req.query;
     
     const requisitions = await requisitionModel.findAll({
+      viewerId: req.user.id,
       status,
       departmentId,
       fromDate,

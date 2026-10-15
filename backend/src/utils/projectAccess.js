@@ -9,13 +9,18 @@ const { audit, AUDIT } = require('./auditLog');
 
 const groupOf = (profileId) => String(profileId).replace(/^prof_/, '');
 
+// Visibilité des réquisitions (migration 30_requisition_visibility.sql) : ces profils ne donnent accès qu'à ses
+// propres réquisitions ; tout autre profil sur le projet (managers, finance, achats, logistique, auditeur, admin…)
+// donne accès à toutes les réquisitions du projet. Même liste que requisition_own_only_profiles() en SQL.
+const OWN_ONLY_GROUPS = new Set(['requester', 'user', 'supplier', 'superadmin']);
+
 /**
  * Profils de l'utilisateur, en une lecture : sert à calculer ses groupes GoFlow sur n'importe quel projet
  * (listes de tâches). → { isAdmin, global: Set(groupes globaux), scoped: Set(groupes soumis au projet),
  *   everywhere: Set(groupes « tous les projets »), byProject: Map(projectId → Set(groupes)) }
  */
 async function loadScope(userId) {
-  const [profiles, assignments] = await Promise.all([
+  const [profiles, assignments, managed] = await Promise.all([
     db.select(
       `SELECT up.profile_id, up.all_projects, pr.project_scoped
        FROM user_profiles up JOIN profiles pr ON pr.id = up.profile_id WHERE up.user_id = $1`,
@@ -27,8 +32,12 @@ async function loadScope(userId) {
        WHERE pmp.user_id = $1`,
       [userId]
     ),
+    db.select('SELECT id FROM projects WHERE project_manager_id = $1', [userId]),
   ]);
-  const scope = { isAdmin: false, global: new Set(), scoped: new Set(), everywhere: new Set(), byProject: new Map() };
+  const scope = {
+    userId: String(userId), isAdmin: false, global: new Set(), scoped: new Set(), everywhere: new Set(), byProject: new Map(),
+    managedProjects: new Set(managed.map(p => String(p.id))), // chef de projet
+  };
   for (const p of profiles) {
     const group = groupOf(p.profile_id);
     if (p.profile_id === 'prof_admin') scope.isAdmin = true;
@@ -50,6 +59,43 @@ async function loadScope(userId) {
 function groupsOnProject(scope, projectId) {
   if (!projectId) return new Set([...scope.global, ...scope.scoped]);
   return new Set([...scope.global, ...scope.everywhere, ...(scope.byProject.get(String(projectId)) || [])]);
+}
+
+/** Voit toutes les réquisitions du projet (sinon seulement les siennes) — cf. user_sees_project_requisitions */
+function seesProjectRequisitions(scope, projectId) {
+  if (scope.isAdmin || (projectId && scope.managedProjects.has(String(projectId)))) return true;
+  return [...groupsOnProject(scope, projectId)].some(g => !OWN_ONLY_GROUPS.has(g));
+}
+
+/** Peut consulter la réquisition { requester_id, project_id } (la sienne ou celles de son projet) */
+function canSeeRequisition(scope, requisition) {
+  return !!requisition && (String(requisition.requester_id) === scope.userId || seesProjectRequisitions(scope, requisition.project_id));
+}
+
+/** Clause SQL de liste : réquisitions (alias) visibles par l'utilisateur ; ajoute le paramètre à params */
+function requisitionVisibilitySql(alias, userId, params) {
+  params.push(userId);
+  const p = `$${params.length}`;
+  return ` AND (${alias}.requester_id = ${p} OR user_sees_project_requisitions(${p}, ${alias}.project_id))`;
+}
+
+/**
+ * Middleware : /requisitions/:id… → 404 si la réquisition n'est pas visible par l'utilisateur (même réponse qu'une
+ * réquisition d'une autre entreprise). Identifiant non UUID (export, import-items…) : laisse passer.
+ */
+async function requisitionVisible(req, res, next) {
+  const id = String(req.params.id || '');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return next();
+  try {
+    const row = await db.one(
+      'SELECT EXISTS (SELECT 1 FROM requisitions WHERE id = $1) AS exists, user_can_view_requisition($2, $1) AS ok',
+      [id, req.user.id]
+    );
+    if (!row.exists || row.ok) return next(); // introuvable : le contrôleur répond 404
+    return res.status(404).json({ success: false, code: 'NOT_FOUND', message: 'Réquisition introuvable' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
 }
 
 /** A le profil du groupe partout, mais pas sur ce projet → raison « NOT_ON_PROJECT » à afficher */
@@ -128,4 +174,7 @@ const from = {
   param: (key) => (req) => req.params?.[key],
 };
 
-module.exports = { loadScope, groupsOnProject, hasGroupElsewhere, hasProjectPermission, projectOf, deny, requireProjectPermission, from, groupOf };
+module.exports = {
+  loadScope, groupsOnProject, hasGroupElsewhere, hasProjectPermission, projectOf, deny, requireProjectPermission, from, groupOf,
+  OWN_ONLY_GROUPS, seesProjectRequisitions, canSeeRequisition, requisitionVisibilitySql, requisitionVisible,
+};

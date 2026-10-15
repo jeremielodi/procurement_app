@@ -67,7 +67,7 @@ class DashboardController {
   async getRecentRequisitions(req, res) {
     try {
       const { limit = 10 } = req.query;
-      const recentRequisitions = await dashboardModel.getRecentRequisitions(parseInt(limit));
+      const recentRequisitions = await dashboardModel.getRecentRequisitions(parseInt(limit), req.user.id);
       
       res.json({
         success: true,
@@ -245,7 +245,7 @@ class DashboardController {
         projectStats
       ] = await Promise.all([
         dashboardModel.getStats(),
-        dashboardModel.getRecentRequisitions(10),
+        dashboardModel.getRecentRequisitions(10, req.user.id),
         dashboardModel.getRecentActivities(10),
         dashboardModel.getKPIs(),
         dashboardModel.getAlerts(),

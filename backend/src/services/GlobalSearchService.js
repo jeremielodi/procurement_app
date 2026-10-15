@@ -5,16 +5,17 @@
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const userModel = require('../models/UserModel');
+const { requisitionVisibilitySql } = require('../utils/projectAccess');
 
 const PER_GROUP = 5;
 const escapeLike = (s) => s.replace(/[\\%_]/g, c => '\\' + c);
 
-// [groupe, permission, requête(paramètres) → lignes { id, label, sublabel }, lien]
+// [groupe, permission, requête(paramètres, utilisateur) → lignes { id, label, sublabel }, lien]
 const GROUPS = [
-  ['requisitions', 'VIEW_REQUISITIONS', (p) => `
+  ['requisitions', 'VIEW_REQUISITIONS', (p, userId) => `
     SELECT r.id, r.requisition_number AS label, r.title AS sublabel, r.status
     FROM requisitions r
-    WHERE (r.requisition_number ILIKE $1 OR r.title ILIKE $1)${tenant.filter('r.enterprise_id', p)}
+    WHERE (r.requisition_number ILIKE $1 OR r.title ILIKE $1)${tenant.filter('r.enterprise_id', p)}${requisitionVisibilitySql('r', userId, p)}
     ORDER BY r.created_at DESC LIMIT ${PER_GROUP}`, (r) => `/requisitions/${r.id}`],
   ['purchaseOrders', 'VIEW_PURCHASE_ORDERS', (p) => `
     SELECT po.id, po.po_number AS label, s.name AS sublabel, po.status
@@ -59,7 +60,7 @@ class GlobalSearchService {
       .map(async ([group, , sql, link]) => {
         const params = [`%${escapeLike(q)}%`];
         try {
-          const rows = await db.select(sql(params), params);
+          const rows = await db.select(sql(params, userId), params);
           return { group, items: rows.map(r => ({ id: r.id, label: r.label, sublabel: r.sublabel, status: r.status, link: link(r) })) };
         } catch (error) {
           console.error(`Recherche globale (${group}) :`, error.message);

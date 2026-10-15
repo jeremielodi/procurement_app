@@ -1060,7 +1060,8 @@
     "deleteConfirmBefore": "Are you sure you want to delete requisition",
     "irreversible": "This action cannot be undone.",
     "bulkDeleteTitle": "Delete several requisitions",
-    "bulkDeleteConfirm": "Are you sure you want to delete {{count}} requisition(s)?"
+    "bulkDeleteConfirm": "Are you sure you want to delete {{count}} requisition(s)?",
+    "requester": "Requester"
   },
   "reqForm": {
     "created": "Requisition created successfully",
@@ -3548,6 +3549,14 @@
               "Assign a budget line to each item (search button). You can tick several items and assign them the same line at once.",
               "Attach documents if needed (quotes, specifications…) then save: the requisition is submitted and GoFlow starts the process."
             ]
+          },
+          {
+            "type": "h",
+            "text": "Who sees which requisitions?"
+          },
+          {
+            "type": "p",
+            "text": "Within a project, a requester only sees the requisitions they created themselves. People with another profile on that project (Manager level 1, 2 or 3, Finance, Management, Procurement, Logistics, Storekeeper, Auditor…), the project manager and the administrator see all the project's requisitions. The list shows each requisition's requester, before the department."
           },
           {
             "type": "h",

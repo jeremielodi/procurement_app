@@ -1060,7 +1060,8 @@
     "deleteConfirmBefore": "Êtes-vous sûr de vouloir supprimer la réquisition",
     "irreversible": "Cette action est irréversible.",
     "bulkDeleteTitle": "Supprimer plusieurs réquisitions",
-    "bulkDeleteConfirm": "Êtes-vous sûr de vouloir supprimer {{count}} réquisition(s) ?"
+    "bulkDeleteConfirm": "Êtes-vous sûr de vouloir supprimer {{count}} réquisition(s) ?",
+    "requester": "Demandeur"
   },
   "reqForm": {
     "created": "Réquisition créée avec succès",
@@ -3548,6 +3549,14 @@
               "Affectez une ligne budgétaire à chaque article (bouton de recherche). Vous pouvez cocher plusieurs articles et leur affecter la même ligne en une fois.",
               "Joignez si besoin des pièces (devis, cahier des charges…) puis enregistrez : la réquisition est soumise et GoFlow démarre le circuit."
             ]
+          },
+          {
+            "type": "h",
+            "text": "Qui voit quelles réquisitions ?"
+          },
+          {
+            "type": "p",
+            "text": "Dans un projet, un demandeur ne voit que les réquisitions qu'il a lui-même créées. Les personnes ayant sur ce projet un autre profil (Manager niveau 1, 2 ou 3, Finance, Direction, Achats, Logistique, Magasinier, Auditeur…), le chef du projet et l'administrateur voient toutes les réquisitions du projet. La liste affiche le demandeur de chaque réquisition, avant le département."
           },
           {
             "type": "h",

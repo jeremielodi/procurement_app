@@ -286,6 +286,16 @@ export default function RequisitionList() {
       render: (priority) => <StatusBadge status={`PRIORITY_${priority}`} size="sm" />,
     },
     {
+      title: t('requisitions.requester'),
+      key: 'requester',
+      render: (_, r) => (
+        <div className="flex items-center gap-1 text-sm text-gray-700 whitespace-nowrap" data-testid="requisition-requester">
+          <User size={14} className="text-gray-400" />
+          {[r.first_name, r.last_name].filter(Boolean).join(' ') || '-'}
+        </div>
+      ),
+    },
+    {
       title: t('common.department'),
       dataIndex: 'department_id',
       key: 'department',

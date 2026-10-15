@@ -1,10 +1,11 @@
 // src/components/Auth/Login.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, LogIn, AlertCircle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { afterLoginPath, safeRedirect } from '../../utils/loginRedirect';
+import { getLogoutReason, clearLogoutReason, IDLE_TIMEOUT_MS } from '../../utils/idleSession';
 import { t } from '../../i18n';
 import LanguageSwitcher from '../Common/LanguageSwitcher';
 
@@ -15,6 +16,9 @@ export default function Login() {
   const [searchParams] = useSearchParams();
   const redirectParam = searchParams.get('redirect');
   const hasRedirect = !!safeRedirect(redirectParam);
+  // Déconnexion automatique après inactivité (components/Auth/IdleLogout) : message affiché une fois
+  const [idleLogout] = useState(() => getLogoutReason() === 'idle');
+  useEffect(() => { clearLogoutReason(); }, []);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -80,7 +84,12 @@ export default function Login() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {hasRedirect && (
+          {idleLogout && (
+            <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status" data-testid="login-idle-hint">
+              <Clock size={16} className="mt-0.5 shrink-0" /> {t('auth.idle.loggedOut', { count: Math.round(IDLE_TIMEOUT_MS / 60000) })}
+            </p>
+          )}
+          {hasRedirect && !idleLogout && (
             <p className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900" data-testid="login-redirect-hint">
               <LogIn size={16} className="mt-0.5 shrink-0" /> {t('auth.loginToContinue')}
             </p>

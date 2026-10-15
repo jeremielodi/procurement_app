@@ -262,8 +262,10 @@ class AuthController {
   /**
    * POST /auth/logout — trace la déconnexion (le JWT est sans état : le client supprime le token)
    */
+  /** POST /auth/logout { reason? } — reason 'IDLE' : déconnexion automatique après inactivité (client) */
   async logout(req, res) {
-    await audit(req, AUDIT.LOGOUT, { target: req.user });
+    const reason = req.body?.reason === 'IDLE' ? 'IDLE' : undefined;
+    await audit(req, AUDIT.LOGOUT, { target: req.user, ...(reason && { details: { reason } }) });
     res.json({ success: true });
   }
 

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import api from '../services/api';
 import { t, setLang, onLangChange } from '../i18n';
 import { connectRealtime, disconnectRealtime } from '../services/realtime';
+import { markActivity, clearActivity } from '../utils/idleSession';
 
 export const AuthContext = createContext(null);
 
@@ -63,6 +64,8 @@ export const AuthProvider = ({ children }) => {
       if (userData.language) setLang(userData.language);
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
+      // Nouvelle session : le délai d'inactivité repart de zéro (components/Auth/IdleLogout)
+      markActivity();
       
       setUser(userData);
       setIsAuthenticated(true);
@@ -84,12 +87,16 @@ export const AuthProvider = ({ children }) => {
    * Déconnexion : ferme le WebSocket, arrête les requêtes en cours / rafraîchissements
    * et vide le cache (aucune donnée de l'ancien compte ne reste en mémoire).
    * Les réponses 401 des requêtes encore en vol sont ignorées par api.js (plus de token).
+   * reason : 'IDLE' pour la déconnexion automatique après inactivité (tracée comme telle) ; tout autre argument
+   * (ex. événement d'un onClick={logout}) = déconnexion ordinaire.
    */
-  const logout = useCallback(() => {
+  const logout = useCallback((reason) => {
     // Trace côté serveur (journal d'audit) : token passé explicitement, la session locale est vidée juste après
     const token = localStorage.getItem('token');
-    if (token) api.post('/auth/logout', {}, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+    const body = reason === 'IDLE' ? { reason: 'IDLE' } : {};
+    if (token) api.post('/auth/logout', body, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
     clearStoredSession();
+    clearActivity();
     disconnectRealtime();
     queryClient.cancelQueries();
     queryClient.clear();

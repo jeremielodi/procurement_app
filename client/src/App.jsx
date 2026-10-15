@@ -66,6 +66,7 @@ import SupplierOrderDetail from './components/SupplierPortal/SupplierOrderDetail
 import SupplierProfile from './components/SupplierPortal/SupplierProfile';
 import SupplierDashboard from './components/SupplierPortal/SupplierDashboard';
 import { useAuth } from './hooks/useAuth';
+import IdleLogout from './components/Auth/IdleLogout';
 import { homePathFor } from './utils/accountType';
 import EnterpriseList from './components/Enterprises/EnterpriseList';
 import ReferenceData from './components/Admin/ReferenceData';
@@ -96,6 +97,8 @@ function App() {
   useEffect(() => { document.title = t('app.title'); }, [lang]);
   return (
     <>
+      {/* Déconnexion automatique après 1 h d'inactivité (avertissement 2 min avant) */}
+      <IdleLogout />
       <EnterpriseProvider>
       <Routes>
         {/* Routes publiques */}

@@ -700,7 +700,15 @@
     },
     "tooManyAttempts_one": "Too many failed login attempts. Try again in {{count}} minute, or use \"Forgot password\".",
     "tooManyAttempts_other": "Too many failed login attempts. Try again in {{count}} minutes, or use \"Forgot password\".",
-    "loginToContinue": "Sign in to open the requested page: you will be taken there right after."
+    "loginToContinue": "Sign in to open the requested page: you will be taken there right after.",
+    "idle": {
+      "title": "Still there?",
+      "message": "Without activity, you will be signed out automatically to protect your account. Click “Stay signed in” to continue.",
+      "stay": "Stay signed in",
+      "logout": "Sign out",
+      "loggedOut_one": "You were signed out after {{count}} minute of inactivity. Sign in again to pick up where you left off.",
+      "loggedOut_other": "You were signed out after {{count}} minutes of inactivity. Sign in again to pick up where you left off."
+    }
   },
   "supplierFields": {
     "companyName": "Company name",
@@ -5109,7 +5117,8 @@
               "Forgotten password: from the login page, enter your email; you receive a confirmation link valid for 1 hour. Your current password is not changed until you confirm; a new password is then sent to you.",
               "Notifications: the bell shows new tasks, decisions, stock handovers, etc. in real time. A click opens the relevant screen.",
               "Emails: sent for tasks, calls for tenders, purchase orders, passwords — in the recipient's language.",
-              "Log out from your profile menu (top right)."
+              "Log out from your profile menu (top right).",
+              "Automatic sign-out: after 1 hour without activity (mouse, keyboard), you are signed out automatically. A warning appears 2 minutes before; “Stay signed in” restarts the delay. After signing in again, you return to the page you were on. With several tabs open, activity in any of them counts."
             ]
           },
           {

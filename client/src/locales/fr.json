@@ -700,7 +700,15 @@
     },
     "tooManyAttempts_one": "Trop de tentatives de connexion échouées. Réessayez dans {{count}} minute, ou utilisez « Mot de passe oublié ».",
     "tooManyAttempts_other": "Trop de tentatives de connexion échouées. Réessayez dans {{count}} minutes, ou utilisez « Mot de passe oublié ».",
-    "loginToContinue": "Connectez-vous pour ouvrir la page demandée : vous y serez redirigé juste après."
+    "loginToContinue": "Connectez-vous pour ouvrir la page demandée : vous y serez redirigé juste après.",
+    "idle": {
+      "title": "Toujours là ?",
+      "message": "Sans activité, vous serez déconnecté automatiquement pour protéger votre compte. Cliquez sur « Rester connecté » pour continuer.",
+      "stay": "Rester connecté",
+      "logout": "Se déconnecter",
+      "loggedOut_one": "Vous avez été déconnecté après {{count}} minute d'inactivité. Reconnectez-vous pour reprendre là où vous en étiez.",
+      "loggedOut_other": "Vous avez été déconnecté après {{count}} minutes d'inactivité. Reconnectez-vous pour reprendre là où vous en étiez."
+    }
   },
   "supplierFields": {
     "companyName": "Raison sociale",
@@ -5109,7 +5117,8 @@
               "Mot de passe oublié : depuis la page de connexion, saisissez votre email ; vous recevez un lien de confirmation valable 1 heure. Votre mot de passe actuel n'est pas modifié tant que vous n'avez pas confirmé ; un nouveau mot de passe vous est alors envoyé.",
               "Notifications : la cloche affiche en temps réel les nouvelles tâches, décisions, remises de stock, etc. Un clic ouvre l'écran concerné.",
               "Emails : envoyés pour les tâches, appels d'offres, envoi des bons de commande, mots de passe — dans la langue du destinataire.",
-              "Déconnexion depuis le menu de votre profil (en haut à droite)."
+              "Déconnexion depuis le menu de votre profil (en haut à droite).",
+              "Déconnexion automatique : après 1 heure sans activité (souris, clavier), vous êtes déconnecté automatiquement. Un avertissement s'affiche 2 minutes avant ; « Rester connecté » relance le délai. Après reconnexion, vous revenez sur la page où vous étiez. Si plusieurs onglets sont ouverts, l'activité dans l'un d'eux suffit."
             ]
           },
           {

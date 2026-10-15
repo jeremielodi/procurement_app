@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import Modal from '../Common/Modal';
 import UserForm from './UserForm';
+import UserAvatar from '../Common/UserAvatar';
 import toast from 'react-hot-toast';
 import { t } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
@@ -71,10 +72,13 @@ export default function UserList() {
       title: t('users.user'),
       key: 'user',
       render: (_, user) => (
-        <>
-          <div className="font-medium text-gray-900">{user.first_name} {user.last_name}</div>
-          <div className="text-sm text-gray-500">@{user.username}</div>
-        </>
+        <div className="flex items-center gap-3">
+          <UserAvatar userId={user.id} version={user.avatar_updated_at} firstName={user.first_name} lastName={user.last_name} size={36} />
+          <div>
+            <div className="font-medium text-gray-900">{user.first_name} {user.last_name}</div>
+            <div className="text-sm text-gray-500">@{user.username}</div>
+          </div>
+        </div>
       ),
     },
     { title: t('common.email'), dataIndex: 'email', key: 'email', render: (v) => <span className="text-gray-600">{v}</span> },

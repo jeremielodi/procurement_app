@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 import { policySummary } from '../../utils/approvalPolicy';
+import UserAvatar from '../Common/UserAvatar';
 
 const apiError = (error) => {
   const code = error?.response?.data?.code;
@@ -195,7 +196,8 @@ export default function ProjectDetail({ project, onClose }) {
         <div className="space-y-2">
           {members.map((member) => (
             <div key={member.id} className="flex justify-between items-start gap-3 p-3 bg-gray-50 rounded-lg" data-testid="project-member">
-              <div className="min-w-0">
+              <UserAvatar userId={member.id} version={member.avatar_updated_at} firstName={member.first_name} lastName={member.last_name} size={40} />
+              <div className="min-w-0 flex-1">
                 <p className="font-medium">{member.first_name} {member.last_name}</p>
                 <p className="text-sm text-gray-500">{member.email}</p>
                 <span className="text-xs text-blue-600">{t(`projects.roles.${member.role}`, { defaultValue: member.role })}</span>

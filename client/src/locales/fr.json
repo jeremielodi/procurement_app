@@ -4799,6 +4799,14 @@
                 "label": "Notifications"
               }
             ]
+          },
+          {
+            "type": "h",
+            "text": "Photo de profil"
+          },
+          {
+            "type": "p",
+            "text": "Dans « Mon profil », « Ajouter une photo » : choisissez une image PNG, JPG ou WEBP, elle est recadrée en carré. Votre photo remplace vos initiales dans l'en-tête, la liste des réquisitions (colonne Demandeur), la liste des utilisateurs et les membres des projets. « Retirer » revient aux initiales. L'administrateur peut aussi changer la photo depuis la fiche de l'utilisateur. Les photos ne sont visibles que par les utilisateurs connectés de votre entreprise."
           }
         ]
       },
@@ -5416,5 +5424,20 @@
     },
     "expected": "Approbation prévue : {{level}} ({{source}})",
     "levelLabel": "Niveau d'approbation"
+  },
+  "avatar": {
+    "title": "Photo de profil",
+    "add": "Ajouter une photo",
+    "change": "Changer la photo",
+    "remove": "Retirer",
+    "hint": "PNG, JPG ou WEBP. La photo est recadrée en carré ; elle remplace vos initiales dans l'application.",
+    "saved": "Photo enregistrée",
+    "removed": "Photo retirée",
+    "err": {
+      "AVATAR_TYPE": "Formats acceptés : PNG, JPG ou WEBP",
+      "AVATAR_TOO_LARGE": "Photo trop volumineuse",
+      "AVATAR_REQUIRED": "Choisissez une photo",
+      "generic": "La photo n'a pas pu être enregistrée"
+    }
   }
 }

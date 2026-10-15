@@ -4799,6 +4799,14 @@
                 "label": "Notifications"
               }
             ]
+          },
+          {
+            "type": "h",
+            "text": "Profile photo"
+          },
+          {
+            "type": "p",
+            "text": "In \"My profile\", \"Add a photo\": choose a PNG, JPG or WEBP image, it is cropped to a square. Your photo replaces your initials in the header, the requisitions list (Requester column), the users list and project members. \"Remove\" goes back to initials. The administrator can also change the photo from the user record. Photos are only visible to signed-in users of your company."
           }
         ]
       },
@@ -5416,5 +5424,20 @@
     },
     "expected": "Expected approval: {{level}} ({{source}})",
     "levelLabel": "Approval level"
+  },
+  "avatar": {
+    "title": "Profile photo",
+    "add": "Add a photo",
+    "change": "Change photo",
+    "remove": "Remove",
+    "hint": "PNG, JPG or WEBP. The photo is cropped to a square; it replaces your initials throughout the application.",
+    "saved": "Photo saved",
+    "removed": "Photo removed",
+    "err": {
+      "AVATAR_TYPE": "Accepted formats: PNG, JPG or WEBP",
+      "AVATAR_TOO_LARGE": "Photo too large",
+      "AVATAR_REQUIRED": "Choose a photo",
+      "generic": "The photo could not be saved"
+    }
   }
 }

@@ -446,7 +446,7 @@ class RequisitionModel {
    */
   async findAll(filters = {}) {
     let sql = `
-      SELECT r.*, u.first_name, u.last_name, 
+      SELECT r.*, u.first_name, u.last_name, u.avatar_updated_at AS requester_avatar_version, 
         d.code as department_code,
         d.name as department_name,
         ${PROGRESS_STATUS_SQL} AS progress_status

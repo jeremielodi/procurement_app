@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { t, getLocale } from '../../i18n';
 import LanguageSwitcher from '../Common/LanguageSwitcher';
+import AvatarPicker from '../Common/AvatarPicker';
 
 export default function Profile() {
   const { user, updateUser } = useAuth();
@@ -175,6 +176,13 @@ export default function Profile() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Photo de profil : affichée à la place des icônes (en-tête, listes, membres des projets…) */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="mb-4 text-lg font-semibold text-gray-800">{t('avatar.title')}</h2>
+        <AvatarPicker version={user?.avatarVersion} firstName={user?.firstName} lastName={user?.lastName}
+          onChange={(avatarVersion) => updateUser({ ...user, avatarVersion })} />
       </div>
 
       {/* Informations personnelles */}

@@ -195,7 +195,7 @@ class ProjectModel {
   async getProjectMembers(projectId) {
     const [members, profiles] = await Promise.all([
       db.select(`
-        SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.is_active, pm.role
+        SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.is_active, u.avatar_updated_at, pm.role
         FROM project_members pm
         JOIN users u ON pm.user_id = u.id
         WHERE pm.project_id = $1

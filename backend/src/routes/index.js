@@ -47,6 +47,23 @@ const { tenantContext, tenantGuard } = require('../middleware/tenant');
 // Profils BPMN liés au projet : la permission doit venir d'un profil de l'utilisateur SUR LE PROJET du document
 const { requireProjectPermission: onProject, from, requisitionVisible } = require('../utils/projectAccess');
 const { logoMiddleware } = require('../utils/logoUpload');
+const avatar = require('../utils/userAvatar');
+const { audit: auditAvatar, AUDIT: AVATAR_AUDIT } = require('../utils/auditLog');
+
+/** Photo de profil : enregistrement / retrait + trace USER_UPDATED (champ avatar) */
+function avatarRoute(pickUserId, change) {
+  return async (req, res) => {
+    try {
+      const userId = pickUserId(req);
+      const data = change === 'REMOVED' ? await avatar.removeAvatar(userId) : await avatar.setAvatar(userId, req.file);
+      await auditAvatar(req, AVATAR_AUDIT.USER_UPDATED, { target: { id: userId }, details: { avatar: change } });
+      res.json({ success: true, data });
+    } catch (error) {
+      if (!error.status) console.error('Avatar :', error);
+      res.status(error.status || 500).json({ success: false, code: error.code, message: error.status ? error.message : 'Erreur lors de l\'enregistrement de la photo' });
+    }
+  };
+}
 
 // Réservé au super administrateur de la plateforme
 const requireSuperAdmin = (req, res, next) => req.isSuperAdmin
@@ -68,6 +85,10 @@ router.post('/auth/reset-password/confirm', authController.confirmPasswordReset)
 router.post('/auth/change-password', authenticate, authController.changePassword);
 router.post('/auth/logout', authenticate, authController.logout);
 router.put('/auth/language', authenticate, authController.setLanguage.bind(authController));
+// Photo de profil de l'utilisateur connecté (tous les types de compte, migration 31)
+router.get('/auth/avatar', authenticate, (req, res) => avatar.sendAvatar(res, req.user.id));
+router.put('/auth/avatar', authenticate, avatar.avatarMiddleware, avatarRoute((req) => req.user.id, 'CHANGED'));
+router.delete('/auth/avatar', authenticate, avatarRoute((req) => req.user.id, 'REMOVED'));
 
 // Inscription fournisseur + logo (publics)
 router.post('/auth/register-supplier',
@@ -550,6 +571,10 @@ router.put('/users/:id',authenticate, hasPermission('MANAGE_USERS'),  userContro
 router.patch('/users/:id/toggle-active',authenticate, hasPermission('MANAGE_USERS'), userController.toggleActive);
 router.post('/users/:id/reset-password',authenticate, hasPermission('MANAGE_USERS'),  userController.resetPassword);
 router.delete('/users/:id',authenticate, hasPermission('MANAGE_USERS'), userController.delete);
+// Photos de profil : visibles par les utilisateurs de la même entreprise (tenantGuard), modifiables par l'administrateur
+router.get('/users/:id/avatar', (req, res) => avatar.sendAvatar(res, req.params.id));
+router.put('/users/:id/avatar', hasPermission('MANAGE_USERS'), avatar.avatarMiddleware, avatarRoute((req) => req.params.id, 'CHANGED'));
+router.delete('/users/:id/avatar', hasPermission('MANAGE_USERS'), avatarRoute((req) => req.params.id, 'REMOVED'));
 
 
 // Profils (rôles) partagés par toutes les entreprises : lecture admin, modification super admin

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import requisitionService from '../../services/requisitionService'
 import WorkflowTrackerModal from './WorkflowTrackerModal'
+import UserAvatar from '../Common/UserAvatar'
 import { departmentService } from '../../services/departmentService'
 import StatusBadge from '../Common/StatusBadge'
 import LoadingSpinner from '../Common/LoadingSpinner'
@@ -289,8 +290,8 @@ export default function RequisitionList() {
       title: t('requisitions.requester'),
       key: 'requester',
       render: (_, r) => (
-        <div className="flex items-center gap-1 text-sm text-gray-700 whitespace-nowrap" data-testid="requisition-requester">
-          <User size={14} className="text-gray-400" />
+        <div className="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap" data-testid="requisition-requester">
+          <UserAvatar userId={r.requester_id} version={r.requester_avatar_version} firstName={r.first_name} lastName={r.last_name} size={24} />
           {[r.first_name, r.last_name].filter(Boolean).join(' ') || '-'}
         </div>
       ),

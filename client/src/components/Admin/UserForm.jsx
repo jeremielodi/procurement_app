@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, FolderKanban } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import AvatarPicker from '../Common/AvatarPicker';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { t, LANGUAGES } from '../../i18n';
@@ -10,6 +11,7 @@ import { projectService } from '../../services/projectService';
 
 export default function UserForm({ user, onClose }) {
   const queryClient = useQueryClient();
+  const [avatarVersion, setAvatarVersion] = useState(user?.avatar_updated_at || null);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -137,6 +139,11 @@ export default function UserForm({ user, onClose }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Photo de profil (modification seulement : enregistrée tout de suite, indépendamment du formulaire) */}
+      {user && (
+        <AvatarPicker userId={user.id} version={avatarVersion} firstName={user.first_name} lastName={user.last_name} size={64}
+          onChange={(v) => { setAvatarVersion(v); queryClient.invalidateQueries({ queryKey: ['users'] }); }} />
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">{t('users.username')}</label>

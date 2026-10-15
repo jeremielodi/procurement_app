@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Menu, User, LogOut, Settings, ChevronDown } from 'lucide-react'
+import UserAvatar from '../Common/UserAvatar'
 import NotificationBell from '../Notifications/NotificationBell'
 import { useAuth } from '../../hooks/useAuth'
 import { useTranslation } from '../../i18n'
@@ -67,9 +68,7 @@ export default function Header({ toggleSidebar }) {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold">
-                {user?.firstName?.[0] || user?.username?.[0] || 'U'}
-              </div>
+              <UserAvatar self version={user?.avatarVersion} firstName={user?.firstName} lastName={user?.lastName} name={user?.username} size={32} />
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-gray-700">
                   {user?.firstName} {user?.lastName}

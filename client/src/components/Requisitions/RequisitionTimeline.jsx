@@ -8,6 +8,7 @@ import {
   CheckCircle2, Clock, XCircle, Circle, MinusCircle, Info, AlertTriangle, User, RefreshCw, ExternalLink
 } from 'lucide-react'
 import requisitionService from '../../services/requisitionService'
+import UserAvatar from '../Common/UserAvatar'
 import { t, getLocale, useTranslation } from '../../i18n'
 
 // label : clé timeline.<statut>
@@ -29,6 +30,12 @@ const EVENT_STYLE = {
 const fmt = (d, withTime = true) => d
   ? new Date(d).toLocaleString(getLocale(), withTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' })
   : ''
+
+// Photo de profil (ou initiales) de la personne ; acteur sans compte (système, rôle attendu) : icône
+function ActorAvatar({ person }) {
+  if (!person) return <User size={12} className="shrink-0" />
+  return <UserAvatar userId={person.id} version={person.avatarVersion} firstName={person.firstName} lastName={person.lastName} size={20} />
+}
 
 function DocLinks({ links, onNavigate }) {
   if (!links?.length) return null
@@ -60,7 +67,7 @@ export default function RequisitionTimeline({ requisitionId, onNavigate }) {
     return <p className="p-6 text-center text-gray-500">{t('timeline.loadError')}</p>
   }
 
-  const { steps, events, progress } = data.data
+  const { steps, events, progress, people = {} } = data.data
   const pct = Math.round((progress.done / progress.total) * 100)
   const current = steps.find(s => s.status === 'current')
   const failed = steps.find(s => s.status === 'failed')
@@ -136,7 +143,16 @@ export default function RequisitionTimeline({ requisitionId, onNavigate }) {
                         <span className="text-sm font-medium text-gray-900">{e.title}</span>
                         {e.date && <span className="text-xs text-gray-400 whitespace-nowrap">{fmt(e.date)}</span>}
                       </div>
-                      {e.actor && <div className="text-xs text-gray-600 flex items-center gap-1 mt-0.5"><User size={12} /> {e.actor}</div>}
+                      {e.actor && (
+                        <div className="text-xs text-gray-600 flex items-center gap-1.5 mt-1" data-testid="timeline-actor">
+                          <ActorAvatar person={people[e.actorId]} /> {e.actor}
+                        </div>
+                      )}
+                      {e.assignee && (
+                        <div className="text-xs text-gray-600 flex items-center gap-1.5 mt-1" data-testid="timeline-assignee">
+                          <ActorAvatar person={people[e.assigneeId]} /> {t('timeline.claimedByUser', { name: e.assignee })}
+                        </div>
+                      )}
                       {e.details?.length > 0 && (
                         <ul className="mt-1 text-xs text-gray-600 list-disc pl-4 space-y-0.5">
                           {e.details.map((d, j) => <li key={j}>{d}</li>)}

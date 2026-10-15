@@ -189,6 +189,7 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - `GET /requisitions/:id/timeline` → `RequisitionTimelineService` : `steps` (12 étapes du cycle complet : création → paiement, statut done/current/pending/failed/skipped + liens vers PO/GRN/SAN/facture/paiement/AO) et `events` (une ligne par action réelle, en français : décision, auteur, commentaire, délai de traitement, tâches en attente)
 - Traductions côté backend : `src/utils/workflowLabels.js` (tâches, rôles, méthodes d'achat, messages des workers ; mêmes libellés que `client/src/utils/taskLabels.js`). Les événements techniques (TASK_CREATED/CLAIMED, NOTIFICATION_SENT, doublons CLASSIFIED_*) sont fusionnés ou masqués
 - Frontend : `RequisitionTimeline` (onglet « Suivi du workflow » de la fiche) et `WorkflowTrackerModal` (bouton « Voir le workflow » de la fiche + icône dans la colonne Actions de la liste)
+- **Photos de profil dans le suivi** (2026-10-16) : chaque événement d'une personne porte `actorId` (auteur de la ligne d'historique — `tagActor` —, personne qui a pris la tâche, auteur du document PO / paiement, demandeur pour la création) ; tâche en attente prise en charge : `assignee` + `assigneeId` (la ligne de texte « Prise en charge par » n'est alors plus dans `details`) ; `people` = `{ id → { firstName, lastName, avatarVersion } }`. Client : `UserAvatar` (20 px, aperçu au survol) devant le nom, icône pour « Système » / rôle attendu
 
 ## Accès au budget
 

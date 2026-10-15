@@ -88,7 +88,7 @@ class RequisitionTimelineService {
     const req = await db.one(
       `SELECT r.id, r.requisition_number, r.title, r.status, r.estimated_amount, r.created_at,
               r.process_instance_id, r.rejected_reason, r.approval_level, r.approval_policy,
-              u.first_name || ' ' || u.last_name AS requester_name
+              r.requester_id, u.first_name || ' ' || u.last_name AS requester_name
        FROM requisitions r LEFT JOIN users u ON u.id = r.requester_id WHERE r.id = $1`,
       [requisitionId]
     );
@@ -101,7 +101,7 @@ class RequisitionTimelineService {
          ORDER BY performed_at, id`,
         [String(req.id), req.process_instance_id]
       ),
-      db.select(`SELECT id, email, first_name || ' ' || last_name AS name FROM users`, []),
+      db.select(`SELECT id, email, first_name, last_name, avatar_updated_at, first_name || ' ' || last_name AS name FROM users`, []),
       db.select(
         `SELECT id, po_number, status, approved_at, approved_by, created_at, supplier_response, supplier_responded_at,
                 delivery_closed_at, delivery_close_reason
@@ -127,7 +127,19 @@ class RequisitionTimelineService {
 
     const nameById = new Map(users.map(u => [u.id, u.name?.trim() || u.email]));
     const nameByEmail = new Map(users.map(u => [String(u.email).toLowerCase(), u.name?.trim() || u.email]));
+    const idByEmail = new Map(users.map(u => [String(u.email).toLowerCase(), u.id]));
+    const userById = new Map(users.map(u => [u.id, u]));
     const who = (row) => (row.performed_by && nameById.get(row.performed_by)) || null;
+    // Photo de profil dans le suivi : chaque événement d'une personne porte son id (actorId) ; le client affiche
+    // l'avatar (Common/UserAvatar) depuis people[actorId]. Événements créés pour une ligne d'historique : l'auteur
+    // de la ligne, si c'est bien lui qui est affiché comme acteur.
+    const tagActor = (from, row) => {
+      if (!row.performed_by) return;
+      const name = nameById.get(row.performed_by);
+      for (let i = from; i < events.length; i++) {
+        if (events[i].actorId === undefined && name && events[i].actor === name) events[i].actorId = row.performed_by;
+      }
+    };
 
     // ---------------- Événements ----------------
     const events = [];
@@ -137,6 +149,8 @@ class RequisitionTimelineService {
     let classification = null;      // { method, date }
 
     for (const row of rows) {
+      const eventsBefore = events.length;
+      try {
       const key = taskKey(row);
       const action = row.action || '';
       const json = parseJson(row.comments);
@@ -149,6 +163,8 @@ class RequisitionTimelineService {
         const t = tasks.get(row.task_id) || { key, label: taskLabel(key || row.task_name), createdAt: row.performed_at };
         const email = String(json?.assignee || '').toLowerCase();
         t.claimedBy = nameByEmail.get(email) || json?.assignee || who(row);
+        // Même personne que le nom affiché : compte de l'email, sinon l'auteur de la prise en charge (si pas d'email)
+        t.claimedById = idByEmail.get(email) || (!json?.assignee ? row.performed_by : null) || null;
         t.claimedAt = row.performed_at;
         tasks.set(row.task_id, t);
         continue;
@@ -160,6 +176,7 @@ class RequisitionTimelineService {
           details: t.claimedBy ? [T('timeline.releasedFrom', { name: t.claimedBy })] : [], links: [],
         });
         delete t.claimedBy;
+        delete t.claimedById;
         delete t.claimedAt;
         tasks.set(row.task_id, t);
         continue;
@@ -176,9 +193,10 @@ class RequisitionTimelineService {
           continue;
         }
         // Tâches complétées via leur formulaire : l'auteur est sur le document
-        const docActor = key === 'Activity_POApproval' ? nameById.get(pos.find(p => p.approved_by)?.approved_by)
-          : key === 'Activity_ProcessPayment' ? nameById.get(payments[0]?.created_by || payments[0]?.approved_by)
+        const docActorId = key === 'Activity_POApproval' ? pos.find(p => p.approved_by)?.approved_by
+          : key === 'Activity_ProcessPayment' ? (payments[0]?.created_by || payments[0]?.approved_by)
           : null;
+        const docActor = docActorId ? nameById.get(docActorId) : null;
         // Auteur inconnu (données antérieures) : on indique le rôle attendu plutôt que « Système »
         const actor = who(row) || t.claimedBy || docActor || (role(key) ? T('timeline.role', { role: role(key) }) : T('timeline.system'));
         const took = t.createdAt ? duration(t.createdAt, row.performed_at, T) : null;
@@ -189,6 +207,7 @@ class RequisitionTimelineService {
           kind: decision === 'REJECTED' ? 'danger' : 'success',
           title: `${t.label}${T(decision === 'APPROVED' ? 'timeline.approved' : decision === 'REJECTED' ? 'timeline.rejected' : 'timeline.completed')}`,
           actor,
+          actorId: (who(row) && row.performed_by) || (t.claimedBy && t.claimedById) || (docActor && docActorId) || null,
           details,
           links,
         };
@@ -239,7 +258,7 @@ class RequisitionTimelineService {
       if (action === 'NOTIFICATION_SENT' || action.startsWith('CLASSIFIED_')) continue; // bruit / doublon
 
       if (action === 'CREATED') {
-        events.push({ date: row.performed_at, kind: 'info', title: T('timeline.created'), actor: who(row) || req.requester_name, details: [], links: [] });
+        events.push({ date: row.performed_at, kind: 'info', title: T('timeline.created'), actor: who(row) || req.requester_name, actorId: row.performed_by || req.requester_id || null, details: [], links: [] });
       } else if (action === 'PROCESS_STARTED') {
         events.push({ date: row.performed_at, kind: 'info', title: T('timeline.processStarted'), actor: T('timeline.system'), details: [], links: [] });
       } else if (action === 'PROCESS_START_FAILED') {
@@ -329,15 +348,19 @@ class RequisitionTimelineService {
           details: [action, json ? null : row.comments].filter(Boolean), links: [],
         });
       }
+      } finally {
+        tagActor(eventsBefore, row);
+      }
     }
 
     // Tâches en attente
     const pending = [...tasks.values()].filter(t => !t.completedAt);
     for (const t of pending) {
       const details = [T('timeline.expectedRole', { role: role(t.key) || '—' })];
-      if (t.claimedBy) details.push(T('timeline.claimedBy', { name: t.claimedBy }));
+      // Responsable connu : affiché par le client avec sa photo (assignee / assigneeId), sinon en texte
+      if (t.claimedBy && !t.claimedById) details.push(T('timeline.claimedBy', { name: t.claimedBy }));
       if (t.createdAt) details.push(T('timeline.waitingFor', { time: duration(t.createdAt, new Date(), T) || T('timeline.fewMoments') }));
-      events.push({ date: t.createdAt, kind: 'warning', title: T('timeline.pendingTitle', { task: t.label }), actor: null, details, links: [], pending: true });
+      events.push({ date: t.createdAt, kind: 'warning', title: T('timeline.pendingTitle', { task: t.label }), actor: null, assignee: t.claimedById ? t.claimedBy : null, assigneeId: t.claimedById || null, details, links: [], pending: true });
     }
     events.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -445,6 +468,10 @@ class RequisitionTimelineService {
       progress: { done: completedSteps, total: steps.length, finished, stopped },
       steps,
       events,
+      // Personnes citées (acteurs, responsables des tâches en attente) : nom et version de la photo de profil
+      people: Object.fromEntries([...new Set(events.flatMap(e => [e.actorId, e.assigneeId]).filter(Boolean))]
+        .map(id => userById.get(id)).filter(Boolean)
+        .map(u => [u.id, { id: u.id, firstName: u.first_name, lastName: u.last_name, avatarVersion: u.avatar_updated_at }])),
     };
   }
 }

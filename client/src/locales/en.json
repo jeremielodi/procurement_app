@@ -1405,7 +1405,8 @@
     "steps": "{{done}} / {{total}} steps",
     "fullWorkflow": "Full workflow",
     "whatHappened": "What happened",
-    "noEvents": "No action recorded."
+    "noEvents": "No action recorded.",
+    "claimedByUser": "Claimed by {{name}}"
   },
   "reqViewer": {
     "pdfEmpty": "The PDF is empty",

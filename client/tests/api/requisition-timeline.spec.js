@@ -30,6 +30,19 @@ test.describe('API › Réquisitions — suivi du workflow', () => {
       expect(e.title).not.toMatch(/^TASK_|^Activity_|PROCESS_START/);
       for (const d of e.details) expect(d).not.toMatch(/^\{|next_element|user_vars/);
     }
+
+    // Photo de profil : chaque personne citée (acteur, responsable d'une tâche en attente) est décrite dans people,
+    // avec le nom affiché ; la création porte toujours le demandeur
+    const { people } = body.data;
+    for (const e of events) {
+      for (const id of [e.actorId, e.assigneeId].filter(Boolean)) {
+        expect(people[id], `people[${id}]`).toMatchObject({ id });
+        expect(people[id]).toHaveProperty('avatarVersion');
+      }
+      if (e.actorId) expect(e.actor).toBe(`${people[e.actorId].firstName} ${people[e.actorId].lastName}`.trim());
+    }
+    const created = events.find(e => e.title === 'Réquisition créée');
+    if (created) expect(created.actorId).toBe(list.data[0].requester_id);
   });
 
   test('Avancement de la liste cohérent avec le suivi du workflow', async ({ request }) => {

@@ -68,7 +68,7 @@ export default function Header({ toggleSidebar }) {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <UserAvatar self version={user?.avatarVersion} firstName={user?.firstName} lastName={user?.lastName} name={user?.username} size={32} />
+              <UserAvatar self version={user?.avatarVersion} firstName={user?.firstName} lastName={user?.lastName} name={user?.username} size={32} preview={false} />
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-gray-700">
                   {user?.firstName} {user?.lastName}

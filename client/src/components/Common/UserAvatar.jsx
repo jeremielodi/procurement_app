@@ -3,6 +3,7 @@
 // lue avec le jeton de l'utilisateur connecté (GET /users/:id/avatar, ou /auth/avatar pour soi-même) puis gardée en
 // mémoire par utilisateur × version (avatarVersion = date de la dernière photo : une nouvelle photo change l'URL).
 import React, { useEffect, useState } from 'react'
+import { Popover } from 'antd'
 import api from '../../services/api'
 
 const cache = new Map() // `${url}|${version}` → Promise<objectURL | null>
@@ -34,8 +35,9 @@ export const initialsOf = (firstName, lastName, fallback) =>
  * @param version       avatarVersion / avatar_updated_at — absente : pas de photo, initiales
  * @param firstName, lastName, name  pour les initiales et le texte alternatif
  * @param size          taille en px (défaut 32)
+ * @param preview       photo en grand au survol (défaut : oui pour les petites pastilles, < 64 px)
  */
-export default function UserAvatar({ userId, self = false, version, firstName, lastName, name, size = 32, className = '', title }) {
+export default function UserAvatar({ userId, self = false, version, firstName, lastName, name, size = 32, className = '', title, preview = size < 64 }) {
   const [src, setSrc] = useState(null)
   const url = self ? '/auth/avatar' : userId ? `/users/${userId}/avatar` : null
   useEffect(() => {
@@ -49,9 +51,23 @@ export default function UserAvatar({ userId, self = false, version, firstName, l
   const [first, ...rest] = String(name || '').trim().split(/\s+/)
   const initials = initialsOf(firstName ?? first, lastName ?? rest.join(' '), label)
   const style = { width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.4)) }
-  return src ? (
-    <img src={src} alt={label} title={label} style={style} className={`shrink-0 rounded-full object-cover ${className}`} data-testid="user-avatar-photo" />
-  ) : (
+  if (src) {
+    const photo = <img src={src} alt={label} title={preview ? undefined : label} style={style} className={`shrink-0 rounded-full object-cover ${preview ? 'cursor-zoom-in' : ''} ${className}`} data-testid="user-avatar-photo" />
+    if (!preview) return photo
+    // Survol : la photo en grand (240 px) avec le nom
+    return (
+      <Popover mouseEnterDelay={0.15} placement="right" arrow={false} styles={{ body: { padding: 8 } }}
+        content={(
+          <div className="text-center" data-testid="user-avatar-preview">
+            <img src={src} alt={label} className="h-60 w-60 rounded-lg object-cover" />
+            {label && <div className="mt-2 text-sm font-medium text-gray-800">{label}</div>}
+          </div>
+        )}>
+        {photo}
+      </Popover>
+    )
+  }
+  return (
     <span title={label} style={style} data-testid="user-avatar-initials"
       className={`inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold text-white ${colorOf(userId || label)} ${className}`}>
       {initials}

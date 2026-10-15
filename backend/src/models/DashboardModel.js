@@ -837,14 +837,13 @@ class DashboardModel {
     }
   }
   /**
-   * Tâches GoFlow en cours, regroupées par profil (candidateGroup) — « qui bloque ? ».
-   * Source : workflow_history (TASK_CREATED sans TASK_COMPLETED), toujours disponible même si
-   * GoFlow est injoignable. Exclut les réquisitions terminées/annulées/rejetées et les processus
-   * arrivés à un événement de fin. Restreint à l'entreprise courante (scopedDb).
+   * Tâches GoFlow en attente (TASK_CREATED sans TASK_COMPLETED, processus non terminé, réquisition active), avec la
+   * dernière prise en charge (TASK_CLAIMED / TASK_UNCLAIMED). Cloisonné par entreprise (scopedDb).
+   * Partagé par « Qui bloque ? » et le volet Opérations du tableau de bord (DashboardOverviewService).
    */
-  async getPendingTasksByProfile({ projectId, lang = i18n.DEFAULT_LANG } = {}) {
+  async getPendingTaskRows(projectId) {
     const params = projectId ? [projectId] : [];
-    const rows = await scopedDb.select(`
+    return scopedDb.select(`
       WITH created AS (
         SELECT DISTINCT ON (wh.task_id)
                wh.task_id, wh.task_definition_id, wh.task_name, wh.entity_id,
@@ -869,7 +868,7 @@ class DashboardModel {
         ) last_claim WHERE action = 'TASK_CLAIMED'
       )
       SELECT c.task_id, c.task_definition_id, c.task_name, c.created_at,
-             r.id AS requisition_id, r.requisition_number, r.title AS requisition_title,
+             r.id AS requisition_id, r.requisition_number, r.title AS requisition_title, r.requester_id,
              r.project_id, p.name AS project_name,
              cl.comments AS claim, cl.performed_by AS claimed_by
       FROM created c
@@ -883,14 +882,45 @@ class DashboardModel {
         ${projectId ? 'AND r.project_id = $1' : ''}
       ORDER BY c.created_at
     `, params);
+  }
+
+  /** Nom de la personne qui a pris la tâche (commentaire JSON { assignee }, sinon auteur de la prise en charge) */
+  taskAssignee(row, { nameById, nameByEmail }) {
+    let assignee = null;
+    if (row.claim) {
+      try {
+        const email = JSON.parse(row.claim).assignee;
+        assignee = nameByEmail.get(String(email || '').toLowerCase()) || email || null;
+      } catch (_) { /* commentaire non JSON */ }
+    }
+    return assignee || (row.claimed_by && nameById.get(row.claimed_by)) || null;
+  }
+
+  /** Noms des utilisateurs de l'entreprise courante, par id et par email */
+  async userNames() {
+    const users = await scopedDb.select(`SELECT id, email, TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) AS name FROM users`, []);
+    return {
+      nameById: new Map(users.map(u => [u.id, u.name || u.email])),
+      nameByEmail: new Map(users.map(u => [String(u.email).toLowerCase(), u.name || u.email])),
+    };
+  }
+
+  /**
+   * Tâches GoFlow en cours, regroupées par profil (candidateGroup) — « qui bloque ? ».
+   * Source : workflow_history (TASK_CREATED sans TASK_COMPLETED), toujours disponible même si
+   * GoFlow est injoignable. Exclut les réquisitions terminées/annulées/rejetées et les processus
+   * arrivés à un événement de fin. Restreint à l'entreprise courante (scopedDb).
+   */
+  async getPendingTasksByProfile({ projectId, lang = i18n.DEFAULT_LANG } = {}) {
+    const rows = await this.getPendingTaskRows(projectId);
 
     // Profils et utilisateurs de l'entreprise courante (scopedDb restreint « users »)
-    const [profiles, members, users] = await Promise.all([
+    const [profiles, members, names] = await Promise.all([
       db.select('SELECT id, name FROM profiles', []),
       scopedDb.select(`SELECT up.profile_id, COUNT(DISTINCT u.id)::int AS n
                        FROM users u JOIN user_profiles up ON up.user_id = u.id
                        WHERE u.is_active = true GROUP BY up.profile_id`, []),
-      scopedDb.select(`SELECT id, email, TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) AS name FROM users`, []),
+      this.userNames(),
     ]);
     // Personnes pouvant traiter chaque tâche : profil exercé sur le projet de la réquisition (profils BPMN liés au
     // projet) — une tâche sans personne sur son projet est signalée même si le profil existe ailleurs
@@ -909,8 +939,6 @@ class DashboardModel {
     const handlersOn = new Map(handlers.map(h => [`${h.project_id}|${h.profile_id}`, h.n]));
     const profileName = new Map(profiles.map(p => [p.id, p.name]));
     const memberCount = new Map(members.map(m => [m.profile_id, m.n]));
-    const nameById = new Map(users.map(u => [u.id, u.name || u.email]));
-    const nameByEmail = new Map(users.map(u => [String(u.email).toLowerCase(), u.name || u.email]));
 
     const now = Date.now();
     const groups = new Map();
@@ -932,11 +960,7 @@ class DashboardModel {
         });
       }
       const g = groups.get(group);
-      let assignee = null;
-      if (row.claim) {
-        try { assignee = nameByEmail.get(String(JSON.parse(row.claim).assignee || '').toLowerCase()) || JSON.parse(row.claim).assignee; } catch (_) { /* commentaire non JSON */ }
-      }
-      assignee = assignee || (row.claimed_by && nameById.get(row.claimed_by)) || null;
+      const assignee = this.taskAssignee(row, names);
       g.count++;
       const handlerCount = profileId ? handlersOn.get(`${row.project_id}|${profileId}`) ?? null : null;
       if (handlerCount === 0) g.unhandled++;

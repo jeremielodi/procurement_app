@@ -19,7 +19,8 @@ const STATUS = {
   warning: { color: '#c2410c', icon: AlertCircle, label: (d) => t('dashboard.pending.waitingSince', { days: d }) },
   normal: { color: '#6B7280', icon: Clock, label: (d) => (d === 0 ? t('dashboard.pending.sinceToday') : t('dashboard.pending.since', { days: d })) },
 };
-const statusFor = (days) => (days >= 7 ? STATUS.critical : days >= 3 ? STATUS.warning : STATUS.normal);
+// Même seuils que le tableau de bord (DashboardOverviewService) : en retard ≥ 2 jours, bloqué ≥ 7 jours
+const statusFor = (days) => (days >= 7 ? STATUS.critical : days >= 2 ? STATUS.warning : STATUS.normal);
 
 const fmtDate = (d) => new Date(d).toLocaleString(getLocale(), { dateStyle: 'short', timeStyle: 'short' });
 

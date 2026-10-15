@@ -504,6 +504,9 @@ router.get('/dashboard/supplier-summary', dashboardController.getSupplierSummary
 // KPI
 router.get('/dashboard/kpis', dashboardController.getKPIs);
 
+// Tableau de bord de pilotage : volets selon le profil (opérations / pilotage / finance / contrôle)
+router.get('/dashboard/overview', hasPermission('VIEW_DASHBOARD'), dashboardController.getOverview.bind(dashboardController));
+
 // Tâches GoFlow en cours par profil (goulots d'étranglement)
 router.get('/dashboard/pending-tasks', hasPermission('VIEW_DASHBOARD'), dashboardController.getPendingTasksByProfile.bind(dashboardController));
 
@@ -613,12 +616,18 @@ router.put('/projects/:projectId/members/:userId/profiles', hasPermission('MANAG
 
 
 
+const budgetImportUpload = require('../utils/tabularImport').uploadHandler({ maxMb: 5 });
 router.get('/budget', hasPermission('VIEW_BUDGET'), budgetListAccess, budgetController.list);
 // Module Budget (consultation détaillée + édition) : Finance uniquement (MANAGE_BUDGET).
 // VIEW_BUDGET ne sert qu'à choisir une ligne budgétaire du projet dans le formulaire de réquisition.
 router.get('/budget/search', hasPermission('VIEW_BUDGET'), budgetController.search);
 // Auditeur (AUDIT_ACCESS) : consultation du module Budget, sans modification
 router.get('/budget/summary', hasAnyPermission('MANAGE_BUDGET', 'AUDIT_ACCESS'), budgetController.getSummary);
+// Registre budgétaire : sources de financement, export Excel (réimportable), import Excel / CSV (aperçu puis confirmation)
+router.get('/budget/funding-sources', hasAnyPermission('MANAGE_BUDGET', 'AUDIT_ACCESS'), budgetController.fundingSources.bind(budgetController));
+router.get('/budget/export', hasAnyPermission('MANAGE_BUDGET', 'AUDIT_ACCESS'), budgetController.exportExcel.bind(budgetController));
+router.get('/budget/import/template', hasPermission('MANAGE_BUDGET'), budgetController.importTemplate.bind(budgetController));
+router.post('/budget/import', hasPermission('MANAGE_BUDGET'), budgetImportUpload, budgetController.importLines.bind(budgetController));
 router.get('/budget/:id', hasAnyPermission('MANAGE_BUDGET', 'AUDIT_ACCESS'), budgetController.getOne);
 router.post('/budget', hasPermission('MANAGE_BUDGET'), budgetController.create);
 router.post('/budget/expenses', hasPermission('MANAGE_BUDGET'), budgetController.addExpense);

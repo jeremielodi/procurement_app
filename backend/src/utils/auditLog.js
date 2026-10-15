@@ -38,6 +38,7 @@ const AUDIT = {
   BUDGET_LINE_CREATED: 'BUDGET_LINE_CREATED',
   BUDGET_LINE_UPDATED: 'BUDGET_LINE_UPDATED',
   BUDGET_LINE_DELETED: 'BUDGET_LINE_DELETED',
+  BUDGET_LINES_IMPORTED: 'BUDGET_LINES_IMPORTED', // registre budgétaire importé depuis Excel / CSV (lignes créées / modifiées)
   // Rôles, permissions, entreprises
   ROLE_CREATED: 'ROLE_CREATED',
   ROLE_UPDATED: 'ROLE_UPDATED',

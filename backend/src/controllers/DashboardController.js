@@ -2,6 +2,7 @@
 const dashboardModel = require('../models/DashboardModel');
 const i18n = require('../i18n');
 const userModel = require('../models/UserModel');
+const overviewService = require('../services/DashboardOverviewService');
 
 // Le budget n'est visible que par la Finance (et l'admin)
 const budgetOpts = async (req) => ({ includeBudget: await userModel.hasPermission(req.user.id, 'MANAGE_BUDGET') });
@@ -152,9 +153,30 @@ class DashboardController {
   /**
    * Récupérer les KPI
    */
-  /** GET /api/dashboard/pending-tasks — tâches en cours par profil (qui bloque ?) */
+  /**
+   * GET /api/dashboard/overview?period=week|month|quarter|year&projectId= — tableau de bord selon le profil
+   * (DashboardOverviewService : seuls les volets autorisés sont calculés et renvoyés)
+   */
+  async getOverview(req, res) {
+    try {
+      const { period = 'month', projectId } = req.query;
+      if (!['week', 'month', 'quarter', 'year'].includes(period)) {
+        return res.status(400).json({ success: false, code: 'INVALID_PERIOD', message: 'Période invalide. Utilisez week, month, quarter ou year' });
+      }
+      const data = await overviewService.build(req.user.id, { period, projectId: projectId || undefined, lang: i18n.fromRequest(req) });
+      res.json({ success: true, data });
+    } catch (error) {
+      console.error('Error getting dashboard overview:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /** GET /api/dashboard/pending-tasks — tâches en cours par profil (qui bloque ?) : volet Pilotage uniquement */
   async getPendingTasksByProfile(req, res) {
     try {
+      if (!(await overviewService.access(req.user.id)).steering) {
+        return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'Accès réservé à la direction' });
+      }
       // ?projectId= : filtre optionnel (le projet est contrôlé par tenantGuard : même entreprise)
       const data = await dashboardModel.getPendingTasksByProfile({ projectId: req.query.projectId || undefined, lang: i18n.fromRequest(req) });
       res.json({ success: true, data });
@@ -261,7 +283,8 @@ class DashboardController {
           recentRequisitions,
           recentActivities,
           kpis,
-          alerts,
+          // Alertes budgétaires : réservées aux profils ayant accès au budget (Finance, admin)
+          alerts: (await budgetOpts(req)).includeBudget ? alerts : { ...alerts, budgetAlerts: [] },
           departmentSummary,
           supplierSummary,
           projectStats,

@@ -1,289 +1,310 @@
 // src/components/Budget/BudgetList.jsx
-import React, { useState } from 'react';
+// Registre budgétaire : tableau antd (pagination et tri côté serveur, GET /budget?page=), filtres (recherche, source de
+// financement, projet, statut), totaux du filtre, export Excel réimportable et import Excel / CSV (MANAGE_BUDGET).
+// Auditeur (AUDIT_ACCESS) : consultation et export seulement.
+import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Eye, DollarSign, TrendingUp, TrendingDown, Search, Filter } from 'lucide-react';
+import { Table } from 'antd';
+import { Plus, Edit, Trash2, Eye, DollarSign, TrendingUp, TrendingDown, Search, Download, Upload, AlertTriangle, Wallet } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
-import { useCurrency } from '../../contexts/EnterpriseContext';
 import { projectService } from '../../services/projectService';
+import { useCurrency } from '../../contexts/EnterpriseContext';
+import { usePermissions } from '../../hooks/usePermissions';
+import { downloadBlob } from '../../utils/supplierDocs';
 import Modal from '../Common/Modal';
+import SearchSelect from '../Common/SearchSelect';
 import BudgetForm from './BudgetForm';
 import BudgetDetail from './BudgetDetail';
-import toast from 'react-hot-toast';
-import { t } from '../../i18n';
-import SearchSelect from '../Common/SearchSelect';
-import { usePermissions } from '../../hooks/usePermissions';
+import ImportBudgetModal from './ImportBudgetModal';
+import { t, getLocale } from '../../i18n';
+
+const NO_PROJECT = '__none__';
+const SORT_KEYS = { entity_code: 'code', project_code: 'project', allocated_amount: 'allocated', utilized_amount: 'utilized', remaining_amount: 'remaining', rate: 'rate' };
+const rateOf = (b) => (Number(b.allocated_amount) > 0 ? (Number(b.utilized_amount) / Number(b.allocated_amount)) * 100 : 0);
+const fmtRate = (v) => `${Number(v).toLocaleString(getLocale(), { maximumFractionDigits: 1 })} %`;
 
 export default function BudgetList() {
   const { formatAmount } = useCurrency();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  // Auditeur (AUDIT_ACCESS) : consultation seule
   const canManage = usePermissions().hasPermission('MANAGE_BUDGET');
-  const [fundingSource, setFundingSource] = useState('all');
+
+  const [searchInput, setSearchInput] = useState('');
+  const [filters, setFilters] = useState({ search: '', fundingSource: 'all', project: '', status: 'all' });
+  const [pagination, setPagination] = useState({ page: 1, limit: 20 });
+  const [sort, setSort] = useState({ sort: 'code', order: 'asc' });
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['budgets', { search, fundingSource }],
-    queryFn: () => budgetService.getAll({ entityCode: search, fundingSource: fundingSource !== 'all' ? fundingSource : undefined })
-  });
+  // Recherche : appliquée 300 ms après la dernière frappe
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters(f => (f.search === searchInput.trim() ? f : { ...f, search: searchInput.trim() }));
+      setPagination(p => ({ ...p, page: 1 }));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
-  const { data: summaryData } = useQuery({
-    queryKey: ['budget-summary'],
-    queryFn: () => budgetService.getSummary()
+  const setFilter = (key, value) => {
+    setFilters(f => ({ ...f, [key]: value }));
+    setPagination(p => ({ ...p, page: 1 }));
+  };
+
+  const queryParams = {
+    ...(filters.search && { search: filters.search }),
+    ...(filters.fundingSource !== 'all' && { fundingSource: filters.fundingSource }),
+    ...(filters.project === NO_PROJECT ? { withoutProject: 1 } : filters.project ? { projectId: filters.project } : {}),
+    ...(filters.status !== 'all' && { status: filters.status }),
+  };
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['budgets', queryParams, pagination, sort],
+    queryFn: () => budgetService.getRegister({ ...queryParams, ...sort, page: pagination.page, limit: pagination.limit }),
+    keepPreviousData: true,
   });
+  const { data: summaryData } = useQuery({ queryKey: ['budget-summary'], queryFn: () => budgetService.getSummary() });
+  const { data: sourcesData } = useQuery({ queryKey: ['budget-funding-sources'], queryFn: () => budgetService.getFundingSources() });
+  const { data: projectsData } = useQuery({ queryKey: ['projects-for-budget-filter'], queryFn: () => projectService.getAll() });
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['budgets'] });
+    queryClient.invalidateQueries({ queryKey: ['budget-summary'] });
+    queryClient.invalidateQueries({ queryKey: ['budget-funding-sources'] });
+  };
 
   const deleteMutation = useMutation({
     mutationFn: (id) => budgetService.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['budgets']);
-      queryClient.invalidateQueries(['budget-summary']);
-      toast.success(t('budget.deleted'));
-    }
+    onSuccess: () => { refresh(); toast.success(t('budget.deleted')); },
   });
 
   const budgets = data?.data || [];
-  let summaryInfo = summaryData?.data;
-  const summary = (summaryInfo || {}).summary;
+  const totals = data?.totals;
+  const summary = summaryData?.data?.summary;
+  const sources = sourcesData?.data || [];
+  const projects = projectsData?.data || [];
 
-  const formatCurrency = (amount) => formatAmount(amount || 0);
-
-  const getUtilizationRate = (allocated, utilized) => {
-    if (allocated === 0) return 0;
-    return (utilized / allocated) * 100;
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      downloadBlob(await budgetService.exportRegister({ ...queryParams, ...sort }), `${t('budget.register.exportFile')}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch {
+      toast.error(t('budget.register.exportFailed'));
+    } finally {
+      setExporting(false);
+    }
   };
+
+  const sortOrder = (key) => (sort.sort === SORT_KEYS[key] ? (sort.order === 'desc' ? 'descend' : 'ascend') : null);
+
+  const columns = [
+    {
+      title: t('budget.entityCode'), dataIndex: 'entity_code', key: 'entity_code', fixed: 'left', sorter: true, sortOrder: sortOrder('entity_code'),
+      render: (v, b) => (
+        <div data-testid="budget-row-code">
+          <div className="font-mono text-sm font-semibold text-gray-900">{v}</div>
+          {b.description && <div className="text-xs text-gray-500 max-w-[260px] truncate" title={b.description}>{b.description}</div>}
+        </div>
+      ),
+    },
+    {
+      title: t('budget.project'), dataIndex: 'project_code', key: 'project_code', sorter: true, sortOrder: sortOrder('project_code'),
+      render: (v, b) => (v ? <div><div className="font-medium text-gray-800">{v}</div><div className="text-xs text-gray-500 max-w-[200px] truncate" title={b.project_name}>{b.project_name}</div></div>
+        : <span className="text-gray-400">—</span>),
+    },
+    { title: t('budget.loc'), dataIndex: 'loc', key: 'loc', render: (v) => v || <span className="text-gray-400">—</span> },
+    {
+      title: t('budget.source'), dataIndex: 'funding_source', key: 'funding_source',
+      render: (v) => (v ? <span className="px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-700 whitespace-nowrap">{v}</span> : <span className="text-gray-400">—</span>),
+    },
+    { title: t('budget.subProject'), dataIndex: 'sub_project', key: 'sub_project', render: (v) => v || <span className="text-gray-400">—</span> },
+    { title: t('budget.functionCode'), dataIndex: 'function_code', key: 'function_code', render: (v) => v || <span className="text-gray-400">—</span> },
+    {
+      title: t('budget.allocated'), dataIndex: 'allocated_amount', key: 'allocated_amount', align: 'right', sorter: true, sortOrder: sortOrder('allocated_amount'),
+      render: (v) => <span className="font-medium tabular-nums whitespace-nowrap">{formatAmount(v || 0)}</span>,
+    },
+    {
+      title: t('budget.utilized'), dataIndex: 'utilized_amount', key: 'utilized_amount', align: 'right', sorter: true, sortOrder: sortOrder('utilized_amount'),
+      render: (v) => <span className="tabular-nums whitespace-nowrap">{formatAmount(v || 0)}</span>,
+    },
+    {
+      title: t('budget.remaining'), dataIndex: 'remaining_amount', key: 'remaining_amount', align: 'right', sorter: true, sortOrder: sortOrder('remaining_amount'),
+      render: (v) => <span className={`tabular-nums whitespace-nowrap ${Number(v) < 0 ? 'text-red-600 font-medium' : ''}`}>{formatAmount(v || 0)}</span>,
+    },
+    {
+      title: t('budget.utilization'), key: 'rate', sorter: true, sortOrder: sortOrder('rate'), width: 170,
+      render: (_, b) => {
+        const rate = rateOf(b);
+        const over = rate > 100;
+        return (
+          <div className="flex items-center gap-2" title={t('budget.register.rateTooltip', { rate: fmtRate(rate) })}>
+            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden min-w-[60px]" aria-hidden="true">
+              <div className={`h-full rounded-full ${over ? 'bg-red-500' : 'bg-blue-600'}`} style={{ width: `${Math.min(rate, 100)}%` }} />
+            </div>
+            <span className={`text-xs tabular-nums whitespace-nowrap inline-flex items-center gap-0.5 ${over ? 'text-red-600 font-medium' : 'text-gray-700'}`}>
+              {over && <AlertTriangle size={11} aria-label={t('budget.register.overBudget')} />}{fmtRate(rate)}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      title: t('budget.register.status'), dataIndex: 'is_active', key: 'is_active',
+      render: (v) => (v
+        ? <span className="px-2 py-0.5 text-xs rounded-full bg-green-50 text-green-700">{t('budget.register.active')}</span>
+        : <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">{t('budget.register.inactive')}</span>),
+    },
+    {
+      title: t('common.actions'), key: 'actions', fixed: 'right', align: 'right',
+      render: (_, budget) => (
+        <div className="flex justify-end gap-2">
+          <button onClick={() => { setSelectedBudget(budget); setShowDetailModal(true); }} className="text-blue-600 hover:text-blue-800" title={t('budget.viewDetails')}>
+            <Eye size={18} />
+          </button>
+          {canManage && (
+            <>
+              <button onClick={() => { setSelectedBudget(budget); setShowModal(true); }} className="text-green-600 hover:text-green-800" title={t('common.edit')}>
+                <Edit size={18} />
+              </button>
+              <button onClick={() => { if (confirm(t('budget.confirmDelete'))) deleteMutation.mutate(budget.id); }}
+                className="text-red-600 hover:text-red-800" title={t('common.delete')}>
+                <Trash2 size={18} />
+              </button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const SummaryCard = ({ label, value, icon: Icon, color }) => (
+    <div className="bg-white rounded-lg shadow p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-500">{label}</p>
+          <p className={`text-2xl font-bold ${color}`}>{value}</p>
+        </div>
+        <Icon size={32} className="text-gray-300" />
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">{t('budget.title')}</h1>
           <p className="text-gray-500 mt-1">{t('budget.subtitle')}</p>
         </div>
-        {canManage && (
-          <button
-            onClick={() => {
-              setSelectedBudget(null);
-              setShowModal(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus size={18} />
-            {t('budget.new')}
+        <div className="flex flex-wrap gap-2">
+          <button onClick={exportExcel} disabled={exporting} data-testid="budget-export"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+            <Download size={18} /> {exporting ? t('budget.register.exporting') : t('budget.register.export')}
           </button>
-        )}
+          {canManage && (
+            <>
+              <button onClick={() => setShowImport(true)} data-testid="budget-import"
+                className="flex items-center gap-2 px-4 py-2 border border-blue-600 text-blue-700 rounded-lg hover:bg-blue-50">
+                <Upload size={18} /> {t('budget.register.import')}
+              </button>
+              <button onClick={() => { setSelectedBudget(null); setShowModal(true); }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <Plus size={18} /> {t('budget.new')}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Cartes de synthèse */}
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">{t('budget.totalBudgets')}</p>
-                <p className="text-2xl font-bold text-gray-800">{summary.total_budgets}</p>
-              </div>
-              <DollarSign size={32} className="text-blue-500" />
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">{t('budget.totalAllocated')}</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.total_allocated)}</p>
-              </div>
-              <TrendingUp size={32} className="text-green-500" />
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">{t('budget.totalUtilized')}</p>
-                <p className="text-2xl font-bold text-orange-600">{formatCurrency(summary.total_utilized)}</p>
-              </div>
-              <TrendingDown size={32} className="text-orange-500" />
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">{t('budget.totalRemaining')}</p>
-                <p className="text-2xl font-bold text-purple-600">{formatCurrency(summary.total_remaining)}</p>
-              </div>
-              <DollarSign size={32} className="text-purple-500" />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <SummaryCard label={t('budget.totalBudgets')} value={summary.total_budgets} icon={Wallet} color="text-gray-800" />
+          <SummaryCard label={t('budget.totalAllocated')} value={formatAmount(summary.total_allocated || 0)} icon={TrendingUp} color="text-gray-900" />
+          <SummaryCard label={t('budget.totalUtilized')} value={formatAmount(summary.total_utilized || 0)} icon={TrendingDown} color="text-gray-900" />
+          <SummaryCard label={t('budget.totalRemaining')} value={formatAmount(summary.total_remaining || 0)} icon={DollarSign} color="text-gray-900" />
         </div>
       )}
 
-      {/* Filtres */}
       <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder={t('budget.searchPlaceholder')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+        <div className="flex flex-wrap gap-3">
+          <div className="flex-1 min-w-[220px] relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} data-testid="budget-search"
+              placeholder={t('budget.register.searchPlaceholder')}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
           </div>
-          <SearchSelect
-            value={fundingSource}
-            onChange={(e) => setFundingSource(e.target.value)}
-            className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
+          <SearchSelect value={filters.fundingSource} onChange={(e) => setFilter('fundingSource', e.target.value)} data-testid="budget-filter-source"
+            aria-label={t('budget.source')} className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="all">{t('budget.allSources')}</option>
-            <option value="WWF">WWF</option>
-            <option value="UE">{t('budget.eu')}</option>
-            <option value="PNUD">{t('budget.undp')}</option>
-            <option value="Banque Mondiale">{t('budget.worldBank')}</option>
+            {sources.map(s => <option key={s} value={s}>{s}</option>)}
+          </SearchSelect>
+          <SearchSelect value={filters.project} onChange={(e) => setFilter('project', e.target.value)} data-testid="budget-filter-project"
+            aria-label={t('budget.project')} className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 max-w-[280px]">
+            <option value="">{t('budget.register.allProjects')}</option>
+            <option value={NO_PROJECT}>{t('budget.register.withoutProject')}</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.code ? `${p.code} — ` : ''}{p.name}</option>)}
+          </SearchSelect>
+          <SearchSelect value={filters.status} onChange={(e) => setFilter('status', e.target.value)} data-testid="budget-filter-status"
+            aria-label={t('budget.register.status')} className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            <option value="all">{t('budget.register.allStatuses')}</option>
+            <option value="active">{t('budget.register.activeLines')}</option>
+            <option value="inactive">{t('budget.register.inactiveLines')}</option>
           </SearchSelect>
         </div>
       </div>
 
-      {/* Tableau des budgets */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budget.entityCode')}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budget.loc')}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budget.source')}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budget.project')}</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('budget.allocated')}</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('budget.utilized')}</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('budget.remaining')}</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('budget.utilization')}</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {isLoading ? (
-              [...Array(5)].map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  <td colSpan={9} className="px-6 py-4"><div className="h-4 bg-gray-200 rounded"></div></td>
-                </tr>
-              ))
-            ) : budgets.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
-                  {t('budget.none')}
-                </td>
-              </tr>
-            ) : (
-              budgets.map((budget) => {
-                const utilizationRate = getUtilizationRate(budget.allocated_amount, budget.utilized_amount);
-                const isOverBudget = utilizationRate > 100;
-                
-                return (
-                  <tr key={budget.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium text-gray-900">{budget.entity_code}</td>
-                    <td className="px-6 py-4 text-gray-600">{budget.loc || '-'}</td>
-                    <td className="px-6 py-4">
-                      <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
-                        {budget.funding_source || '-'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">{budget.project_name || '-'}</td>
-                    <td className="px-6 py-4 text-right font-medium text-green-600">
-                      {formatCurrency(budget.allocated_amount)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-orange-600">
-                      {formatCurrency(budget.utilized_amount)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-purple-600">
-                      {formatCurrency(budget.remaining_amount)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full ${isOverBudget ? 'bg-red-500' : 'bg-green-500'} rounded-full`}
-                            style={{ width: `${Math.min(utilizationRate, 100)}%` }}
-                          />
-                        </div>
-                        <span className={`text-xs font-medium ${isOverBudget ? 'text-red-600' : 'text-green-600'}`}>
-                          {utilizationRate.toFixed(1)}%
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      <button
-                        onClick={() => {
-                          setSelectedBudget(budget);
-                          setShowDetailModal(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-800"
-                        title={t('budget.viewDetails')}
-                      >
-                        <Eye size={18} />
-                      </button>
-                      {canManage && (
-                        <>
-                          <button
-                            onClick={() => {
-                              setSelectedBudget(budget);
-                              setShowModal(true);
-                            }}
-                            className="text-green-600 hover:text-green-800"
-                            title={t('common.edit')}
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm(t('budget.confirmDelete'))) {
-                                deleteMutation.mutate(budget.id);
-                              }
-                            }}
-                            className="text-red-600 hover:text-red-800"
-                            title={t('common.delete')}
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+      <div className="bg-white rounded-lg shadow overflow-hidden" data-testid="budget-table">
+        <Table
+          rowKey="id"
+          size="middle"
+          columns={columns}
+          dataSource={budgets}
+          loading={isLoading || (isFetching && !budgets.length)}
+          scroll={{ x: 'max-content' }}
+          locale={{ emptyText: <div className="py-8 text-center text-gray-500">{t('budget.none')}</div> }}
+          onChange={(_, __, sorter) => {
+            const key = SORT_KEYS[sorter?.columnKey];
+            setSort(key && sorter.order ? { sort: key, order: sorter.order === 'descend' ? 'desc' : 'asc' } : { sort: 'code', order: 'asc' });
+          }}
+          pagination={{
+            current: pagination.page,
+            pageSize: pagination.limit,
+            total: data?.pagination?.total || 0,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
+            showTotal: (total, [from, to]) => t('budget.register.showing', { from, to, total }),
+            onChange: (page, limit) => setPagination(prev => ({ page: limit !== prev.limit ? 1 : page, limit })),
+          }}
+          summary={() => (totals && budgets.length ? (
+            <Table.Summary fixed>
+              <Table.Summary.Row className="bg-gray-50 font-semibold">
+                <Table.Summary.Cell index={0} colSpan={6}>
+                  <span data-testid="budget-totals">{t('budget.register.totals', { count: data?.pagination?.total || 0 })}</span>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={6} align="right"><span className="tabular-nums whitespace-nowrap">{formatAmount(totals.allocated)}</span></Table.Summary.Cell>
+                <Table.Summary.Cell index={7} align="right"><span className="tabular-nums whitespace-nowrap">{formatAmount(totals.utilized)}</span></Table.Summary.Cell>
+                <Table.Summary.Cell index={8} align="right"><span className="tabular-nums whitespace-nowrap">{formatAmount(totals.remaining)}</span></Table.Summary.Cell>
+                <Table.Summary.Cell index={9}>
+                  <span className="text-xs tabular-nums">{fmtRate(totals.allocated > 0 ? (totals.utilized / totals.allocated) * 100 : 0)}</span>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={10} colSpan={2} />
+              </Table.Summary.Row>
+            </Table.Summary>
+          ) : null)}
+        />
       </div>
 
-      {/* Modals */}
-      <Modal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title={selectedBudget ? t('budget.edit') : t('budget.new')}
-        size="lg"
-        showFooter={false}
-      >
-        <BudgetForm
-          budget={selectedBudget}
-          onClose={() => {
-            setShowModal(false);
-            queryClient.invalidateQueries(['budgets']);
-            queryClient.invalidateQueries(['budget-summary']);
-          }}
-        />
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={selectedBudget ? t('budget.edit') : t('budget.new')} size="lg" showFooter={false}>
+        <BudgetForm budget={selectedBudget} onClose={() => { setShowModal(false); refresh(); }} />
       </Modal>
 
-      <Modal
-        isOpen={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-        title={t('budget.detailTitle', { code: selectedBudget?.entity_code })}
-        size="xl"
-        showFooter={false}
-      >
+      <Modal isOpen={showDetailModal} onClose={() => setShowDetailModal(false)} title={t('budget.detailTitle', { code: selectedBudget?.entity_code })} size="xl" showFooter={false}>
         <BudgetDetail budget={selectedBudget} onClose={() => setShowDetailModal(false)} />
       </Modal>
+
+      {canManage && <ImportBudgetModal isOpen={showImport} onClose={() => setShowImport(false)} onImported={refresh} />}
     </div>
   );
 }

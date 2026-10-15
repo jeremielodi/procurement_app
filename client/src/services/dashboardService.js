@@ -50,9 +50,14 @@ export const dashboardService = {
     return response.data;
   },
 
-  /**
-   * Récupérer les KPI
-   */
+  /** Tableau de bord selon le profil : volets autorisés (période week|month|quarter|year, projectId optionnel) */
+  async getOverview(period = 'month', projectId) {
+    const response = await apiClient.get('/dashboard/overview', {
+      params: projectId ? { period, projectId } : { period }
+    });
+    return response.data;
+  },
+
   /** Tâches GoFlow en cours par profil (projectId optionnel) */
   async getPendingTasks(projectId) {
     const response = await apiClient.get('/dashboard/pending-tasks', {

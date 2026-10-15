@@ -704,7 +704,8 @@
     "PROJECT_MEMBER_ADDED": "Membre ajouté à un projet",
     "PROJECT_MEMBER_REMOVED": "Membre retiré d'un projet",
     "PROJECT_MEMBER_PROFILES_CHANGED": "Profils d'un membre modifiés sur un projet",
-    "APPROVAL_POLICY_CHANGED": "Seuils d'approbation modifiés"
+    "APPROVAL_POLICY_CHANGED": "Seuils d'approbation modifiés",
+    "BUDGET_LINES_IMPORTED": "Import du registre budgétaire"
   },
   "auditExport": {
     "sheet": "Journal d'audit",
@@ -864,6 +865,61 @@
       "laptop": "Ordinateur portable",
       "laptopUnit": "pce",
       "laptopDesc": "Stock existant : Équipements › Enregistrer le parc existant"
+    }
+  },
+  "budgetImport": {
+    "fileName": "modele_import_budget",
+    "exportFileName": "registre_budgetaire",
+    "yes": "Oui",
+    "no": "Non",
+    "total": "TOTAL",
+    "requiredNew": "Obligatoire (nouvelle ligne)",
+    "optional": "Facultatif",
+    "sheets": {
+      "lines": "Lignes budgétaires",
+      "projects": "Projets",
+      "help": "Mode d'emploi"
+    },
+    "headers": {
+      "project": "Code projet",
+      "entityCode": "Code ligne",
+      "description": "Description",
+      "loc": "LOC",
+      "fundingSource": "Source de financement",
+      "subProject": "Sous-projet",
+      "functionCode": "Code fonction",
+      "allocated": "Montant alloué",
+      "active": "Active",
+      "projectName": "Nom du projet",
+      "utilized": "Montant utilisé",
+      "remaining": "Disponible",
+      "rate": "Taux d'utilisation"
+    },
+    "help": {
+      "project": "Code du projet (feuille Projets). Vide = ligne sans projet. Avec le code ligne, il identifie la ligne : s'il existe déjà, la ligne est mise à jour.",
+      "entityCode": "Code de la ligne budgétaire (lettres, chiffres, . - _ /), enregistré en majuscules. Obligatoire.",
+      "description": "Libellé de la ligne.",
+      "loc": "Localisation (bureau, site).",
+      "fundingSource": "Bailleur ou source de financement.",
+      "subProject": "Sous-projet (facultatif).",
+      "functionCode": "Code fonction / activité (facultatif).",
+      "allocated": "Montant alloué, dans la devise de l'entreprise. Obligatoire pour une nouvelle ligne ; jamais inférieur au montant déjà utilisé.",
+      "active": "Oui / Non. Une ligne inactive ne peut plus être choisie dans une réquisition. Oui par défaut."
+    },
+    "ref": {
+      "column": "Colonne",
+      "required": "Obligatoire ?",
+      "description": "Description"
+    },
+    "rules1": "Une ligne est identifiée par Code projet + Code ligne : une ligne existante est mise à jour avec les seules cellules remplies (une cellule vide ne change rien).",
+    "rules2": "Le montant utilisé est calculé par l'application (réquisitions) : il n'est jamais importé.",
+    "rules3": "Les lignes en erreur sont ignorées ; les autres sont enregistrées ensemble après confirmation de l’aperçu.",
+    "rules4": "Un export du registre peut être modifié puis réimporté tel quel : les colonnes en gris (utilisé, disponible, taux) sont ignorées.",
+    "exportNote1": "Registre exporté depuis procureApp. Les colonnes bleues peuvent être modifiées et réimportées (Budget › Importer) ; les colonnes grises sont calculées et ignorées à l'import.",
+    "exportNote2": "Montant utilisé = montants engagés par les réquisitions sur la ligne. Disponible = alloué − utilisé.",
+    "example": {
+      "travel": "Voyages et missions",
+      "equipment": "Équipement informatique"
     }
   }
 }

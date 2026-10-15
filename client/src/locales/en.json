@@ -937,10 +937,156 @@
       "profile": "Profile",
       "pendingTasks": "Pending tasks",
       "oldest": "Oldest",
-      "legend": "Status: orange after 3 days of waiting, red (“blocked”) after 7 days.",
+      "legend": "Status: orange after 2 days of waiting (late), red (“blocked”) after 7 days.",
       "unhandled_one": "{{count}} task with nobody holding this profile on its project",
       "unhandled_other": "{{count}} tasks with nobody holding this profile on their project",
       "noHandler": "Nobody has this profile on this project"
+    },
+    "overview": {
+      "headerSub": "Procurement steering: content depends on your profile",
+      "period": "Period",
+      "periods": {
+        "week": "7 days",
+        "month": "30 days",
+        "quarter": "90 days",
+        "year": "12 months"
+      },
+      "scope": "Indicators computed over the last {{days}} days (rolling period), on the requisitions you can view. Pending tasks and commitments are always as of today.",
+      "days_one": "{{value}} day",
+      "days_other": "{{value}} days",
+      "daysShort": "{{value}} d",
+      "lateBy": "+{{value}} d late",
+      "nobody": "Nobody — to be claimed",
+      "noData": "No data for this period.",
+      "status": {
+        "onTime": "On time",
+        "late": "Late",
+        "blocked": "Blocked"
+      },
+      "col": {
+        "requisition": "Requisition",
+        "step": "Step",
+        "project": "Project",
+        "since": "In step since",
+        "delay": "Delay",
+        "assignee": "Claimed by"
+      },
+      "operations": {
+        "title": "My tasks",
+        "subtitle": "Steps you can handle. A task is late after {{days}} days in its current step.",
+        "total": "To handle",
+        "totalSub": "Pending tasks for your profiles",
+        "late": "Late",
+        "lateSub": "In the step for {{days}} days or more",
+        "blocked_one": "{{count}} blocked (≥ {{days}} d)",
+        "blocked_other": "{{count}} blocked (≥ {{days}} d)",
+        "toHandle": "Handle first",
+        "allOnTime": "Everything is on time",
+        "claimedByMe": "Claimed by me",
+        "unclaimed_one": "{{count}} task is not claimed by anyone",
+        "unclaimed_other": "{{count}} tasks are not claimed by anyone",
+        "oldest": "Oldest",
+        "oldestSub": "Time spent in the current step",
+        "todayTitle": "To handle today",
+        "todaySub": "Oldest first — click the requisition to open the task.",
+        "none": "No pending task for you.",
+        "more": "{{shown}} of {{total}} tasks shown.",
+        "allTasks": "See all my tasks"
+      },
+      "steering": {
+        "title": "Steering",
+        "subtitle": "Lead times, bottlenecks and procurement cycle performance (management).",
+        "cycle": "Median P2P cycle",
+        "cycleSub": "Mean {{mean}} · {{count}} file(s) fully paid",
+        "cycleNone": "No fully paid file in this period",
+        "cycleHint": "From requisition creation to the last payment, for requisitions whose orders were all paid during the period. The median is not skewed by a few exceptionally long files.",
+        "lateTasks": "Late tasks",
+        "lateTasksSub": "Out of {{total}} pending (≥ {{days}} d in the step)",
+        "completion": "Completion rate",
+        "completionSub": "{{completed}} completed out of {{closed}} closed · {{inProgress}} still in progress",
+        "completionHint": "Requisitions submitted during the period: completed (paid) / closed (completed + rejected + cancelled). Files still in progress are not counted as failures.",
+        "conversion": "Conversion to order",
+        "conversionSub": "{{converted}} of {{approved}} approved requisitions",
+        "conversionHint": "Requisitions approved during the period with at least one active purchase order (neither rejected nor cancelled).",
+        "deliveries": "Complete deliveries",
+        "deliveriesSub": "{{delivered}} complete · {{closedShort}} remainder closed · {{inProgress}} in progress",
+        "deliveriesHint": "Orders created during the period whose delivery is finished: fully delivered / (fully delivered + remainder closed).",
+        "urgent": "Urgent purchases",
+        "urgentSub": "{{urgent}} of {{total}} submitted requisitions",
+        "urgentHint": "Requisitions submitted during the period with High or Urgent priority: measures the share of unplanned purchases.",
+        "stepsTitle": "Where does the process slow down?",
+        "stepsSub": "Median duration per step (entering the step → completion), steps completed during the period. Hover a bar for details.",
+        "stepTooltip": "{{label}}: median {{median}}, mean {{mean}} — {{count}} step(s) completed, {{late}} of them in 2 days or more",
+        "lateTitle": "Requests over the target lead time",
+        "lateSub": "Tasks pending for {{days}} days or more, oldest first.",
+        "noLate": "No late task.",
+        "suppliersTitle": "Supplier spend concentration",
+        "suppliersSub": "The top 5 suppliers account for {{share}} of the ordered amount ({{amount}}, {{count}} supplier(s)) — active orders created during the period.",
+        "supplierTooltip": "{{name}}: {{amount}} — {{orders}} order(s)"
+      },
+      "finance": {
+        "title": "Finance",
+        "subtitle": "Budget, commitments and payments — amounts in {{currency}} only.",
+        "budget": "Budget consumed",
+        "budgetSub": "{{paid}} paid out of {{allocated}} allocated",
+        "budgetHint": "Amount PAID (payments made, cumulative) / allocated budget of active budget lines. Unpaid commitments are not counted here.",
+        "otherCurrency_one": "{{count}} payment in another currency not counted",
+        "otherCurrency_other": "{{count}} payments in another currency not counted",
+        "commitments": "Open commitments",
+        "commitmentsSub": "{{count}} approved order(s) left to pay",
+        "commitmentsHint": "Approved orders (neither rejected nor cancelled): order amount minus payments made.",
+        "paymentDelay": "Median payment time",
+        "paymentDelaySub": "Mean {{mean}} · {{count}} payment(s)",
+        "noPayment": "No payment in this period",
+        "paymentDelayHint": "From the invoice date to the payment, for payments made during the period.",
+        "invoices": "Invoices to pay",
+        "invoicesSub": "Amount: {{amount}}",
+        "overdue_one": "{{count}} overdue invoice",
+        "overdue_other": "{{count}} overdue invoices",
+        "byProjectTitle": "Budget by project",
+        "byProjectSub": "Allocated budget and amount paid (cumulative), top 10 projects by allocated budget.",
+        "allocated": "Allocated",
+        "paid": "Paid",
+        "consumed": "Consumed",
+        "projectTooltip": "{{rate}} of the budget paid"
+      },
+      "control": {
+        "title": "Control",
+        "subtitle": "Rejections, competition, matching discrepancies and attempts blocked by internal control.",
+        "rejection": "Rejection / return rate",
+        "rejectionSub": "{{rejected}} rejection(s) and {{returned}} return(s) out of {{decisions}} decisions",
+        "rejectionHint": "Approval decisions (N1, N2, N3, purchase order) made during the period. Each decision counts: a file returned twice counts as two returns. A withdrawal by the requester is not a decision.",
+        "returnedSeveral_one": "{{count}} file returned several times",
+        "returnedSeveral_other": "{{count}} files returned several times",
+        "competition": "Competitive sourcing",
+        "competitionSub": "{{competitive}} of {{total}} purchases · {{sole}} sole source(s)",
+        "competitionHint": "Share of procurement methods with competition (multiple quotations, call for tenders) among the methods chosen during the period.",
+        "discrepancies": "Matching discrepancies",
+        "discrepanciesSub": "of which {{count}} unpaid invoice(s)",
+        "toCheck": "Files to check",
+        "blocked": "Blocked attempts",
+        "blockedSub": "Actions refused by internal control",
+        "blockedHint": "Company audit log during the period (the project filter does not apply).",
+        "decisionsTitle": "Rejections and returns by step",
+        "decisionsSub": "Decisions made during the period.",
+        "colDecisions": "Decisions",
+        "colRejected": "Rejections",
+        "colReturned": "Returns",
+        "colRate": "Rate",
+        "methodsTitle": "Procurement methods chosen",
+        "methodsSub": "Share of each method among purchases classified during the period.",
+        "methodTooltip": "{{count}} purchase(s) — {{share}}",
+        "discrepanciesTitle": "Invoices with discrepancies",
+        "discrepanciesListSub": "Non-compliant order – receipt – invoice matching (invoices neither rejected nor cancelled), most recent first.",
+        "noDiscrepancy": "No matching discrepancy.",
+        "colInvoice": "Invoice",
+        "colSupplier": "Supplier",
+        "colGap": "Discrepancy",
+        "colAmount": "Amount",
+        "blockedTitle": "Blocked attempts",
+        "blockedListSub": "By type, during the period.",
+        "openAudit": "Open the audit log"
+      }
     }
   },
   "charts": {
@@ -2455,7 +2601,102 @@
     "amountRequired": "Amount *",
     "linkedRequisition": "Linked requisition",
     "none_f": "None",
-    "linkedOrder": "Linked order"
+    "linkedOrder": "Linked order",
+    "register": {
+      "searchPlaceholder": "Search: code, description, LOC, sub-project, function, project…",
+      "allProjects": "All projects",
+      "withoutProject": "Without project",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "activeLines": "Active lines",
+      "inactiveLines": "Inactive lines",
+      "active": "Active",
+      "inactive": "Inactive",
+      "showing": "{{from}}–{{to}} of {{total}} lines",
+      "totals_one": "Total ({{count}} line)",
+      "totals_other": "Total ({{count}} lines)",
+      "rateTooltip": "{{rate}} of the allocated amount utilized",
+      "overBudget": "Over budget",
+      "export": "Export",
+      "exporting": "Exporting…",
+      "exportFile": "budget_register",
+      "exportFailed": "Register export failed",
+      "import": "Import"
+    },
+    "import": {
+      "title": "Import the budget register",
+      "templateTitle": "Template to fill in",
+      "templateHint": "A register export (“Export” button) can also be edited and re-imported as is.",
+      "templateXlsx": "Excel template",
+      "templateCsv": "CSV template",
+      "templateFile": "budget_import_template",
+      "templateFailed": "Could not download the template",
+      "columnsTitle": "Columns:",
+      "rules": "A line is identified by Project code + Line code: an existing line is updated with the filled cells only, otherwise it is created (allocated amount required). The utilized amount is computed by the application and never imported.",
+      "chooseFile": "Choose an .xlsx or .csv file (5 MB, 2,000 lines max)",
+      "analyzing": "Analysing…",
+      "importing": "Importing…",
+      "confirm": "Import",
+      "confirmN_one": "Import {{count}} line",
+      "confirmN_other": "Import {{count}} lines",
+      "sumCreate_one": "{{count}} line to create",
+      "sumCreate_other": "{{count}} lines to create",
+      "sumUpdate_one": "{{count}} line to update",
+      "sumUpdate_other": "{{count}} lines to update",
+      "sumUnchanged_one": "{{count}} unchanged line",
+      "sumUnchanged_other": "{{count}} unchanged lines",
+      "sumErrors_one": "{{count}} error",
+      "sumErrors_other": "{{count}} errors",
+      "sumAllocated": "Allocated budget: {{amount}}",
+      "errorsTitle_one": "{{count}} line with an error (skipped)",
+      "errorsTitle_other": "{{count}} errors (lines skipped)",
+      "lineError": "Line {{line}}: {{message}}",
+      "ready": "Preview: nothing is saved yet. Check, then confirm.",
+      "nothing": "No line to create or update.",
+      "line": "Line",
+      "action": "Action",
+      "before": "before: {{amount}}",
+      "actions": {
+        "CREATE": "Create",
+        "UPDATE": "Update",
+        "UNCHANGED": "Unchanged"
+      },
+      "done": "Import done: {{created}} line(s) created, {{updated}} updated",
+      "doneSkipped_one": "{{count}} line with an error was skipped",
+      "doneSkipped_other": "{{count}} lines with errors were skipped",
+      "failed": "Import failed",
+      "columns": {
+        "project": "Project code",
+        "entityCode": "Line code",
+        "description": "Description",
+        "loc": "LOC",
+        "fundingSource": "Funding source",
+        "subProject": "Sub-project",
+        "functionCode": "Function code",
+        "allocated": "Allocated amount",
+        "active": "Active"
+      },
+      "err": {
+        "CODE_REQUIRED": "missing line code",
+        "CODE_INVALID": "invalid line code “{{value}}” (letters, digits, . - _ /)",
+        "PROJECT_UNKNOWN": "unknown project “{{value}}”",
+        "DUPLICATE_LINE": "same project and code as line {{line}}",
+        "TOO_LONG": "“{{column}}” too long ({{max}} characters max)",
+        "AMOUNT_REQUIRED": "allocated amount required for a new line",
+        "AMOUNT_INVALID": "invalid allocated amount “{{value}}”",
+        "ALLOCATED_BELOW_UTILIZED": "allocated amount lower than the amount already utilized ({{utilized}})",
+        "BOOL_INVALID": "“{{column}}”: invalid value “{{value}}” (Yes / No)"
+      },
+      "fileErr": {
+        "UNREADABLE": "Unreadable file: make sure it is an .xlsx or .csv file",
+        "EMPTY": "The file contains no budget line",
+        "MISSING_COLUMNS": "“Line code” column not found: use the template",
+        "TOO_MANY_ROWS": "{{max}} lines max per import",
+        "NOTHING_TO_IMPORT": "No line to create or update",
+        "NO_FILE": "No file received",
+        "ALLOCATED_BELOW_UTILIZED": "Line {{line}}: the utilized amount changed in the meantime and exceeds the new allocated amount. Run the preview again."
+      }
+    }
   },
   "departments": {
     "codeRequired": "Code is required",
@@ -4659,17 +4900,60 @@
       },
       "dashboard": {
         "title": "Dashboard",
-        "summary": "Indicators, alerts and \"Who is blocking?\".",
+        "summary": "Indicators by profile: my tasks, steering, finance, control.",
         "blocks": [
+          {
+            "type": "p",
+            "text": "The content depends on your profile: everyone only sees the sections they are entitled to. Choose the period (7 days, 30 days, 90 days, 12 months — rolling periods) and, if you have access to projects, a project. Figures only cover the requisitions you can view."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Section",
+                "Who sees it",
+                "Content"
+              ],
+              [
+                "My tasks",
+                "Everyone",
+                "Tasks you can handle, late ones, those claimed by you; “To handle today” list"
+              ],
+              [
+                "Steering",
+                "Administrator, CEO, management, auditor",
+                "Median P2P cycle, late tasks, completion, conversion, complete deliveries, urgent purchases, lead time per step, supplier concentration, “Who is blocking?”"
+              ],
+              [
+                "Finance",
+                "Finance, administrator, auditor",
+                "Budget consumed, open commitments, payment time, invoices to pay, budget by project"
+              ],
+              [
+                "Control",
+                "Auditor, administrator",
+                "Rejections and returns per step, competitive sourcing, matching discrepancies, blocked attempts"
+              ]
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Calculation rules"
+          },
           {
             "type": "list",
             "items": [
-              "Key indicators over the chosen period (week, month, year): approval rate, average approval time, conversion into orders, on-time deliveries, budget compliance.",
-              "Cycle counters: requisitions, pending approvals, orders, receipts, invoices (matched / mismatched), payments, active suppliers.",
-              "Alerts: requisitions pending for more than 5 days, budget lines more than 80% used, suppliers rated below 3/5.",
-              "\"Who is blocking?\": pending GoFlow tasks grouped by profile, with how long they have been waiting (orange after 3 days, red \"blocked\" after 7 days) and the details per requisition. An alert flags a profile without any user.",
-              "The budget summary is only visible to Finance and administrators."
+              "Late task: in its current step for 2 days or more; “blocked” from 7 days. Age is counted from entering the step, not from the requisition creation.",
+              "P2P cycle: from requisition creation to the last payment, for requisitions whose orders were all paid during the period. The median is shown with the mean.",
+              "Budget consumed: amount PAID (payments made, cumulative) divided by the allocated budget of active lines. Approved but unpaid orders are in “Open commitments”.",
+              "Completion rate: requisitions submitted during the period completed / closed (completed + rejected + cancelled); those still in progress are counted separately.",
+              "Rejection / return rate: (rejections + returns) / approval decisions of the period; each decision counts, a withdrawal by the requester is not one.",
+              "Amounts: only in the company currency (other currencies are flagged, never added up)."
             ]
+          },
+          {
+            "type": "tip",
+            "text": "Hover the ⓘ icon of a card for its exact definition, and a bar for its details. In “My tasks”, click the requisition to open the task."
           },
           {
             "type": "links",
@@ -4677,6 +4961,10 @@
               {
                 "to": "/dashboard",
                 "label": "Dashboard"
+              },
+              {
+                "to": "/tasks",
+                "label": "My tasks"
               }
             ]
           }
@@ -4684,11 +4972,52 @@
       },
       "budget": {
         "title": "Budget",
-        "summary": "Budget lines per project: allocated, spent, available.",
+        "summary": "Budget line register: allocated, utilized, available; Excel export and import.",
         "blocks": [
           {
             "type": "p",
             "text": "The Budget module is reserved for Finance and administrators. Each project has budget lines (code, description, allocated amount). Requisitions consume the available amount of the lines charged; a requisition that exceeds the available amount is stopped at the budget check. Requesters only see the lines to choose them in their requisition."
+          },
+          {
+            "type": "h",
+            "text": "Register: filter, export, import"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Sort the table by clicking a column header (code, project, amounts, rate) and filter it by search, funding source, project (or “Without project”) and status. The Total row sums all filtered lines.",
+              "“Export” downloads the filtered register as Excel: blue columns can be edited, grey columns are computed (utilized, available, rate).",
+              "“Import” (Finance, administrator): download the template (Excel or CSV) or start from an export, then choose the file. A preview shows the lines to create, to update, unchanged and the errors; nothing is saved before “Import n lines”."
+            ]
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Rule",
+                "Detail"
+              ],
+              [
+                "Identification",
+                "Project code + Line code. Empty project = line without project."
+              ],
+              [
+                "Existing line",
+                "Only filled cells are updated; an empty cell changes nothing."
+              ],
+              [
+                "New line",
+                "Line code and Allocated amount required; Active = Yes by default."
+              ],
+              [
+                "Utilized amount",
+                "Computed by the application, never imported; an allocated amount lower than the utilized amount is refused."
+              ],
+              [
+                "Errors",
+                "Lines with errors are skipped, the others are saved together. Each import is recorded in the audit log."
+              ]
+            ]
           },
           {
             "type": "links",
@@ -5050,7 +5379,8 @@
       "PROJECT_MEMBER_ADDED": "Member added to a project",
       "PROJECT_MEMBER_REMOVED": "Member removed from a project",
       "PROJECT_MEMBER_PROFILES_CHANGED": "Member profiles changed on a project",
-      "APPROVAL_POLICY_CHANGED": "Approval thresholds changed"
+      "APPROVAL_POLICY_CHANGED": "Approval thresholds changed",
+      "BUDGET_LINES_IMPORTED": "Budget register import"
     },
     "groups": {
       "all": "All events",

@@ -704,7 +704,8 @@
     "PROJECT_MEMBER_ADDED": "Member added to a project",
     "PROJECT_MEMBER_REMOVED": "Member removed from a project",
     "PROJECT_MEMBER_PROFILES_CHANGED": "Member profiles changed on a project",
-    "APPROVAL_POLICY_CHANGED": "Approval thresholds changed"
+    "APPROVAL_POLICY_CHANGED": "Approval thresholds changed",
+    "BUDGET_LINES_IMPORTED": "Budget register import"
   },
   "auditExport": {
     "sheet": "Audit log",
@@ -864,6 +865,61 @@
       "laptop": "Laptop",
       "laptopUnit": "pce",
       "laptopDesc": "Existing stock: Equipment › Register existing equipment"
+    }
+  },
+  "budgetImport": {
+    "fileName": "budget_import_template",
+    "exportFileName": "budget_register",
+    "yes": "Yes",
+    "no": "No",
+    "total": "TOTAL",
+    "requiredNew": "Required (new line)",
+    "optional": "Optional",
+    "sheets": {
+      "lines": "Budget lines",
+      "projects": "Projects",
+      "help": "Instructions"
+    },
+    "headers": {
+      "project": "Project code",
+      "entityCode": "Line code",
+      "description": "Description",
+      "loc": "LOC",
+      "fundingSource": "Funding source",
+      "subProject": "Sub-project",
+      "functionCode": "Function code",
+      "allocated": "Allocated amount",
+      "active": "Active",
+      "projectName": "Project name",
+      "utilized": "Utilized amount",
+      "remaining": "Available",
+      "rate": "Utilization rate"
+    },
+    "help": {
+      "project": "Project code (Projects sheet). Empty = line without project. Together with the line code it identifies the line: if it already exists, the line is updated.",
+      "entityCode": "Budget line code (letters, digits, . - _ /), stored in upper case. Required.",
+      "description": "Line label.",
+      "loc": "Location (office, site).",
+      "fundingSource": "Donor or funding source.",
+      "subProject": "Sub-project (optional).",
+      "functionCode": "Function / activity code (optional).",
+      "allocated": "Allocated amount, in the company currency. Required for a new line; never lower than the amount already utilized.",
+      "active": "Yes / No. An inactive line can no longer be chosen in a requisition. Yes by default."
+    },
+    "ref": {
+      "column": "Column",
+      "required": "Required?",
+      "description": "Description"
+    },
+    "rules1": "A line is identified by Project code + Line code: an existing line is updated with the filled cells only (an empty cell changes nothing).",
+    "rules2": "The utilized amount is computed by the application (requisitions): it is never imported.",
+    "rules3": "Lines with errors are skipped; the others are saved together once the preview is confirmed.",
+    "rules4": "A register export can be edited and re-imported as is: grey columns (utilized, available, rate) are ignored.",
+    "exportNote1": "Register exported from procureApp. Blue columns can be edited and re-imported (Budget › Import); grey columns are computed and ignored on import.",
+    "exportNote2": "Utilized amount = amounts committed by requisitions on the line. Available = allocated − utilized.",
+    "example": {
+      "travel": "Travel and missions",
+      "equipment": "IT equipment"
     }
   }
 }

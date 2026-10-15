@@ -84,4 +84,15 @@ test.describe.serial('API › Visibilité des réquisitions par projet', () => {
     expect(await listOf(request, users.mgrQ.token)).toEqual([]);
     expect((await request.get(`/api/requisitions/${reqAlice.id}`, { headers: H(users.mgrQ.token) })).status()).toBe(404);
   });
+
+  test('Profil Manager ajouté à un membre du projet : activé sur ses projets, il voit alors toutes les réquisitions', async ({ request }) => {
+    const { alice } = users;
+    const res = await request.put(`/api/users/${alice.id}`, { headers: H(), data: {
+      firstName: 'alice', lastName: stamp, profileIds: ['prof_requester', 'prof_manager_n2'],
+    } });
+    expect(res.status(), await res.text()).toBe(200);
+    const member = (await (await request.get(`/api/projects/${projectP.id}/members`, { headers: H() })).json()).data.find(m => m.id === alice.id);
+    expect(member.profiles.find(p => p.id === 'prof_manager_n2')?.assigned).toBe(true);
+    expect(await listOf(request, alice.token)).toEqual([reqAlice.id, reqBob.id].sort());
+  });
 });

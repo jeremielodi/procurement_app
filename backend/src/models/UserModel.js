@@ -285,6 +285,21 @@ class UserModel {
     }
     // Profil retiré : retiré aussi de tous les projets
     await db.exec('DELETE FROM project_member_profiles WHERE user_id = $1 AND NOT (profile_id = ANY($2::varchar[]))', [id, profileIds]);
+    // Profil de workflow ajouté (sans « Tous les projets ») : activé sur les projets dont il est déjà membre, comme à
+    // l'ajout d'un membre — sinon il ne s'exerce nulle part (ex. Manager niveau 2 qui ne voit aucune réquisition).
+    // Les profils par projet envoyés par la fiche (setProjectProfiles, appelé ensuite) restent prioritaires
+    const held = new Set(previous.map(p => p.profile_id));
+    const added = profileIds.filter(p => !held.has(p) && !everywhere.has(p));
+    if (added.length) {
+      await db.exec(
+        `INSERT INTO project_member_profiles (project_id, user_id, profile_id, assigned_by)
+         SELECT pm.project_id, pm.user_id, pr.id, pm.user_id
+         FROM project_members pm JOIN profiles pr ON pr.id = ANY($2::varchar[]) AND pr.project_scoped
+         WHERE pm.user_id = $1
+           AND NOT EXISTS (SELECT 1 FROM project_member_profiles x WHERE x.project_id = pm.project_id AND x.user_id = pm.user_id AND x.profile_id = pr.id)`,
+        [id, added]
+      );
+    }
     
     return { success: true };
   }

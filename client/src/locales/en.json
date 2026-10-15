@@ -2326,7 +2326,7 @@
     "projectsTitle": "Profiles per project",
     "noProjects": "Member of no project",
     "noProjectProfile": "First tick a workflow profile (Manager, Requester…) above",
-    "projectProfilesHint": "Choose the user's projects and, for each one, the workflow profiles they hold there (e.g. Manager on project A, Requester on project B). Profiles ticked \"All projects\" already apply everywhere.",
+    "projectProfilesHint": "Choose the user's projects and, for each one, the workflow profiles they hold there (e.g. Manager on project A, Requester on project B). Profiles ticked \"All projects\" already apply everywhere. A workflow profile you tick is switched on in all their projects; remove it here from the projects where it should not apply.",
     "addProject": "Add a project",
     "selectProject": "Choose a project",
     "removeProject": "Remove from this project",

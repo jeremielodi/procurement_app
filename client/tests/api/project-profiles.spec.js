@@ -133,11 +133,11 @@ test.describe.serial('API › Profils liés au projet', () => {
     const kept = (await (await request.get(`/api/users/${users.finance.id}`, { headers: H() })).json()).data;
     expect(kept.profiles.find(p => p.id === 'prof_finance')?.all_projects).toBe(true);
 
-    // Profil retiré de la fiche : plus aucun profil sur le projet A
+    // Profil retiré de la fiche : retiré du projet A ; profil ajouté (Demandeur) : activé d'office sur ses projets
     expect((await update({ profileIds: ['prof_requester'], allProjectsProfileIds: [] })).status()).toBe(200);
     const member = (await members(request, projectA.id)).find(m => m.id === users.finance.id);
     expect(member.profiles.map(p => p.id)).toEqual(['prof_requester']);
-    expect(member.profiles[0].assigned).toBe(false);
+    expect(member.profiles[0].assigned).toBe(true);
   });
 
   test('Fiche utilisateur : Manager sur le projet A, Demandeur sur le projet B ; profils contrôlés', async ({ request }) => {

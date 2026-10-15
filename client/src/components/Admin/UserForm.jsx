@@ -118,6 +118,11 @@ export default function UserForm({ user, onClose }) {
   };
 
   const toggleProfile = (profileId) => {
+    // Profil de workflow ajouté : activé d'office sur chacun des projets de l'utilisateur (comme à l'ajout d'un membre) ;
+    // l'administrateur peut ensuite le retirer projet par projet
+    if (!formData.profileIds.includes(profileId) && profiles.some(p => p.id === profileId && p.project_scoped)) {
+      setProjectRows(rows => rows && rows.map(r => (r.profileIds.includes(profileId) ? r : { ...r, profileIds: [...r.profileIds, profileId] })));
+    }
     setFormData(prev => {
       const removing = prev.profileIds.includes(profileId);
       return {

@@ -2326,7 +2326,7 @@
     "projectsTitle": "Profils par projet",
     "noProjects": "Membre d'aucun projet",
     "noProjectProfile": "Cochez d'abord un profil de workflow (Manager, Demandeur…) ci-dessus",
-    "projectProfilesHint": "Choisissez les projets de l'utilisateur et, pour chacun, les profils de workflow qu'il y exerce (ex. Manager sur le projet A, Demandeur sur le projet B). Les profils cochés « Tous les projets » valent déjà partout.",
+    "projectProfilesHint": "Choisissez les projets de l'utilisateur et, pour chacun, les profils de workflow qu'il y exerce (ex. Manager sur le projet A, Demandeur sur le projet B). Les profils cochés « Tous les projets » valent déjà partout. Un profil de workflow que vous cochez est activé d'office sur tous ses projets ; retirez-le ici des projets où il ne doit pas s'exercer.",
     "addProject": "Ajouter un projet",
     "selectProject": "Choisir un projet",
     "removeProject": "Retirer de ce projet",

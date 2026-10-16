@@ -85,14 +85,17 @@ test.describe.serial('API › Visibilité des réquisitions par projet', () => {
     expect((await request.get(`/api/requisitions/${reqAlice.id}`, { headers: H(users.mgrQ.token) })).status()).toBe(404);
   });
 
-  test('Filtre par demandeur : liste des demandeurs visibles, liste et total filtrés', async ({ request }) => {
+  test('Filtre par demandeur : tous les utilisateurs de l\'entreprise, nombre de réquisitions visibles, liste et total filtrés', async ({ request }) => {
     const requesters = async (token) => (await (await request.get('/api/requisitions/requesters', { headers: H(token) })).json()).data;
-    // Simple demandeuse : elle-même seulement (Bob n'est pas révélé)
-    expect((await requesters(users.alice.token)).map(u => u.id)).toEqual([users.alice.id]);
-    // Manager du projet : Alice et Bob, avec leur nombre de réquisitions
-    const forMgr = (await requesters(users.mgrP.token)).filter(u => [users.alice.id, users.bob.id].includes(u.id));
-    expect(forMgr.map(u => [u.first_name, u.count]).sort()).toEqual([['alice', 1], ['bob', 1]]);
-    expect((await requesters(users.mgrQ.token)).map(u => u.id)).not.toContain(users.alice.id);
+    const countsOf = (list) => Object.fromEntries(list.filter(u => [users.alice.id, users.bob.id].includes(u.id)).map(u => [u.first_name, u.count]));
+    // Tous les utilisateurs de l'entreprise sont proposés ; le nombre ne compte que les réquisitions visibles
+    expect(countsOf(await requesters(users.alice.token))).toEqual({ alice: 1, bob: 0 });
+    expect(countsOf(await requesters(users.mgrP.token))).toEqual({ alice: 1, bob: 1 });
+    expect(countsOf(await requesters(users.mgrQ.token))).toEqual({ alice: 0, bob: 0 });
+    // Cloisonnement : jamais d'utilisateur d'une autre entreprise ni de compte fournisseur / super admin
+    const all = await requesters(admin);
+    expect(all.every(u => u.email)).toBe(true);
+    expect(all.some(u => /^superadmin@/.test(u.email))).toBe(false);
 
     const res = await (await request.get(`/api/requisitions?search=${stamp}&requesterId=${users.bob.id}`, { headers: H(users.mgrP.token) })).json();
     expect(res.data.map(r => r.id)).toEqual([reqBob.id]);

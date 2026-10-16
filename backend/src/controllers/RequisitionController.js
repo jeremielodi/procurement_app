@@ -508,7 +508,7 @@ async create(req, res) {
     }
   }
 
-  /** GET /requisitions/requesters — demandeurs des réquisitions visibles (filtre de la liste) */
+  /** GET /requisitions/requesters — utilisateurs de l'entreprise avec leur nombre de réquisitions visibles (filtre de la liste) */
   async requesters(req, res) {
     try {
       res.json({ success: true, data: await requisitionModel.listRequesters(req.user.id) });

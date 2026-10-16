@@ -434,18 +434,22 @@ class RequisitionModel {
   }
 
   /**
-   * Demandeurs proposés dans le filtre de la liste : uniquement ceux des réquisitions visibles par l'utilisateur
-   * (même cloisonnement que la liste : entreprise + visibilité par projet), avec leur nombre de réquisitions
+   * Demandeurs proposés dans le filtre de la liste : tous les utilisateurs actifs de l'entreprise, plus les comptes
+   * désactivés ayant des réquisitions visibles. count = nombre de réquisitions VISIBLES par l'utilisateur
+   * (même cloisonnement que la liste : entreprise + visibilité par projet) — 0 si aucune.
    */
   async listRequesters(viewerId) {
     const params = [];
     let where = tenant.filter('r.enterprise_id', params);
     if (viewerId) where += requisitionVisibilitySql('r', viewerId, params);
+    const userScope = tenant.filter('u.enterprise_id', params);
     return db.select(
-      `SELECT u.id, u.first_name, u.last_name, u.email, u.avatar_updated_at AS avatar_version, COUNT(*)::int AS count
-       FROM requisitions r JOIN users u ON u.id = r.requester_id
-       WHERE 1=1${where}
-       GROUP BY u.id, u.first_name, u.last_name, u.email, u.avatar_updated_at
+      `SELECT u.id, u.first_name, u.last_name, u.email, u.avatar_updated_at AS avatar_version, u.is_active,
+              COALESCE(v.count, 0)::int AS count
+       FROM users u
+       LEFT JOIN (SELECT r.requester_id, COUNT(*) AS count FROM requisitions r WHERE 1=1${where} GROUP BY r.requester_id) v
+              ON v.requester_id = u.id
+       WHERE u.enterprise_id IS NOT NULL AND (u.is_active OR v.count > 0)${userScope}
        ORDER BY LOWER(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')), u.email`,
       params
     );

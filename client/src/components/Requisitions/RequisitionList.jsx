@@ -461,7 +461,7 @@ export default function RequisitionList() {
           >
             <Filter size={18} />
             {t('common.filters')}
-            {(filters.progress !== 'all' || filters.status !== 'all' || filters.priority !== 'all' || filters.departmentId !== 'all' || filters.fromDate || filters.toDate) && (
+            {(filters.progress !== 'all' || filters.status !== 'all' || filters.priority !== 'all' || filters.departmentId !== 'all' || filters.requesterId !== 'all' || filters.fromDate || filters.toDate) && (
               <span className="ml-1 w-2 h-2 bg-blue-600 rounded-full" />
             )}
           </button>
@@ -553,10 +553,11 @@ export default function RequisitionList() {
                 aria-label={t('requisitions.requester')}
                 data-testid="requisition-requester-filter"
                 disabled={requestersLoading}
+                searchThreshold={0}
               >
                 <option value="all">{t('requisitions.allRequesters')}</option>
                 {requesters.map(u => (
-                  <option key={u.id} value={u.id}>{t('requisitions.requesterOption', { name: requesterName(u), count: u.count })}</option>
+                  <option key={u.id} value={u.id} data-search={u.email}>{t('requisitions.requesterOption', { name: requesterName(u), count: u.count })}</option>
                 ))}
               </SearchSelect>
               <input

@@ -32,6 +32,8 @@ function collectOptions(children, group = null, out = []) {
         label,
         disabled: !!child.props.disabled,
         group,
+        // data-search : texte recherché en plus du libellé, non affiché (ex. email)
+        search: child.props['data-search'] || '',
       })
     }
   })
@@ -76,7 +78,7 @@ const SearchSelect = forwardRef(function SearchSelect(
 
   const selected = options.find(o => o.value === current)
   const q = normalize(query.trim())
-  const filtered = q ? options.filter(o => normalize(o.label).includes(q) || normalize(o.group).includes(q)) : options
+  const filtered = q ? options.filter(o => normalize(o.label).includes(q) || normalize(o.group).includes(q) || normalize(o.search).includes(q)) : options
 
   const place = useCallback(() => {
     const r = buttonRef.current?.getBoundingClientRect()

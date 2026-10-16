@@ -368,18 +368,14 @@ async function processClassifyProcurement(task) {
     return { processTerminated: true };
   }
 
-  const estimatedAmount = getVariableValue(task.variables, 'estimatedAmount');
   const requesterId = getVariableValue(task.variables, 'requesterId');
   const requisitionNumber = getVariableValue(task.variables, 'requisitionNumber');
 
-  // Méthode choisie par les achats à l'étape Activity_DetermineType (prime sur le calcul par montant)
+  // La méthode est choisie par l'utilisateur à l'étape Activity_DetermineType : ce worker la transmet seulement
+  // (statut de la réquisition) — il ne la recalcule jamais et n'écrit rien dans l'historique en son nom.
+  // Choix absent : erreur → nouvelle tentative puis incident GoFlow (jamais de méthode inventée)
   const chosenMethod = getVariableValue(task.variables, 'procurementMethod');
-  const result = await requisitionModel.classifyProcurement(estimatedAmount, requisitionId, chosenMethod);
-
-  await addWorkflowHistory(
-    processInstanceId, 'requisition', requisitionId, task.id,
-    'Procurement Classification', result.procurementMethod, result.classificationReason
-  );
+  const result = await requisitionModel.applyChosenMethod(requisitionId, chosenMethod);
 
   const methodLabels = {
     DIRECT_PURCHASE: 'Achat direct',

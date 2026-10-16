@@ -4,6 +4,8 @@ const camundaService = require('../services/CamundaService');
 const db             = require('../config/database');
 const segregation    = require('../utils/segregation');
 const { audit, AUDIT } = require('../utils/auditLog');
+const i18n           = require('../i18n');
+const invoiceExportService = require('../services/InvoiceExportService');
 
 class InvoiceController {
 
@@ -144,6 +146,22 @@ class InvoiceController {
       res.json({ success: true, data: inv });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Erreur récupération facture', error: error.message });
+    }
+  }
+
+  /** PDF de la facture (langue : ?lang= puis Accept-Language) */
+  async generatePDF(req, res) {
+    try {
+      const result = /^\d+$/.test(String(req.params.id))
+        ? await invoiceExportService.generatePDF(req.params.id, { lang: i18n.fromRequest(req) })
+        : null;
+      if (!result) return res.status(404).json({ success: false, message: 'Facture non trouvée' });
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', `inline; filename="${String(result.invoice.invoice_number).replace(/[^\w.-]+/g, '_')}.pdf"`);
+      res.end(result.pdf);
+    } catch (error) {
+      console.error('Error generating invoice PDF:', error);
+      res.status(500).json({ success: false, message: 'Erreur lors de la génération du PDF', error: error.message });
     }
   }
 

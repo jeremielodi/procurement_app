@@ -768,6 +768,10 @@ router.get('/invoices',
   authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
   invoiceController.getAll.bind(invoiceController)
 );
+router.get('/invoices/:id/pdf',
+  authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
+  invoiceController.generatePDF.bind(invoiceController)
+);
 router.get('/invoices/:id',
   authenticate, hasPermission('VIEW_PURCHASE_ORDERS'),
   invoiceController.getById.bind(invoiceController)

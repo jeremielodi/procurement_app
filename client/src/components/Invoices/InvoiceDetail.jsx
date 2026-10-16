@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, CheckCircle, XCircle, AlertTriangle, RefreshCw, CreditCard } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle, XCircle, AlertTriangle, RefreshCw, CreditCard, Eye, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { invoiceService } from '../../services/invoiceService';
+import BlobPdfViewer from '../Common/BlobPdfViewer';
 import { t, withLabel, labelMap, getLocale } from '../../i18n';
 
 const MATCH_CONFIG = withLabel('matchResult', {
@@ -22,6 +23,7 @@ export default function InvoiceDetail() {
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [rematchLoading, setRematchLoading] = useState(false);
+  const [showPdf, setShowPdf] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -78,11 +80,36 @@ export default function InvoiceDetail() {
             </p>
           </div>
         </div>
-        <button onClick={handleRematch} disabled={rematchLoading}
-          className="flex items-center gap-2 border border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm">
-          <RefreshCw size={14} className={rematchLoading ? 'animate-spin' : ''} /> {t('invoice.rematch')}
-        </button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button onClick={handleRematch} disabled={rematchLoading}
+            className="flex items-center gap-2 border border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm">
+            <RefreshCw size={14} className={rematchLoading ? 'animate-spin' : ''} /> {t('invoice.rematch')}
+          </button>
+          <button onClick={() => setShowPdf(true)} data-testid="invoice-pdf-preview"
+            className="flex items-center gap-2 border border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm">
+            <Eye size={14} /> {t('invoice.pdfPreview')}
+          </button>
+          <button onClick={() => invoiceService.downloadPDF(invoice.id, invoice.invoice_number).catch(() => {})}
+            data-testid="invoice-pdf-download"
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm">
+            <Download size={14} /> {t('common.download')}
+          </button>
+        </div>
       </div>
+
+      {showPdf && (
+        <BlobPdfViewer
+          title={invoice.invoice_number}
+          fileName={`${invoice.invoice_number}.pdf`}
+          fetchPdf={() => invoiceService.getPDF(invoice.id)}
+          onClose={() => setShowPdf(false)}
+          infoBar={<>
+            <span><span className="text-gray-500">{t('grn.orderLabel')}</span> <b>{invoice.po_number || '—'}</b></span>
+            <span><span className="text-gray-500">{t('grn.supplierLabel')}</span> <b>{invoice.supplier_name || '—'}</b></span>
+            <span><span className="text-gray-500">{t('invoice.total')}</span> <b>{parseFloat(invoice.total_amount || 0).toLocaleString(getLocale())} {invoice.currency}</b></span>
+          </>}
+        />
+      )}
 
       {/* Amounts */}
       <div className="grid grid-cols-3 gap-4 mb-6">

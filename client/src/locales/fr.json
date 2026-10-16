@@ -1834,6 +1834,7 @@
     "rematchResult": "Rapprochement : {{status}}",
     "rematchError": "Erreur rapprochement",
     "rematch": "Relancer rapprochement",
+    "pdfPreview": "Aperçu PDF",
     "subtotal": "Sous-total HT",
     "tax": "TVA / Taxes",
     "total": "Total TTC",

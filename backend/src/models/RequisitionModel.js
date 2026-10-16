@@ -604,48 +604,21 @@ class RequisitionModel {
   }
 
   /**
-   * Classifier la méthode d'achat (worker classify_procurement) : la méthode choisie par les achats à l'étape
-   * « Déterminer la méthode d'achat » prime ; à défaut (ancien processus), elle est déduite du montant
-   * ou d'une justification de source unique approuvée.
+   * Méthode d'achat transmise au processus (worker classify_procurement) : c'est TOUJOURS celle choisie par
+   * l'utilisateur à l'étape « Déterminer la méthode d'achat » (Activity_DetermineType, contrôlée à la complétion par
+   * TaskController : obligatoire, au moins aussi exigeante que le montant). Le système ne la détermine jamais :
+   * aucun calcul par montant, aucun historique en son nom ; seul le statut CLASSIFIED_* de la réquisition est mis à jour.
+   * Choix absent ou inconnu → erreur (incident GoFlow) plutôt qu'une méthode inventée.
    */
-  async classifyProcurement(estimatedAmount, requisitionId, chosenMethod = null) {
-    let procurementMethod = '';
-    let classificationReason = '';
-
-    if (chosenMethod && !this.checkChosenMethod(chosenMethod, estimatedAmount)) {
-      procurementMethod = chosenMethod;
-      classificationReason = 'Method selected by procurement';
-    } else {
-      procurementMethod = this.requiredProcurementMethod(estimatedAmount);
-      classificationReason = {
-        DIRECT_PURCHASE: 'Amount below direct purchase threshold',
-        MULTIPLE_QUOTATIONS: 'Amount requires multiple quotations',
-        RFP: 'Amount requires formal tender process'
-      }[procurementMethod];
-
-      const soleSource = await db.one(
-        'SELECT * FROM sole_source_justifications WHERE requisition_id = $1 AND approved = true',
-        [requisitionId]
+  async applyChosenMethod(requisitionId, chosenMethod) {
+    if (!PROCUREMENT_METHODS.includes(chosenMethod)) {
+      throw Object.assign(
+        new Error(`Méthode d'achat absente ou inconnue (${chosenMethod || 'vide'}) : elle doit être choisie à l'étape « Déterminer la méthode d'achat »`),
+        { code: 'PROCUREMENT_METHOD_REQUIRED' }
       );
-      if (soleSource) {
-        procurementMethod = 'SOLE_SOURCE';
-        classificationReason = 'Approved sole source justification';
-      }
     }
-
-    await this.updateStatus(requisitionId, `CLASSIFIED_${procurementMethod}`);
-    
-    await this.addWorkflowHistory({
-      entityType: 'requisition',
-      entityId: requisitionId,
-      action: `CLASSIFIED_${procurementMethod}`,
-      comments: classificationReason
-    });
-    
-    return { 
-      procurementMethod, 
-      classificationReason 
-    };
+    await this.updateStatus(requisitionId, `CLASSIFIED_${chosenMethod}`);
+    return { procurementMethod: chosenMethod };
   }
 
   /**

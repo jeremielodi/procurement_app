@@ -1834,6 +1834,7 @@
     "rematchResult": "Matching: {{status}}",
     "rematchError": "Matching error",
     "rematch": "Re-run matching",
+    "pdfPreview": "PDF preview",
     "subtotal": "Subtotal (excl. tax)",
     "tax": "VAT / Taxes",
     "total": "Total (incl. tax)",

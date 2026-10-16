@@ -1,4 +1,5 @@
 import api from './api';
+import { getLang } from '../i18n';
 
 export const invoiceService = {
   getAll: async (params = {}) => {
@@ -25,5 +26,20 @@ export const invoiceService = {
   reject: async (id, data) => {
     const response = await api.post(`/invoices/${id}/reject`, data);
     return response.data;
+  },
+  // PDF dans la langue de l'interface
+  getPDF: async (id) => {
+    const response = await api.get(`/invoices/${id}/pdf`, { params: { lang: getLang() }, responseType: 'blob' });
+    return response.data;
+  },
+  // Téléchargement direct (sans aperçu)
+  downloadPDF: async (id, invoiceNumber) => {
+    const blob = await invoiceService.getPDF(id);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${invoiceNumber || 'INV'}.pdf`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 };

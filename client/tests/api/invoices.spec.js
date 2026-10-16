@@ -28,6 +28,26 @@ test.describe('API › Invoices', () => {
     expect(res.status()).toBeLessThan(500);
   });
 
+  test('GET /api/invoices/:id/pdf — PDF de la facture (FR et EN)', async ({ request }) => {
+    const list = await (await request.get('/api/invoices', { headers: auth(token) })).json();
+    test.skip(!list.data?.length, 'Aucune facture en base');
+    for (const lang of ['fr', 'en']) {
+      const res = await request.get(`/api/invoices/${list.data[0].id}/pdf?lang=${lang}`, { headers: auth(token) });
+      expect(res.status()).toBe(200);
+      expect(res.headers()['content-type']).toContain('application/pdf');
+      expect((await res.body()).subarray(0, 4).toString()).toBe('%PDF');
+    }
+  });
+
+  test('GET /api/invoices/:id/pdf — 404 pour une facture inexistante', async ({ request }) => {
+    expect((await request.get('/api/invoices/99999/pdf', { headers: auth(token) })).status()).toBe(404);
+    expect((await request.get('/api/invoices/abc/pdf', { headers: auth(token) })).status()).toBe(404);
+  });
+
+  test('GET /api/invoices/:id/pdf — 401 sans token', async ({ request }) => {
+    expect((await request.get('/api/invoices/1/pdf')).status()).toBe(401);
+  });
+
   test('POST /api/invoices — 400 with empty body', async ({ request }) => {
     const res  = await request.post('/api/invoices', {
       headers: auth(token),

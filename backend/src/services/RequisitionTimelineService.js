@@ -192,6 +192,10 @@ class RequisitionTimelineService {
           tasks.set(row.task_id, t);
           continue;
         }
+        // Méthode d'achat choisie par l'utilisateur : c'est elle qui fait foi pour l'étape « Méthode d'achat »
+        if (key === 'Activity_DetermineType' && json?.user_vars?.procurementMethod) {
+          classification = { method: json.user_vars.procurementMethod, date: row.performed_at, byUser: true };
+        }
         // Tâches complétées via leur formulaire : l'auteur est sur le document
         const docActorId = key === 'Activity_POApproval' ? pos.find(p => p.approved_by)?.approved_by
           : key === 'Activity_ProcessPayment' ? (payments[0]?.created_by || payments[0]?.approved_by)
@@ -272,6 +276,9 @@ class RequisitionTimelineService {
         budget = { ok, date: row.performed_at };
         events.push({ date: row.performed_at, kind: ok ? 'success' : 'danger', title: ok ? T('timeline.budgetOk') : T('timeline.budgetKo'), actor: T('timeline.system'), details: [...budgetLines], links: [] });
       } else if (name === 'Procurement Classification') {
+        // Simple transmission du choix de l'utilisateur (processus antérieurs au 2026-10-16) : pas d'événement « Système ».
+        // Méthode différente (ancien worker qui recalculait par montant) : l'événement reste, c'est le chemin suivi
+        if (classification?.byUser && classification.method === action) continue;
         classification = { method: action, date: row.performed_at };
         events.push({
           date: row.performed_at, kind: 'info', title: T('timeline.methodTitle', { method: methodLabel(action, lang) }), actor: T('timeline.system'),

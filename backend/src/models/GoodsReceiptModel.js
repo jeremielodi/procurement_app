@@ -121,68 +121,17 @@ class GoodsReceiptModel {
         const lotNumber = String(raw.lotNumber ?? raw.lot_number ?? '').trim();
         const expiryDate = raw.expiryDate ?? raw.expiry_date ?? null;
         const toStock = !!(stockItem?.is_stockable && accepted > EPS);
-        if (toStock && stockItem.track_lots && !lotNumber) {
-          throw fail(400, 'LOT_REQUIRED', `${stockItem.name} : n° de lot obligatoire`, { line: index });
-        }
-        if (toStock && stockItem.track_expiry && !expiryDate) {
-          throw fail(400, 'EXPIRY_REQUIRED', `${stockItem.name} : date de péremption obligatoire`, { line: index });
-        }
-        if (toStock && expiryDate && String(expiryDate).slice(0, 10) < new Date().toISOString().slice(0, 10)) {
-          throw fail(400, 'LOT_EXPIRED', `${stockItem.name} : lot ${lotNumber} déjà périmé — à rejeter`, { line: index });
-        }
-
-        // Équipements suivis par n° de série : un n° (et éventuellement un n° d'inventaire) par unité acceptée
-        let serials = [];
-        if (toStock && stockItem.track_serials) {
-          if (!Number.isInteger(accepted)) throw fail(400, 'SERIAL_INTEGER', `${stockItem.name} : quantité entière obligatoire`, { line: index });
-          serials = (raw.serials || raw.serialNumbers || []).map(s => (typeof s === 'string' ? { serialNumber: s } : s))
-            .map(s => ({ serialNumber: String(s.serialNumber || s.serial_number || '').trim(), assetTag: String(s.assetTag || s.asset_tag || '').trim() || null }))
-            .filter(s => s.serialNumber);
-          if (serials.length !== accepted) {
-            throw fail(400, 'SERIALS_REQUIRED', `${stockItem.name} : ${accepted} n° de série attendu(s), ${serials.length} saisi(s)`, { line: index });
-          }
-          const seen = new Set();
-          for (const s of serials) {
-            const key = s.serialNumber.toUpperCase();
-            if (seen.has(key)) throw fail(400, 'SERIAL_DUPLICATE', `${stockItem.name} : n° de série ${s.serialNumber} en double`, { line: index });
-            seen.add(key);
-          }
-          const known = await tx.select(
-            `SELECT serial_number FROM stock_units WHERE stock_item_id = $1 AND status <> 'VOID' AND UPPER(serial_number) = ANY($2::text[])`,
-            [stockItem.id, [...seen]]
-          );
-          if (known.length) throw fail(400, 'SERIAL_EXISTS', `${stockItem.name} : n° de série déjà enregistré (${known.map(k => k.serial_number).join(', ')})`, { line: index });
-          await require('./StockEquipmentModel').checkAssetTags(tx, po.enterprise_id, serials);
-        }
+        const serials = toStock
+          ? await this.stockLineChecks(tx, { stockItem, accepted, lotNumber, expiryDate, serials: raw.serials || raw.serialNumbers, enterpriseId: po.enterprise_id, index })
+          : [];
 
         lines.push({ raw, label, received, accepted, rejected, poItem, stockItem, requestedItemId, lotNumber, expiryDate, toStock, serials });
       }
 
       // ---- 2. Dépôt (si au moins une ligne entre en stock)
-      let warehouse = null;
-      if (lines.some(l => l.toStock)) {
-        if (userId) {
-          const accessible = (await warehouseModel.accessibleFor(userId))
-            .filter(w => String(w.enterprise_id) === String(po.enterprise_id));
-          if (!accessible.length) {
-            throw fail(403, 'NO_WAREHOUSE_ACCESS', 'Vous n\'avez accès à aucun dépôt : demandez un accès à votre administrateur');
-          }
-          if (warehouseId) {
-            warehouse = accessible.find(w => String(w.id) === String(warehouseId));
-            if (!warehouse) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès à ce dépôt');
-          } else if (accessible.length === 1) {
-            warehouse = accessible[0];
-          } else {
-            throw fail(400, 'WAREHOUSE_REQUIRED', 'Choisissez le dépôt où placer les articles reçus');
-          }
-        } else {
-          if (!warehouseId) throw fail(400, 'WAREHOUSE_REQUIRED', 'Dépôt obligatoire pour les articles stockables');
-          warehouse = await tx.one('SELECT id, enterprise_id, is_active FROM warehouses WHERE id = $1', [warehouseId]);
-          if (!warehouse || !warehouse.is_active || String(warehouse.enterprise_id) !== String(po.enterprise_id)) {
-            throw fail(400, 'WAREHOUSE_FORBIDDEN', 'Dépôt introuvable ou inactif');
-          }
-        }
-      }
+      const warehouse = lines.some(l => l.toStock)
+        ? await this.resolveWarehouse(tx, { userId, warehouseId, enterpriseId: po.enterprise_id })
+        : null;
 
       // ---- 3. GRN
       const totalReceived = lines.reduce((s, l) => s + l.received, 0);
@@ -200,60 +149,27 @@ class GoodsReceiptModel {
 
       // ---- 4. Lignes, lots, mouvements
       let movementCount = 0;
-      let fundingProjectId; // projet de la réquisition (lu à la première ligne stockée)
+      const fundingProjectId = await this.fundingProjectOf(tx, po);
       for (const l of lines) {
-        let lotId = null;
-        if (l.toStock && l.stockItem.track_lots) {
-          lotId = await stockModel.findOrCreateLot(tx, {
-            enterpriseId: po.enterprise_id, stockItemId: l.stockItem.id, lotNumber: l.lotNumber,
-            expiryDate: l.expiryDate, supplierId: po.supplier_id, createdBy: userId || receivedBy || null,
-          });
-        }
         const item = await tx.one(
           `INSERT INTO goods_receipt_items
              (grn_id, item_description, quantity_received, quantity_accepted, quantity_rejected, rejection_reason,
-              po_item_id, stock_item_id, lot_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+              po_item_id, stock_item_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
           [grn.id, l.poItem?.item_description || l.label, l.received, l.accepted, l.rejected, l.raw.rejection_reason || null,
-           l.poItem?.id || null, l.stockItem?.id || null, lotId]
+           l.poItem?.id || null, l.stockItem?.id || null]
         );
         // Ligne de PO en texte libre rattachée à un article à la réception : le lien est conservé
         if (l.poItem && !l.poItem.stock_item_id && l.stockItem) {
           await tx.exec('UPDATE purchase_order_items SET stock_item_id = $1 WHERE id = $2 AND stock_item_id IS NULL', [l.stockItem.id, l.poItem.id]);
         }
-        // Projet qui a financé l'entrée en stock : celui de la réquisition du bon de commande (migration 28)
-        if (fundingProjectId === undefined) {
-          fundingProjectId = po.requisition_id
-            ? (await tx.one('SELECT project_id FROM requisitions WHERE id = $1', [po.requisition_id]))?.project_id || null
-            : null;
-        }
-        if (l.toStock && l.stockItem.track_serials) {
-          let first = null;
-          for (const s of l.serials) {
-            const unit = await tx.one(
-              `INSERT INTO stock_units (enterprise_id, stock_item_id, serial_number, asset_tag, status, warehouse_id, grn_item_id, created_by, project_id)
-               VALUES ($1, $2, $3, $4, 'IN_STOCK', $5, $6, $7, $8) RETURNING id`,
-              [po.enterprise_id, l.stockItem.id, s.serialNumber, s.assetTag, warehouse.id, item.id, userId || receivedBy || null, fundingProjectId]
-            );
-            const movement = await stockModel.addMovement(tx, {
-              enterpriseId: po.enterprise_id, stockItemId: l.stockItem.id, warehouseId: warehouse.id, unitId: unit.id,
-              type: 'RECEIPT', quantity: 1, unitCost: l.poItem?.unit_price ?? null, currencyId: po.currency_id,
-              sourceType: 'GRN', sourceId: grn.id, sourceLineId: item.id, projectId: fundingProjectId,
-              comment: grnNumber, performedBy: userId || receivedBy || null,
-            });
-            first = first || movement;
-            movementCount++;
-          }
-          await tx.exec('UPDATE goods_receipt_items SET stock_movement_id = $1 WHERE id = $2', [first.id, item.id]);
-        } else if (l.toStock) {
-          const movement = await stockModel.addMovement(tx, {
-            enterpriseId: po.enterprise_id, stockItemId: l.stockItem.id, warehouseId: warehouse.id, lotId,
-            type: 'RECEIPT', quantity: l.accepted, unitCost: l.poItem?.unit_price ?? null, currencyId: po.currency_id,
-            sourceType: 'GRN', sourceId: grn.id, sourceLineId: item.id, projectId: fundingProjectId,
-            comment: grnNumber, performedBy: userId || receivedBy || null,
+        if (l.toStock) {
+          movementCount += await this.writeStockEntry(tx, {
+            po, grn: { id: grn.id }, itemId: item.id, stockItem: l.stockItem,
+            quantity: l.accepted, lotNumber: l.lotNumber, expiryDate: l.expiryDate, serials: l.serials,
+            warehouseId: warehouse.id, unitCost: l.poItem?.unit_price ?? null, projectId: fundingProjectId,
+            userId: userId || receivedBy || null, comment: grnNumber,
           });
-          await tx.exec('UPDATE goods_receipt_items SET stock_movement_id = $1 WHERE id = $2', [movement.id, item.id]);
-          movementCount++;
         }
       }
 
@@ -283,6 +199,205 @@ class GoodsReceiptModel {
     });
   }
 
+  // ------------------------------------------------------------------
+  // Entrée en stock d'une ligne (à la réception ou après coup)
+  // ------------------------------------------------------------------
+
+  /**
+   * Contrôles d'une ligne qui entre en stock : lot / péremption obligatoires selon l'article, lot périmé refusé ;
+   * équipements : un n° de série (+ n° d'inventaire facultatif) par unité, sans doublon ni n° déjà connu.
+   * → n° de série normalisés [{ serialNumber, assetTag }] ([] si l'article n'est pas suivi par n° de série)
+   */
+  async stockLineChecks(tx, { stockItem, accepted, lotNumber, expiryDate, serials: rawSerials, enterpriseId, index }) {
+    const line = index === undefined ? {} : { line: index };
+    if (stockItem.track_lots && !lotNumber) {
+      throw fail(400, 'LOT_REQUIRED', `${stockItem.name} : n° de lot obligatoire`, line);
+    }
+    if (stockItem.track_expiry && !expiryDate) {
+      throw fail(400, 'EXPIRY_REQUIRED', `${stockItem.name} : date de péremption obligatoire`, line);
+    }
+    if (expiryDate && String(expiryDate).slice(0, 10) < new Date().toISOString().slice(0, 10)) {
+      throw fail(400, 'LOT_EXPIRED', `${stockItem.name} : lot ${lotNumber} déjà périmé — à rejeter`, line);
+    }
+    if (!stockItem.track_serials) return [];
+
+    // Équipements suivis par n° de série : un n° (et éventuellement un n° d'inventaire) par unité acceptée
+    if (!Number.isInteger(accepted)) throw fail(400, 'SERIAL_INTEGER', `${stockItem.name} : quantité entière obligatoire`, line);
+    const serials = (rawSerials || []).map(s => (typeof s === 'string' ? { serialNumber: s } : s))
+      .map(s => ({ serialNumber: String(s.serialNumber || s.serial_number || '').trim(), assetTag: String(s.assetTag || s.asset_tag || '').trim() || null }))
+      .filter(s => s.serialNumber);
+    if (serials.length !== accepted) {
+      throw fail(400, 'SERIALS_REQUIRED', `${stockItem.name} : ${accepted} n° de série attendu(s), ${serials.length} saisi(s)`, line);
+    }
+    const seen = new Set();
+    for (const s of serials) {
+      const key = s.serialNumber.toUpperCase();
+      if (seen.has(key)) throw fail(400, 'SERIAL_DUPLICATE', `${stockItem.name} : n° de série ${s.serialNumber} en double`, line);
+      seen.add(key);
+    }
+    const known = await tx.select(
+      `SELECT serial_number FROM stock_units WHERE stock_item_id = $1 AND status <> 'VOID' AND UPPER(serial_number) = ANY($2::text[])`,
+      [stockItem.id, [...seen]]
+    );
+    if (known.length) throw fail(400, 'SERIAL_EXISTS', `${stockItem.name} : n° de série déjà enregistré (${known.map(k => k.serial_number).join(', ')})`, line);
+    await require('./StockEquipmentModel').checkAssetTags(tx, enterpriseId, serials);
+    return serials;
+  }
+
+  /**
+   * Dépôt de destination. Avec userId : parmi ses dépôts (admin d'entreprise : tous les dépôts actifs) — choisi d'office
+   * s'il n'en a qu'un, obligatoire sinon ; sans userId (worker) : obligatoire, non contrôlé.
+   */
+  async resolveWarehouse(tx, { userId, warehouseId, enterpriseId }) {
+    if (userId) {
+      const accessible = (await warehouseModel.accessibleFor(userId))
+        .filter(w => String(w.enterprise_id) === String(enterpriseId));
+      if (!accessible.length) {
+        throw fail(403, 'NO_WAREHOUSE_ACCESS', 'Vous n\'avez accès à aucun dépôt : demandez un accès à votre administrateur');
+      }
+      if (warehouseId) {
+        const warehouse = accessible.find(w => String(w.id) === String(warehouseId));
+        if (!warehouse) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès à ce dépôt');
+        return warehouse;
+      }
+      if (accessible.length === 1) return accessible[0];
+      throw fail(400, 'WAREHOUSE_REQUIRED', 'Choisissez le dépôt où placer les articles reçus');
+    }
+    if (!warehouseId) throw fail(400, 'WAREHOUSE_REQUIRED', 'Dépôt obligatoire pour les articles stockables');
+    const warehouse = await tx.one('SELECT id, enterprise_id, is_active FROM warehouses WHERE id = $1', [warehouseId]);
+    if (!warehouse || !warehouse.is_active || String(warehouse.enterprise_id) !== String(enterpriseId)) {
+      throw fail(400, 'WAREHOUSE_FORBIDDEN', 'Dépôt introuvable ou inactif');
+    }
+    return warehouse;
+  }
+
+  /** Projet qui a financé l'entrée en stock : celui de la réquisition du bon de commande (migration 28) */
+  async fundingProjectOf(tx, po) {
+    if (!po.requisition_id) return null;
+    return (await tx.one('SELECT project_id FROM requisitions WHERE id = $1', [po.requisition_id]))?.project_id || null;
+  }
+
+  /**
+   * Écritures d'entrée en stock d'une ligne de GRN : lot, unités (n° de série), mouvements RECEIPT ;
+   * lot et premier mouvement reportés sur la ligne. → nombre de mouvements écrits
+   */
+  async writeStockEntry(tx, { po, grn, itemId, stockItem, quantity, lotNumber, expiryDate, serials, warehouseId, unitCost, projectId, userId, comment }) {
+    let lotId = null;
+    if (stockItem.track_lots) {
+      lotId = await stockModel.findOrCreateLot(tx, {
+        enterpriseId: po.enterprise_id, stockItemId: stockItem.id, lotNumber,
+        expiryDate, supplierId: po.supplier_id, createdBy: userId,
+      });
+    }
+    const base = {
+      enterpriseId: po.enterprise_id, stockItemId: stockItem.id, warehouseId, type: 'RECEIPT', unitCost, currencyId: po.currency_id,
+      sourceType: 'GRN', sourceId: grn.id, sourceLineId: itemId, projectId, comment, performedBy: userId,
+    };
+    let first = null;
+    let count = 0;
+    if (stockItem.track_serials) {
+      for (const s of serials) {
+        const unit = await tx.one(
+          `INSERT INTO stock_units (enterprise_id, stock_item_id, serial_number, asset_tag, status, warehouse_id, grn_item_id, created_by, project_id)
+           VALUES ($1, $2, $3, $4, 'IN_STOCK', $5, $6, $7, $8) RETURNING id`,
+          [po.enterprise_id, stockItem.id, s.serialNumber, s.assetTag, warehouseId, itemId, userId, projectId]
+        );
+        const movement = await stockModel.addMovement(tx, { ...base, unitId: unit.id, quantity: 1 });
+        first = first || movement;
+        count++;
+      }
+    } else {
+      first = await stockModel.addMovement(tx, { ...base, lotId, quantity });
+      count = 1;
+    }
+    await tx.exec('UPDATE goods_receipt_items SET lot_id = $1, stock_movement_id = $2 WHERE id = $3', [lotId, first.id, itemId]);
+    return count;
+  }
+
+  /**
+   * Entrée en stock APRÈS la réception d'une ligne qui n'y est pas entrée (texte libre, ou article alors non stockable) :
+   * rattachement à un article stockable du catalogue (reporté sur la ligne de PO en texte libre), puis mouvement RECEIPT
+   * de la quantité ACCEPTÉE au prix du PO, projet de la réquisition. Un GRN = un seul dépôt (rapprochement réceptions ↔
+   * stock) : celui du GRN s'il en a déjà un, sinon le dépôt choisi (mêmes règles d'accès qu'à la réception) devient le sien.
+   * @param {object} data { stockItemId, warehouseId, lotNumber, expiryDate, serials }
+   */
+  async stockEntry(grnId, itemId, { stockItemId, warehouseId, lotNumber, expiryDate, serials } = {}, { userId } = {}) {
+    return db.withTransaction(async (tx) => {
+      const grn = await tx.one(
+        'SELECT id, grn_number, status, po_id, warehouse_id, enterprise_id FROM goods_receipt_notes WHERE id = $1 FOR UPDATE',
+        [grnId]
+      );
+      if (!grn) throw fail(404, 'GRN_NOT_FOUND', 'GRN introuvable');
+      if (grn.status === 'CANCELLED') throw fail(409, 'GRN_CANCELLED', 'GRN annulé : aucune entrée en stock possible');
+
+      const item = /^\d+$/.test(String(itemId)) ? await tx.one(
+        `SELECT gi.id, gi.item_description, gi.quantity_accepted::float8 AS accepted, gi.stock_item_id, gi.po_item_id,
+                pi.stock_item_id AS po_stock_item_id, pi.unit_price
+         FROM goods_receipt_items gi
+         LEFT JOIN purchase_order_items pi ON pi.id = gi.po_item_id
+         WHERE gi.id = $1 AND gi.grn_id = $2 FOR UPDATE OF gi`,
+        [itemId, grn.id]
+      ) : null;
+      if (!item) throw fail(404, 'GRN_ITEM_NOT_FOUND', 'Ligne de réception introuvable');
+      const entered = await tx.one(
+        `SELECT COUNT(*)::int AS n FROM stock_movements WHERE source_type = 'GRN' AND source_id = $1 AND source_line_id = $2`,
+        [String(grn.id), String(item.id)]
+      );
+      if (entered.n > 0) throw fail(409, 'ALREADY_IN_STOCK', `${item.item_description} : déjà entré en stock`);
+      if (!(item.accepted > EPS)) throw fail(400, 'NOTHING_ACCEPTED', `${item.item_description} : aucune quantité acceptée à entrer en stock`);
+
+      // Article : celui déjà lié (ligne de GRN ou de PO), sinon celui choisi
+      const linkedId = item.stock_item_id || item.po_stock_item_id || null;
+      if (linkedId && stockItemId && String(stockItemId) !== String(linkedId)) {
+        throw fail(400, 'ITEM_MISMATCH', `${item.item_description} : la ligne est déjà liée à un autre article`);
+      }
+      const effectiveItemId = linkedId || stockItemId;
+      if (!effectiveItemId) throw fail(400, 'ITEM_REQUIRED', 'Choisissez l\'article du catalogue');
+      const stockItem = await tx.one(
+        'SELECT id, enterprise_id, code, name, is_stockable, track_lots, track_expiry, track_serials FROM stock_items WHERE id::text = $1',
+        [String(effectiveItemId)]
+      );
+      if (!stockItem || String(stockItem.enterprise_id) !== String(grn.enterprise_id)) {
+        throw fail(400, 'ITEM_NOT_FOUND', `${item.item_description} : article introuvable`);
+      }
+      if (!stockItem.is_stockable) throw fail(400, 'ITEM_NOT_STOCKABLE', `${stockItem.name} : article non stockable`);
+
+      const lot = String(lotNumber || '').trim();
+      const expiry = expiryDate || null;
+      const checkedSerials = await this.stockLineChecks(tx, {
+        stockItem, accepted: item.accepted, lotNumber: lot, expiryDate: expiry, serials, enterpriseId: grn.enterprise_id,
+      });
+
+      // Dépôt : celui du GRN s'il en a un (un seul dépôt par réception), sinon celui choisi
+      if (grn.warehouse_id && warehouseId && String(warehouseId) !== String(grn.warehouse_id)) {
+        throw fail(400, 'WAREHOUSE_MISMATCH', 'Cette réception est déjà rattachée à un autre dépôt');
+      }
+      const warehouse = await this.resolveWarehouse(tx, { userId, warehouseId: grn.warehouse_id || warehouseId, enterpriseId: grn.enterprise_id });
+
+      const po = await tx.one(
+        'SELECT id, enterprise_id, currency_id, supplier_id, requisition_id FROM purchase_orders WHERE id = $1',
+        [grn.po_id]
+      );
+      const movements = await this.writeStockEntry(tx, {
+        po, grn, itemId: item.id, stockItem, quantity: item.accepted, lotNumber: lot, expiryDate: expiry,
+        serials: checkedSerials, warehouseId: warehouse.id, unitCost: item.unit_price ?? null,
+        projectId: await this.fundingProjectOf(tx, po), userId: userId || null,
+        comment: `${grn.grn_number} — entrée en stock après réception`,
+      });
+      await tx.exec('UPDATE goods_receipt_items SET stock_item_id = $1 WHERE id = $2', [stockItem.id, item.id]);
+      if (item.po_item_id && !item.po_stock_item_id) {
+        await tx.exec('UPDATE purchase_order_items SET stock_item_id = $1 WHERE id = $2 AND stock_item_id IS NULL', [stockItem.id, item.po_item_id]);
+      }
+      if (!grn.warehouse_id) {
+        await tx.exec('UPDATE goods_receipt_notes SET warehouse_id = $1 WHERE id = $2', [warehouse.id, grn.id]);
+      }
+      return {
+        id: grn.id, grnNumber: grn.grn_number, itemId: item.id, itemDescription: item.item_description,
+        stockItemId: stockItem.id, stockItemCode: stockItem.code, quantity: item.accepted, warehouseId: warehouse.id, stockMovements: movements,
+      };
+    });
+  }
+
   async findById(id) {
     const grn = await db.one(
       `SELECT grn.*,
@@ -307,6 +422,7 @@ class GoodsReceiptModel {
               gi.quantity_received::float8 AS quantity_received, gi.quantity_accepted::float8 AS quantity_accepted,
               gi.quantity_rejected::float8 AS quantity_rejected, pi.quantity::float8 AS quantity_ordered,
               si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable,
+              si.track_lots, si.track_expiry, si.track_serials,
               lt.lot_number, lt.expiry_date, m.movement_number,
               ARRAY(SELECT un.serial_number FROM stock_units un WHERE un.grn_item_id = gi.id AND un.status <> 'VOID' ORDER BY un.serial_number) AS serials
        FROM goods_receipt_items gi

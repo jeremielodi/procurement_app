@@ -779,6 +779,7 @@
     "PURCHASE_ORDER_REJECTED": "Purchase order rejected",
     "PURCHASE_ORDER_DELETED": "Purchase order deleted",
     "GOODS_RECEIPT_CANCELLED": "Goods receipt cancelled",
+    "GOODS_RECEIPT_STOCK_ENTRY": "Receipt line put into stock afterwards",
     "INVOICE_REJECTED": "Invoice rejected",
     "INVOICE_DUPLICATE_BLOCKED": "Duplicate invoice refused",
     "PAYMENT_APPROVED": "Payment approved",

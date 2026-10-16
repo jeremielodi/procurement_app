@@ -1731,7 +1731,30 @@
       "ASSET_TAG_EXISTS": "Asset tag already assigned",
       "ASSET_TAG_DUPLICATE": "Duplicate asset tag",
       "DELIVERY_CLOSED": "The remaining quantity of this order has been closed: no further receipt is possible",
-      "CLOSE_REASON_REQUIRED": "Reason required to close the remaining quantity"
+      "CLOSE_REASON_REQUIRED": "Reason required to close the remaining quantity",
+      "GRN_CANCELLED": "Receipt cancelled: nothing can be put into stock",
+      "GRN_ITEM_NOT_FOUND": "Receipt line not found",
+      "ALREADY_IN_STOCK": "This line is already in stock",
+      "NOTHING_ACCEPTED": "No accepted quantity to put into stock",
+      "ITEM_REQUIRED": "Choose the catalogue item",
+      "ITEM_NOT_FOUND": "Item not found",
+      "ITEM_NOT_STOCKABLE": "Item not stockable",
+      "ITEM_MISMATCH": "The line is already linked to another item",
+      "WAREHOUSE_MISMATCH": "This receipt is already linked to another warehouse"
+    },
+    "stockEntry": {
+      "action": "Put into stock",
+      "hint": "Not put into stock at receipt: you can do it now",
+      "title": "Put into stock — {{item}}",
+      "intro": "This line was not put into stock at receipt. Link it to a stockable catalogue item: the accepted quantity ({{qty}}) enters stock at the purchase order price, for the requisition project.",
+      "item": "Catalogue item",
+      "itemLinked": "Item linked to the line",
+      "notStockable": "This item is not stockable: choose a stockable catalogue item.",
+      "warehouse": "Warehouse",
+      "warehouseFixed": "Warehouse of this receipt (one receipt = one warehouse)",
+      "quantity": "Accepted quantity entering stock",
+      "confirm": "Put into stock",
+      "done": "{{item}}: {{qty}} put into stock"
     },
     "cancel": "Cancel receipt",
     "cancelTitle": "Cancel {{number}}?",
@@ -4309,6 +4332,10 @@
           {
             "q": "I cannot find the \"Goods receipt\" task for the remaining quantity.",
             "a": "It only appears after the requester's new service acceptance. Check \"My tasks\" or the requisition's workflow tracking to see who needs to act."
+          },
+          {
+            "q": "An item received as free text did not go into stock: can I do it after the receipt?",
+            "a": "Yes. Open the goods receipt: in the « Stock » column, a line « Not linked to the catalogue » with an accepted quantity offers « Put into stock ». Choose the stockable catalogue item (and the lot, expiry date or serial numbers if it is tracked): the accepted quantity enters stock at the purchase order price, in the receipt's warehouse (one receipt = one warehouse; if it has none yet, choose it). Reserved for people who record receipts; not possible on a cancelled receipt."
           }
         ]
       },
@@ -5372,6 +5399,7 @@
       "PURCHASE_ORDER_REJECTED": "Purchase order rejected",
       "PURCHASE_ORDER_DELETED": "Purchase order deleted",
       "GOODS_RECEIPT_CANCELLED": "Goods receipt cancelled",
+      "GOODS_RECEIPT_STOCK_ENTRY": "Receipt line put into stock afterwards",
       "INVOICE_REJECTED": "Invoice rejected",
       "INVOICE_DUPLICATE_BLOCKED": "Duplicate invoice refused",
       "PAYMENT_APPROVED": "Payment approved",

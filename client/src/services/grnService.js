@@ -24,6 +24,11 @@ export const grnService = {
     const response = await api.post(`/goods-receipts/${id}/cancel`, { reason }, { skipErrorToast: true });
     return response.data;
   },
+  // Entrée en stock, après la réception, d'une ligne restée hors stock (erreurs affichées par la fenêtre)
+  stockEntry: async (id, itemId, payload) => {
+    const response = await api.post(`/goods-receipts/${id}/items/${itemId}/stock-entry`, payload, { skipErrorToast: true });
+    return response.data;
+  },
   getPDF: async (id) => {
     const response = await api.get(`/goods-receipts/${id}/pdf`, { params: { lang: getLang() }, responseType: 'blob' });
     return response.data;

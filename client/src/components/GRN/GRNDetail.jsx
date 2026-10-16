@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Package, CheckCircle, AlertTriangle, Clock, Eye, Download, Ban, Warehouse } from 'lucide-react';
+import { ArrowLeft, Package, PackagePlus, CheckCircle, AlertTriangle, Clock, Eye, Download, Ban, Warehouse } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { grnService } from '../../services/grnService';
 import BlobPdfViewer from '../Common/BlobPdfViewer';
 import Modal from '../Common/Modal';
+import GRNStockEntryModal from './GRNStockEntryModal';
 import { usePermissions } from '../../hooks/usePermissions';
 import { t, withLabel, getLocale } from '../../i18n';
 
@@ -27,6 +28,7 @@ export default function GRNDetail() {
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [stockEntryItem, setStockEntryItem] = useState(null); // ligne à entrer en stock après la réception
   const { hasPermission } = usePermissions();
 
   const load = () => grnService.getById(id)
@@ -65,6 +67,9 @@ export default function GRNDetail() {
   const totalReceived = (grn.items || []).reduce((s, i) => s + (Number(i.quantity_received) || 0), 0);
   const totalRejected = (grn.items || []).reduce((s, i) => s + (Number(i.quantity_rejected) || 0), 0);
   const canCancel = grn.status !== 'CANCELLED' && hasPermission('APPROVE_PURCHASE_ORDERS');
+  // Ligne restée hors stock (texte libre ou article alors non stockable) : entrée possible après la réception
+  const canStockEntry = (item) => grn.status !== 'CANCELLED' && hasPermission('RECORD_GOODS_RECEIPT')
+    && !item.movement_number && Number(item.quantity_accepted) > 0 && (!item.stock_item_id || item.is_stockable);
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -122,6 +127,15 @@ export default function GRNDetail() {
             className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400" />
         </div>
       </Modal>
+
+      {stockEntryItem && (
+        <GRNStockEntryModal
+          grn={grn}
+          item={stockEntryItem}
+          onClose={() => setStockEntryItem(null)}
+          onDone={() => { setStockEntryItem(null); load(); }}
+        />
+      )}
 
       {/* Header */}
       <div className={`flex items-center justify-between p-4 rounded-xl border mb-6 ${status.cls}`}>
@@ -199,6 +213,13 @@ export default function GRNDetail() {
                     {item.movement_number
                       ? <span className="text-green-700" title={t('grn.movementHint')}>{item.movement_number}</span>
                       : <span className="text-gray-400">{item.stock_item_id ? (item.is_stockable ? '—' : t('stock.notStockable')) : t('grn.notLinked')}</span>}
+                    {canStockEntry(item) && (
+                      <button type="button" onClick={() => setStockEntryItem(item)} title={t('grn.stockEntry.hint')}
+                        data-testid="grn-stock-entry-btn"
+                        className="mt-1 flex items-center gap-1 rounded border border-indigo-300 px-2 py-0.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50">
+                        <PackagePlus size={12} /> {t('grn.stockEntry.action')}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

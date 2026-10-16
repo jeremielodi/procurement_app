@@ -779,6 +779,7 @@
     "PURCHASE_ORDER_REJECTED": "Bon de commande rejeté",
     "PURCHASE_ORDER_DELETED": "Bon de commande supprimé",
     "GOODS_RECEIPT_CANCELLED": "Réception annulée",
+    "GOODS_RECEIPT_STOCK_ENTRY": "Ligne de réception entrée en stock après coup",
     "INVOICE_REJECTED": "Facture rejetée",
     "INVOICE_DUPLICATE_BLOCKED": "Facture en double refusée",
     "PAYMENT_APPROVED": "Paiement approuvé",

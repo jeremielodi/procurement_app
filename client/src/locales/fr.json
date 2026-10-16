@@ -1731,7 +1731,30 @@
       "ASSET_TAG_EXISTS": "N° d'inventaire déjà attribué",
       "ASSET_TAG_DUPLICATE": "N° d'inventaire en double",
       "DELIVERY_CLOSED": "Le reliquat de cette commande a été soldé : plus aucune réception possible",
-      "CLOSE_REASON_REQUIRED": "Motif obligatoire pour solder le reliquat"
+      "CLOSE_REASON_REQUIRED": "Motif obligatoire pour solder le reliquat",
+      "GRN_CANCELLED": "Réception annulée : aucune entrée en stock possible",
+      "GRN_ITEM_NOT_FOUND": "Ligne de réception introuvable",
+      "ALREADY_IN_STOCK": "Cette ligne est déjà entrée en stock",
+      "NOTHING_ACCEPTED": "Aucune quantité acceptée à entrer en stock",
+      "ITEM_REQUIRED": "Choisissez l'article du catalogue",
+      "ITEM_NOT_FOUND": "Article introuvable",
+      "ITEM_NOT_STOCKABLE": "Article non stockable",
+      "ITEM_MISMATCH": "La ligne est déjà liée à un autre article",
+      "WAREHOUSE_MISMATCH": "Cette réception est déjà rattachée à un autre dépôt"
+    },
+    "stockEntry": {
+      "action": "Entrer en stock",
+      "hint": "Non entré en stock à la réception : vous pouvez le faire maintenant",
+      "title": "Entrer en stock — {{item}}",
+      "intro": "Cette ligne n'est pas entrée en stock à la réception. Rattachez-la à un article stockable du catalogue : la quantité acceptée ({{qty}}) entre en stock au prix du bon de commande, pour le projet de la réquisition.",
+      "item": "Article du catalogue",
+      "itemLinked": "Article lié à la ligne",
+      "notStockable": "Cet article n'est pas stockable : choisissez un article stockable du catalogue.",
+      "warehouse": "Dépôt",
+      "warehouseFixed": "Dépôt de cette réception (une réception = un seul dépôt)",
+      "quantity": "Quantité acceptée qui entre en stock",
+      "confirm": "Entrer en stock",
+      "done": "{{item}} : {{qty}} entré(s) en stock"
     },
     "cancel": "Annuler la réception",
     "cancelTitle": "Annuler {{number}} ?",
@@ -4309,6 +4332,10 @@
           {
             "q": "Je ne trouve pas la tâche « Bon de réception (GRN) » pour le reste à livrer.",
             "a": "Elle n'apparaît qu'après la nouvelle acceptation de service du demandeur. Vérifiez dans « Mes tâches » ou dans le suivi du workflow de la réquisition qui doit agir."
+          },
+          {
+            "q": "Un article reçu en texte libre n'est pas entré en stock : puis-je le faire après la réception ?",
+            "a": "Oui. Ouvrez le bon de réception : dans la colonne « Stock », une ligne « Non liée au catalogue » avec une quantité acceptée propose « Entrer en stock ». Choisissez l'article stockable du catalogue (et le lot, la péremption ou les n° de série s'il est suivi) : la quantité acceptée entre en stock au prix du bon de commande, dans le dépôt de la réception (une réception = un seul dépôt ; s'il n'y en a pas encore, choisissez-le). Réservé aux personnes qui enregistrent les réceptions ; impossible sur une réception annulée."
           }
         ]
       },
@@ -5372,6 +5399,7 @@
       "PURCHASE_ORDER_REJECTED": "Bon de commande rejeté",
       "PURCHASE_ORDER_DELETED": "Bon de commande supprimé",
       "GOODS_RECEIPT_CANCELLED": "Réception annulée",
+      "GOODS_RECEIPT_STOCK_ENTRY": "Ligne de réception entrée en stock après coup",
       "INVOICE_REJECTED": "Facture rejetée",
       "INVOICE_DUPLICATE_BLOCKED": "Facture en double refusée",
       "PAYMENT_APPROVED": "Paiement approuvé",

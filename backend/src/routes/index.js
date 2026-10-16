@@ -671,6 +671,11 @@ router.post('/goods-receipts/:id/cancel',
   authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'), onProject('APPROVE_PURCHASE_ORDERS', 'goodsReceipt', from.param('id')),
   grnController.cancel.bind(grnController)
 );
+// Entrée en stock après la réception d'une ligne restée hors stock (texte libre rattaché ensuite au catalogue)
+router.post('/goods-receipts/:id/items/:itemId/stock-entry',
+  authenticate, hasPermission('RECORD_GOODS_RECEIPT'), onProject('RECORD_GOODS_RECEIPT', 'goodsReceipt', from.param('id')),
+  grnController.stockEntry.bind(grnController)
+);
 
 // ============================================
 // GESTION DE STOCK : dépôts, catalogue, soldes, mouvements

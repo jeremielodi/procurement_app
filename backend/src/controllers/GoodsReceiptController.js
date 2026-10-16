@@ -185,6 +185,28 @@ class GoodsReceiptController {
     }
   }
 
+  /**
+   * POST /goods-receipts/:id/items/:itemId/stock-entry { stockItemId, warehouseId, lotNumber, expiryDate, serials }
+   * — entrée en stock, après la réception, d'une ligne qui n'y est pas entrée (texte libre / article alors non stockable)
+   */
+  async stockEntry(req, res) {
+    try {
+      const { stockItemId, warehouseId, lotNumber, expiryDate, serials } = req.body || {};
+      const result = await grnModel.stockEntry(req.params.id, req.params.itemId,
+        { stockItemId, warehouseId, lotNumber, expiryDate, serials }, { userId: req.user.id });
+      await audit(req, AUDIT.GOODS_RECEIPT_STOCK_ENTRY, {
+        entity: { type: 'goods_receipt', id: result.id, label: result.grnNumber },
+        details: {
+          item: result.itemDescription, stockItem: result.stockItemCode, quantity: result.quantity,
+          warehouseId: result.warehouseId, lotNumber: lotNumber || null, stockMovements: result.stockMovements,
+        },
+      });
+      res.json({ success: true, data: result, message: 'Ligne entrée en stock' });
+    } catch (error) {
+      return sendError(res, error, 'Erreur lors de l\'entrée en stock');
+    }
+  }
+
   /** POST /goods-receipts/:id/cancel { reason } — annule la réception et ses entrées en stock */
   async cancel(req, res) {
     try {

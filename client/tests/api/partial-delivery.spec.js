@@ -11,7 +11,7 @@
  * Requiert GoFlow (BPMN redéployé).
  */
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth } from './helpers.js';
+import { getToken, getApproverToken, auth, directPurchaseVariables } from './helpers.js';
 
 const POLL_TIMEOUT = 60_000;
 const PRICE = 100; // 10 × 100 = 1 000 → N1, achat direct
@@ -56,7 +56,7 @@ async function orderConfirmed(request, label) {
 
   expect((await complete(request, await waitForTask(request, pid, 'Activity_ValidationN1_Manager'), { approved: true }, approverToken)).status()).toBe(200);
   expect((await complete(request, await waitForTask(request, pid, 'Activity_DetermineType'), { procurementMethod: 'DIRECT_PURCHASE' })).status()).toBe(200);
-  expect((await complete(request, await waitForTask(request, pid, 'Activity_DirectPurchase'), { comment: 'ok' })).status()).toBe(200);
+  expect((await complete(request, await waitForTask(request, pid, 'Activity_DirectPurchase'), await directPurchaseVariables(request, token, req.id, refs.supplier.id))).status()).toBe(200);
   await waitForTask(request, pid, 'Activity_CreatePO');
 
   const poRes = await request.post('/api/purchase-orders', { headers: H, data: {
@@ -92,6 +92,8 @@ const delivery = async (request, ctx) => (await (await request.get(`/api/purchas
 const keys = async (request, ctx) => (await openTasks(request, ctx.pid)).map(t => t.taskDefinitionKey);
 
 test.describe.serial('Livraisons partielles : SAN puis GRN à chaque livraison', () => {
+  // Chaque test refait le circuit GoFlow jusqu'au PO confirmé (achat direct avec pro-forma compris) puis les livraisons
+  test.setTimeout(180_000);
   test.beforeAll(async ({ request }) => {
     token = await getToken(request);
     approverToken = await getApproverToken(request);

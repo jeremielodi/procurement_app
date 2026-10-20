@@ -210,6 +210,15 @@ const revisionRoute = (fn) => async (req, res) => {
 };
 router.get('/requisitions/:id/revision', hasPermission('VIEW_REQUISITIONS'), revisionRoute((req) => revisionService.state(req.params.id, req.user.id)));
 router.get('/requisitions/:id/versions', hasPermission('VIEW_REQUISITIONS'), revisionRoute((req) => revisionService.versions(req.params.id)));
+// Achat direct : fournisseur désigné et pro-forma (dernière sélection de l'étape Activity_DirectPurchase, ou null)
+const directPurchaseService = require('../services/DirectPurchaseService');
+router.get('/requisitions/:id/direct-purchase', hasPermission('VIEW_REQUISITIONS'), async (req, res) => {
+  try { res.json({ success: true, data: await directPurchaseService.latest(req.params.id) }); }
+  catch (error) {
+    console.error('Achat direct :', error);
+    res.status(500).json({ success: false, message: "Erreur lors de la lecture de l'achat direct" });
+  }
+});
 router.put('/requisitions/:id',
   hasPermission('CREATE_REQUISITIONS'),
   onProject('CREATE_REQUISITIONS', 'project', from.body('projectId')),

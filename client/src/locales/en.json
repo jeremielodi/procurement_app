@@ -1473,6 +1473,30 @@
       "METHOD_BELOW_THRESHOLD": "Procurement method not sufficient for the requisition amount",
       "PROCUREMENT_METHOD_REQUIRED": "Select the procurement method",
       "JUSTIFICATION_REQUIRED": "Justification required for a sole source"
+    },
+    "direct": {
+      "intro": "Select the chosen supplier and attach its pro forma invoice. The purchase order will offer this supplier by default.",
+      "supplier": "Selected supplier",
+      "chooseSupplier": "— Choose the supplier —",
+      "prequalified": "Prequalified",
+      "notPrequalifiedGroup": "Not prequalified",
+      "notPrequalified": "This supplier is not prequalified by your organization.",
+      "proforma": "Pro forma invoice",
+      "proformaHint": "PDF, JPG or PNG — 10 MB maximum. The file is attached to the requisition.",
+      "tooLarge": "File too large (10 MB maximum)",
+      "number": "Pro forma number",
+      "date": "Pro forma date",
+      "amount": "Amount ({{currency}})",
+      "err": {
+        "SUPPLIER_REQUIRED": "Select the chosen supplier",
+        "SUPPLIER_NOT_FOUND": "Supplier not found",
+        "SUPPLIER_INACTIVE": "This supplier is not active",
+        "PROFORMA_REQUIRED": "Attach the supplier's pro forma invoice",
+        "PROFORMA_NOT_FOUND": "Pro forma not found: attach it again",
+        "PROFORMA_TYPE": "The pro forma must be a PDF, JPG or PNG file",
+        "PROFORMA_AMOUNT_INVALID": "Invalid pro forma amount",
+        "PROFORMA_DATE_INVALID": "Invalid pro forma date"
+      }
     }
   },
   "po": {
@@ -1599,7 +1623,8 @@
     "suppliersPrequalified": "Prequalified by your company",
     "suppliersNotPrequalified": "Not prequalified",
     "notPrequalifiedWarning": "This supplier is not yet prequalified by your company (registered on the portal, file to be checked).",
-    "openPrequalification": "View prequalification"
+    "openPrequalification": "View prequalification",
+    "directPurchaseSupplier": "selected at the \"Direct purchase\" step"
   },
   "grnStatus": {
     "DRAFT": "Draft",
@@ -4044,6 +4069,10 @@
                 "Sole source, with a mandatory justification"
               ]
             ]
+          },
+          {
+            "type": "p",
+            "text": "Direct purchase: the \"Direct purchase\" task asks for the chosen supplier and its pro forma invoice (PDF, JPG or PNG, attached to the requisition); the pro forma number, date and amount are optional. The purchase order then offers this supplier by default."
           },
           {
             "type": "p",

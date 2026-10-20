@@ -5,7 +5,8 @@
  * la classification (worker classify_procurement) reprend le choix au lieu de le recalculer d'après le montant.
  *   - choix obligatoire, refusé s'il est moins exigeant que le montant (sauf source unique justifiée)
  *   - Source unique → « Justification source unique » → « Créer le bon de commande »
- *   - Achat direct  → « Achat direct » → « Créer le bon de commande »
+ *   - Achat direct  → « Achat direct » (fournisseur retenu + pro-forma obligatoires) → « Créer le bon de commande »
+ *     avec ce fournisseur proposé d'office
  *   - puis approbation du PO, confirmation fournisseur, réception, SAN, facture, paiement → processus terminé
  *
  * Requiert GoFlow (sinon les tests s'ignorent).
@@ -45,6 +46,7 @@ const complete = (request, task, variables, tk = token) =>
 function scenario({ method, sourcingTask, amount, justification, refused }) {
   test.describe.serial(`${method} (${amount}) → cycle complet GoFlow`, () => {
     let req, po, grn;
+    let directSupplier = null; // achat direct : fournisseur désigné avec la pro-forma
 
     test('Réquisition approuvée (N1) → « Déterminer la méthode d\'achat »', async ({ request }) => {
       token = await getToken(request);
@@ -106,13 +108,44 @@ function scenario({ method, sourcingTask, amount, justification, refused }) {
       const current = (await (await request.get(`/api/requisitions/${req.id}`, { headers: auth(token) })).json()).data;
       expect(current.status).toBe(`CLASSIFIED_${method}`);
 
-      expect((await complete(request, sourcing, { comment: 'Étape réalisée' })).status()).toBe(200);
+      if (sourcingTask === 'Activity_DirectPurchase') {
+        // Fournisseur retenu + pro-forma (pièce jointe de la réquisition) obligatoires
+        const H = auth(token);
+        directSupplier = (await (await request.get('/api/suppliers', { headers: H, params: { forPurchaseOrder: 1 } })).json()).data[0];
+        const noSupplier = await complete(request, sourcing, { comment: 'Étape réalisée' });
+        expect(noSupplier.status()).toBe(400);
+        expect((await noSupplier.json()).code).toBe('SUPPLIER_REQUIRED');
+        const noProforma = await complete(request, sourcing, { supplierId: directSupplier.id });
+        expect(noProforma.status()).toBe(400);
+        expect((await noProforma.json()).code).toBe('PROFORMA_REQUIRED');
+
+        const upload = await request.post('/api/upload', { headers: H, multipart: {
+          file: { name: 'proforma.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%pro-forma de test\n') },
+          entity_type: 'requisition', entity_id: req.id,
+        } });
+        expect(upload.status(), await upload.text()).toBe(200);
+        const proformaId = (await upload.json()).data.id;
+        const done = await complete(request, sourcing, {
+          supplierId: directSupplier.id, proformaAttachmentId: proformaId, proformaNumber: 'PF-001', proformaAmount: amount, comment: 'Pro-forma reçue',
+        });
+        expect(done.status(), await done.text()).toBe(200);
+
+        const selection = (await (await request.get(`/api/requisitions/${req.id}/direct-purchase`, { headers: H })).json()).data;
+        expect(selection.supplier_id).toBe(directSupplier.id);
+        expect(selection.proforma_attachment_id).toBe(proformaId);
+        expect(selection.proforma_number).toBe('PF-001');
+        // Le bon de commande propose ce fournisseur d'office
+        const forPo = (await (await request.get('/api/suppliers', { headers: H, params: { forPurchaseOrder: 1, requisitionId: req.id } })).json()).data;
+        expect(forPo.filter(sp => sp.direct_purchase).map(sp => sp.id)).toEqual([directSupplier.id]);
+      } else {
+        expect((await complete(request, sourcing, { comment: 'Étape réalisée' })).status()).toBe(200);
+      }
       await waitForTask(request, req, 'Activity_CreatePO');
     });
 
     test('PO créé (termine Activity_CreatePO) puis approuvé par un autre administrateur', async ({ request }) => {
       const H = auth(token);
-      const supplier = (await (await request.get('/api/suppliers', { headers: H })).json()).data[0];
+      const supplier = directSupplier || (await (await request.get('/api/suppliers', { headers: H })).json()).data[0];
       const created = await request.post('/api/purchase-orders', { headers: H, data: {
         requisitionId: req.id, supplierId: supplier.id, currency: 'USD', totalAmount: amount, deliveryDate: future(20),
         items: [{ description: 'Pièce constructeur', quantity: 1, unitPrice: amount }],

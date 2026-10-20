@@ -230,7 +230,8 @@
         "ENTERPRISE": "Politique de l'entreprise : N1 en dessous de {n1}, N2 en dessous de {n2}, N3 au-delà",
         "DEFAULT": "Seuils par défaut : N1 en dessous de {n1}, N2 en dessous de {n2}, N3 au-delà"
       }
-    }
+    },
+    "directPurchaseSupplier": "Fournisseur retenu : {supplier}"
   },
   "supplierProfile": {
     "logo_path": "Logo",

@@ -230,7 +230,8 @@
         "ENTERPRISE": "Company policy: N1 below {n1}, N2 below {n2}, N3 above",
         "DEFAULT": "Default thresholds: N1 below {n1}, N2 below {n2}, N3 above"
       }
-    }
+    },
+    "directPurchaseSupplier": "Selected supplier: {supplier}"
   },
   "supplierProfile": {
     "logo_path": "Logo",

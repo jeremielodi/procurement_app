@@ -34,6 +34,7 @@ async function findEnterpriseTask(taskId) {
 const supplierConfirmationService = require('../services/SupplierConfirmationService');
 const invoiceModel = require('../models/InvoiceModel');
 const paymentModel = require('../models/PaymentModel');
+const directPurchaseService = require('../services/DirectPurchaseService');
 
 // Task definition keys for each approval level (must match BPMN Activity IDs)
 const REQUISITION_APPROVAL_TASKS = [
@@ -434,6 +435,11 @@ async function completeTask(req, res) {
       }
     }
 
+    // Achat direct : fournisseur retenu et pro-forma obligatoires (contrôlés avant de terminer l'étape)
+    const directPurchase = taskDefinitionKey === directPurchaseService.TASK_KEY
+      ? await directPurchaseService.validate(requisitionId, variables)
+      : null;
+
     // Paiement saisi depuis la tâche : refusé AVANT de terminer l'étape si les coordonnées bancaires ne sont pas vérifiées
     if (taskDefinitionKey === 'Activity_ProcessPayment' && variables.amount) {
       await supplierBankService.assertPayable(req, { invoiceId: variables.invoiceId || null, poId: variables.poId || null });
@@ -486,8 +492,23 @@ async function completeTask(req, res) {
       taskVariables.budgetAdjusted = false;
     }
 
-    // 1. Complete the Camunda user task
-    const result = await camundaService.completeTask(taskId, taskVariables);
+    if (directPurchase) {
+      Object.assign(taskVariables, {
+        supplierId: directPurchase.supplier.id,
+        supplierName: directPurchase.supplier.name,
+        proformaAttachmentId: directPurchase.attachment.id,
+        proformaNumber: directPurchase.proformaNumber || '',
+        proformaAmount: directPurchase.proformaAmount ?? '',
+      });
+    }
+
+    // 1. Complete the Camunda user task (achat direct : sélection enregistrée dans la même transaction)
+    const result = directPurchase
+      ? await directPurchaseService.recordAndComplete(
+        { requisitionId, selection: directPurchase, userId, taskId },
+        () => camundaService.completeTask(taskId, taskVariables)
+      )
+      : await camundaService.completeTask(taskId, taskVariables);
     if (!result.success) {
       return res.status(500).json({
         success: false,

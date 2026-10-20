@@ -38,6 +38,9 @@ import { invoiceService } from '../../services/invoiceService';
 import { t, getLocale } from '../../i18n';
 import { TASK_LABELS } from '../../utils/taskLabels';
 import RevisionChanges from './RevisionChanges';
+import SearchSelect from '../Common/SearchSelect';
+import { supplierService } from '../../services/supplierService';
+import { uploadService } from '../../services/uploadService';
 
 // Statuts de bon de commande par étape
 const PO_PENDING = ['PO_PENDING', 'DRAFT'];
@@ -50,8 +53,14 @@ const TASK_FORMS = {
   Activity_ValidationN2_Finance: 'approval',
   Activity_ValidationN3_DG: 'approval',
   Activity_DetermineType: 'method',
+  Activity_DirectPurchase: 'directPurchase',
   Activity_BudgetAdjustment: 'budget',
 };
+
+// Achat direct : pro-forma du fournisseur (PDF / JPG / PNG, 10 Mo comme les autres pièces jointes)
+const PROFORMA_ACCEPT = '.pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png';
+const PROFORMA_MAX = 10 * 1024 * 1024;
+const DIRECT_PURCHASE_ERRORS = ['SUPPLIER_REQUIRED', 'SUPPLIER_NOT_FOUND', 'SUPPLIER_INACTIVE', 'PROFORMA_REQUIRED', 'PROFORMA_NOT_FOUND', 'PROFORMA_TYPE', 'PROFORMA_AMOUNT_INVALID', 'PROFORMA_DATE_INVALID'];
 
 // Méthode d'achat minimale selon le montant (même règle que RequisitionModel.requiredProcurementMethod) ;
 // la source unique (justifiée) reste toujours possible
@@ -75,7 +84,8 @@ export default function RequisitionTasks() {
   const [opening, setOpening] = useState(null);
   const { user } = useAuth();
   const userEmail = user?.email;
-  const { formatAmount } = useCurrency();
+  const { formatAmount, currency } = useCurrency();
+  const [suppliers, setSuppliers] = useState([]); // achat direct : fournisseurs actifs, préqualifiés en tête
 
   const [tasks, setTasks] = useState([]);
   const [requisition, setRequisition] = useState(null);
@@ -96,7 +106,12 @@ export default function RequisitionTasks() {
     procurementMethod: '',
     justification: '',
     newBudgetAmount: '',
-    adjustmentJustification: ''
+    adjustmentJustification: '',
+    supplierId: '',
+    proformaFile: null,
+    proformaNumber: '',
+    proformaDate: '',
+    proformaAmount: ''
   });
 
   useEffect(() => {
@@ -240,6 +255,11 @@ export default function RequisitionTasks() {
       newBudgetAmount: '',
       adjustmentJustification: ''
     });
+    if (TASK_FORMS[task.taskDefinitionKey] === 'directPurchase') {
+      supplierService.getForPurchaseOrder(id)
+        .then(r => setSuppliers(r.data || r || []))
+        .catch(() => toast.error(t('po.loadSuppliersError')));
+    }
     setShowTaskModal(true);
   };
 
@@ -257,9 +277,27 @@ export default function RequisitionTasks() {
       if (!formData.approved) { toast.error(t('revision.decisionRequired')); return; }
       if (formData.approved === 'return' && !formData.comment.trim()) { toast.error(t('revision.returnReasonRequired')); return; }
     }
+    // Achat direct : fournisseur retenu + pro-forma obligatoires (contrôlés aussi par le serveur)
+    if (taskForm(selectedTask) === 'directPurchase') {
+      if (!formData.supplierId) { toast.error(t('reqTasks.direct.err.SUPPLIER_REQUIRED')); return; }
+      if (!formData.proformaFile) { toast.error(t('reqTasks.direct.err.PROFORMA_REQUIRED')); return; }
+    }
     setSubmitting(true);
+    let proformaId = null; // pro-forma déposée pour cette tentative : retirée si l'étape est refusée
     try {
       const variables = {};
+      if (taskForm(selectedTask) === 'directPurchase') {
+        const uploaded = await uploadService.uploadFile(formData.proformaFile, 'requisition', id);
+        proformaId = uploaded.data?.id;
+        Object.assign(variables, {
+          supplierId: Number(formData.supplierId),
+          proformaAttachmentId: proformaId,
+          proformaNumber: formData.proformaNumber.trim(),
+          proformaDate: formData.proformaDate,
+          proformaAmount: formData.proformaAmount === '' ? '' : Number(formData.proformaAmount),
+          currency: currency?.code,
+        });
+      }
 
       if (formData.approved === 'return') {
         variables.approved = false;
@@ -278,7 +316,9 @@ export default function RequisitionTasks() {
       loadData();
     } catch (error) {
       console.error('Error completing task:', error);
+      if (proformaId) uploadService.deleteFile(proformaId).catch(() => {});
       const code = error.response?.data?.code;
+      if (code && DIRECT_PURCHASE_ERRORS.includes(code)) { toast.error(t(`reqTasks.direct.err.${code}`)); return; }
       toast.error(code && ['METHOD_BELOW_THRESHOLD', 'PROCUREMENT_METHOD_REQUIRED', 'JUSTIFICATION_REQUIRED'].includes(code)
         ? t(`reqTasks.err.${code}`)
         : code && ['RETURN_REASON_REQUIRED', 'DECISION_REQUIRED', 'RETURN_NOT_SUPPORTED'].includes(code)
@@ -745,6 +785,90 @@ export default function RequisitionTasks() {
                   </div>
                 </>
               )}
+
+            {/* Formulaire Achat direct : fournisseur retenu + pro-forma */}
+            {taskForm(selectedTask) === 'directPurchase' && (
+              <>
+                <p className="text-sm text-gray-600">{t('reqTasks.direct.intro')}</p>
+                <div>
+                  <label htmlFor="dp-supplier" className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('reqTasks.direct.supplier')} <span className="text-red-500">*</span>
+                  </label>
+                  <SearchSelect
+                    id="dp-supplier"
+                    data-testid="direct-purchase-supplier"
+                    value={formData.supplierId}
+                    onChange={(e) => handleInputChange('supplierId', e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="">{t('reqTasks.direct.chooseSupplier')}</option>
+                    {suppliers.some(s => s.is_prequalified) && (
+                      <optgroup label={t('reqTasks.direct.prequalified')}>
+                        {suppliers.filter(s => s.is_prequalified).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </optgroup>
+                    )}
+                    {suppliers.some(s => !s.is_prequalified) && (
+                      <optgroup label={t('reqTasks.direct.notPrequalifiedGroup')}>
+                        {suppliers.filter(s => !s.is_prequalified).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </optgroup>
+                    )}
+                  </SearchSelect>
+                  {formData.supplierId && !suppliers.find(s => String(s.id) === String(formData.supplierId))?.is_prequalified && (
+                    <p className="text-xs text-orange-600 mt-1">{t('reqTasks.direct.notPrequalified')}</p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="dp-proforma" className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('reqTasks.direct.proforma')} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="dp-proforma"
+                    data-testid="direct-purchase-proforma"
+                    type="file"
+                    accept={PROFORMA_ACCEPT}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      if (file && file.size > PROFORMA_MAX) { toast.error(t('reqTasks.direct.tooLarge')); e.target.value = ''; return; }
+                      handleInputChange('proformaFile', file);
+                    }}
+                    className="w-full text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">{t('reqTasks.direct.proformaHint')}</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label htmlFor="dp-number" className="block text-sm font-medium text-gray-700 mb-1">{t('reqTasks.direct.number')}</label>
+                    <input id="dp-number" type="text" maxLength={100} value={formData.proformaNumber}
+                      onChange={(e) => handleInputChange('proformaNumber', e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label htmlFor="dp-date" className="block text-sm font-medium text-gray-700 mb-1">{t('reqTasks.direct.date')}</label>
+                    <input id="dp-date" type="date" value={formData.proformaDate}
+                      onChange={(e) => handleInputChange('proformaDate', e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label htmlFor="dp-amount" className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('reqTasks.direct.amount', { currency: currency?.code || '' })}
+                    </label>
+                    <input id="dp-amount" type="number" min="0" step="0.01" value={formData.proformaAmount}
+                      onChange={(e) => handleInputChange('proformaAmount', e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.comment')}</label>
+                  <textarea
+                    value={formData.comment}
+                    onChange={(e) => handleInputChange('comment', e.target.value)}
+                    rows="2"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder={t('taskList.commentPlaceholder')}
+                  />
+                </div>
+              </>
+            )}
 
             {/* Formulaire Ajustement budgétaire */}
             {taskForm(selectedTask) === 'budget' && (

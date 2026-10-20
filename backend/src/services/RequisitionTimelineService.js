@@ -4,6 +4,7 @@
 //  - events : ce qui s'est réellement passé, une ligne par action
 // Textes dans la langue demandée (src/i18n/locales : workflow.*, timeline.*)
 const db = require('../config/database');
+const directPurchaseService = require('./DirectPurchaseService');
 const i18n = require('../i18n');
 const {
   TASK_CANDIDATE_GROUPS, taskKey, taskLabel: rawTaskLabel, groupLabel, methodLabel, reasonLabel, matchLabel,
@@ -376,6 +377,8 @@ class RequisitionTimelineService {
     const approvals = [...tasks.values()].filter(t => APPROVAL_KEYS.includes(t.key) && t.completedAt);
     const approvalRejected = approvals.some(t => t.decision === 'REJECTED') || req.status === 'REJECTED';
     const sourcingDone = SOURCING_KEYS.map(done).find(Boolean);
+    // Achat direct : fournisseur désigné avec sa pro-forma (Activity_DirectPurchase)
+    const directPurchase = await directPurchaseService.latest(requisitionId);
     const activePos = pos.filter(p => !PO_REJECTED.includes(p.status));
     const paid = payments.some(p => ['PAID', 'COMPLETED'].includes(p.status)) || invoices.some(i => i.status === 'PAID');
     // Même règle que la colonne « Avancement » (RequisitionModel) : la fin du processus GoFlow fait foi
@@ -409,7 +412,8 @@ class RequisitionTimelineService {
       { key: 'method', label: T('timeline.steps.method'), status: classification ? 'done' : 'pending', date: classification?.date, info: classification ? methodLabel(classification.method, lang) : null },
       {
         key: 'sourcing', label: T('timeline.steps.sourcing'), status: sourcingDone || activePos.length ? 'done' : 'pending',
-        date: sourcingDone?.completedAt, info: sourcingDone?.label || null,
+        date: sourcingDone?.completedAt,
+        info: [sourcingDone?.label, directPurchase ? T('timeline.directPurchaseSupplier', { supplier: directPurchase.supplier_name }) : null].filter(Boolean).join(' · ') || null,
         links: tender ? [{ label: tender.tender_number, to: `/tenders/${tender.id}` }] : [],
       },
       { key: 'po', label: T('timeline.steps.po'), status: activePos.length ? 'done' : pos.length ? 'failed' : 'pending', date: activePos[0]?.created_at, links: links(pos, 'po_number', '/purchase-orders') },

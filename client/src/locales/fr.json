@@ -1473,6 +1473,30 @@
       "METHOD_BELOW_THRESHOLD": "Méthode d'achat insuffisante pour le montant de la réquisition",
       "PROCUREMENT_METHOD_REQUIRED": "Choisissez la méthode d'achat",
       "JUSTIFICATION_REQUIRED": "Justification obligatoire pour une source unique"
+    },
+    "direct": {
+      "intro": "Désignez le fournisseur retenu et joignez sa facture pro-forma. Le bon de commande proposera ce fournisseur d'office.",
+      "supplier": "Fournisseur retenu",
+      "chooseSupplier": "— Choisir le fournisseur —",
+      "prequalified": "Préqualifiés",
+      "notPrequalifiedGroup": "Non préqualifiés",
+      "notPrequalified": "Ce fournisseur n'est pas préqualifié par votre entreprise.",
+      "proforma": "Facture pro-forma",
+      "proformaHint": "PDF, JPG ou PNG — 10 Mo maximum. Le fichier est joint à la réquisition.",
+      "tooLarge": "Fichier trop volumineux (10 Mo maximum)",
+      "number": "N° de la pro-forma",
+      "date": "Date de la pro-forma",
+      "amount": "Montant ({{currency}})",
+      "err": {
+        "SUPPLIER_REQUIRED": "Désignez le fournisseur retenu",
+        "SUPPLIER_NOT_FOUND": "Fournisseur introuvable",
+        "SUPPLIER_INACTIVE": "Ce fournisseur n'est pas actif",
+        "PROFORMA_REQUIRED": "Joignez la facture pro-forma du fournisseur",
+        "PROFORMA_NOT_FOUND": "Pro-forma introuvable : joignez-la à nouveau",
+        "PROFORMA_TYPE": "La pro-forma doit être un PDF, un JPG ou un PNG",
+        "PROFORMA_AMOUNT_INVALID": "Montant de la pro-forma invalide",
+        "PROFORMA_DATE_INVALID": "Date de la pro-forma invalide"
+      }
     }
   },
   "po": {
@@ -1599,7 +1623,8 @@
     "suppliersPrequalified": "Préqualifiés par votre entreprise",
     "suppliersNotPrequalified": "Non préqualifiés",
     "notPrequalifiedWarning": "Ce fournisseur n'est pas encore préqualifié par votre entreprise (inscrit sur le portail, dossier à vérifier).",
-    "openPrequalification": "Voir sa préqualification"
+    "openPrequalification": "Voir sa préqualification",
+    "directPurchaseSupplier": "désigné à l'étape « Achat direct »"
   },
   "grnStatus": {
     "DRAFT": "Brouillon",
@@ -4044,6 +4069,10 @@
                 "Source unique, avec une justification obligatoire"
               ]
             ]
+          },
+          {
+            "type": "p",
+            "text": "Achat direct : la tâche « Achat direct » demande le fournisseur retenu et sa facture pro-forma (PDF, JPG ou PNG, jointe à la réquisition) ; le n° de la pro-forma, sa date et son montant sont facultatifs. Le bon de commande propose ensuite ce fournisseur d'office."
           },
           {
             "type": "p",

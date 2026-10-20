@@ -156,7 +156,10 @@ class SupplierModel {
                  SELECT 1 FROM supplier_prequalifications sp
                  WHERE sp.supplier_id = s.id AND sp.status = 'APPROVED'${preqFilter})) AS is_prequalified,
               EXISTS (SELECT 1 FROM tenders td WHERE td.requisition_id = ${reqParam} AND td.status = 'AWARDED'
-                        AND td.awarded_supplier_id = s.id) AS awarded
+                        AND td.awarded_supplier_id = s.id) AS awarded,
+              -- Fournisseur désigné (avec sa pro-forma) à l'étape « Achat direct » : la plus récente fait foi
+              COALESCE((SELECT dp.supplier_id FROM direct_purchase_selections dp WHERE dp.requisition_id = ${reqParam}
+                        ORDER BY dp.created_at DESC LIMIT 1) = s.id, false) AS direct_purchase
        FROM suppliers s
        WHERE s.status = 'ACTIVE'
        ORDER BY is_prequalified DESC, s.name`,

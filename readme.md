@@ -241,11 +241,13 @@ docker compose up -d --build
 Les scripts SQL de `database/` ne sont exécutés automatiquement **qu'à la création de la base**. Sur une base existante, appliquer les nouvelles migrations à la main (elles sont idempotentes, on peut les relancer) :
 
 ```bash
-for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations 12_audit_logs 13_stock_management 14_stock_issues 15_stock_equipment 16_stock_issue_destinations 17_supplier_order_confirmation 18_stock_counts 19_stock_transfers_in_transit 20_audit_log_access 21_internal_control 22_daily_requisition_report 23_po_delivery_closure 24_project_profiles 25_requisition_revisions 26_approval_policies 27_manager_approval_levels 28_stock_funding_project 29_stock_balances_by_project 30_requisition_visibility 31_user_avatars 32_activate_orphan_project_profiles; do
+for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations 12_audit_logs 13_stock_management 14_stock_issues 15_stock_equipment 16_stock_issue_destinations 17_supplier_order_confirmation 18_stock_counts 19_stock_transfers_in_transit 20_audit_log_access 21_internal_control 22_daily_requisition_report 23_po_delivery_closure 24_project_profiles 25_requisition_revisions 26_approval_policies 27_manager_approval_levels 28_stock_funding_project 29_stock_balances_by_project 30_requisition_visibility 31_user_avatars 32_activate_orphan_project_profiles 33_direct_purchase_selection; do
   docker exec -i wwf_postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < database/$f.sql
 done
 ```
 
+> `33_direct_purchase_selection.sql` (achat direct) : l'étape « Achat direct » exige désormais le fournisseur retenu et sa facture pro-forma — à appliquer **avant** de démarrer la nouvelle version (aucun redéploiement du BPMN).
+>
 > `08_supplier_prequalification.sql` et `09_tender_invitations.sql` ajoutent la préqualification des fournisseurs, la vérification des documents et les appels d'offres sur invitation : à appliquer **avant** de démarrer la nouvelle version de l'application.
 >
 > `21_internal_control.sql` (contrôle interne) peut signaler des **factures déjà en double** : l'index d'unicité n'est alors pas créé (le contrôle applicatif reste actif). Les lister : `SELECT enterprise_id, supplier_id, LOWER(TRIM(supplier_invoice_number)), COUNT(*) FROM invoices WHERE supplier_invoice_number IS NOT NULL AND status NOT IN ('REJECTED','CANCELLED') GROUP BY 1,2,3 HAVING COUNT(*) > 1;`, rejeter les doublons, puis rejouer la migration. Après la mise à jour, **attribuer les profils** : au moins deux approbateurs par niveau (séparation des tâches), et le profil « Auditeur » aux auditeurs.

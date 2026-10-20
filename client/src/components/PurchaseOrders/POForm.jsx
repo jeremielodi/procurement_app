@@ -29,12 +29,12 @@ export default function POForm() {
 
   useEffect(() => {
     // Tous les fournisseurs actifs, préqualifiés en tête ; l'attributaire de l'appel d'offres de la réquisition
-    // est choisi d'office
+    // (ou le fournisseur désigné avec sa pro-forma à l'étape « Achat direct ») est choisi d'office
     supplierService.getForPurchaseOrder(requisitionId)
       .then(r => {
         const list = r.data || r || [];
         setSuppliers(list);
-        const awarded = list.find(s => s.awarded);
+        const awarded = list.find(s => s.awarded) || list.find(s => s.direct_purchase);
         if (awarded) setSupplierId(id => id || String(awarded.id));
       })
       .catch(() => toast.error(t('po.loadSuppliersError')));
@@ -44,7 +44,7 @@ export default function POForm() {
   const otherSuppliers = suppliers.filter(s => !s.is_prequalified);
   const selectedSupplier = suppliers.find(s => String(s.id) === String(supplierId));
   const supplierOption = (s) => (
-    <option key={s.id} value={s.id}>{s.name}{s.awarded ? ` — ${t('po.awardedSupplier')}` : ''}</option>
+    <option key={s.id} value={s.id}>{s.name}{s.awarded ? ` — ${t('po.awardedSupplier')}` : s.direct_purchase ? ` — ${t('po.directPurchaseSupplier')}` : ''}</option>
   );
 
   useEffect(() => {

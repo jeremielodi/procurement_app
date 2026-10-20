@@ -55,6 +55,19 @@ const pdf = (name) => ({ name: `${name}.pdf`, mimeType: 'application/pdf', buffe
  * Formulaire d'inscription fournisseur complet (multipart).
  * type : COMPANY (5 documents + RCCM / impôt / ID Nat) ou INDIVIDUAL (pièce d'identité + RIB).
  */
+/**
+ * Étape « Achat direct » (Activity_DirectPurchase) : fournisseur retenu + pro-forma obligatoires.
+ * Dépose une pro-forma PDF sur la réquisition et renvoie les variables de complétion de la tâche.
+ */
+export async function directPurchaseVariables(request, token, requisitionId, supplierId) {
+  const upload = await request.post('/api/upload', { headers: auth(token), multipart: {
+    file: { name: 'proforma.pdf', mimeType: 'application/pdf', buffer: PDF_BUFFER },
+    entity_type: 'requisition', entity_id: requisitionId,
+  } });
+  if (!upload.ok()) throw new Error('Pro-forma non déposée : ' + upload.status() + ' ' + (await upload.text()));
+  return { supplierId, proformaAttachmentId: (await upload.json()).data.id, comment: 'Pro-forma reçue' };
+}
+
 export function supplierRegistration({ type = 'COMPANY', name, email, password = 'Secret123', locationIds, categoryIds, extra = {} }) {
   const base = {
     supplierType: type, name, email, password,

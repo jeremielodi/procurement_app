@@ -104,6 +104,7 @@ const PATH_RESOURCES = [
   { re: new RegExp(`^/stock-units/(${UUID})(/|$)`), table: 'stock_units' },
   { re: new RegExp(`^/stock-counts/(${UUID})(/|$)`), table: 'stock_counts' },
   { re: new RegExp(`^/stock-adjustments/(${UUID})(/|$)`), table: 'stock_adjustments' },
+  { re: new RegExp(`^/stock/movement-groups/(${UUID})(/|$)`), table: 'stock_movement_groups' },
 ];
 
 // Clés de query / body → table

@@ -718,6 +718,10 @@ router.get('/stock/receipt-reconciliation', authenticate, hasPermission('VIEW_ST
 router.get('/stock/receipt-reconciliation/export', authenticate, hasPermission('VIEW_STOCK'), st.exportReceiptReconciliation);
 router.get('/stock/balances', authenticate, hasPermission('VIEW_STOCK'), st.balances);
 router.get('/stock/movements', authenticate, hasPermission('VIEW_STOCK'), st.movements);
+// Opérations de stock (groupes de mouvements écrits d'un seul coup, migration 36) et leur export Excel
+router.get('/stock/movement-groups', authenticate, hasPermission('VIEW_STOCK'), st.movementGroups);
+router.get('/stock/movement-groups/:id/export', authenticate, hasPermission('VIEW_STOCK'), st.exportMovementGroup);
+router.get('/stock/movement-groups/:id', authenticate, hasPermission('VIEW_STOCK'), st.movementGroup);
 
 // Sorties de stock vers un utilisateur (bons de sortie)
 // Consultation : VIEW_STOCK, ou le bénéficiaire pour ses propres bons (contrôlé dans le contrôleur)

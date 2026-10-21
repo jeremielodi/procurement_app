@@ -71,7 +71,7 @@ class StockModel {
   }
 
   /** Journal des mouvements (filtres + pagination) */
-  async movements({ warehouseId, stockItemId, lotId, unitId, projectId, type, sourceType, sourceId, fromDate, toDate, search, limit = 50, offset = 0 } = {}) {
+  async movements({ warehouseId, stockItemId, lotId, unitId, projectId, type, sourceType, sourceId, groupId, fromDate, toDate, search, limit = 50, offset = 0 } = {}) {
     const params = [];
     let where = `WHERE 1=1${tenant.filter('m.enterprise_id', params)}`;
     if (warehouseId) { params.push(warehouseId); where += ` AND m.warehouse_id = $${params.length}`; }
@@ -83,6 +83,7 @@ class StockModel {
     if (type) { params.push(type); where += ` AND m.movement_type = $${params.length}`; }
     if (sourceType) { params.push(sourceType); where += ` AND m.source_type = $${params.length}`; }
     if (sourceId) { params.push(String(sourceId)); where += ` AND m.source_id = $${params.length}`; }
+    if (groupId) { params.push(String(groupId)); where += ` AND m.group_id::text = $${params.length}`; }
     if (fromDate) { params.push(fromDate); where += ` AND m.performed_at >= $${params.length}::date`; }
     if (toDate) { params.push(toDate); where += ` AND m.performed_at < ($${params.length}::date + 1)`; }
     if (search) {
@@ -90,10 +91,12 @@ class StockModel {
       where += ` AND (si.code ILIKE $${params.length} OR si.name ILIKE $${params.length} OR m.movement_number ILIKE $${params.length}
                  OR lt.lot_number ILIKE $${params.length} OR g.grn_number ILIKE $${params.length} OR sis.issue_number ILIKE $${params.length}
                  OR su.serial_number ILIKE $${params.length} OR su.asset_tag ILIKE $${params.length} OR sr.return_number ILIKE $${params.length}
-                 OR sct.count_number ILIKE $${params.length} OR sad.adjustment_number ILIKE $${params.length})`;
+                 OR sct.count_number ILIKE $${params.length} OR sad.adjustment_number ILIKE $${params.length}
+                 OR mg.group_number ILIKE $${params.length})`;
     }
     const from = `
       FROM stock_movements m
+      LEFT JOIN stock_movement_groups mg ON mg.id = m.group_id
       JOIN stock_items si ON si.id = m.stock_item_id
       JOIN warehouses w ON w.id = m.warehouse_id
       LEFT JOIN stock_lots lt ON lt.id = m.lot_id
@@ -113,7 +116,7 @@ class StockModel {
       LEFT JOIN projects fp ON fp.id = m.project_id
       ${where}`;
     const total = (await db.one(`SELECT COUNT(*)::int AS n ${from}`, params)).n;
-    params.push(Math.min(parseInt(limit) || 50, 500), parseInt(offset) || 0);
+    params.push(Math.min(parseInt(limit) || 50, 20000), parseInt(offset) || 0);
     const rows = await db.select(
       `SELECT m.id, m.movement_number, m.movement_type, m.quantity, m.unit_cost, c.format_key AS currency_code,
               m.source_type, m.source_id, m.comment, m.performed_at,
@@ -130,7 +133,7 @@ class StockModel {
                 WHEN sis.destination_type = 'DEPARTMENT' THEN sd.name
                 ELSE TRIM(COALESCE(ru.first_name, '') || ' ' || COALESCE(ru.last_name, ''))
               END AS recipient_name,
-              su.serial_number, sr.return_number, sct.count_number, sad.adjustment_number, sad.reason AS adjustment_reason,
+              su.serial_number, su.asset_tag, mg.id AS group_id, mg.group_number, sr.return_number, sct.count_number, sad.adjustment_number, sad.reason AS adjustment_reason,
               TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS performed_by_name
        ${from}
        ORDER BY m.performed_at DESC, m.movement_number DESC
@@ -138,6 +141,87 @@ class StockModel {
       params
     );
     return { rows, total };
+  }
+
+  /**
+   * Groupes de mouvements (« opérations », migration 36) : tous les mouvements écrits par une même opération
+   * (réception, sortie, transfert, retour, inventaire, ajustement, import, parc existant).
+   * Filtres : warehouseId / type / projectId (au moins un mouvement du groupe), sourceType, fromDate, toDate,
+   * search (n° de groupe, n° du document, article, lot, n° de série, n° d'inventaire)
+   */
+  async movementGroups({ warehouseId, type, projectId, sourceType, fromDate, toDate, search, groupId, limit = 50, offset = 0 } = {}) {
+    const params = [];
+    let where = `WHERE 1=1${tenant.filter('g.enterprise_id', params)}`;
+    const anyMovement = (cond) => ` AND EXISTS (SELECT 1 FROM stock_movements x
+      LEFT JOIN stock_items xi ON xi.id = x.stock_item_id
+      LEFT JOIN stock_lots xl ON xl.id = x.lot_id
+      LEFT JOIN stock_units xu ON xu.id = x.unit_id
+      WHERE x.group_id = g.id AND ${cond})`;
+    if (groupId) { params.push(String(groupId)); where += ` AND g.id::text = $${params.length}`; }
+    if (warehouseId) { params.push(warehouseId); where += anyMovement(`x.warehouse_id = $${params.length}`); }
+    if (type) { params.push(type); where += anyMovement(`x.movement_type = $${params.length}`); }
+    if (projectId === 'none') where += anyMovement('x.project_id IS NULL');
+    else if (projectId) { params.push(projectId); where += anyMovement(`x.project_id = $${params.length}`); }
+    if (sourceType) { params.push(sourceType); where += ` AND g.source_type = $${params.length}`; }
+    if (fromDate) { params.push(fromDate); where += ` AND g.created_at >= $${params.length}::date`; }
+    if (toDate) { params.push(toDate); where += ` AND g.created_at < ($${params.length}::date + 1)`; }
+    if (search) {
+      params.push(`%${String(search).trim()}%`);
+      const p = `$${params.length}`;
+      where += ` AND (g.group_number ILIKE ${p} OR gr.grn_number ILIKE ${p} OR sis.issue_number ILIKE ${p} OR sr.return_number ILIKE ${p}
+                 OR sct.count_number ILIKE ${p} OR sad.adjustment_number ILIKE ${p}
+                 ${anyMovement(`(xi.code ILIKE ${p} OR xi.name ILIKE ${p} OR x.movement_number ILIKE ${p} OR xl.lot_number ILIKE ${p}
+                   OR xu.serial_number ILIKE ${p} OR xu.asset_tag ILIKE ${p})`).replace(/^ AND /, 'OR ')})`;
+    }
+    const from = `
+      FROM stock_movement_groups g
+      LEFT JOIN users u ON u.id = g.performed_by
+      LEFT JOIN goods_receipt_notes gr ON g.source_type = 'GRN' AND gr.id::text = g.source_id
+      LEFT JOIN purchase_orders po ON po.id = gr.po_id
+      LEFT JOIN stock_issues sis ON g.source_type = 'ISSUE' AND sis.id::text = g.source_id
+      LEFT JOIN stock_returns sr ON g.source_type = 'RETURN' AND sr.id::text = g.source_id
+      LEFT JOIN stock_counts sct ON g.source_type = 'COUNT' AND sct.id::text = g.source_id
+      LEFT JOIN stock_adjustments sad ON g.source_type = 'ADJUSTMENT' AND sad.id::text = g.source_id
+      ${where}`;
+    const total = (await db.one(`SELECT COUNT(*)::int AS n ${from}`, params)).n;
+    params.push(Math.min(parseInt(limit) || 50, 500), parseInt(offset) || 0);
+    const rows = await db.select(
+      `SELECT g.id, g.group_number, g.created_at, g.source_type, g.source_id,
+              TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS performed_by_name,
+              gr.grn_number, po.id AS po_id, po.po_number, sis.issue_number, sis.destination_type, sr.return_number,
+              sct.count_number, sad.adjustment_number, sad.reason AS adjustment_reason,
+              a.movement_count, a.item_count, a.unit_count, a.lot_count, a.types, a.warehouses, a.quantity_in, a.quantity_out,
+              a.item_names, a.comment
+       ${from}
+       CROSS JOIN LATERAL (
+         SELECT COUNT(*)::int AS movement_count,
+                COUNT(DISTINCT m.stock_item_id)::int AS item_count,
+                COUNT(m.unit_id)::int AS unit_count,
+                COUNT(DISTINCT m.lot_id)::int AS lot_count,
+                ARRAY_AGG(DISTINCT m.movement_type) AS types,
+                STRING_AGG(DISTINCT w.name, ', ') AS warehouses,
+                COALESCE(SUM(m.quantity) FILTER (WHERE m.quantity > 0), 0)::float8 AS quantity_in,
+                COALESCE(-SUM(m.quantity) FILTER (WHERE m.quantity < 0), 0)::float8 AS quantity_out,
+                (ARRAY_AGG(DISTINCT si.name))[1:3] AS item_names,
+                MIN(m.comment) AS comment
+         FROM stock_movements m
+         JOIN stock_items si ON si.id = m.stock_item_id
+         JOIN warehouses w ON w.id = m.warehouse_id
+         WHERE m.group_id = g.id
+       ) a
+       ORDER BY g.created_at DESC, g.group_number DESC
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+    return { rows, total };
+  }
+
+  /** Un groupe + tous ses mouvements (null si introuvable dans l'entreprise courante) */
+  async movementGroup(id) {
+    const { rows } = await this.movementGroups({ groupId: id, limit: 1 });
+    if (!rows.length) return null;
+    const { rows: movements } = await this.movements({ groupId: id, limit: 20000 });
+    return { ...rows[0], movements: movements.reverse() };
   }
 
   async lots(stockItemId) {

@@ -735,7 +735,19 @@
     },
     "sheetProject": "By project",
     "project": "Project (funding)",
-    "noProject": "No project"
+    "noProject": "No project",
+    "mvType": {
+      "OPENING": "Opening stock",
+      "RECEIPT": "Receipt",
+      "RECEIPT_REVERSAL": "Receipt reversal",
+      "ISSUE": "Issue",
+      "ISSUE_REVERSAL": "Issue reversal",
+      "RETURN": "Return",
+      "TRANSFER_IN": "Transfer (in)",
+      "TRANSFER_OUT": "Transfer (out)",
+      "ADJUSTMENT_IN": "Adjustment (+)",
+      "ADJUSTMENT_OUT": "Adjustment (−)"
+    }
   },
   "auditActions": {
     "LOGIN_SUCCESS": "Successful sign-in",
@@ -1011,6 +1023,33 @@
     "example": {
       "travel": "Travel and missions",
       "equipment": "IT equipment"
+    }
+  },
+  "movementGroup": {
+    "sheet": "Operation",
+    "number": "Operation no.",
+    "date": "Date",
+    "operation": "Operation",
+    "by": "By",
+    "summary": "Content",
+    "summaryText": "{movements} movement(s), {items} item(s), {units} equipment unit(s)",
+    "movement": "Movement no.",
+    "type": "Type",
+    "serial": "Serial no.",
+    "assetTag": "Asset tag",
+    "unitCost": "Unit cost",
+    "destination": "Destination / origin",
+    "comment": "Comment",
+    "source": {
+      "GRN": "Receipt (goods receipt note)",
+      "ISSUE": "Issue / transfer",
+      "RETURN": "Return to stock",
+      "COUNT": "Stock count",
+      "ADJUSTMENT": "Adjustment",
+      "IMPORT": "Opening stock import",
+      "OPENING": "Existing equipment",
+      "RETIRE": "Equipment retirement",
+      "OTHER": "Stock operation"
     }
   }
 }

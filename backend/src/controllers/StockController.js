@@ -320,6 +320,82 @@ const stock = {
     } catch (error) { return serverError(res, error, 'Erreur lors de l\'export du rapprochement'); }
   },
 
+  /** GET /stock/movement-groups — opérations (groupes de mouvements, migration 36), mêmes filtres que le journal */
+  async movementGroups(req, res) {
+    try {
+      const limit = Math.min(parseInt(req.query.limit) || 50, 500);
+      const page = Math.max(parseInt(req.query.page) || 1, 1);
+      const { groupId, ...query } = req.query;
+      const { rows, total } = await stockModel.movementGroups({ ...query, limit, offset: (page - 1) * limit });
+      res.json({ success: true, data: rows, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+    } catch (error) { return serverError(res, error, 'Erreur lors du chargement des opérations de stock'); }
+  },
+
+  /** GET /stock/movement-groups/:id — une opération et tous ses mouvements */
+  async movementGroup(req, res) {
+    try {
+      const group = await stockModel.movementGroup(req.params.id);
+      if (!group) return res.status(404).json({ success: false, code: 'NOT_FOUND', message: 'Opération introuvable' });
+      res.json({ success: true, data: group });
+    } catch (error) { return serverError(res, error, "Erreur lors du chargement de l'opération"); }
+  },
+
+  /** GET /stock/movement-groups/:id/export — Excel de l'opération : en-tête + un mouvement par ligne (n° de série, n° d'inventaire…) */
+  async exportMovementGroup(req, res) {
+    try {
+      const lang = i18n.fromRequest(req);
+      const T = i18n.translator(lang);
+      const locale = i18n.locale(lang);
+      const group = await stockModel.movementGroup(req.params.id);
+      if (!group) return res.status(404).json({ success: false, code: 'NOT_FOUND', message: 'Opération introuvable' });
+      const documentNumber = group.grn_number || group.issue_number || group.return_number || group.count_number || group.adjustment_number || '';
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'procureApp';
+      const ws = wb.addWorksheet(T('movementGroup.sheet'));
+      const head = [
+        [T('movementGroup.number'), group.group_number],
+        [T('movementGroup.date'), new Date(group.created_at).toLocaleString(locale, { timeZone: process.env.APP_TIMEZONE || 'Africa/Kinshasa' })],
+        [T('movementGroup.operation'), T(`movementGroup.source.${group.source_type || 'OTHER'}`, {}) + (documentNumber ? ` — ${documentNumber}` : '')],
+        [T('movementGroup.by'), group.performed_by_name || ''],
+        [T('stockExport.warehouses'), group.warehouses || ''],
+        [T('movementGroup.summary'), T('movementGroup.summaryText', { movements: group.movement_count, items: group.item_count, units: group.unit_count })],
+      ];
+      for (const [k, v] of head) {
+        const row = ws.addRow([k, v]);
+        row.getCell(1).font = { bold: true };
+      }
+      ws.addRow([]);
+      const columns = [
+        ['movement', T('movementGroup.movement'), 20], ['type', T('movementGroup.type'), 22], ['code', T('stockExport.code'), 16],
+        ['item', T('stockExport.item'), 36], ['warehouse', T('stockExport.warehouse'), 24], ['lot', T('stockExport.lot'), 16],
+        ['expiry', T('stockExport.expiry'), 12], ['serial', T('movementGroup.serial'), 20], ['assetTag', T('movementGroup.assetTag'), 18],
+        ['quantity', T('stockExport.quantity'), 12], ['unit', T('stockExport.unit'), 8], ['unitCost', T('movementGroup.unitCost'), 14],
+        ['currency', T('stockExport.currency'), 8], ['project', T('stockExport.project'), 18], ['destination', T('movementGroup.destination'), 24],
+        ['comment', T('movementGroup.comment'), 30],
+      ];
+      columns.forEach(([, , width], i) => { ws.getColumn(i + 1).width = width; });
+      const header = ws.addRow(columns.map(c => c[1]));
+      header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      header.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } }; });
+      ws.views = [{ state: 'frozen', ySplit: header.number }];
+      for (const m of group.movements) {
+        const row = ws.addRow([
+          m.movement_number, T(`stockExport.mvType.${m.movement_type}`), m.item_code, m.item_name, m.warehouse_name, m.lot_number || '',
+          m.expiry_date || '', m.serial_number || '', m.asset_tag || '', Number(m.quantity), m.unit,
+          m.unit_cost != null ? Number(m.unit_cost) : null, m.currency_code || '', m.project_code || '', m.recipient_name || '', m.comment || '',
+        ]);
+        row.getCell(10).numFmt = '#,##0.####';
+        row.getCell(12).numFmt = '#,##0.0000';
+      }
+      res.set({
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="${group.group_number}.xlsx"`,
+      });
+      await wb.xlsx.write(res);
+      res.end();
+    } catch (error) { return serverError(res, error, "Erreur lors de l'export de l'opération"); }
+  },
+
   /** GET /stock/valuation/export — Excel de la valorisation */
   async exportValuation(req, res) {
     try {

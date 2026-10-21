@@ -3573,6 +3573,37 @@
       "fundedBy": "Financé par {{project}}",
       "outLabel": "Stock à sortir",
       "outAuto": "Automatique : stock sans projet d'abord, puis les projets"
+    },
+    "mvGroup": {
+      "column": "Opération",
+      "number": "N° d'opération",
+      "operation": "Opération",
+      "content": "Contenu",
+      "contentText": "{{items}} article(s) · {{movements}} mouvement(s)",
+      "units_one": "{{count}} équipement (n° de série)",
+      "units_other": "{{count}} équipements (n° de série)",
+      "in": "Entrées",
+      "out": "Sorties",
+      "quantities": "Quantités",
+      "download": "Télécharger (Excel)",
+      "viewGroups": "Par opération",
+      "viewDetail": "Détail des mouvements",
+      "subtitle": "Chaque opération regroupe les mouvements écrits d'un seul coup (réception, sortie, transfert, retour, inventaire, ajustement, import) ; téléchargeable en Excel",
+      "detailSubtitle": "Tous les mouvements écrits par cette opération — un par article et lot, un par équipement (n° de série, n° d'inventaire)",
+      "none": "Aucune opération",
+      "total": "{{count}} opération(s)",
+      "notFound": "Opération introuvable",
+      "source": {
+        "GRN": "Réception (bon de réception)",
+        "ISSUE": "Bon de sortie / transfert",
+        "RETURN": "Retour en stock",
+        "COUNT": "Inventaire",
+        "ADJUSTMENT": "Ajustement",
+        "IMPORT": "Import du stock initial",
+        "OPENING": "Parc existant",
+        "RETIRE": "Réforme d'équipement",
+        "OTHER": "Opération de stock"
+      }
     }
   },
   "help": {
@@ -4544,6 +4575,7 @@
             "items": [
               "« État du stock » : quantités par article, dépôt et lot, avec alertes (sous le minimum, lots qui expirent sous 90 jours, lots périmés) et export Excel.",
               "« Mouvements » : journal de toutes les entrées et sorties (réception, sortie, retour, annulation, stock initial, réforme), avec son origine et son auteur.",
+              "« Par opération » (vue par défaut des Mouvements) : chaque opération (MVG-AAAA-NNNNNN) regroupe les mouvements écrits d'un seul coup — une réception, un bon de sortie ou de transfert, un retour, un inventaire validé, un ajustement, un import de stock initial, l'enregistrement du parc existant. Un équipement garde son propre mouvement (n° de série, n° d'inventaire), mais on voit ce qui est entré ensemble ; « Télécharger (Excel) » exporte l'opération, un mouvement par ligne. « Détail des mouvements » affiche le journal ligne par ligne.",
               "Le journal est immuable : une erreur se corrige par une écriture inverse, jamais par une modification. Un stock ne peut jamais devenir négatif."
             ]
           },

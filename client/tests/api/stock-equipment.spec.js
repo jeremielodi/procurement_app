@@ -87,6 +87,31 @@ test.describe.serial('API › Équipements affectés et retours', () => {
     expect(units.map(u => [u.serial_number, u.status, u.warehouse_id])).toEqual([[S(1), 'IN_STOCK', wh1.id], [S(2), 'IN_STOCK', wh1.id], [S(3), 'IN_STOCK', wh1.id]]);
   });
 
+  test('Opération : la réception forme un seul groupe de mouvements, téléchargeable (migration 36)', async ({ request }) => {
+    const mv = (await (await request.get(`/api/stock/movements?sourceType=GRN&sourceId=${grnId}`, { headers: L() })).json()).data;
+    expect(mv).toHaveLength(4);
+    const groupIds = [...new Set(mv.map(m => m.group_id))];
+    expect(groupIds).toHaveLength(1);
+    expect(mv.filter(m => m.asset_tag).map(m => m.asset_tag)).toContain(`INV-${stamp}-2`);
+
+    const g = await json(await request.get(`/api/stock/movement-groups/${groupIds[0]}`, { headers: L() }));
+    expect(g.status).toBe(200);
+    expect(g.body.data).toMatchObject({ source_type: 'GRN', movement_count: 4, item_count: 2, unit_count: 3 });
+    expect(g.body.data.group_number).toMatch(/^MVG-\d{4}-\d{6}$/);
+    expect(g.body.data.movements.map(m => m.serial_number).filter(Boolean).sort()).toEqual([S(1), S(2), S(3)]);
+
+    // Recherche d'une opération par n° d'inventaire
+    const list = (await (await request.get(`/api/stock/movement-groups?search=INV-${stamp}-2`, { headers: L() })).json()).data;
+    expect(list.map(x => x.id)).toEqual([groupIds[0]]);
+
+    const xlsx = await request.get(`/api/stock/movement-groups/${groupIds[0]}/export`, { headers: L() });
+    expect(xlsx.status()).toBe(200);
+    expect(xlsx.headers()['content-type']).toContain('spreadsheetml');
+    expect((await xlsx.body()).subarray(0, 2).toString()).toBe('PK');
+
+    expect((await request.get('/api/stock/movement-groups/00000000-0000-0000-0000-000000000000', { headers: L() })).status()).toBe(404);
+  });
+
   test('Parc existant : enregistrement de n° de série (OPENING)', async ({ request }) => {
     let r = await json(await request.post('/api/stock-units/register', { headers: L(), data: { stockItemId: laptop.id, warehouseId: wh1.id, units: [{ serialNumber: S(4) }, { serialNumber: S(1) }] } }));
     expect(r.body.code).toBe('SERIAL_EXISTS');

@@ -32,6 +32,7 @@ import StockOverview from './components/Stock/StockOverview';
 import StockItemList from './components/Stock/StockItemList';
 import StockItemDetail from './components/Stock/StockItemDetail';
 import StockMovements from './components/Stock/StockMovements';
+import MovementGroupDetail from './components/Stock/MovementGroupDetail';
 import WarehouseList from './components/Stock/WarehouseList';
 import StockIssueList from './components/Stock/StockIssueList';
 import StockIssueForm from './components/Stock/StockIssueForm';
@@ -307,6 +308,7 @@ function App() {
         <Route path="/stock/items" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockItemList /></Layout></ProtectedRoute>} />
         <Route path="/stock/items/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockItemDetail /></Layout></ProtectedRoute>} />
         <Route path="/stock/movements" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockMovements /></Layout></ProtectedRoute>} />
+        <Route path="/stock/movement-groups/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><MovementGroupDetail /></Layout></ProtectedRoute>} />
         <Route path="/stock/warehouses" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><WarehouseList /></Layout></ProtectedRoute>} />
         <Route path="/stock/issues" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockIssueList /></Layout></ProtectedRoute>} />
         <Route path="/stock/issues/new" element={<ProtectedRoute requiredPermission="ISSUE_STOCK"><Layout><StockIssueForm /></Layout></ProtectedRoute>} />

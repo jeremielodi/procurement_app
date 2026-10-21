@@ -735,7 +735,19 @@
     },
     "sheetProject": "Par projet",
     "project": "Projet (financement)",
-    "noProject": "Sans projet"
+    "noProject": "Sans projet",
+    "mvType": {
+      "OPENING": "Stock initial",
+      "RECEIPT": "Réception",
+      "RECEIPT_REVERSAL": "Annulation de réception",
+      "ISSUE": "Sortie",
+      "ISSUE_REVERSAL": "Annulation de sortie",
+      "RETURN": "Retour",
+      "TRANSFER_IN": "Transfert (entrée)",
+      "TRANSFER_OUT": "Transfert (sortie)",
+      "ADJUSTMENT_IN": "Ajustement (+)",
+      "ADJUSTMENT_OUT": "Ajustement (−)"
+    }
   },
   "auditActions": {
     "LOGIN_SUCCESS": "Connexion réussie",
@@ -1011,6 +1023,33 @@
     "example": {
       "travel": "Voyages et missions",
       "equipment": "Équipement informatique"
+    }
+  },
+  "movementGroup": {
+    "sheet": "Opération",
+    "number": "N° d'opération",
+    "date": "Date",
+    "operation": "Opération",
+    "by": "Par",
+    "summary": "Contenu",
+    "summaryText": "{movements} mouvement(s), {items} article(s), {units} équipement(s)",
+    "movement": "N° de mouvement",
+    "type": "Type",
+    "serial": "N° de série",
+    "assetTag": "N° d'inventaire",
+    "unitCost": "Coût unitaire",
+    "destination": "Destination / origine",
+    "comment": "Commentaire",
+    "source": {
+      "GRN": "Réception (bon de réception)",
+      "ISSUE": "Bon de sortie / transfert",
+      "RETURN": "Retour en stock",
+      "COUNT": "Inventaire",
+      "ADJUSTMENT": "Ajustement",
+      "IMPORT": "Import du stock initial",
+      "OPENING": "Parc existant",
+      "RETIRE": "Réforme d'équipement",
+      "OTHER": "Opération de stock"
     }
   }
 }

@@ -37,6 +37,10 @@ export const stockService = {
   summary: () => api.get('/stock/summary').then(data),
   balances: (params = {}) => api.get('/stock/balances', { params }).then(data),
   movements: (params = {}) => api.get('/stock/movements', { params }).then(data),
+  // Opérations (groupes de mouvements écrits d'un seul coup) : liste, détail, export Excel
+  movementGroups: (params = {}) => api.get('/stock/movement-groups', { params }).then(data),
+  movementGroup: (id) => api.get(`/stock/movement-groups/${id}`).then(data),
+  exportMovementGroup: (id) => api.get(`/stock/movement-groups/${id}/export`, { params: { lang: getLang() }, responseType: 'blob' }).then(data),
   // Valorisation au CMUP (asOf, warehouseId, categoryId) et export Excel
   valuation: (params = {}) => api.get('/stock/valuation', { params }).then(data),
   exportValuation: (params = {}) => api.get('/stock/valuation/export', { params: { ...params, lang: getLang() }, responseType: 'blob' }).then(data),

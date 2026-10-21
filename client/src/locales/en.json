@@ -3573,6 +3573,37 @@
       "fundedBy": "Funded by {{project}}",
       "outLabel": "Stock to remove",
       "outAuto": "Automatic: stock without a project first, then project stock"
+    },
+    "mvGroup": {
+      "column": "Operation",
+      "number": "Operation no.",
+      "operation": "Operation",
+      "content": "Content",
+      "contentText": "{{items}} item(s) · {{movements}} movement(s)",
+      "units_one": "{{count}} equipment unit (serial no.)",
+      "units_other": "{{count}} equipment units (serial no.)",
+      "in": "In",
+      "out": "Out",
+      "quantities": "Quantities",
+      "download": "Download (Excel)",
+      "viewGroups": "By operation",
+      "viewDetail": "Movement detail",
+      "subtitle": "Each operation groups the movements written at once (receipt, issue, transfer, return, stock count, adjustment, import); downloadable as Excel",
+      "detailSubtitle": "All movements written by this operation — one per item and lot, one per equipment unit (serial no., asset tag)",
+      "none": "No operations",
+      "total": "{{count}} operation(s)",
+      "notFound": "Operation not found",
+      "source": {
+        "GRN": "Receipt (goods receipt note)",
+        "ISSUE": "Issue / transfer",
+        "RETURN": "Return to stock",
+        "COUNT": "Stock count",
+        "ADJUSTMENT": "Adjustment",
+        "IMPORT": "Opening stock import",
+        "OPENING": "Existing equipment",
+        "RETIRE": "Equipment retirement",
+        "OTHER": "Stock operation"
+      }
     }
   },
   "help": {
@@ -4544,6 +4575,7 @@
             "items": [
               "\"Stock levels\": quantities by item, warehouse and lot, with alerts (below minimum, lots expiring within 90 days, expired lots) and Excel export.",
               "\"Movements\": log of every entry and exit (receipt, issue, return, cancellation, opening stock, retirement), with its source and author.",
+              "\"By operation\" (default view of Movements): each operation (MVG-YYYY-NNNNNN) groups the movements written at once — a receipt, an issue or transfer note, a return, a validated stock count, an adjustment, an opening stock import, the registration of existing equipment. Each equipment unit keeps its own movement (serial no., asset tag), but you see what came in together; \"Download (Excel)\" exports the operation, one movement per row. \"Movement detail\" shows the journal line by line.",
               "The log is immutable: an error is corrected with a reversing entry, never by editing. Stock can never become negative."
             ]
           },

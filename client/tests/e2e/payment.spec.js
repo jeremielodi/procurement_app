@@ -34,8 +34,15 @@ test.describe('💳 Paiements', () => {
     await expect(page.getByTestId('workflow-only')).toBeVisible();
   });
 
-  test('Le formulaire de paiement a les champs requis', async ({ page }) => {
+  test('Facture sans tâche du workflow : pas de formulaire de paiement', async ({ page }) => {
     await page.goto('/payments/new?invoiceId=999999');
+    await expect(page.locator('h1')).toContainText('Nouveau Paiement', { timeout: 8_000 });
+    await expect(page.getByTestId('workflow-only')).toBeVisible();
+    await expect(page.locator('button[type="submit"]')).toHaveCount(0);
+  });
+
+  test('Le formulaire de paiement a les champs requis', async ({ page }) => {
+    await page.goto('/payments/new?invoiceId=999999&taskId=fake-task-pay');
     // Montant
     await expect(page.locator('input[type="number"]').first()).toBeVisible({ timeout: 5_000 });
     // Mode de paiement (select)
@@ -47,7 +54,7 @@ test.describe('💳 Paiements', () => {
   });
 
   test('Soumettre sans montant affiche une erreur toast', async ({ page }) => {
-    await page.goto('/payments/new?invoiceId=999999');
+    await page.goto('/payments/new?invoiceId=999999&taskId=fake-task-pay');
     await page.waitForLoadState('networkidle');
     // Vider le champ montant
     const amountInput = page.locator('input[type="number"]').first();
@@ -81,7 +88,7 @@ test.describe('💳 Paiements', () => {
 
   test('Pré-remplissage depuis une facture (URL param invoiceId)', async ({ page }) => {
     // Naviguer avec un invoiceId fictif — vérifier que la page ne crash pas
-    await page.goto('/payments/new?invoiceId=99999');
+    await page.goto('/payments/new?invoiceId=99999&taskId=fake-task-pay');
     await page.waitForTimeout(3000);
     await expect(page.locator('h1')).toContainText('Nouveau Paiement');
     // La page doit rester stable même si la facture n'existe pas

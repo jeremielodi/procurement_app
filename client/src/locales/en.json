@@ -1889,8 +1889,7 @@
     "invoiceDate": "Invoice date",
     "dueDate": "Due date",
     "linkedOrder": "Linked order",
-    "matchedHint": "Invoice matched — you can start the payment",
-    "startPayment": "Start payment →",
+    "matchedHint": "Invoice matched — the payment is entered only through the \"Process payment\" workflow step (requisition Tasks tab).",
     "statusSentence": "Invoice status: {{status}}.",
     "amountDateRequired": "Total amount and invoice date are required",
     "matchedLabel": "✅ Matched",
@@ -1932,7 +1931,8 @@
     "supplierNumberHint": "Duplicate check: the same supplier invoice can only be entered once. The internal number INV-… is assigned automatically.",
     "duplicate": "Invoice already recorded: number {{number}} from this supplier is {{existing}}.",
     "supplierNumberShort": "Supplier no.: {{number}}",
-    "supplierFromPo": "Supplier of the purchase order: the invoice is always linked to it."
+    "supplierFromPo": "Supplier of the purchase order: the invoice is always linked to it.",
+    "paymentTaskLink": "Open the tasks of requisition {{number}}"
   },
   "paymentStatus": {
     "PENDING": "Pending",

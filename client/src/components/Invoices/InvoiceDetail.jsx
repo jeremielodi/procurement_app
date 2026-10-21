@@ -163,16 +163,18 @@ export default function InvoiceDetail() {
         )}
       </div>
 
-      {/* Actions */}
+      {/* Paiement : uniquement par l'étape « Traiter le paiement » du workflow (onglet tâches de la réquisition) */}
       {invoice.match_status === 'MATCHED' && !['PAID', 'PARTIALLY_PAID'].includes(invoice.status) && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-          <p className="text-sm text-green-800 font-medium mb-3">{t('invoice.matchedHint')}</p>
-          <Link
-            to={`/payments/new?invoiceId=${invoice.id}`}
-            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-          >
-            <CreditCard size={16} /> {t('invoice.startPayment')}
-          </Link>
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4" data-testid="invoice-payment-hint">
+          <p className="text-sm text-green-800 font-medium">{t('invoice.matchedHint')}</p>
+          {invoice.requisition_id && (
+            <Link
+              to={`/requisitions/${invoice.requisition_id}/tasks`}
+              className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-green-800 underline hover:text-green-900"
+            >
+              <CreditCard size={16} /> {t('invoice.paymentTaskLink', { number: invoice.requisition_number })}
+            </Link>
+          )}
         </div>
       )}
 

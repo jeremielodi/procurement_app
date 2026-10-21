@@ -147,12 +147,14 @@ class InvoiceModel {
     const inv = await db.one(
       `SELECT inv.*,
               po.po_number, po.total_amount AS po_amount, pc.format_key AS po_currency,
+              po.requisition_id, r.requisition_number,
               grn.grn_number, grn.status AS grn_status,
               s.name AS supplier_name, s.email AS supplier_email,
               u.first_name || ' ' || u.last_name AS created_by_name
        FROM invoices inv
        LEFT JOIN purchase_orders    po  ON inv.po_id = po.id
        LEFT JOIN currency           pc  ON po.currency_id = pc.id
+       LEFT JOIN requisitions        r   ON r.id = po.requisition_id
        LEFT JOIN goods_receipt_notes grn ON inv.grn_id = grn.id
        LEFT JOIN suppliers           s   ON inv.supplier_id = s.id
        LEFT JOIN users               u   ON inv.created_by = u.id

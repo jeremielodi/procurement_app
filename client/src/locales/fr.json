@@ -1889,8 +1889,7 @@
     "invoiceDate": "Date facture",
     "dueDate": "Échéance",
     "linkedOrder": "Commande liée",
-    "matchedHint": "Facture rapprochée — vous pouvez initier le paiement",
-    "startPayment": "Initier le paiement →",
+    "matchedHint": "Facture rapprochée — le paiement se saisit uniquement par l'étape « Traitement du paiement » du workflow (onglet Tâches de la réquisition).",
     "statusSentence": "Statut de la facture : {{status}}.",
     "amountDateRequired": "Montant total et date de facture sont requis",
     "matchedLabel": "✅ Rapprochée",
@@ -1932,7 +1931,8 @@
     "supplierNumberHint": "Contrôle anti-doublon : une même facture d'un fournisseur ne peut être saisie qu'une fois. Le n° interne INV-… est attribué automatiquement.",
     "duplicate": "Facture déjà enregistrée : le n° {{number}} de ce fournisseur correspond à {{existing}}.",
     "supplierNumberShort": "N° fournisseur : {{number}}",
-    "supplierFromPo": "Fournisseur du bon de commande : la facture lui est toujours rattachée."
+    "supplierFromPo": "Fournisseur du bon de commande : la facture lui est toujours rattachée.",
+    "paymentTaskLink": "Ouvrir les tâches de la réquisition {{number}}"
   },
   "paymentStatus": {
     "PENDING": "En attente",

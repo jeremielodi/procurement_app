@@ -1931,7 +1931,8 @@
     "supplierNumberPlaceholder": "Number printed on the invoice, e.g. F-2026-0153",
     "supplierNumberHint": "Duplicate check: the same supplier invoice can only be entered once. The internal number INV-… is assigned automatically.",
     "duplicate": "Invoice already recorded: number {{number}} from this supplier is {{existing}}.",
-    "supplierNumberShort": "Supplier no.: {{number}}"
+    "supplierNumberShort": "Supplier no.: {{number}}",
+    "supplierFromPo": "Supplier of the purchase order: the invoice is always linked to it."
   },
   "paymentStatus": {
     "PENDING": "Pending",

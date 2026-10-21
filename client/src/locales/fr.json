@@ -1931,7 +1931,8 @@
     "supplierNumberPlaceholder": "N° imprimé sur la facture, ex. F-2026-0153",
     "supplierNumberHint": "Contrôle anti-doublon : une même facture d'un fournisseur ne peut être saisie qu'une fois. Le n° interne INV-… est attribué automatiquement.",
     "duplicate": "Facture déjà enregistrée : le n° {{number}} de ce fournisseur correspond à {{existing}}.",
-    "supplierNumberShort": "N° fournisseur : {{number}}"
+    "supplierNumberShort": "N° fournisseur : {{number}}",
+    "supplierFromPo": "Fournisseur du bon de commande : la facture lui est toujours rattachée."
   },
   "paymentStatus": {
     "PENDING": "En attente",

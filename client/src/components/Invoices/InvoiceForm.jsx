@@ -18,7 +18,6 @@ export default function InvoiceForm() {
 
   const { currency } = useCurrency();
   const [po, setPO] = useState(null);
-  const [suppliers, setSuppliers] = useState([]);
   const [currencies, setCurrencies] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -38,7 +37,6 @@ export default function InvoiceForm() {
 
   useEffect(() => {
     api.get('/currencies').then(r => setCurrencies(r.data?.data || [])).catch(() => {});
-    api.get('/suppliers').then(r => setSuppliers(r.data?.data || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -154,15 +152,12 @@ export default function InvoiceForm() {
             <p className="mt-1 text-xs text-gray-500">{t('invoice.supplierNumberHint')}</p>
           </div>
           <div>
+            {/* Fournisseur = celui du bon de commande (imposé par le serveur) : affiché, pas choisi */}
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.supplier')}</label>
-            <SearchSelect
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={form.supplierId}
-              onChange={e => set('supplierId', e.target.value)}
-            >
-              <option value="">{t('common.select')}</option>
-              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </SearchSelect>
+            <div className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-800" data-testid="invoice-supplier">
+              {po?.supplier_name || '—'}
+            </div>
+            <p className="mt-1 text-xs text-gray-500">{t('invoice.supplierFromPo')}</p>
           </div>
         </div>
 

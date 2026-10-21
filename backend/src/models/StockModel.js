@@ -181,9 +181,8 @@ class StockModel {
       LEFT JOIN stock_issues sis ON g.source_type = 'ISSUE' AND sis.id::text = g.source_id
       LEFT JOIN stock_returns sr ON g.source_type = 'RETURN' AND sr.id::text = g.source_id
       LEFT JOIN stock_counts sct ON g.source_type = 'COUNT' AND sct.id::text = g.source_id
-      LEFT JOIN stock_adjustments sad ON g.source_type = 'ADJUSTMENT' AND sad.id::text = g.source_id
-      ${where}`;
-    const total = (await db.one(`SELECT COUNT(*)::int AS n ${from}`, params)).n;
+      LEFT JOIN stock_adjustments sad ON g.source_type = 'ADJUSTMENT' AND sad.id::text = g.source_id`;
+    const total = (await db.one(`SELECT COUNT(*)::int AS n ${from} ${where}`, params)).n;
     params.push(Math.min(parseInt(limit) || 50, 500), parseInt(offset) || 0);
     const rows = await db.select(
       `SELECT g.id, g.group_number, g.created_at, g.source_type, g.source_id,
@@ -209,6 +208,7 @@ class StockModel {
          JOIN warehouses w ON w.id = m.warehouse_id
          WHERE m.group_id = g.id
        ) a
+       ${where}
        ORDER BY g.created_at DESC, g.group_number DESC
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params

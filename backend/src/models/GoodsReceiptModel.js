@@ -424,7 +424,8 @@ class GoodsReceiptModel {
               si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable,
               si.track_lots, si.track_expiry, si.track_serials,
               lt.lot_number, lt.expiry_date, m.movement_number,
-              ARRAY(SELECT un.serial_number FROM stock_units un WHERE un.grn_item_id = gi.id AND un.status <> 'VOID' ORDER BY un.serial_number) AS serials
+              ARRAY(SELECT un.serial_number FROM stock_units un WHERE un.grn_item_id = gi.id AND un.status <> 'VOID' ORDER BY un.serial_number) AS serials,
+              ARRAY(SELECT un.asset_tag FROM stock_units un WHERE un.grn_item_id = gi.id AND un.status <> 'VOID' ORDER BY un.serial_number) AS asset_tags
        FROM goods_receipt_items gi
        LEFT JOIN purchase_order_items pi ON pi.id = gi.po_item_id
        LEFT JOIN stock_items si ON si.id = gi.stock_item_id

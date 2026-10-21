@@ -16,7 +16,7 @@ class BudgetModel {
       id,
       entity_code: entityCode,
       loc,
-      funding_source: fundingSource,
+      funding_source: typeof fundingSource === 'string' ? (fundingSource.trim() || null) : fundingSource,
       sub_project: subProject,
       function_code: functionCode,
       description,
@@ -116,7 +116,7 @@ class BudgetModel {
     const { loc, fundingSource, subProject, functionCode, description, allocatedAmount, projectId, isActive } = data;
     await db.update('budget_allocations', {
       loc,
-      funding_source: fundingSource,
+      funding_source: typeof fundingSource === 'string' ? (fundingSource.trim() || null) : fundingSource,
       sub_project: subProject,
       function_code: functionCode,
       description,

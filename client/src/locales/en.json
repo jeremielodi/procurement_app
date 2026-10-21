@@ -1796,7 +1796,7 @@
     "movementHint": "Stock movement (entry)",
     "notLinked": "Not linked to the catalogue",
     "serials": "Serial numbers",
-    "serialsPlaceholder": "One per line: serial number ; asset tag (optional)\nE.g. 5CD1234XYZ ; INV-0042",
+    "serialsPlaceholder": "One per line: serial number ; asset tag (optional: assigned automatically if empty)\nE.g. 5CD1234XYZ",
     "serialsHint": "One serial number per accepted unit",
     "remainingAfter": "After this receipt, {{remaining}} will remain to be delivered: a new service acceptance (SAN) and a new receipt (GRN) will be requested at the next delivery.",
     "closeRemaining": "The supplier will not deliver the rest: close the remaining quantity",
@@ -2629,10 +2629,7 @@
     "entityPlaceholder": "E.g. A",
     "locPlaceholder": "E.g. 61001",
     "fundingSource": "Funding source",
-    "selectSource": "Select a source",
-    "euFull": "European Union",
-    "undp": "UNDP",
-    "worldBank": "World Bank",
+    "sourcePlaceholder": "E.g. USAID, European Union, own funds...",
     "subProject": "Sub-project",
     "subProjectPlaceholder": "E.g. CONS-001, EDU-001...",
     "functionCode": "Function code",
@@ -3029,7 +3026,7 @@
       "restockJustification": "Items below minimum stock (stock / minimum): {{list}}",
       "reorderQuantity": "Reorder quantity",
       "reorderHint": "Optional: quantity proposed below the minimum",
-      "trackSerialsHint": "At every receipt (goods receipt note), a serial number will be required for each accepted unit — one per line: serial number ; asset tag (optional). Equipment already in stock: Equipment › \"Register existing equipment\"."
+      "trackSerialsHint": "At every receipt (goods receipt note), a serial number will be required for each accepted unit — one per line: serial number ; asset tag (optional). Without an asset tag, one is assigned automatically (INV-YYYY-NNNNN). Equipment already in stock: Equipment › \"Register existing equipment\"."
     },
     "mv": {
       "title": "Stock movements",
@@ -4246,7 +4243,7 @@
               "Before each receipt, the requester has accepted the delivery (service acceptance, SAN). Then open the \"Goods receipt note (GRN)\" task: the form loads the order. For each line, the proposed quantity is the remaining quantity.",
               "Enter the quantity received and the quantity rejected (with its reason): the accepted quantity is calculated (received − rejected).",
               "Choose the destination warehouse if at least one item is stockable. If you only have access to one warehouse, it is selected automatically; if you have several, the choice is mandatory.",
-              "Fill in the information required by the item: lot number and expiry date, or one serial number per unit for equipment (\"serial number ; asset tag\", one line per device).",
+              "Fill in the information required by the item: lot number and expiry date, or one serial number per unit for equipment (\"serial number\", one line per device; the asset tag is assigned automatically unless you enter \"serial number ; asset tag\" for an existing label).",
               "Save: the goods receipt is created, the accepted quantity enters stock (one movement per line or per device) and the process moves on."
             ]
           },
@@ -4772,7 +4769,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "A piece of equipment (laptop, phone, GPS, camera…) remains company property: it is assigned to an employee and then recovered. Each device is tracked by its serial number and, if you wish, by an asset tag."
+            "text": "A piece of equipment (laptop, phone, GPS, camera…) remains company property: it is assigned to an employee and then recovered. Each device is tracked by its serial number and by an asset tag, assigned automatically when it enters stock (INV-YYYY-NNNNN) unless you enter one."
           },
           {
             "type": "h",
@@ -5688,7 +5685,7 @@
   "serialsHelp": {
     "title": "How to enter serial numbers",
     "onePerLine": "One item per line (press Enter between numbers), as many lines as units.",
-    "format": "Format: serial number ; asset tag — the asset tag (internal label) is optional.",
+    "format": "Format: serial number ; asset tag — the asset tag (internal label) is optional: if empty, one is assigned automatically (INV-YYYY-NNNNN).",
     "unique": "A serial number cannot be recorded twice for the same item; an asset tag is unique within the company.",
     "example": "5CD1234XYZ ; INV-0042\n5CD1234XZA ; INV-0043\n5CD1234XZB",
     "counter": "{{count}} / {{expected}} entered",

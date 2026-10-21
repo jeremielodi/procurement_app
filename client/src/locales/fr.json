@@ -1796,7 +1796,7 @@
     "movementHint": "Mouvement de stock (entrée)",
     "notLinked": "Non lié au catalogue",
     "serials": "N° de série",
-    "serialsPlaceholder": "Un par ligne : n° de série ; n° d'inventaire (facultatif)\nEx. 5CD1234XYZ ; INV-0042",
+    "serialsPlaceholder": "Un par ligne : n° de série ; n° d'inventaire (facultatif : attribué automatiquement si vide)\nEx. 5CD1234XYZ",
     "serialsHint": "Un n° de série par unité acceptée",
     "remainingAfter": "Après cette réception, il restera {{remaining}} à livrer : une nouvelle acceptation (SAN) puis une nouvelle réception (GRN) seront demandées à la prochaine livraison.",
     "closeRemaining": "Le fournisseur ne livrera pas le reste : solder le reliquat",
@@ -2629,10 +2629,7 @@
     "entityPlaceholder": "Ex : A",
     "locPlaceholder": "Ex : 61001",
     "fundingSource": "Source de financement",
-    "selectSource": "Sélectionner une source",
-    "euFull": "Union Européenne",
-    "undp": "PNUD",
-    "worldBank": "Banque Mondiale",
+    "sourcePlaceholder": "Ex : USAID, Union Européenne, fonds propres...",
     "subProject": "Sous-projet",
     "subProjectPlaceholder": "Ex : CONS-001, EDU-001...",
     "functionCode": "Code fonction",
@@ -3029,7 +3026,7 @@
       "restockJustification": "Articles sous le stock minimum (stock / minimum) : {{list}}",
       "reorderQuantity": "Quantité de réapprovisionnement",
       "reorderHint": "Facultatif : quantité proposée sous le minimum",
-      "trackSerialsHint": "À chaque réception (bon de réception), un n° de série sera demandé pour chaque unité acceptée — un par ligne : n° de série ; n° d'inventaire (facultatif). Équipements déjà en stock : Équipements › « Enregistrer le parc existant »."
+      "trackSerialsHint": "À chaque réception (bon de réception), un n° de série sera demandé pour chaque unité acceptée — un par ligne : n° de série ; n° d'inventaire (facultatif). Sans n° d'inventaire saisi, il est attribué automatiquement (INV-AAAA-NNNNN). Équipements déjà en stock : Équipements › « Enregistrer le parc existant »."
     },
     "mv": {
       "title": "Mouvements de stock",
@@ -4246,7 +4243,7 @@
               "Avant chaque réception, le demandeur a validé la livraison (acceptation de service, SAN). Ouvrez ensuite la tâche « Bon de réception (GRN) » : le formulaire reprend la commande. Pour chaque ligne, la quantité proposée est le reste à livrer.",
               "Indiquez la quantité reçue et la quantité rejetée (avec son motif) : l'acceptée est calculée (reçu − rejeté).",
               "Choisissez le dépôt de destination si au moins un article est stockable. Si vous n'avez accès qu'à un dépôt, il est choisi d'office ; si vous en avez plusieurs, le choix est obligatoire.",
-              "Complétez les informations demandées selon l'article : n° de lot et date de péremption, ou un n° de série par unité pour un équipement (« n° de série ; n° d'inventaire », une ligne par appareil).",
+              "Complétez les informations demandées selon l'article : n° de lot et date de péremption, ou un n° de série par unité pour un équipement (« n° de série », une ligne par appareil ; le n° d'inventaire est attribué automatiquement, sauf si vous saisissez « n° de série ; n° d'inventaire » pour une étiquette déjà collée).",
               "Enregistrez : le bon de réception est créé, la quantité acceptée entre en stock (un mouvement par ligne ou par appareil) et le circuit avance."
             ]
           },
@@ -4772,7 +4769,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "Un équipement (ordinateur, téléphone, GPS, appareil photo…) reste la propriété de l'entreprise : il est affecté à un employé puis récupéré. Chaque appareil est suivi par son n° de série et, si vous le souhaitez, par un n° d'inventaire."
+            "text": "Un équipement (ordinateur, téléphone, GPS, appareil photo…) reste la propriété de l'entreprise : il est affecté à un employé puis récupéré. Chaque appareil est suivi par son n° de série et par un n° d'inventaire, attribué automatiquement à l'entrée en stock (INV-AAAA-NNNNN) si vous n'en saisissez pas."
           },
           {
             "type": "h",
@@ -5688,7 +5685,7 @@
   "serialsHelp": {
     "title": "Comment saisir les n° de série",
     "onePerLine": "Un équipement par ligne (touche Entrée entre deux numéros), autant de lignes que d'unités.",
-    "format": "Format : n° de série ; n° d'inventaire — le n° d'inventaire (étiquette interne) est facultatif.",
+    "format": "Format : n° de série ; n° d'inventaire — le n° d'inventaire (étiquette interne) est facultatif : sans saisie, il est attribué automatiquement (INV-AAAA-NNNNN).",
     "unique": "Un n° de série ne peut pas être enregistré deux fois pour le même article ; un n° d'inventaire est unique dans l'entreprise.",
     "example": "5CD1234XYZ ; INV-0042\n5CD1234XZA ; INV-0043\n5CD1234XZB",
     "counter": "{{count}} / {{expected}} saisi(s)",

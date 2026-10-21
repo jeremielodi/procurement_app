@@ -200,7 +200,7 @@ export default function GRNDetail() {
                   <td className="px-4 py-2 text-gray-900">
                     {item.item_code && <span className="mr-1 rounded bg-indigo-50 px-1 text-xs font-semibold text-indigo-700">{item.item_code}</span>}
                     {item.item_description}
-                    {item.serials?.length > 0 && <div className="font-mono text-xs text-gray-500">{item.serials.join(', ')}</div>}
+                    {item.serials?.length > 0 && <div className="font-mono text-xs text-gray-500">{item.serials.map((s, k) => (item.asset_tags?.[k] ? `${s} · ${item.asset_tags[k]}` : s)).join(', ')}</div>}
                     {item.lot_number && (
                       <div className="text-xs text-gray-500">{t('grn.lotLabel', { lot: item.lot_number })}{item.expiry_date && ` · ${t('grn.expiryLabel', { date: new Date(item.expiry_date).toLocaleDateString(getLocale()) })}`}</div>
                     )}

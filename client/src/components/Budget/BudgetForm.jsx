@@ -28,18 +28,6 @@ export default function BudgetForm({ budget, onClose }) {
 
   const projects = projectsData?.data || [];
 
-  // Charger les sources de financement distinctes (optionnel)
-  const { data: fundingSourcesData } = useQuery({
-    queryKey: ['budget-funding-sources'],
-    queryFn: async () => {
-      const response = await budgetService.getAll({ limit: 100 });
-      const sources = [...new Set(response.data?.map(b => b.funding_source).filter(Boolean))];
-      return { data: sources };
-    }
-  });
-
-  const fundingSources = fundingSourcesData?.data || [];
-
   useEffect(() => {
     if (budget) {
       setFormData({
@@ -122,27 +110,16 @@ export default function BudgetForm({ budget, onClose }) {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {t('budget.fundingSource')}
           </label>
-          <SearchSelect
+          <input
+            type="text"
+            name="fundingSource"
             value={formData.fundingSource}
             onChange={(e) => setFormData({ ...formData, fundingSource: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">{t('budget.selectSource')}</option>
-            <option value="WWF">WWF</option>
-            <option value="UE">{t('budget.euFull')}</option>
-            <option value="PNUD">{t('budget.undp')}</option>
-            <option value="Banque Mondiale">{t('budget.worldBank')}</option>
-            <option value="USAID">USAID</option>
-            <option value="GEF">GEF</option>
-            <option value="FFEM">FFEM</option>
-            <option value="KfW">KfW</option>
-            <option value="AFD">AFD</option>
-            {fundingSources.map(source => (
-              !['WWF', 'UE', 'PNUD', 'Banque Mondiale', 'USAID', 'GEF', 'FFEM', 'KfW', 'AFD'].includes(source) && (
-                <option key={source} value={source}>{source}</option>
-              )
-            ))}
-          </SearchSelect>
+            placeholder={t('budget.sourcePlaceholder')}
+            maxLength={100}
+            data-testid="budget-funding-source"
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">

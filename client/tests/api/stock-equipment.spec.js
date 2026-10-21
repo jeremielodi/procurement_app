@@ -77,7 +77,12 @@ test.describe.serial('API › Équipements affectés et retours', () => {
     grnId = r.body.data.id;
     expect(r.body.data.stockMovements).toBe(4); // 3 unités + 1 ligne de papier
     const detail = (await (await request.get(`/api/goods-receipts/${grnId}`, { headers: L() })).json()).data;
-    expect(detail.items.find(i => i.po_item_id === poLines.laptop.id).serials).toEqual([S(1), S(2), S(3)]);
+    const laptopLine = detail.items.find(i => i.po_item_id === poLines.laptop.id);
+    expect(laptopLine.serials).toEqual([S(1), S(2), S(3)]);
+    // N° d'inventaire : saisi = conservé, sinon attribué automatiquement (migration 35)
+    expect(laptopLine.asset_tags[1]).toBe(`INV-${stamp}-2`);
+    for (const k of [0, 2]) expect(laptopLine.asset_tags[k]).toMatch(/^INV-\d{4}-\d{5}$/);
+    expect(laptopLine.asset_tags[0]).not.toBe(laptopLine.asset_tags[2]);
     units = await unitsOf(request);
     expect(units.map(u => [u.serial_number, u.status, u.warehouse_id])).toEqual([[S(1), 'IN_STOCK', wh1.id], [S(2), 'IN_STOCK', wh1.id], [S(3), 'IN_STOCK', wh1.id]]);
   });

@@ -1,6 +1,7 @@
 // backend/src/controllers/PaymentController.js
 const paymentModel   = require('../models/PaymentModel');
 const camundaService = require('../services/CamundaService');
+const orderTasks = require('../services/OrderTaskService');
 const db             = require('../config/database');
 const { renderPdf } = require('../utils/pdfRenderer');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
@@ -70,23 +71,17 @@ class PaymentController {
         paymentComplete: true
       };
 
-      if (taskId) {
+      // Étape GoFlow du bon de commande de la facture (réquisition répartie : un paiement par part) ; le taskId du
+      // client n'est retenu que s'il désigne cette étape
+      if (processInstanceId && poId) {
         try {
-          await camundaService.completeTask(taskId, completionVars);
-          camundaTaskCompleted = true;
-        } catch (e) {
-          console.error('[Payment] Camunda completeTask (non-fatal):', e.message);
-        }
-      } else if (processInstanceId) {
-        try {
-          const tasks = await camundaService.getProcessTasks(processInstanceId);
-          const payTask = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_ProcessPayment');
+          const payTask = await orderTasks.findForPurchaseOrder(processInstanceId, 'Activity_ProcessPayment', poId, taskId);
           if (payTask) {
             await camundaService.completeTask(payTask.id, completionVars);
             camundaTaskCompleted = true;
           }
         } catch (e) {
-          console.error('[Payment] Camunda auto-complete (non-fatal):', e.message);
+          console.error('[Payment] Camunda completeTask (non-fatal):', e.message);
         }
       }
 

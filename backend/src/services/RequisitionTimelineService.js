@@ -5,6 +5,9 @@
 // Textes dans la langue demandée (src/i18n/locales : workflow.*, timeline.*)
 const db = require('../config/database');
 const directPurchaseService = require('./DirectPurchaseService');
+const allocationService = require('./SupplierAllocationService');
+const orderTasks = require('./OrderTaskService');
+const camundaService = require('./CamundaService');
 const i18n = require('../i18n');
 const {
   TASK_CANDIDATE_GROUPS, taskKey, taskLabel: rawTaskLabel, groupLabel, methodLabel, reasonLabel, matchLabel,
@@ -28,6 +31,7 @@ const TASK_STEP = {
   Activity_ReviseRequisition: 'approval', // correction demandée pendant l'approbation
   Activity_DetermineType: 'method',
   Activity_DirectPurchase: 'sourcing', Activity_RequestQuotations: 'sourcing', Activity_RFPProcess: 'sourcing', Activity_SoleSource: 'sourcing',
+  Activity_AllocateSuppliers: 'allocation',
   Activity_CreatePO: 'po', Activity_POApproval: 'po_approval', Activity_SupplierConfirmation: 'supplier_confirmation',
   Activity_GoodsReceipt: 'grn', Activity_ServiceAcceptance: 'san', Activity_EnterInvoice: 'invoice', Activity_ProcessPayment: 'payment',
 };
@@ -114,8 +118,8 @@ class RequisitionTimelineService {
     ]);
     const poIds = pos.map(p => p.id);
     const [grns, sans, invoices] = poIds.length ? await Promise.all([
-      db.select('SELECT id, grn_number, status, receipt_date, created_at FROM goods_receipt_notes WHERE po_id = ANY($1) ORDER BY id', [poIds]),
-      db.select('SELECT id, san_number, status, acceptance_date, created_at FROM service_acceptance_notes WHERE po_id = ANY($1) ORDER BY id', [poIds]),
+      db.select('SELECT id, po_id, grn_number, status, receipt_date, created_at FROM goods_receipt_notes WHERE po_id = ANY($1) ORDER BY id', [poIds]),
+      db.select('SELECT id, po_id, san_number, status, acceptance_date, created_at FROM service_acceptance_notes WHERE po_id = ANY($1) ORDER BY id', [poIds]),
       db.select('SELECT id, po_id, invoice_number, status, match_status, created_at FROM invoices WHERE po_id = ANY($1) ORDER BY id', [poIds]),
     ]) : [[], [], []];
     // Les paiements sont liés à la facture (po_id souvent vide)
@@ -363,12 +367,24 @@ class RequisitionTimelineService {
 
     // Tâches en attente
     const pending = [...tasks.values()].filter(t => !t.completedAt);
+    // Réquisition répartie entre plusieurs fournisseurs : une part par fournisseur (étapes de commande par part)
+    const lots = await allocationService.list(requisitionId);
+    const lotOfTask = new Map();
+    if (lots.length && req.process_instance_id && pending.length) {
+      try {
+        for (const t of await orderTasks.withLots(await camundaService.getProcessTasks(req.process_instance_id))) {
+          if (t.lot) lotOfTask.set(t.id, t.lot);
+        }
+      } catch { /* GoFlow injoignable : sans le fournisseur */ }
+    }
+    for (const [taskId, t] of tasks) if (lotOfTask.has(taskId)) t.lot = lotOfTask.get(taskId);
     for (const t of pending) {
       const details = [T('timeline.expectedRole', { role: role(t.key) || '—' })];
       // Responsable connu : affiché par le client avec sa photo (assignee / assigneeId), sinon en texte
       if (t.claimedBy && !t.claimedById) details.push(T('timeline.claimedBy', { name: t.claimedBy }));
       if (t.createdAt) details.push(T('timeline.waitingFor', { time: duration(t.createdAt, new Date(), T) || T('timeline.fewMoments') }));
-      events.push({ date: t.createdAt, kind: 'warning', title: T('timeline.pendingTitle', { task: t.label }), actor: null, assignee: t.claimedById ? t.claimedBy : null, assigneeId: t.claimedById || null, details, links: [], pending: true });
+      const task = t.lot ? T('timeline.split.taskOfLot', { task: t.label, supplier: t.lot.supplierName }) : t.label;
+      events.push({ date: t.createdAt, kind: 'warning', title: T('timeline.pendingTitle', { task }), actor: null, assignee: t.claimedById ? t.claimedBy : null, assigneeId: t.claimedById || null, details, links: [], pending: true });
     }
     events.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -392,6 +408,13 @@ class RequisitionTimelineService {
     const deliveryOpen = pending.some(t => ['Activity_ServiceAcceptance', 'Activity_GoodsReceipt'].includes(t.key));
     const closedPo = activePos.find(p => p.delivery_closed_at);
     const links = (list, numberKey, base) => list.map(d => ({ label: d[numberKey], to: `${base}/${d.id}` }));
+    // Répartition : une étape de commande n'est faite que lorsque toutes les parts encore actives l'ont passée
+    // (part au bon rejeté : arrêtée) ; « n / total commandes » en information
+    const expected = lots.length ? lots.filter(l => !PO_REJECTED.includes(l.po_status)).length : 0;
+    const poDone = (test) => activePos.filter(test).length;
+    const splitInfo = (n) => (expected ? T('timeline.split.progress', { done: Math.min(n, expected), total: expected }) : null);
+    const allDone = (n, fallback) => (expected ? n >= expected : fallback);
+    const hasDoc = (list) => (po) => list.some(d => String(d.po_id) === String(po.id));
 
     const steps = [
       { key: 'created', label: T('timeline.steps.created'), status: 'done', date: req.created_at, info: req.requester_name },
@@ -416,48 +439,70 @@ class RequisitionTimelineService {
         info: [sourcingDone?.label, directPurchase ? T('timeline.directPurchaseSupplier', { supplier: directPurchase.supplier_name }) : null].filter(Boolean).join(' · ') || null,
         links: tender ? [{ label: tender.tender_number, to: `/tenders/${tender.id}` }] : [],
       },
-      { key: 'po', label: T('timeline.steps.po'), status: activePos.length ? 'done' : pos.length ? 'failed' : 'pending', date: activePos[0]?.created_at, links: links(pos, 'po_number', '/purchase-orders') },
+      // Répartition entre plusieurs fournisseurs (seulement si elle a lieu)
+      ...(lots.length || pending.some(t => t.key === 'Activity_AllocateSuppliers') ? [{
+        key: 'allocation', label: T('timeline.steps.allocation'), status: lots.length ? 'done' : 'pending', date: lots[0]?.created_at,
+        info: lots.map(l => T('timeline.split.lotInfo', { supplier: l.supplier_name, count: l.items.length })).join(' · ') || null,
+      }] : []),
+      {
+        key: 'po', label: T('timeline.steps.po'),
+        status: allDone(activePos.length, activePos.length > 0) ? 'done' : pos.length && !activePos.length ? 'failed' : 'pending',
+        date: activePos[0]?.created_at, info: splitInfo(activePos.length), links: links(pos, 'po_number', '/purchase-orders'),
+      },
       {
         key: 'po_approval', label: T('timeline.steps.po_approval'),
-        status: activePos.some(p => PO_APPROVED.includes(p.status)) ? 'done' : pos.some(p => PO_REJECTED.includes(p.status)) && !activePos.length ? 'failed' : 'pending',
+        status: allDone(poDone(p => PO_APPROVED.includes(p.status)), activePos.some(p => PO_APPROVED.includes(p.status))) ? 'done' : pos.some(p => PO_REJECTED.includes(p.status)) && !activePos.length ? 'failed' : 'pending',
         date: activePos.find(p => p.approved_at)?.approved_at,
-        info: nameById.get(activePos.find(p => p.approved_by)?.approved_by) ? T('timeline.approvedBy', { name: nameById.get(activePos.find(p => p.approved_by).approved_by) }) : null,
+        info: splitInfo(poDone(p => PO_APPROVED.includes(p.status)))
+          || (nameById.get(activePos.find(p => p.approved_by)?.approved_by) ? T('timeline.approvedBy', { name: nameById.get(activePos.find(p => p.approved_by).approved_by) }) : null),
       },
-      { key: 'supplier_confirmation', label: T('timeline.steps.supplier_confirmation'), status: done('Activity_SupplierConfirmation') || grns.length || sans.length || activePos.some(p => p.supplier_response === 'CONFIRMED') ? 'done'
+      { key: 'supplier_confirmation', label: T('timeline.steps.supplier_confirmation'),
+        status: allDone(poDone(p => p.supplier_response === 'CONFIRMED' || hasDoc(grns)(p) || hasDoc(sans)(p)),
+          done('Activity_SupplierConfirmation') || grns.length || sans.length || activePos.some(p => p.supplier_response === 'CONFIRMED')) ? 'done'
           : activePos.some(p => p.supplier_response === 'DECLINED') ? 'failed' : 'pending',
-        date: done('Activity_SupplierConfirmation')?.completedAt || activePos.find(p => p.supplier_response)?.supplier_responded_at },
+        date: done('Activity_SupplierConfirmation')?.completedAt || activePos.find(p => p.supplier_response)?.supplier_responded_at,
+        info: splitInfo(poDone(p => p.supplier_response === 'CONFIRMED' || hasDoc(grns)(p) || hasDoc(sans)(p))) },
       // Pour chaque livraison : SAN puis GRN ; tant qu'il reste à livrer, une nouvelle SAN puis un nouveau GRN sont demandés
-      { key: 'san', label: T('timeline.steps.san'), status: sans.length && !deliveryOpen ? 'done' : 'pending', date: sans[0]?.acceptance_date || sans[0]?.created_at, links: links(sans, 'san_number', '/service-acceptance-notes') },
+      { key: 'san', label: T('timeline.steps.san'), status: allDone(poDone(hasDoc(sans)), sans.length) && !deliveryOpen ? 'done' : 'pending', date: sans[0]?.acceptance_date || sans[0]?.created_at,
+        info: splitInfo(poDone(hasDoc(sans))), links: links(sans, 'san_number', '/service-acceptance-notes') },
       {
-        key: 'grn', label: T('timeline.steps.grn'), status: grns.length && !deliveryOpen ? 'done' : 'pending',
+        key: 'grn', label: T('timeline.steps.grn'), status: allDone(poDone(hasDoc(grns)), grns.length) && !deliveryOpen ? 'done' : 'pending',
         date: grns[0]?.receipt_date || grns[0]?.created_at, links: links(grns, 'grn_number', '/goods-receipts'),
-        info: closedPo ? T('timeline.deliveryClosed', { reason: closedPo.delivery_close_reason || '' })
-          : grns.length > 1 || deliveryOpen ? T('timeline.deliveries', { count: grns.length }) : null,
+        info: [splitInfo(poDone(hasDoc(grns))),
+          closedPo ? T('timeline.deliveryClosed', { reason: closedPo.delivery_close_reason || '' })
+            // Répartition : plusieurs réceptions = une par bon, pas forcément une livraison en cours
+            : deliveryOpen || (!expected && grns.length > 1) ? T('timeline.deliveries', { count: grns.length }) : null].filter(Boolean).join(' · ') || null,
       },
       {
-        key: 'invoice', label: T('timeline.steps.invoice'), status: invoices.length ? 'done' : 'pending', date: invoices[0]?.created_at,
-        info: invoices[0]?.match_status ? T('timeline.matchingInfo', { status: matchLabel(invoices[0].match_status, lang) }) : null,
+        key: 'invoice', label: T('timeline.steps.invoice'), status: allDone(poDone(hasDoc(invoices)), invoices.length) ? 'done' : 'pending', date: invoices[0]?.created_at,
+        info: splitInfo(poDone(hasDoc(invoices)))
+          || (invoices[0]?.match_status ? T('timeline.matchingInfo', { status: matchLabel(invoices[0].match_status, lang) }) : null),
         links: links(invoices, 'invoice_number', '/invoices'),
       },
       {
-        key: 'payment', label: T('timeline.steps.payment'), status: paid ? 'done' : 'pending', date: payments[0]?.created_at,
-        info: payments.length ? T('timeline.paidAmount', { amount: fmtNum(payments.reduce((s, p) => s + parseFloat(p.amount || 0), 0), lang) }) : null,
+        key: 'payment', label: T('timeline.steps.payment'),
+        status: allDone(poDone(po => invoices.some(i => String(i.po_id) === String(po.id) && i.status === 'PAID')), paid) ? 'done' : 'pending',
+        date: payments[0]?.created_at,
+        info: [splitInfo(poDone(po => invoices.some(i => String(i.po_id) === String(po.id) && i.status === 'PAID'))),
+          payments.length ? T('timeline.paidAmount', { amount: fmtNum(payments.reduce((s, p) => s + parseFloat(p.amount || 0), 0), lang) }) : null].filter(Boolean).join(' · ') || null,
         links: links(payments, 'payment_number', '/payments'),
       },
     ];
 
     // Étape en cours : celle de la tâche en attente, sinon la première non faite
     const stopped = ['REJECTED', 'CANCELLED'].includes(req.status) || endedAt('Event_Rejected') || steps.some(s => s.status === 'failed');
-    const pendingStep = pending.map(t => TASK_STEP[t.key]).find(Boolean);
+    // Plusieurs parts : elles peuvent attendre à des étapes différentes → la plus en amont
+    const pendingSteps = new Set(pending.map(t => TASK_STEP[t.key]).filter(Boolean));
     if (!stopped && !finished) {
-      const current = steps.find(s => s.key === pendingStep && s.status !== 'done') || steps.find(s => s.status === 'pending');
+      const current = steps.find(s => pendingSteps.has(s.key) && s.status !== 'done') || steps.find(s => s.status === 'pending');
       if (current) {
         current.status = 'current';
         const t = pending.find(p => TASK_STEP[p.key] === current.key);
         if (t) {
           const who = t.claimedBy ? T('timeline.claimedByLower', { name: t.claimedBy }) : T('timeline.roleLower', { role: role(t.key) || T('timeline.undefinedRole') });
           // Libellé de tâche répété seulement s'il diffère de l'étape (ex. « Achat direct » dans « Sélection du fournisseur »)
-          const task = t.label === current.label ? '' : ` : ${t.label}`;
+          const label = t.lot ? T('timeline.split.taskOfLot', { task: t.label, supplier: t.lot.supplierName }) : t.label;
+          const task = label === current.label ? '' : ` : ${label}`;
           current.info = [current.info, T('timeline.waitingInfo', { task, who })].filter(Boolean).join(' · ');
         }
       }

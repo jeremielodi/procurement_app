@@ -236,7 +236,8 @@
       "Activity_ServiceAcceptance": "Service acceptance note (SAN)",
       "Activity_EnterInvoice": "Enter supplier invoice",
       "Activity_ProcessPayment": "Process payment",
-      "Activity_ReviseRequisition": "Revise the requisition"
+      "Activity_ReviseRequisition": "Revise the requisition",
+      "Activity_AllocateSuppliers": "Allocate items to suppliers"
     }
   },
   "tenderStatus": {
@@ -438,11 +439,11 @@
         },
         {
           "title": "Tenders",
-          "desc": "Publishing, sealed bids until closing, comparison and award."
+          "desc": "Publishing, sealed bids until closing, comparison and award. Award to a single supplier or item by item (one purchase order per selected supplier)."
         },
         {
           "title": "Purchase orders",
-          "desc": "Approved POs sent as PDF to the supplier, who confirms the order and delivery date online."
+          "desc": "Approved POs sent as PDF to the supplier, who confirms the order and delivery date online. A requisition can be split between several suppliers: one purchase order, one invoice and one payment per supplier."
         },
         {
           "title": "3-way matching",
@@ -1472,7 +1473,9 @@
     "err": {
       "METHOD_BELOW_THRESHOLD": "Procurement method not sufficient for the requisition amount",
       "PROCUREMENT_METHOD_REQUIRED": "Select the procurement method",
-      "JUSTIFICATION_REQUIRED": "Justification required for a sole source"
+      "JUSTIFICATION_REQUIRED": "Justification required for a sole source",
+      "SPLIT_NOT_AVAILABLE_FOR_RFP": "Call for tenders: the split happens at the award (tender published \"per item\").",
+      "SPLIT_NEEDS_TWO_ITEMS": "A split requires at least two items in the requisition."
     },
     "direct": {
       "intro": "Select the chosen supplier and attach its pro forma invoice. The purchase order will offer this supplier by default.",
@@ -2144,7 +2147,42 @@
     "cancelled": "Cancelled",
     "closed": "Closed",
     "cancelHint": "The tender will be cancelled and no longer visible to suppliers.",
-    "closeHint": "The deadline will be set to now: suppliers will no longer be able to change their bids and prices will be revealed. ({{count}}/{{total}} submitted)"
+    "closeHint": "The deadline will be set to now: suppliers will no longer be able to change their bids and prices will be revealed. ({{count}}/{{total}} submitted)",
+    "awardMode": {
+      "label": "Award",
+      "SINGLE": "To a single supplier",
+      "SINGLE_help": "The selected bid covers every item: a single purchase order.",
+      "PER_ITEM": "Per item (several suppliers possible)",
+      "PER_ITEM_help": "Each item is awarded to the best bid for that item: one purchase order per selected supplier. Announced to suppliers, who may price only some of the items.",
+      "locked": "Bids have been submitted: the award mode can no longer change."
+    },
+    "perItem": {
+      "awardedSplit_one": "Tender awarded to {{count}} supplier",
+      "awardedSplit_other": "Tender awarded per item to {{count}} suppliers: one purchase order per supplier",
+      "awardedTo": "Awarded per item to",
+      "closedHint": "Submissions closed: choose the supplier of each item (best price pre-selected), then \"Award per item\".",
+      "awardTo": "Award to",
+      "awardedColumn": "Awarded to",
+      "noOffer": "No bid — not ordered",
+      "awardButton": "Award per item",
+      "confirmTitle": "Award per item",
+      "confirmIntro": "Items selected per supplier:",
+      "summaryRow_one": "{{count}} item · {{amount}}",
+      "summaryRow_other": "{{count}} items · {{amount}}",
+      "splitHint": "{{count}} suppliers selected: the requisition is split, each supplier gets its own purchase order (separate approval, receipt, invoice and payment).",
+      "err": {
+        "AWARD_MODE_SINGLE": "This tender was published for a single awardee.",
+        "ITEM_NOT_FOUND": "An item is not part of the requisition.",
+        "ITEM_AWARDED_TWICE": "An item can only be awarded once.",
+        "ITEM_NOT_QUOTED": "This supplier did not price this item.",
+        "ITEM_NOT_AWARDED": "Award every item that received a bid.",
+        "AWARD_REQUIRED": "No item awarded.",
+        "SPLIT_NOT_SUPPORTED": "Process started before supplier splitting: award every item to a single supplier.",
+        "ALLOCATION_LOCKED": "Purchase orders already exist for this requisition.",
+        "GOFLOW_ERROR": "The workflow engine did not accept the end of the step: nothing was saved.",
+        "default": "Award failed"
+      }
+    }
   },
   "portal": {
     "result": {
@@ -2267,6 +2305,11 @@
         "CONFIRMED": "Confirmed",
         "DECLINED": "Declined"
       }
+    },
+    "perItem": {
+      "congrats_one": "Congratulations: you won {{count}} item of this tender.",
+      "congrats_other": "Congratulations: you won {{count}} items of this tender.",
+      "notice": "Per-item award: each item may be awarded to a different supplier. You may price only the items you supply."
     }
   },
   "docReview": {
@@ -4068,7 +4111,7 @@
       },
       "sourcing": {
         "title": "Purchasing method",
-        "summary": "Direct purchase, multiple quotations, call for tenders or sole source.",
+        "summary": "Direct purchase, multiple quotations, call for tenders or sole source — and splitting between several suppliers.",
         "blocks": [
           {
             "type": "p",
@@ -4108,6 +4151,32 @@
             "text": "For a call for tenders, the \"Call for tenders\" task opens the creation of the call linked to the requisition directly. It ends when the call is awarded: the selected bid is passed on to the offer analysis, then to the creation of the purchase order."
           },
           {
+            "type": "h",
+            "text": "Split between several suppliers"
+          },
+          {
+            "type": "p",
+            "text": "A requisition can be split between several suppliers, whatever its amount: each item goes to a single supplier (e.g. 5 items → supplier A takes 1, B takes 2, C takes 2). Each supplier gets its own purchase order, which follows its full cycle: order approval, sending, confirmation, service acceptance (SAN) and goods receipt (GRN), invoice then payment. One invoice per purchase order."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "In \"Determine the procurement method\", choose the method then tick \"Split between several suppliers\".",
+              "Direct purchase: the \"Allocate items to suppliers\" step comes right away. Multiple quotations or sole source: it comes after the method's usual step.",
+              "In \"Allocate items to suppliers\", assign each item to a supplier (list per item, or tick several items then \"Assign selection\"). Direct purchase: attach each supplier's pro forma; sole source: justify each supplier.",
+              "\"Confirm the split\": one \"Create purchase order\" step appears per supplier, with the supplier and the items of its lot already filled in.",
+              "Each lot then moves at its own pace; task cards show the lot (\"Lot 2 — supplier\"). The requisition is completed when all its active purchase orders are paid."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "No order splitting to avoid thresholds: the procurement method and the approval level stay those of the requisition's TOTAL amount. Splitting a 60,000 requisition between three suppliers still requires a call for tenders: publish it with the \"per item\" award, the split then happens at the award."
+          },
+          {
+            "type": "tip",
+            "text": "A rejected purchase order only stops its own lot: the other suppliers carry on. The requisition page shows the \"Split between suppliers\" (items, purchase order, paid or not)."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -4115,6 +4184,20 @@
                 "label": "Calls for tenders"
               }
             ]
+          }
+        ],
+        "faq": [
+          {
+            "q": "Can I share the quantity of one item between two suppliers?",
+            "a": "No: the split is done item by item. To share a quantity, split the line into two items in the requisition before approval."
+          },
+          {
+            "q": "Can I split a call for tenders?",
+            "a": "Yes, through the tender itself: publish it with the \"Per item\" award, then award each item to the best bid. The \"Split between several suppliers\" box stays disabled for this method: the split happens at the award."
+          },
+          {
+            "q": "Is there a minimum number of suppliers?",
+            "a": "Yes, at least two suppliers, and every item must be assigned. Otherwise, do not tick the split: the usual path (a single supplier) applies."
           }
         ]
       },
@@ -4150,6 +4233,26 @@
             ]
           },
           {
+            "type": "h",
+            "text": "Per-item award (several suppliers)"
+          },
+          {
+            "type": "p",
+            "text": "When creating the tender, choose the award: \"To a single supplier\" or \"Per item (several suppliers possible)\". The mode is announced to suppliers and can no longer change once a bid is submitted. In per-item mode, a supplier may price only the items it supplies."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "After closing, the comparison shows an \"Award to\" column: for each item, the best-priced supplier is pre-selected; change it if needed (only bids that priced the item are offered).",
+              "\"Award per item\": the window summarises the items and amount selected per supplier; add a justification then confirm.",
+              "Single supplier selected: the rest is that of a standard tender. Several: the requisition is split, one \"Create purchase order\" step appears per supplier, with its items and the prices of its bid."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "An item with no bid is not ordered. Each selected supplier only sees, on its portal, the items it won."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -4161,6 +4264,12 @@
                 "label": "Prequalified suppliers"
               }
             ]
+          }
+        ],
+        "faq": [
+          {
+            "q": "Can I switch a tender to \"per item\" after publication?",
+            "a": "Yes, as long as no bid has been submitted (\"Edit\" button). After that the mode is locked: changing the rules after receiving bids would be open to challenge."
           }
         ]
       },
@@ -5474,7 +5583,8 @@
       "PROJECT_MEMBER_REMOVED": "Member removed from a project",
       "PROJECT_MEMBER_PROFILES_CHANGED": "Member profiles changed on a project",
       "APPROVAL_POLICY_CHANGED": "Approval thresholds changed",
-      "BUDGET_LINES_IMPORTED": "Budget register import"
+      "BUDGET_LINES_IMPORTED": "Budget register import",
+      "SUPPLIER_ALLOCATION_RECORDED": "Requisition split between several suppliers"
     },
     "groups": {
       "all": "All events",
@@ -5620,7 +5730,8 @@
     "invoice": "An invoice is always linked to a purchase order, itself linked to a requisition.",
     "payment": "A payment is always linked to an invoice, itself linked to the purchase order and the requisition.",
     "how": "Open \"My tasks\", then the requisition concerned: in its \"Tasks\" tab, claim the step and click \"Process\". The form opens with the right document.",
-    "listHint": "Documents are created from the requisition's task"
+    "listHint": "Documents are created from the requisition's task",
+    "allocation": "Items are allocated to suppliers from the requisition's \"Allocate items to suppliers\" step."
   },
   "dailyReport": {
     "title": "Daily requisition report",
@@ -5862,6 +5973,68 @@
       "AVATAR_TOO_LARGE": "Photo too large",
       "AVATAR_REQUIRED": "Choose a photo",
       "generic": "The photo could not be saved"
+    }
+  },
+  "split": {
+    "methodOption": "Split between several suppliers",
+    "methodOptionHelp": "Each item goes to a single supplier; one purchase order, one invoice and one payment per supplier. The method stays the one required by the total amount.",
+    "notForRfp": "Call for tenders: publish it with the \"per item\" award — the split happens at the award.",
+    "lotLabel": "Lot {{number}} — {{supplier}}",
+    "lotColumn": "Supplier",
+    "title": "Allocate items to suppliers",
+    "loading": "Loading the requisition…",
+    "loadError": "Unable to load the requisition",
+    "intro": "Assign each item to a supplier. Each supplier then gets its own purchase order, which follows its own cycle (approval, sending, receipt, invoice, payment).",
+    "rules": "Every item must be assigned, with at least two suppliers. Direct purchase: a pro forma is required for each supplier. Sole source: a justification is required for each supplier.",
+    "itemsTitle": "Items ({{count}})",
+    "selectedCount_one": "{{count}} item selected",
+    "selectedCount_other": "{{count}} items selected",
+    "chooseSupplier": "— Choose a supplier —",
+    "assignSelected": "Assign selection",
+    "selectAll": "Select all",
+    "supplier": "Supplier",
+    "colDescription": "Item",
+    "colQuantity": "Quantity",
+    "colTotal": "Amount",
+    "unassigned_one": "{{count}} item without a supplier",
+    "unassigned_other": "{{count}} items without a supplier",
+    "lotsTitle": "Lots per supplier ({{count}})",
+    "noLot": "No item assigned yet.",
+    "lotSummary_one": "{{count}} item · {{amount}}",
+    "lotSummary_other": "{{count}} items · {{amount}}",
+    "proforma": "Pro forma / quotation",
+    "justification": "Justification",
+    "submitting": "Saving…",
+    "submit": "Confirm the split ({{count}})",
+    "done_one": "Split saved: {{count}} purchase order to create",
+    "done_other": "Split saved: {{count}} purchase orders to create",
+    "poLotBanner": "Lot {{number}} of the requisition: purchase order for {{supplier}} covering its {{count}} item(s). The supplier and the items are set by the split.",
+    "panelTitle": "Split between suppliers — {{count}} suppliers",
+    "panelPaid": "{{paid}} / {{total}} paid",
+    "lotPaid": "Paid",
+    "noPurchaseOrder": "Purchase order to create",
+    "err": {
+      "ALLOCATION_REQUIRED": "Allocate the items to the suppliers.",
+      "SUPPLIER_REQUIRED": "Choose the supplier of each lot.",
+      "SUPPLIER_TWICE": "A supplier can only have one lot.",
+      "SUPPLIER_NOT_FOUND": "Supplier not found.",
+      "SUPPLIER_INACTIVE": "One of the chosen suppliers is not active.",
+      "LOT_EMPTY": "Each supplier must have at least one item.",
+      "ITEM_NOT_FOUND": "An item is not part of this requisition.",
+      "ITEM_ALLOCATED_TWICE": "An item can only be assigned to one supplier.",
+      "ITEM_NOT_ALLOCATED": "Every item must be assigned to a supplier.",
+      "SPLIT_MIN_SUPPLIERS": "A split has at least two suppliers.",
+      "PROFORMA_REQUIRED": "Attach each supplier's pro forma (direct purchase).",
+      "PROFORMA_NOT_FOUND": "Pro forma not found: upload the file again.",
+      "PROFORMA_TYPE": "The pro forma must be a PDF, a JPG or a PNG.",
+      "PROFORMA_AMOUNT_INVALID": "Invalid amount.",
+      "JUSTIFICATION_REQUIRED": "Justify the choice of each supplier (sole source).",
+      "ALLOCATION_LOCKED": "Purchase orders already exist for this split.",
+      "proformaFor": "Attach the pro forma of {{supplier}}.",
+      "justificationFor": "Justify the choice of {{supplier}}.",
+      "LOT_SUPPLIER_MISMATCH": "This supplier does not match the lot of this step.",
+      "LOT_ITEMS_MISMATCH": "The purchase order must cover exactly the items of the lot.",
+      "LOT_ALREADY_ORDERED": "This lot already has its purchase order."
     }
   }
 }

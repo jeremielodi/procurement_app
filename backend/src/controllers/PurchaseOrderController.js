@@ -6,6 +6,32 @@ const i18n = require('../i18n');
 const purchaseOrderExportService = require('../services/PurchaseOrderExportService');
 const segregation = require('../utils/segregation');
 const { audit, AUDIT } = require('../utils/auditLog');
+const orderTasks = require('../services/OrderTaskService');
+const allocationService = require('../services/SupplierAllocationService');
+
+/**
+ * Part d'une réquisition répartie entre plusieurs fournisseurs à laquelle appartient un nouveau bon de commande :
+ * celle de la tâche « Créer le bon de commande » choisie, sinon celle du fournisseur. null sans répartition ;
+ * { error } si la part ne correspond pas (fournisseur d'une autre part, part déjà commandée).
+ */
+async function lotForNewOrder(requisition, { taskId, supplierId }) {
+  const lots = await allocationService.list(requisition.id);
+  if (!lots.length) return null;
+  const err = (status, code, message) => ({ error: { status, code, message } });
+  const fromTask = taskId ? await orderTasks.lotOfTask(taskId) : null;
+  const lot = fromTask
+    ? lots.find(l => String(l.id) === String(fromTask))
+    : lots.find(l => String(l.supplier_id) === String(supplierId));
+  if (!lot) return err(409, 'LOT_SUPPLIER_MISMATCH', 'Ce fournisseur n\'a aucune part dans la répartition de cette réquisition');
+  if (String(lot.supplier_id) !== String(supplierId)) {
+    return err(409, 'LOT_SUPPLIER_MISMATCH', `Cette part revient à ${lot.supplier_name}`);
+  }
+  // Une part = un bon de commande (bon rejeté : la part s'arrête, comme le processus sans répartition)
+  if (lot.po_id) {
+    return err(409, 'LOT_ALREADY_ORDERED', `La part de ${lot.supplier_name} a déjà son bon de commande (${lot.po_number})`);
+  }
+  return lot;
+}
 
 /** Erreur métier { status, code } (séparation des tâches…) sinon 500 */
 function sendError(res, error, fallback) {
@@ -39,22 +65,32 @@ class PurchaseOrderController {
         return res.status(409).json({ success: false, code: 'REQUISITION_NOT_ACTIVE', message: `Réquisition au statut ${requisition.status} : aucune commande possible` });
       }
 
+      // Réquisition répartie entre plusieurs fournisseurs : le bon appartient à une part (celle de la tâche choisie,
+      // sinon celle du fournisseur) qui impose le fournisseur et les articles
+      const lot = await lotForNewOrder(requisition, { taskId, supplierId });
+      if (lot?.error) return res.status(lot.error.status).json({ success: false, code: lot.error.code, message: lot.error.message });
+      if (lot) {
+        const expected = lot.items.map(i => String(i.id)).sort();
+        const given = (items || []).map(i => String(i.requisitionItemId || '')).sort();
+        if (given.length !== expected.length || given.some((id, i) => id !== expected[i])) {
+          return res.status(400).json({ success: false, code: 'LOT_ITEMS_MISMATCH', message: `Le bon de commande de ${lot.supplier_name} reprend exactement les articles de sa part` });
+        }
+      }
+
       const result = await purchaseOrderModel.create({
         requisitionId, taskId: taskId || null, supplierId, orderDate, deliveryDate,
         shippingAddress, totalAmount, currency, notes,
         items: items || [],
+        supplierLotId: lot?.id || null,
         createdBy: req.user.id // jamais une valeur du client (séparation des tâches)
       });
 
-      // Étape GoFlow « Créer le bon de commande » de CETTE réquisition (le taskId du client n'est retenu que s'il
-      // correspond : une autre tâche ne doit jamais être terminée par la création d'une commande)
+      // Étape GoFlow « Créer le bon de commande » de CETTE réquisition et de CETTE part (le taskId du client n'est
+      // retenu que s'il correspond : une autre tâche ne doit jamais être terminée par la création d'une commande)
       try {
-        let camundaTaskId = null;
-        if (requisition.process_instance_id) {
-          const tasks = await camundaService.getProcessTasks(requisition.process_instance_id);
-          const createTasks = (tasks || []).filter(t => t.taskDefinitionKey === 'Activity_CreatePO');
-          camundaTaskId = (createTasks.find(t => t.id === taskId) || createTasks[0])?.id || null;
-        }
+        const camundaTaskId = requisition.process_instance_id
+          ? (await orderTasks.findCreateTask(requisition.process_instance_id, lot?.id || null, taskId))?.id || null
+          : null;
         if (camundaTaskId) {
           await camundaService.completeTask(camundaTaskId, {
             poId: result.id,
@@ -150,8 +186,7 @@ class PurchaseOrderController {
       );
       if (row?.process_instance_id) {
         try {
-          const tasks = await camundaService.getProcessTasks(row.process_instance_id);
-          const task = (tasks || []).find(t => ['Activity_ServiceAcceptance', 'Activity_GoodsReceipt'].includes(t.taskDefinitionKey));
+          const task = await orderTasks.findForPurchaseOrder(row.process_instance_id, ['Activity_ServiceAcceptance', 'Activity_GoodsReceipt'], result.poId);
           if (task) {
             const vars = task.taskDefinitionKey === 'Activity_ServiceAcceptance'
               ? { serviceAccepted: true, deliveryComplete: true, deliveryCloseReason: reason }
@@ -220,8 +255,7 @@ class PurchaseOrderController {
           [existing.requisition_id]
         );
         if (reqRow?.process_instance_id) {
-          const tasks = await camundaService.getProcessTasks(reqRow.process_instance_id);
-          const poTask = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_POApproval');
+          const poTask = await orderTasks.findForPurchaseOrder(reqRow.process_instance_id, 'Activity_POApproval', existing.id);
           if (poTask) {
             await camundaService.completeTask(poTask.id, { poApproved: true, poApprovalComment: comments || '' });
             camundaTaskCompleted = true;
@@ -282,8 +316,7 @@ class PurchaseOrderController {
           [existing.requisition_id]
         );
         if (reqRow?.process_instance_id) {
-          const tasks = await camundaService.getProcessTasks(reqRow.process_instance_id);
-          const poTask = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_POApproval');
+          const poTask = await orderTasks.findForPurchaseOrder(reqRow.process_instance_id, 'Activity_POApproval', existing.id);
           if (poTask) {
             await camundaService.completeTask(poTask.id, { poApproved: false, poApprovalComment: reason || '' });
             camundaTaskCompleted = true;

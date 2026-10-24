@@ -714,6 +714,41 @@ async function processUpdateSupplierRating(task) {
   return { ratingUpdated: true, newRating: rating };
 }
 
+/**
+ * Fin du cycle de commande (Task_CloseRequisition, après le sous-processus SubProcess_SupplierOrder répété par part) :
+ * réquisition terminée quand TOUS ses bons de commande actifs ont une facture payée. Sinon (bon rejeté, litige…) le
+ * statut ne change pas, comme à la fin d'un processus sans répartition.
+ */
+async function processCloseRequisition(task) {
+  logTask('[%s] Processing task: %s', 'close_requisition', task.id);
+  const processInstanceId = task.processInstanceId;
+  const requisition = await db.one(
+    'SELECT id, status FROM requisitions WHERE process_instance_id = $1',
+    [processInstanceId]
+  );
+  if (!requisition) return { requisitionCompleted: false };
+  const counts = await db.one(
+    `SELECT COUNT(*)::int AS active,
+            COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM invoices i WHERE i.po_id = po.id AND i.status = 'PAID'))::int AS paid
+     FROM purchase_orders po
+     WHERE po.requisition_id = $1 AND po.status NOT IN ('PO_REJECTED', 'REJECTED', 'CANCELLED')`,
+    [requisition.id]
+  );
+  const completed = counts.active > 0 && counts.paid === counts.active;
+  if (completed && !['COMPLETED', 'CANCELLED', 'REJECTED'].includes(requisition.status)) {
+    await db.exec(
+      "UPDATE requisitions SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+      [requisition.id]
+    );
+  }
+  await addWorkflowHistory(
+    processInstanceId, 'requisition', requisition.id, task.id, 'Close Requisition',
+    completed ? 'REQUISITION_COMPLETED' : 'REQUISITION_CLOSED',
+    JSON.stringify({ purchaseOrders: counts.active, paid: counts.paid })
+  );
+  return { requisitionCompleted: completed };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Task dispatch + polling
 // ─────────────────────────────────────────────────────────────────────────────
@@ -731,6 +766,7 @@ async function processTask(task) {
       case 'goods_receipt': result = await processGoodsReceipt(task); break;
       case 'service_acceptance': result = await processServiceAcceptance(task); break;
       case 'update_supplier_rating': result = await processUpdateSupplierRating(task); break;
+      case 'close_requisition': result = await processCloseRequisition(task); break;
       default:
         logWarn('Unknown topic: %s', topicName);
         result = {};
@@ -770,7 +806,8 @@ async function fetchAndLockTasks() {
         { topicName: 'process_invoice', lockDuration: LOCK_DURATION },
         { topicName: 'goods_receipt', lockDuration: LOCK_DURATION },
         { topicName: 'service_acceptance', lockDuration: LOCK_DURATION },
-        { topicName: 'update_supplier_rating', lockDuration: LOCK_DURATION }
+        { topicName: 'update_supplier_rating', lockDuration: LOCK_DURATION },
+        { topicName: 'close_requisition', lockDuration: LOCK_DURATION }
       ]
     });
     return tasks;

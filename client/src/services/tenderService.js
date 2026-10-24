@@ -45,6 +45,11 @@ export const tenderService = {
     const response = await api.post(`/tenders/${id}/award`, { supplierId, comment });
     return response.data;
   },
+  // AO « par article » : items = [{ requisitionItemId, supplierId }] (erreurs traduites par l'écran)
+  awardPerItem: async (id, items, comment) => {
+    const response = await api.post(`/tenders/${id}/award`, { items, comment }, { skipErrorToast: true });
+    return response.data;
+  },
   downloadComparison: async (id, tenderNumber) => {
     const response = await api.get(`/tenders/${id}/export/excel`, { responseType: 'blob' });
     const url = URL.createObjectURL(response.data);

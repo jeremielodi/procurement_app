@@ -1,6 +1,7 @@
 // backend/src/controllers/InvoiceController.js
 const invoiceModel   = require('../models/InvoiceModel');
 const camundaService = require('../services/CamundaService');
+const orderTasks = require('../services/OrderTaskService');
 const db             = require('../config/database');
 const segregation    = require('../utils/segregation');
 const { audit, AUDIT } = require('../utils/auditLog');
@@ -80,23 +81,17 @@ class InvoiceController {
         matchStatus: result.match_status
       };
 
-      if (taskId) {
+      // Étape GoFlow de CE bon de commande (réquisition répartie : une facture par part) ; le taskId du client
+      // n'est retenu que s'il désigne cette étape
+      if (processInstanceId) {
         try {
-          await camundaService.completeTask(taskId, completionVars);
-          camundaTaskCompleted = true;
-        } catch (e) {
-          console.error('[Invoice] Camunda completeTask (non-fatal):', e.message);
-        }
-      } else if (processInstanceId) {
-        try {
-          const tasks = await camundaService.getProcessTasks(processInstanceId);
-          const invoiceTask = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_EnterInvoice');
+          const invoiceTask = await orderTasks.findForPurchaseOrder(processInstanceId, 'Activity_EnterInvoice', poId, taskId);
           if (invoiceTask) {
             await camundaService.completeTask(invoiceTask.id, completionVars);
             camundaTaskCompleted = true;
           }
         } catch (e) {
-          console.error('[Invoice] Camunda auto-complete (non-fatal):', e.message);
+          console.error('[Invoice] Camunda completeTask (non-fatal):', e.message);
         }
       }
 

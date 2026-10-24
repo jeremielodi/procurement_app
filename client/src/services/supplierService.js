@@ -13,8 +13,9 @@ export const supplierService = {
   },
 
   // Bon de commande : tous les fournisseurs actifs (is_prequalified, awarded = attributaire de l'AO de la réquisition)
-  getForPurchaseOrder: async (requisitionId) => {
-    const response = await api.get('/suppliers', { params: { forPurchaseOrder: 1, ...(requisitionId ? { requisitionId } : {}) } })
+  // supplierLotId : part d'une réquisition répartie entre plusieurs fournisseurs (son fournisseur : lot = true)
+  getForPurchaseOrder: async (requisitionId, supplierLotId = null) => {
+    const response = await api.get('/suppliers', { params: { forPurchaseOrder: 1, ...(requisitionId ? { requisitionId } : {}), ...(supplierLotId ? { supplierLotId } : {}) } })
     return response.data
   },
 

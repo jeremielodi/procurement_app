@@ -191,6 +191,17 @@ const TaskList = () => {
 
                       <div className="text-gray-500">{t('taskList.project')}</div>
                       <div className="font-medium">{variables.projectName || variables.projectCode || '-'}</div>
+
+                      {/* Réquisition répartie entre plusieurs fournisseurs : part de cette tâche */}
+                      {task.lot && (
+                        <>
+                          <div className="text-gray-500">{t('split.lotColumn')}</div>
+                          <div className="font-medium text-indigo-700" data-testid="task-lot">
+                            {t('split.lotLabel', { number: task.lot.number, supplier: task.lot.supplierName })}
+                            {task.lot.poNumber ? ` — ${task.lot.poNumber}` : ''}
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     <p className="text-xs text-gray-400 mt-2">

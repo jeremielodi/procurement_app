@@ -121,8 +121,23 @@ export default function SupplierTenderDetail() {
       </div>
 
       {tender.is_awarded_to_me && (
-        <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-green-800 flex items-center gap-2">
-          <Award size={18} /> {t('portal.congrats')}
+        <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-green-800 flex items-start gap-2" data-testid="awarded-to-me">
+          <Award size={18} className="shrink-0 mt-0.5" />
+          {(tender.my_awarded_item_ids || []).length ? (
+            // Attribution par article : uniquement les articles remportés par ce fournisseur
+            <div>
+              {t('portal.perItem.congrats', { count: tender.my_awarded_item_ids.length })}
+              <ul className="list-disc pl-5 mt-1 text-sm">
+                {tender.items.filter(i => tender.my_awarded_item_ids.includes(i.id)).map(i => <li key={i.id}>{i.item_description}</li>)}
+              </ul>
+            </div>
+          ) : t('portal.congrats')}
+        </div>
+      )}
+      {/* Mode d'attribution annoncé : par article, chaque article peut revenir à un fournisseur différent */}
+      {tender.award_mode === 'PER_ITEM' && (
+        <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-200 text-sm text-indigo-800" data-testid="per-item-notice">
+          {t('portal.perItem.notice')}
         </div>
       )}
       {editable ? (

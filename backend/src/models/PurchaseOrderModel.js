@@ -56,12 +56,17 @@ class PurchaseOrderModel {
       currency_id: currencyId,
       status: 'PO_PENDING',
       created_by: poData.createdBy,
+      // Part d'une réquisition répartie entre plusieurs fournisseurs (migration 38)
+      supplier_lot_id: poData.supplierLotId || null,
       created_at: new Date(),
       updated_at: new Date()
     }, 'id');
 
     const results = await transaction.execute();
     const poId = results[0][0]?.id || results[0][0]?.purchase_order_id;
+    if (poData.supplierLotId) {
+      await db.exec('UPDATE requisition_supplier_lots SET po_id = $1 WHERE id = $2', [poId, poData.supplierLotId]);
+    }
     
     // Ajouter les items si présents
     if (poData.items && poData.items.length > 0) {

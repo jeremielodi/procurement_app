@@ -10,6 +10,7 @@ const { getSupplierByUser, parseIdList } = require('./SupplierPortalController')
 const referenceModel = require('../models/ReferenceModel');
 const supplierModel = require('../models/SupplierModel');
 const i18n = require('../i18n');
+const allocationService = require('../services/SupplierAllocationService');
 
 const { appLink } = require('../utils/appUrl');
 
@@ -42,6 +43,7 @@ function validateTenderPayload(b, { requireNumber }) {
   const days = parseInt(b.maxDeliveryDays);
   if (!Number.isInteger(days) || days <= 0) errors.push('Nombre de jours de livraison invalide');
   if (b.audience !== undefined && !AUDIENCES.includes(b.audience)) errors.push('Type de diffusion invalide');
+  if (b.awardMode !== undefined && !AWARD_MODES.includes(b.awardMode)) errors.push('Mode d\x27attribution invalide');
   if (b.audience === 'PREQUALIFIED' && !parseInt(b.categoryId)) {
     errors.push('Catégorie de marché requise pour un appel d\'offres réservé aux fournisseurs préqualifiés');
   }
@@ -49,6 +51,8 @@ function validateTenderPayload(b, { requireNumber }) {
 }
 
 const AUDIENCES = ['ALL', 'PREQUALIFIED'];
+// Mode d'attribution annoncé à la publication (migration 39) : un seul attributaire, ou article par article
+const AWARD_MODES = ['SINGLE', 'PER_ITEM'];
 
 /**
  * AO réservé : fournisseurs sélectionnés, tous parmi les candidats (préqualifiés de la catégorie et de la
@@ -116,6 +120,148 @@ async function notifySuppliers(io, tender, kind, { only, exclude } = {}) {
   } catch (e) {
     console.error('[Tender] notifySuppliers (non-fatal):', e.message);
     return 0;
+  }
+}
+
+const err = (status, code, message, details) => Object.assign(new Error(message), { status, code, details });
+
+/**
+ * Attribution article par article (AO en mode PER_ITEM) : body.items = [{ requisitionItemId, supplierId }].
+ * Chaque article chiffré par au moins une offre est attribué à une offre qui l'a chiffré ; un article sans offre
+ * n'est pas commandé. Un seul attributaire : chemin habituel (awarded_supplier_id). Plusieurs : une part par
+ * fournisseur (requisition_supplier_lots), et l'étape Activity_RFPProcess se termine avec supplierLots = [parts] —
+ * le sous-processus de commande du BPMN est répété par part. Écritures et complétion GoFlow dans une transaction.
+ */
+async function awardPerItem(req, res, tender, submissions) {
+  try {
+    if (tender.award_mode !== 'PER_ITEM') {
+      throw err(400, 'AWARD_MODE_SINGLE', 'Cet appel d\'offres a été publié pour un attributaire unique');
+    }
+    const reqItems = await tenderModel.getItems(tender.requisition_id);
+    const itemById = new Map(reqItems.map(i => [String(i.id), i]));
+    // Offre de chaque fournisseur pour chaque article chiffré
+    const quote = (supplierId, itemId) => {
+      const sub = submissions.find(s => String(s.supplier_id) === String(supplierId));
+      const line = sub?.items.find(i => String(i.requisition_item_id) === String(itemId));
+      return line ? { sub, line } : null;
+    };
+    const quoted = new Set(submissions.flatMap(s => s.items.map(i => String(i.requisition_item_id))));
+
+    const awards = [];
+    const seen = new Set();
+    for (const a of req.body.items) {
+      const itemId = String(a?.requisitionItemId || '');
+      if (!itemById.has(itemId)) throw err(400, 'ITEM_NOT_FOUND', 'Article absent de la réquisition', { itemId });
+      if (seen.has(itemId)) throw err(400, 'ITEM_AWARDED_TWICE', 'Un article ne peut être attribué qu\'une fois', { itemId });
+      seen.add(itemId);
+      const q = quote(a.supplierId, itemId);
+      if (!q) throw err(400, 'ITEM_NOT_QUOTED', 'Ce fournisseur n\'a pas chiffré cet article', { itemId, supplierId: a.supplierId });
+      awards.push({ itemId: Number(itemId), supplierId: q.sub.supplier_id, supplierName: q.sub.supplier_name, submissionId: q.sub.id,
+        unitPrice: parseFloat(q.line.unit_price), totalPrice: parseFloat(q.line.total_price) });
+    }
+    const notAwarded = [...quoted].filter(id => !seen.has(id));
+    if (notAwarded.length) throw err(400, 'ITEM_NOT_AWARDED', 'Attribuez chaque article ayant reçu une offre', { itemIds: notAwarded.map(Number) });
+    if (!awards.length) throw err(400, 'AWARD_REQUIRED', 'Aucun article attribué');
+
+    // Une part par fournisseur, dans l'ordre des articles
+    const bySupplier = new Map();
+    for (const a of [...awards].sort((x, y) => x.itemId - y.itemId)) {
+      if (!bySupplier.has(a.supplierId)) bySupplier.set(a.supplierId, { supplierId: a.supplierId, supplierName: a.supplierName, itemIds: [], amount: 0 });
+      const lot = bySupplier.get(a.supplierId);
+      lot.itemIds.push(a.itemId);
+      lot.amount += a.totalPrice;
+    }
+    const winners = [...bySupplier.values()];
+    const split = winners.length > 1;
+
+    // Étape GoFlow « Appel d'offres » ouverte ; un processus démarré avant la répartition ne sait pas la traiter
+    let rfpTask = null;
+    if (tender.process_instance_id) {
+      rfpTask = ((await camundaService.getProcessTasks(tender.process_instance_id)) || [])
+        .find(t => t.taskDefinitionKey === 'Activity_RFPProcess') || null;
+      if (split && rfpTask) {
+        const vars = await camundaService.getProcessVariables(tender.process_instance_id);
+        if (vars.supplierLots === undefined) {
+          throw err(409, 'SPLIT_NOT_SUPPORTED', 'Processus démarré avant la répartition par fournisseur : attribuez tous les articles à un seul fournisseur');
+        }
+      }
+    }
+
+    const result = await db.withTransaction(async (tx) => {
+      for (const a of awards) {
+        await tx.exec(
+          `INSERT INTO tender_awards (tender_id, requisition_item_id, submission_id, supplier_id, unit_price, total_price, awarded_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [tender.id, a.itemId, a.submissionId, a.supplierId, a.unitPrice, a.totalPrice, req.user.id]
+        );
+      }
+      await tx.exec(
+        `UPDATE tenders SET status = 'AWARDED', awarded_supplier_id = $2, awarded_at = NOW(), updated_at = NOW() WHERE id = $1`,
+        [tender.id, split ? null : winners[0].supplierId]
+      );
+      const lotIds = split
+        ? await allocationService.insertLots(tx, tender.requisition_id, winners.map(w => ({
+          supplierId: w.supplierId, itemIds: w.itemIds, amount: Math.round(w.amount * 100) / 100,
+        })), { userId: req.user.id, taskId: rfpTask?.id || null, tenderId: tender.id })
+        : null;
+      if (rfpTask) {
+        const vars = {
+          tenderId: tender.id,
+          tenderNumber: tender.tender_number,
+          offers: JSON.stringify(winners.map(w => ({ supplierId: w.supplierId, supplierName: w.supplierName, amount: w.amount }))),
+          allOffers: JSON.stringify(submissions.map(s => ({
+            supplierId: s.supplier_id, supplierName: s.supplier_name, amount: parseFloat(s.total_amount), deliveryDays: s.delivery_days,
+          }))),
+          ...(lotIds ? { supplierLots: lotIds } : {}),
+          ...(req.body.comment ? { comment: req.body.comment } : {}),
+        };
+        // GoFlow en dernier : en cas de refus, l'attribution est annulée avec la transaction
+        const done = await camundaService.completeTask(rfpTask.id, vars);
+        if (!done?.success) throw err(502, 'GOFLOW_ERROR', done?.error || 'GoFlow n\'a pas accepté la fin de l\'étape');
+      }
+      return { lotIds };
+    });
+
+    const summary = winners.map(w => `${w.supplierName} (${w.itemIds.length})`).join(', ');
+    await db.insert('workflow_history', {
+      entity_type: 'requisition',
+      entity_id: tender.requisition_id,
+      task_id: rfpTask?.id || tender.task_id || null,
+      task_name: 'Activity_RFPProcess',
+      action: 'TENDER_AWARDED',
+      comments: `${tender.tender_number} attribué par article : ${summary}${req.body.comment ? ' — ' + req.body.comment : ''}`,
+      performed_by: req.user.id,
+      performed_at: new Date()
+    });
+
+    // Soumissionnaires : chacun apprend s'il a remporté des articles (et combien), jamais ceux des autres
+    const owners = await db.select(
+      `SELECT s.id, s.user_id, u.language FROM suppliers s
+       JOIN tender_submissions ts ON ts.supplier_id = s.id
+       JOIN users u ON u.id = s.user_id
+       WHERE ts.tender_id = $1`,
+      [tender.id]
+    );
+    for (const o of owners) {
+      const won = bySupplier.get(o.id);
+      const T = i18n.translator(o.language);
+      await notifyUser(req.io, o.user_id,
+        T(won ? 'notification.tender.wonTitle' : 'notification.tender.lostTitle'),
+        won ? T('notification.tender.wonItemsMessage', { number: tender.tender_number, count: won.itemIds.length })
+          : T('notification.tender.lostMessage', { number: tender.tender_number }),
+        won ? 'SUCCESS' : 'INFO',
+        `/supplier/tenders/${tender.id}`);
+    }
+
+    res.json({
+      success: true, camundaTaskCompleted: !!rfpTask, split, lotIds: result.lotIds || [],
+      winners: winners.map(w => ({ supplierId: w.supplierId, supplierName: w.supplierName, itemIds: w.itemIds, amount: w.amount })),
+      message: `Attribué par article : ${summary}`,
+    });
+  } catch (error) {
+    if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
+    console.error('Error awarding tender per item:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 }
 
@@ -192,7 +338,8 @@ class TenderController {
           .sort((a, b) => a.supplier_name.localeCompare(b.supplier_name))
         : allSubmissions;
       const invitations = tender.audience === 'PREQUALIFIED' ? await tenderModel.getInvitations(tender.id) : [];
-      res.json({ success: true, data: { ...tender, items, submissions, registeredSuppliers, sealed, invitations } });
+      const awards = tender.status === 'AWARDED' ? await tenderModel.getAwards(tender.id) : [];
+      res.json({ success: true, data: { ...tender, items, submissions, registeredSuppliers, sealed, invitations, awards } });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
@@ -236,6 +383,7 @@ class TenderController {
         startDate: new Date(b.startDate),
         endDate: new Date(b.endDate),
         maxDeliveryDays: parseInt(b.maxDeliveryDays),
+        awardMode: AWARD_MODES.includes(b.awardMode) ? b.awardMode : 'SINGLE',
         createdBy: req.user.id
       });
 
@@ -280,6 +428,11 @@ class TenderController {
       }
       const errors = validateTenderPayload(req.body, { requireNumber: false });
       if (errors.length) return res.status(400).json({ success: false, message: errors.join(' · ') });
+      // Mode d'attribution : annoncé aux fournisseurs, il ne change plus une fois une offre déposée
+      const awardMode = AWARD_MODES.includes(req.body.awardMode) ? req.body.awardMode : null;
+      if (awardMode && awardMode !== tender.award_mode && (await tenderModel.getSubmissions(tender.id)).length) {
+        return res.status(409).json({ success: false, code: 'AWARD_MODE_LOCKED', message: 'Des offres ont déjà été déposées : le mode d\x27attribution ne peut plus changer' });
+      }
 
       const target = await targeting({ audience: tender.audience, categoryId: tender.category_id, locationId: tender.location_id, ...req.body });
       let invitedChange = null;
@@ -294,7 +447,8 @@ class TenderController {
         description: req.body.description,
         startDate: new Date(req.body.startDate),
         endDate: new Date(req.body.endDate),
-        maxDeliveryDays: parseInt(req.body.maxDeliveryDays)
+        maxDeliveryDays: parseInt(req.body.maxDeliveryDays),
+        awardMode
       });
       if (invited) invitedChange = await tenderModel.setInvitations(tender.id, invited, req.user.id);
       const updated = await tenderModel.getById(tender.id);
@@ -382,6 +536,8 @@ class TenderController {
         });
       }
       const submissions = await tenderModel.getSubmissions(tender.id);
+      // Attribution article par article (AO publié en mode PER_ITEM)
+      if (Array.isArray(req.body.items)) return awardPerItem(req, res, tender, submissions);
       const winner = submissions.find(s => String(s.supplier_id) === String(supplierId));
       if (!winner) return res.status(400).json({ success: false, message: 'Ce fournisseur n\'a pas soumis d\'offre' });
 
@@ -564,6 +720,9 @@ class TenderController {
       if (!eligible && !mySubmission) {
         return res.status(404).json({ success: false, message: 'Appel d\'offres introuvable' });
       }
+      // Attribution par article : uniquement SES articles (jamais ceux des autres attributaires)
+      const myAwardedItemIds = (await tenderModel.getAwards(tender.id))
+        .filter(a => String(a.supplier_id) === String(supplier.id)).map(a => a.requisition_item_id);
       // Uniquement les infos publiques : pas de montant estimé, ni d'offres concurrentes
       res.json({
         success: true,
@@ -584,7 +743,9 @@ class TenderController {
           enterprise_id: tender.enterprise_id,
           enterprise_name: tender.enterprise_name,
           enterprise_logo_path: tender.enterprise_logo_path,
-          is_awarded_to_me: String(tender.awarded_supplier_id) === String(supplier.id),
+          is_awarded_to_me: String(tender.awarded_supplier_id) === String(supplier.id) || myAwardedItemIds.length > 0,
+          award_mode: tender.award_mode,
+          my_awarded_item_ids: myAwardedItemIds,
           items,
           mySubmission
         }

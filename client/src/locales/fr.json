@@ -236,7 +236,8 @@
       "Activity_ServiceAcceptance": "Acceptation de service (SAN)",
       "Activity_EnterInvoice": "Saisie de la facture fournisseur",
       "Activity_ProcessPayment": "Traitement du paiement",
-      "Activity_ReviseRequisition": "Corriger la réquisition"
+      "Activity_ReviseRequisition": "Corriger la réquisition",
+      "Activity_AllocateSuppliers": "Répartition par fournisseur"
     }
   },
   "tenderStatus": {
@@ -438,11 +439,11 @@
         },
         {
           "title": "Appels d'offres",
-          "desc": "Publication, offres scellées jusqu'à la clôture, comparatif et attribution."
+          "desc": "Publication, offres scellées jusqu'à la clôture, comparatif et attribution. Attribution à un seul fournisseur ou article par article (un bon de commande par fournisseur retenu)."
         },
         {
           "title": "Bons de commande",
-          "desc": "PO approuvés, envoyés en PDF au fournisseur, qui confirme la commande et la date de livraison en ligne."
+          "desc": "PO approuvés, envoyés en PDF au fournisseur, qui confirme la commande et la date de livraison en ligne. Une réquisition peut être répartie entre plusieurs fournisseurs : un bon de commande, une facture et un paiement par fournisseur."
         },
         {
           "title": "Rapprochement 3 voies",
@@ -1472,7 +1473,9 @@
     "err": {
       "METHOD_BELOW_THRESHOLD": "Méthode d'achat insuffisante pour le montant de la réquisition",
       "PROCUREMENT_METHOD_REQUIRED": "Choisissez la méthode d'achat",
-      "JUSTIFICATION_REQUIRED": "Justification obligatoire pour une source unique"
+      "JUSTIFICATION_REQUIRED": "Justification obligatoire pour une source unique",
+      "SPLIT_NOT_AVAILABLE_FOR_RFP": "Appel d'offres : la répartition se fait à l'attribution (appel d'offres publié « par article »).",
+      "SPLIT_NEEDS_TWO_ITEMS": "Une répartition demande au moins deux articles dans la réquisition."
     },
     "direct": {
       "intro": "Désignez le fournisseur retenu et joignez sa facture pro-forma. Le bon de commande proposera ce fournisseur d'office.",
@@ -2144,7 +2147,42 @@
     "cancelled": "Annulé",
     "closed": "Clôturé",
     "cancelHint": "L'appel d'offres sera annulé et ne sera plus visible par les fournisseurs.",
-    "closeHint": "La date limite sera ramenée à maintenant : les fournisseurs ne pourront plus modifier leurs offres et les prix seront dévoilés. ({{count}}/{{total}} ont soumis)"
+    "closeHint": "La date limite sera ramenée à maintenant : les fournisseurs ne pourront plus modifier leurs offres et les prix seront dévoilés. ({{count}}/{{total}} ont soumis)",
+    "awardMode": {
+      "label": "Attribution",
+      "SINGLE": "À un seul fournisseur",
+      "SINGLE_help": "L'offre retenue couvre tous les articles : un seul bon de commande.",
+      "PER_ITEM": "Par article (plusieurs fournisseurs possibles)",
+      "PER_ITEM_help": "Chaque article est attribué à la meilleure offre pour cet article : un bon de commande par fournisseur retenu. Annoncé aux fournisseurs, qui peuvent ne chiffrer qu'une partie des articles.",
+      "locked": "Des offres ont été déposées : le mode d'attribution ne peut plus changer."
+    },
+    "perItem": {
+      "awardedSplit_one": "Appel d'offres attribué à {{count}} fournisseur",
+      "awardedSplit_other": "Appel d'offres attribué par article à {{count}} fournisseurs : un bon de commande par fournisseur",
+      "awardedTo": "Attribué par article à",
+      "closedHint": "Soumissions clôturées : choisissez le fournisseur de chaque article (meilleur prix proposé d'office), puis « Attribuer par article ».",
+      "awardTo": "Attribuer à",
+      "awardedColumn": "Attribué à",
+      "noOffer": "Aucune offre — non commandé",
+      "awardButton": "Attribuer par article",
+      "confirmTitle": "Attribution par article",
+      "confirmIntro": "Articles retenus par fournisseur :",
+      "summaryRow_one": "{{count}} article · {{amount}}",
+      "summaryRow_other": "{{count}} articles · {{amount}}",
+      "splitHint": "{{count}} fournisseurs retenus : la réquisition est répartie, chaque fournisseur reçoit son propre bon de commande (approbation, réception, facture et paiement séparés).",
+      "err": {
+        "AWARD_MODE_SINGLE": "Cet appel d'offres a été publié pour un attributaire unique.",
+        "ITEM_NOT_FOUND": "Un article ne fait pas partie de la réquisition.",
+        "ITEM_AWARDED_TWICE": "Un article ne peut être attribué qu'une fois.",
+        "ITEM_NOT_QUOTED": "Ce fournisseur n'a pas chiffré cet article.",
+        "ITEM_NOT_AWARDED": "Attribuez chaque article ayant reçu une offre.",
+        "AWARD_REQUIRED": "Aucun article attribué.",
+        "SPLIT_NOT_SUPPORTED": "Processus démarré avant la répartition par fournisseur : attribuez tous les articles à un seul fournisseur.",
+        "ALLOCATION_LOCKED": "Des bons de commande existent déjà pour cette réquisition.",
+        "GOFLOW_ERROR": "Le moteur de workflow n'a pas accepté la fin de l'étape : rien n'a été enregistré.",
+        "default": "Attribution impossible"
+      }
+    }
   },
   "portal": {
     "result": {
@@ -2267,6 +2305,11 @@
         "CONFIRMED": "Confirmée",
         "DECLINED": "Déclinée"
       }
+    },
+    "perItem": {
+      "congrats_one": "Félicitations : vous avez remporté {{count}} article de cet appel d'offres.",
+      "congrats_other": "Félicitations : vous avez remporté {{count}} articles de cet appel d'offres.",
+      "notice": "Attribution par article : chaque article peut être attribué à un fournisseur différent. Vous pouvez ne chiffrer que les articles que vous fournissez."
     }
   },
   "docReview": {
@@ -4068,7 +4111,7 @@
       },
       "sourcing": {
         "title": "Méthode d'achat",
-        "summary": "Achat direct, devis multiples, appel d'offres ou source unique.",
+        "summary": "Achat direct, devis multiples, appel d'offres ou source unique — et répartition entre plusieurs fournisseurs.",
         "blocks": [
           {
             "type": "p",
@@ -4108,6 +4151,32 @@
             "text": "Pour un appel d'offres, la tâche « Appel d'offres » ouvre directement la création de l'appel d'offres lié à la réquisition. Elle se termine quand l'appel d'offres est attribué : l'offre retenue est transmise à l'analyse des offres, puis à la création du bon de commande."
           },
           {
+            "type": "h",
+            "text": "Répartir entre plusieurs fournisseurs"
+          },
+          {
+            "type": "p",
+            "text": "Une réquisition peut être répartie entre plusieurs fournisseurs, quel que soit son montant : chaque article va à un seul fournisseur (ex. 5 articles → le fournisseur A en prend 1, B en prend 2, C en prend 2). Chaque fournisseur reçoit son propre bon de commande, qui suit son cycle complet : approbation du bon, envoi, confirmation, acceptation (SAN) et réception (GRN), facture puis paiement. Une facture par bon de commande."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Dans « Déterminer la méthode d'achat », choisissez la méthode puis cochez « Répartir entre plusieurs fournisseurs ».",
+              "Achat direct : l'étape « Répartition par fournisseur » vient aussitôt. Devis multiples ou source unique : elle vient après l'étape habituelle de la méthode.",
+              "Dans « Répartition par fournisseur », attribuez chaque article à un fournisseur (liste par article, ou cochez plusieurs articles puis « Attribuer la sélection »). Achat direct : joignez la pro-forma de chaque fournisseur ; source unique : justifiez chaque fournisseur.",
+              "« Valider la répartition » : une étape « Créer le bon de commande » apparaît par fournisseur, avec le fournisseur et les articles de sa part déjà remplis.",
+              "Chaque part avance ensuite à son rythme ; les cartes de tâche indiquent la part (« Part 2 — fournisseur »). La réquisition est terminée quand tous ses bons de commande actifs sont payés."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "Pas de fractionnement : la méthode d'achat et le niveau d'approbation restent ceux du montant TOTAL de la réquisition. Répartir une réquisition de 60 000 entre trois fournisseurs exige toujours un appel d'offres : publiez-le avec l'attribution « par article », la répartition se fait alors à l'attribution."
+          },
+          {
+            "type": "tip",
+            "text": "Un bon de commande rejeté arrête seulement sa part : les autres fournisseurs continuent. La fiche de la réquisition montre la « Répartition par fournisseur » (articles, bon de commande, payé ou non)."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -4115,6 +4184,20 @@
                 "label": "Appels d'offres"
               }
             ]
+          }
+        ],
+        "faq": [
+          {
+            "q": "Puis-je partager la quantité d'un même article entre deux fournisseurs ?",
+            "a": "Non : la répartition se fait article par article. Pour partager une quantité, scindez la ligne en deux articles dans la réquisition avant l'approbation."
+          },
+          {
+            "q": "Puis-je répartir un appel d'offres ?",
+            "a": "Oui, par l'appel d'offres lui-même : publiez-le avec l'attribution « Par article », puis attribuez chaque article à la meilleure offre. La case « Répartir entre plusieurs fournisseurs » reste désactivée pour cette méthode : la répartition se fait à l'attribution."
+          },
+          {
+            "q": "Faut-il un minimum de fournisseurs ?",
+            "a": "Oui, au moins deux fournisseurs, et tous les articles doivent être attribués. Sinon, ne cochez pas la répartition : le chemin habituel (un seul fournisseur) s'applique."
           }
         ]
       },
@@ -4150,6 +4233,26 @@
             ]
           },
           {
+            "type": "h",
+            "text": "Attribution par article (plusieurs fournisseurs)"
+          },
+          {
+            "type": "p",
+            "text": "À la création, choisissez l'attribution : « À un seul fournisseur » ou « Par article (plusieurs fournisseurs possibles) ». Le mode est annoncé aux fournisseurs et ne change plus dès qu'une offre est déposée. En mode par article, un fournisseur peut ne chiffrer que les articles qu'il fournit."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Après la clôture, le comparatif affiche une colonne « Attribuer à » : pour chaque article, le fournisseur au meilleur prix est proposé d'office ; changez-le si besoin (seules les offres qui ont chiffré l'article sont proposées).",
+              "« Attribuer par article » : la fenêtre récapitule les articles et le montant retenus par fournisseur ; ajoutez une justification puis confirmez.",
+              "Un seul fournisseur retenu : la suite est celle d'un appel d'offres classique. Plusieurs : la réquisition est répartie, une étape « Créer le bon de commande » apparaît par fournisseur, avec ses articles et les prix de son offre."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Un article sans aucune offre n'est pas commandé. Chaque fournisseur retenu ne voit, sur son portail, que les articles qu'il a remportés."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -4161,6 +4264,12 @@
                 "label": "Fournisseurs préqualifiés"
               }
             ]
+          }
+        ],
+        "faq": [
+          {
+            "q": "Puis-je passer un appel d'offres en « par article » après publication ?",
+            "a": "Oui, tant qu'aucune offre n'a été déposée (bouton « Modifier »). Ensuite le mode est verrouillé : changer les règles après réception des offres serait contestable."
           }
         ]
       },
@@ -5474,7 +5583,8 @@
       "PROJECT_MEMBER_REMOVED": "Membre retiré d'un projet",
       "PROJECT_MEMBER_PROFILES_CHANGED": "Profils d'un membre modifiés sur un projet",
       "APPROVAL_POLICY_CHANGED": "Seuils d'approbation modifiés",
-      "BUDGET_LINES_IMPORTED": "Import du registre budgétaire"
+      "BUDGET_LINES_IMPORTED": "Import du registre budgétaire",
+      "SUPPLIER_ALLOCATION_RECORDED": "Réquisition répartie entre plusieurs fournisseurs"
     },
     "groups": {
       "all": "Tous les événements",
@@ -5620,7 +5730,8 @@
     "invoice": "Une facture se rattache toujours à un bon de commande, lui-même rattaché à une réquisition.",
     "payment": "Un paiement se rattache toujours à une facture, elle-même rattachée au bon de commande et à la réquisition.",
     "how": "Ouvrez « Mes tâches », puis la réquisition concernée : dans son onglet « Tâches », prenez en charge l'étape et cliquez sur « Traiter ». Le formulaire s'ouvre avec le bon document.",
-    "listHint": "Les documents se créent depuis la tâche de la réquisition"
+    "listHint": "Les documents se créent depuis la tâche de la réquisition",
+    "allocation": "La répartition des articles entre fournisseurs se fait depuis l'étape « Répartition par fournisseur » de la réquisition."
   },
   "dailyReport": {
     "title": "Rapport quotidien des réquisitions",
@@ -5862,6 +5973,68 @@
       "AVATAR_TOO_LARGE": "Photo trop volumineuse",
       "AVATAR_REQUIRED": "Choisissez une photo",
       "generic": "La photo n'a pas pu être enregistrée"
+    }
+  },
+  "split": {
+    "methodOption": "Répartir entre plusieurs fournisseurs",
+    "methodOptionHelp": "Chaque article ira à un seul fournisseur ; un bon de commande, une facture et un paiement par fournisseur. La méthode reste celle exigée par le montant total.",
+    "notForRfp": "Appel d'offres : publiez-le avec l'attribution « par article » — la répartition se fait à l'attribution.",
+    "lotLabel": "Part {{number}} — {{supplier}}",
+    "lotColumn": "Fournisseur",
+    "title": "Répartition par fournisseur",
+    "loading": "Chargement de la réquisition…",
+    "loadError": "Impossible de charger la réquisition",
+    "intro": "Attribuez chaque article à un fournisseur. Chaque fournisseur reçoit ensuite son propre bon de commande, qui suit son cycle (approbation, envoi, réception, facture, paiement).",
+    "rules": "Tous les articles doivent être attribués, au moins deux fournisseurs. Achat direct : pro-forma obligatoire pour chaque fournisseur. Source unique : justification obligatoire pour chaque fournisseur.",
+    "itemsTitle": "Articles ({{count}})",
+    "selectedCount_one": "{{count}} article sélectionné",
+    "selectedCount_other": "{{count}} articles sélectionnés",
+    "chooseSupplier": "— Choisir un fournisseur —",
+    "assignSelected": "Attribuer la sélection",
+    "selectAll": "Tout sélectionner",
+    "supplier": "Fournisseur",
+    "colDescription": "Article",
+    "colQuantity": "Quantité",
+    "colTotal": "Montant",
+    "unassigned_one": "{{count}} article sans fournisseur",
+    "unassigned_other": "{{count}} articles sans fournisseur",
+    "lotsTitle": "Parts par fournisseur ({{count}})",
+    "noLot": "Aucun article attribué pour l'instant.",
+    "lotSummary_one": "{{count}} article · {{amount}}",
+    "lotSummary_other": "{{count}} articles · {{amount}}",
+    "proforma": "Pro-forma / devis",
+    "justification": "Justification",
+    "submitting": "Enregistrement…",
+    "submit": "Valider la répartition ({{count}})",
+    "done_one": "Répartition enregistrée : {{count}} bon de commande à créer",
+    "done_other": "Répartition enregistrée : {{count}} bons de commande à créer",
+    "poLotBanner": "Part {{number}} de la réquisition : bon de commande de {{supplier}} pour ses {{count}} article(s). Le fournisseur et les articles sont imposés par la répartition.",
+    "panelTitle": "Répartition par fournisseur — {{count}} fournisseurs",
+    "panelPaid": "{{paid}} / {{total}} payée(s)",
+    "lotPaid": "Payée",
+    "noPurchaseOrder": "Bon de commande à créer",
+    "err": {
+      "ALLOCATION_REQUIRED": "Répartissez les articles entre les fournisseurs.",
+      "SUPPLIER_REQUIRED": "Choisissez le fournisseur de chaque part.",
+      "SUPPLIER_TWICE": "Un fournisseur ne peut avoir qu'une seule part.",
+      "SUPPLIER_NOT_FOUND": "Fournisseur introuvable.",
+      "SUPPLIER_INACTIVE": "Un des fournisseurs choisis n'est pas actif.",
+      "LOT_EMPTY": "Chaque fournisseur doit avoir au moins un article.",
+      "ITEM_NOT_FOUND": "Un article ne fait pas partie de cette réquisition.",
+      "ITEM_ALLOCATED_TWICE": "Un article ne peut être attribué qu'à un seul fournisseur.",
+      "ITEM_NOT_ALLOCATED": "Chaque article doit être attribué à un fournisseur.",
+      "SPLIT_MIN_SUPPLIERS": "Une répartition compte au moins deux fournisseurs.",
+      "PROFORMA_REQUIRED": "Joignez la pro-forma de chaque fournisseur (achat direct).",
+      "PROFORMA_NOT_FOUND": "Pro-forma introuvable : déposez à nouveau le fichier.",
+      "PROFORMA_TYPE": "La pro-forma doit être un PDF, un JPG ou un PNG.",
+      "PROFORMA_AMOUNT_INVALID": "Montant invalide.",
+      "JUSTIFICATION_REQUIRED": "Justifiez le choix de chaque fournisseur (source unique).",
+      "ALLOCATION_LOCKED": "Des bons de commande existent déjà pour cette répartition.",
+      "proformaFor": "Joignez la pro-forma de {{supplier}}.",
+      "justificationFor": "Justifiez le choix de {{supplier}}.",
+      "LOT_SUPPLIER_MISMATCH": "Ce fournisseur ne correspond pas à la part de cette étape.",
+      "LOT_ITEMS_MISMATCH": "Le bon de commande doit reprendre exactement les articles de la part.",
+      "LOT_ALREADY_ORDERED": "Cette part a déjà son bon de commande."
     }
   }
 }

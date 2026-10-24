@@ -148,6 +148,8 @@ class RequisitionService {
   // Correction (renvoi / retrait) : état, versions, modification, nouvelle soumission, abandon
   getRevisionState = async (id) => (await api.get(`/requisitions/${id}/revision`)).data
   getVersions = async (id) => (await api.get(`/requisitions/${id}/versions`)).data
+  // Répartition entre plusieurs fournisseurs : parts (fournisseur, articles, bon de commande), [] sinon
+  getSupplierLots = async (id) => (await api.get(`/requisitions/${id}/supplier-lots`)).data
   withdraw = async (id, reason) => (await api.post(`/requisitions/${id}/withdraw`, { reason }, { skipErrorToast: true })).data
   resubmit = async (id, comment) => (await api.post(`/requisitions/${id}/resubmit`, { comment }, { skipErrorToast: true })).data
   abandon = async (id, reason) => (await api.post(`/requisitions/${id}/abandon`, { reason }, { skipErrorToast: true })).data

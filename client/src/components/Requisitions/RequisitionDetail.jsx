@@ -52,6 +52,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { t } from '../../i18n'
 import BudgetAdjustmentPanel from './BudgetAdjustmentPanel'
 import RevisionPanel from './RevisionPanel'
+import SupplierLotsPanel from './SupplierLotsPanel'
 import RequisitionVersions from './RequisitionVersions'
 import { levelLabel, policySummary } from '../../utils/approvalPolicy'
 
@@ -418,6 +419,9 @@ const handleGeneratePDF = async () => {
 
       {/* Correction : renvoyée / retirée (« À corriger »), ou retrait possible avant prise en charge de l'approbation */}
       <RevisionPanel requisition={requisition} onChanged={() => { refetch(); queryClient.invalidateQueries(['requisitions']) }} />
+
+      {/* Réquisition répartie entre plusieurs fournisseurs : une part (et un bon de commande) par fournisseur */}
+      <SupplierLotsPanel requisitionId={requisition.id} />
 
       {/* Alertes - Message sur les tâches en attente */}
       {hasActiveProcess && (

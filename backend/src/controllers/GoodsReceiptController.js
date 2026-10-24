@@ -1,6 +1,7 @@
 // backend/src/controllers/GoodsReceiptController.js
 const grnModel       = require('../models/GoodsReceiptModel');
 const camundaService = require('../services/CamundaService');
+const orderTasks = require('../services/OrderTaskService');
 const db             = require('../config/database');
 const i18n           = require('../i18n');
 const grnExportService = require('../services/GoodsReceiptExportService');
@@ -60,34 +61,25 @@ class GoodsReceiptController {
         receiptStatus: result.status
       };
 
-      if (taskId) {
-        try {
-          await camundaService.completeTask(taskId, completionVars);
+      // Étape GoFlow de CE bon de commande (réquisition répartie : une réception par part) ; le taskId du client
+      // n'est retenu que s'il désigne cette étape
+      try {
+        const row = await db.one(
+          `SELECT r.process_instance_id
+           FROM requisitions r
+           JOIN purchase_orders po ON po.requisition_id = r.id
+           WHERE po.id = $1`,
+          [poId]
+        );
+        const grnTask = row?.process_instance_id
+          ? await orderTasks.findForPurchaseOrder(row.process_instance_id, 'Activity_GoodsReceipt', poId, taskId)
+          : null;
+        if (grnTask) {
+          await camundaService.completeTask(grnTask.id, completionVars);
           camundaTaskCompleted = true;
-        } catch (e) {
-          console.error('[GRN] Camunda completeTask (non-fatal):', e.message);
         }
-      } else {
-        // Auto-find the task via process_instance_id of the linked requisition
-        try {
-          const row = await db.one(
-            `SELECT r.process_instance_id
-             FROM requisitions r
-             JOIN purchase_orders po ON po.requisition_id = r.id
-             WHERE po.id = $1`,
-            [poId]
-          );
-          if (row?.process_instance_id) {
-            const tasks = await camundaService.getProcessTasks(row.process_instance_id);
-            const grnTask = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_GoodsReceipt');
-            if (grnTask) {
-              await camundaService.completeTask(grnTask.id, completionVars);
-              camundaTaskCompleted = true;
-            }
-          }
-        } catch (e) {
-          console.error('[GRN] Camunda auto-complete (non-fatal):', e.message);
-        }
+      } catch (e) {
+        console.error('[GRN] Camunda completeTask (non-fatal):', e.message);
       }
 
       if (req.io) {

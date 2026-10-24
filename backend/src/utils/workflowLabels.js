@@ -15,6 +15,7 @@ const TASK_CANDIDATE_GROUPS = {
   Activity_RequestQuotations:    'procurement',
   Activity_RFPProcess:           'procurement',
   Activity_SoleSource:           'procurement',
+  Activity_AllocateSuppliers:    'procurement', // répartition des articles entre plusieurs fournisseurs
   Activity_CreatePO:             'procurement',
   Activity_POApproval:           'management',
   Activity_SupplierConfirmation: 'procurement',
@@ -40,6 +41,7 @@ const TASK_NAME_EN = {
   'Request Multiple Quotations':  'Activity_RequestQuotations',
   'Call for Tenders / RFP':       'Activity_RFPProcess',
   'Sole Source Justification':    'Activity_SoleSource',
+  'Allocate Items to Suppliers':  'Activity_AllocateSuppliers',
   'Create Purchase Order':        'Activity_CreatePO',
   'Approve Purchase Order':       'Activity_POApproval',
   'Supplier Order Confirmation':  'Activity_SupplierConfirmation',

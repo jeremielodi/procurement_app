@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, ShoppingCart, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Save, ShoppingCart, Plus, Trash2, AlertTriangle, Split } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { purchaseOrderService } from '../../services/purchaseOrderService';
 import requisitionService from '../../services/requisitionService';
@@ -12,6 +12,10 @@ import SearchSelect from '../Common/SearchSelect';
 
 export default function POForm() {
   const { requisitionId, taskId } = useParams();
+  // Réquisition répartie entre plusieurs fournisseurs : bon de commande d'une part (fournisseur et articles imposés)
+  const [searchParams] = useSearchParams();
+  const supplierLotId = searchParams.get('supplierLotId');
+  const [lot, setLot] = useState(null);
   const navigate = useNavigate();
   const { currency } = useCurrency();
 
@@ -30,15 +34,15 @@ export default function POForm() {
   useEffect(() => {
     // Tous les fournisseurs actifs, préqualifiés en tête ; l'attributaire de l'appel d'offres de la réquisition
     // (ou le fournisseur désigné avec sa pro-forma à l'étape « Achat direct ») est choisi d'office
-    supplierService.getForPurchaseOrder(requisitionId)
+    supplierService.getForPurchaseOrder(requisitionId, supplierLotId)
       .then(r => {
         const list = r.data || r || [];
         setSuppliers(list);
-        const awarded = list.find(s => s.awarded) || list.find(s => s.direct_purchase);
+        const awarded = list.find(s => s.lot) || list.find(s => s.awarded) || list.find(s => s.direct_purchase);
         if (awarded) setSupplierId(id => id || String(awarded.id));
       })
       .catch(() => toast.error(t('po.loadSuppliersError')));
-  }, [requisitionId]);
+  }, [requisitionId, supplierLotId]);
 
   const prequalifiedSuppliers = suppliers.filter(s => s.is_prequalified);
   const otherSuppliers = suppliers.filter(s => !s.is_prequalified);
@@ -50,15 +54,22 @@ export default function POForm() {
   useEffect(() => {
     if (!requisitionId) return;
     setLoadingReq(true);
-    requisitionService.getById(requisitionId)
-      .then(r => {
+    Promise.all([
+      requisitionService.getById(requisitionId),
+      supplierLotId ? requisitionService.getSupplierLots(requisitionId).catch(() => null) : null,
+    ])
+      .then(([r, lotsRes]) => {
         const req = r.data || r;
+        const ownLot = supplierLotId ? (lotsRes?.data || []).find(l => String(l.id) === String(supplierLotId)) || null : null;
+        setLot(ownLot);
+        const lotItemIds = ownLot ? new Set(ownLot.items.map(i => String(i.id))) : null;
         setRequisition(req);
         setShippingAddress(req.delivery_address || '');
-        const reqItems = (req.items || []).map(it => ({
+        const reqItems = (req.items || []).filter(it => !lotItemIds || lotItemIds.has(String(it.id))).map(it => ({
           description: it.item_description || it.description || '',
           quantity: Number(it.quantity) || 1,
-          unitPrice: Number(it.unit_price) || 0,
+          // Part issue d'un appel d'offres attribué par article : prix de l'offre retenue
+          unitPrice: Number(ownLot?.items.find(li => String(li.id) === String(it.id))?.awarded_unit_price ?? it.unit_price) || 0,
           specifications: it.specifications || '',
           // Traçabilité : ligne de réquisition d'origine + article du catalogue (gestion de stock)
           requisitionItemId: it.id,
@@ -68,7 +79,7 @@ export default function POForm() {
       })
       .catch(() => toast.error(t('po.loadRequisitionError')))
       .finally(() => setLoadingReq(false));
-  }, [requisitionId]);
+  }, [requisitionId, supplierLotId]);
 
   function emptyItem() {
     return { description: '', quantity: 1, unitPrice: 0, specifications: '', stockItem: null, requisitionItemId: null };
@@ -115,7 +126,10 @@ export default function POForm() {
         toast.error(res.message || t('po.createError'));
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || t('po.createError'));
+      const code = err.response?.data?.code;
+      toast.error(['LOT_SUPPLIER_MISMATCH', 'LOT_ITEMS_MISMATCH', 'LOT_ALREADY_ORDERED'].includes(code)
+        ? t(`split.err.${code}`)
+        : err.response?.data?.message || t('po.createError'));
     } finally {
       setLoading(false);
     }
@@ -171,6 +185,13 @@ export default function POForm() {
         </div>
       )}
 
+      {lot && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-sm mb-6 flex gap-2 text-indigo-900" data-testid="po-lot-banner">
+          <Split size={18} className="shrink-0 mt-0.5" />
+          <span>{t('split.poLotBanner', { number: lot.lot_number, supplier: lot.supplier_name, count: lot.items.length })}</span>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* En-tête PO */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
@@ -183,6 +204,7 @@ export default function POForm() {
               <SearchSelect
                 required
                 searchThreshold={0}
+                disabled={!!lot}
                 value={supplierId}
                 onChange={e => setSupplierId(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -252,13 +274,13 @@ export default function POForm() {
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
             <h2 className="font-semibold text-gray-800">{t('po.items')}</h2>
-            <button
+            {!lot && <button
               type="button"
               onClick={() => setItems(prev => [...prev, emptyItem()])}
               className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
             >
               <Plus size={14} /> {t('common.add')}
-            </button>
+            </button>}
           </div>
 
           <div className="overflow-x-auto">
@@ -307,7 +329,7 @@ export default function POForm() {
                       {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toLocaleString(getLocale())} {currency.code}
                     </td>
                     <td className="px-3 py-2">
-                      {items.length > 1 && (
+                      {items.length > 1 && !lot && (
                         <button type="button" onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600">
                           <Trash2 size={14} />
                         </button>

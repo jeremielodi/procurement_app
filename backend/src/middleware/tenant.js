@@ -122,6 +122,8 @@ const KEY_TABLES = {
   warehouseId: 'warehouses', warehouse_id: 'warehouses', destinationWarehouseId: 'warehouses',
   stockItemId: 'stock_items', stock_item_id: 'stock_items',
   lotId: 'stock_lots', lot_id: 'stock_lots',
+  // Part d'une réquisition répartie entre plusieurs fournisseurs (migration 38)
+  supplierLotId: 'requisition_supplier_lots', supplier_lot_id: 'requisition_supplier_lots',
   recipientId: 'users', recipient_id: 'users', returnedBy: 'users', holderId: 'users',
 };
 

@@ -1,5 +1,6 @@
 const sanModel       = require('../models/ServiceAcceptanceModel');
 const camundaService = require('../services/CamundaService');
+const orderTasks = require('../services/OrderTaskService');
 const db             = require('../config/database');
 
 class ServiceAcceptanceController {
@@ -47,33 +48,25 @@ class ServiceAcceptanceController {
         sanStatus: result.status
       };
 
-      if (taskId) {
-        try {
-          await camundaService.completeTask(taskId, completionVars);
+      // Étape GoFlow de CE bon de commande (réquisition répartie : une SAN par part) ; le taskId du client n'est
+      // retenu que s'il désigne cette étape
+      try {
+        const row = await db.one(
+          `SELECT r.process_instance_id
+           FROM requisitions r
+           JOIN purchase_orders po ON po.requisition_id = r.id
+           WHERE po.id = $1`,
+          [poId]
+        );
+        const sanTask = row?.process_instance_id
+          ? await orderTasks.findForPurchaseOrder(row.process_instance_id, 'Activity_ServiceAcceptance', poId, taskId)
+          : null;
+        if (sanTask) {
+          await camundaService.completeTask(sanTask.id, completionVars);
           camundaTaskCompleted = true;
-        } catch (e) {
-          console.error('[SAN] Camunda completeTask (non-fatal):', e.message);
         }
-      } else {
-        try {
-          const row = await db.one(
-            `SELECT r.process_instance_id
-             FROM requisitions r
-             JOIN purchase_orders po ON po.requisition_id = r.id
-             WHERE po.id = $1`,
-            [poId]
-          );
-          if (row?.process_instance_id) {
-            const tasks = await camundaService.getProcessTasks(row.process_instance_id);
-            const sanTask = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_ServiceAcceptance');
-            if (sanTask) {
-              await camundaService.completeTask(sanTask.id, completionVars);
-              camundaTaskCompleted = true;
-            }
-          }
-        } catch (e) {
-          console.error('[SAN] Camunda auto-complete (non-fatal):', e.message);
-        }
+      } catch (e) {
+        console.error('[SAN] Camunda completeTask (non-fatal):', e.message);
       }
 
       if (req.io) {

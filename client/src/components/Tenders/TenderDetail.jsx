@@ -10,6 +10,8 @@ import { tenderService } from '../../services/tenderService';
 import { supplierLogoUrl } from '../../services/supplierPortalService';
 import { TENDER_STATUS, fmtDateTime, fmtMoney, timeLeft, toLocalInput } from '../../utils/tenderStatus';
 import TenderTargetingFields, { AUDIENCE_LABELS } from './TenderTargetingFields';
+import AwardModeFields from './AwardModeFields';
+import SearchSelect from '../Common/SearchSelect';
 import { t } from '../../i18n';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -24,6 +26,9 @@ export default function TenderDetail() {
   const [awardTo, setAwardTo] = useState(null);
   const [awardComment, setAwardComment] = useState('');
   const [confirm, setConfirm] = useState(null); // 'close' | 'cancel'
+  // AO « par article » : fournisseur retenu pour chaque article (meilleur prix proposé d'office)
+  const [itemAward, setItemAward] = useState({});
+  const [perItemConfirm, setPerItemConfirm] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -36,6 +41,19 @@ export default function TenderDetail() {
   };
 
   useEffect(() => { load(); }, [id]);
+
+  useEffect(() => {
+    if (!tender || tender.award_mode !== 'PER_ITEM') return;
+    const best = {};
+    for (const i of tender.items || []) {
+      const offers = (tender.submissions || [])
+        .map(sub => ({ sub, line: (sub.items || []).find(l => String(l.requisition_item_id) === String(i.id)) }))
+        .filter(o => o.line)
+        .sort((a, b) => parseFloat(a.line.unit_price) - parseFloat(b.line.unit_price));
+      if (offers.length) best[i.id] = String(offers[0].sub.supplier_id);
+    }
+    setItemAward(best);
+  }, [tender]);
 
   if (loading && !tender) {
     return <div className="flex justify-center items-center h-64"><RefreshCw className="animate-spin text-blue-500" /></div>;
@@ -53,6 +71,24 @@ export default function TenderDetail() {
     || (tender.effective_status === 'CLOSED' && subs.length === 0);
   const canAward = tender.effective_status === 'CLOSED' && subs.length > 0;
   const left = isOpen ? timeLeft(tender.end_date) : null;
+  const perItem = tender.award_mode === 'PER_ITEM';
+  const awards = tender.awards || [];
+  const awardOf = (itemId) => awards.find(a => String(a.requisition_item_id) === String(itemId));
+  // Récapitulatif de l'attribution par article : une ligne par fournisseur retenu
+  const perItemSummary = () => {
+    const out = new Map();
+    for (const i of items) {
+      const sid = itemAward[i.id];
+      if (!sid) continue;
+      const sub = subs.find(x => String(x.supplier_id) === sid);
+      const line = (sub?.items || []).find(l => String(l.requisition_item_id) === String(i.id));
+      if (!out.has(sid)) out.set(sid, { name: sub?.supplier_name, count: 0, total: 0 });
+      const row = out.get(sid);
+      row.count += 1;
+      row.total += parseFloat(line?.total_price || 0);
+    }
+    return [...out.values()];
+  };
 
   // Meilleur PU par item
   const priceOf = (s, itemId) => (s.items || []).find(l => String(l.requisition_item_id) === String(itemId));
@@ -104,6 +140,25 @@ export default function TenderDetail() {
     if (ok) setEditForm(null);
   };
 
+  const doAwardPerItem = async () => {
+    setBusy(true);
+    try {
+      const res = await tenderService.awardPerItem(tender.id,
+        Object.entries(itemAward).map(([requisitionItemId, supplierId]) => ({ requisitionItemId: Number(requisitionItemId), supplierId: Number(supplierId) })),
+        awardComment);
+      toast.success(res.split ? t('tenders.perItem.awardedSplit', { count: res.winners.length }) : t('tenders.awarded'));
+      if (!res.camundaTaskCompleted) toast(t('tenders.taskNotCompleted'), { icon: '⚠️' });
+      setPerItemConfirm(false);
+      setAwardComment('');
+      await load();
+    } catch (error) {
+      const code = error.response?.data?.code;
+      toast.error(code ? t(`tenders.perItem.err.${code}`, { defaultValue: error.response?.data?.message }) : (error.response?.data?.message || t('tenders.perItem.err.default')));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const doAward = async () => {
     const ok = await run(async () => {
       const res = await tenderService.award(tender.id, awardTo.supplier_id, awardComment);
@@ -145,6 +200,7 @@ export default function TenderDetail() {
               maxDeliveryDays: tender.max_delivery_days,
               audience: tender.audience || 'ALL', categoryId: tender.category_id || '', locationId: tender.location_id || '',
               supplierIds: (tender.invitations || []).map(i => i.supplier_id),
+              awardMode: tender.award_mode || 'SINGLE',
             })} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
               <Pencil size={16} /> {tender.effective_status === 'CLOSED' ? t('tenders.extend') : t('common.edit')}
             </button>
@@ -170,6 +226,7 @@ export default function TenderDetail() {
           [t('tenders.maxDeliveryLabel'), t('tenders.maxDeliveryValue', { count: tender.max_delivery_days })],
           [t('tenders.submissions'), <span className="flex items-center gap-1"><Users size={14} /> {t('tenders.submissionsValue', { count: subs.length, total: tender.registeredSuppliers, kind: t(tender.audience === 'PREQUALIFIED' ? 'tenders.eligible' : 'tenders.registeredKind') })}</span>],
           [t('tenders.diffusion'), AUDIENCE_LABELS[tender.audience || 'ALL']],
+          [t('tenders.awardMode.label'), <span data-testid="tender-award-mode">{t(`tenders.awardMode.${tender.award_mode || 'SINGLE'}`)}</span>],
           [t('tenders.category'), tender.category_name || '—'],
           [t('tenders.locationLabel'), tender.location_name || t('tenders.allLocations')],
         ].map(([k, v]) => (
@@ -184,7 +241,7 @@ export default function TenderDetail() {
 
       {tender.effective_status === 'AWARDED' && (
         <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 flex items-center gap-2">
-          <Award size={18} /> {t('tenders.awardedTo')} <b>{tender.awarded_supplier_name}</b> {t('tenders.awardedOn', { date: fmtDateTime(tender.awarded_at) })}
+          <Award size={18} /> {perItem && awards.length ? t('tenders.perItem.awardedTo') : t('tenders.awardedTo')} <b>{tender.awarded_supplier_name}</b> {t('tenders.awardedOn', { date: fmtDateTime(tender.awarded_at) })}
         </div>
       )}
       {sealed && (
@@ -216,7 +273,7 @@ export default function TenderDetail() {
       )}
       {canAward && (
         <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-sm text-green-800">
-          {t('tenders.closedHint')}
+          {perItem ? t('tenders.perItem.closedHint') : t('tenders.closedHint')}
         </div>
       )}
 
@@ -256,6 +313,11 @@ export default function TenderDetail() {
                     <div className="text-xs font-normal text-gray-500">{t('tenders.unitTotal')}</div>
                   </th>
                 ))}
+                {perItem && (canAward || awards.length > 0) && (
+                  <th className="text-left px-3 py-2 font-medium text-gray-700 min-w-[200px]">
+                    {canAward ? t('tenders.perItem.awardTo') : t('tenders.perItem.awardedColumn')}
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -274,6 +336,27 @@ export default function TenderDetail() {
                         </td>
                       );
                     })}
+                    {perItem && canAward && (
+                      <td className="px-3 py-2">
+                        {subs.some(sub => priceOf(sub, i.id)) ? (
+                          <SearchSelect
+                            data-testid="per-item-award"
+                            value={itemAward[i.id] || ''}
+                            onChange={(e) => setItemAward(a => ({ ...a, [i.id]: e.target.value }))}
+                            className="w-full px-2 py-1 border rounded text-sm"
+                          >
+                            {subs.filter(sub => priceOf(sub, i.id)).map(sub => (
+                              <option key={sub.id} value={String(sub.supplier_id)}>{sub.supplier_name} — {fmtMoney(priceOf(sub, i.id).unit_price)}</option>
+                            ))}
+                          </SearchSelect>
+                        ) : <span className="text-xs text-gray-400">{t('tenders.perItem.noOffer')}</span>}
+                      </td>
+                    )}
+                    {perItem && !canAward && awards.length > 0 && (
+                      <td className="px-3 py-2 text-sm font-medium text-blue-800" data-testid="per-item-awarded">
+                        {awardOf(i.id)?.supplier_name || <span className="text-gray-400">—</span>}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -302,7 +385,7 @@ export default function TenderDetail() {
                   {subs.map(s => <td key={s.id} className="px-3 py-2 text-right text-xs text-gray-600">{s.notes || ''}</td>)}
                 </tr>
               )}
-              {canAward && (
+              {canAward && !perItem && (
                 <tr>
                   <td colSpan={2} />
                   {subs.map(s => (
@@ -317,6 +400,14 @@ export default function TenderDetail() {
               )}
             </tfoot>
           </table>
+        )}
+        {perItem && canAward && (
+          <div className="px-4 py-3 border-t border-gray-200 flex justify-end">
+            <button data-testid="per-item-award-open" onClick={() => setPerItemConfirm(true)}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+              <Award size={16} /> {t('tenders.perItem.awardButton')}
+            </button>
+          </div>
         )}
       </div>}
 
@@ -346,6 +437,10 @@ export default function TenderDetail() {
               <input type="number" min="1" className={inputCls} value={editForm.maxDeliveryDays} onChange={e => setEditForm(f => ({ ...f, maxDeliveryDays: e.target.value }))} />
             </div>
             <div className="col-span-2 border-t pt-3">
+              <AwardModeFields value={editForm.awardMode} locked={subs.length > 0}
+                onChange={(v) => setEditForm(f => ({ ...f, awardMode: v }))} />
+            </div>
+            <div className="col-span-2 border-t pt-3">
               <TenderTargetingFields
                 value={{ audience: editForm.audience, categoryId: editForm.categoryId, locationId: editForm.locationId, supplierIds: editForm.supplierIds }}
                 lockedIds={(tender.invitations || []).filter(i => i.submitted).map(i => i.supplier_id)}
@@ -369,6 +464,24 @@ export default function TenderDetail() {
             <p className="text-gray-500">{t('tenders.awardTaskHint')}</p>
           </div>
         )}
+      </Modal>
+
+      {/* Modale attribution par article */}
+      <Modal isOpen={perItemConfirm} onClose={() => setPerItemConfirm(false)} title={t('tenders.perItem.confirmTitle')} type="success"
+        onConfirm={doAwardPerItem} confirmText={t('tenders.confirmAward')} isLoading={busy}>
+        <div className="space-y-3 text-sm" data-testid="per-item-summary">
+          <p>{t('tenders.perItem.confirmIntro')}</p>
+          <ul className="divide-y divide-gray-100 border rounded-lg">
+            {perItemSummary().map(row => (
+              <li key={row.name} className="px-3 py-2 flex justify-between">
+                <span className="font-medium">{row.name}</span>
+                <span>{t('tenders.perItem.summaryRow', { count: row.count, amount: fmtMoney(row.total, cur) })}</span>
+              </li>
+            ))}
+          </ul>
+          {perItemSummary().length > 1 && <p className="text-blue-800 bg-blue-50 p-2 rounded">{t('tenders.perItem.splitHint', { count: perItemSummary().length })}</p>}
+          <textarea rows={3} className={inputCls} placeholder={t('tenders.justification')} value={awardComment} onChange={e => setAwardComment(e.target.value)} />
+        </div>
       </Modal>
 
       {/* Confirmations */}

@@ -10,6 +10,7 @@ const TASK_KEYS = [
   'Activity_ReviseRequisition',
   // Méthode d'achat
   'Activity_DetermineType', 'Activity_DirectPurchase', 'Activity_RequestQuotations', 'Activity_RFPProcess', 'Activity_SoleSource',
+  'Activity_AllocateSuppliers',
   // Bon de commande
   'Activity_CreatePO', 'Activity_POApproval', 'Activity_SupplierConfirmation',
   // Cycle P2P

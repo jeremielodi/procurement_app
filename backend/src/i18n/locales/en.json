@@ -81,7 +81,8 @@
       "Activity_ServiceAcceptance": "Service acceptance note (SAN)",
       "Activity_EnterInvoice": "Enter supplier invoice",
       "Activity_ProcessPayment": "Process payment",
-      "Activity_ReviseRequisition": "Revise the requisition"
+      "Activity_ReviseRequisition": "Revise the requisition",
+      "Activity_AllocateSuppliers": "Allocate items to suppliers"
     },
     "approvalPrefix": "",
     "roles": {
@@ -177,7 +178,8 @@
       "grn": "Goods receipt (GRN)",
       "san": "Service acceptance (SAN)",
       "invoice": "Invoice & matching",
-      "payment": "Payment"
+      "payment": "Payment",
+      "allocation": "Split between suppliers"
     },
     "approvedBy": "Approved by {name}",
     "matchingInfo": "Matching: {status}",
@@ -231,7 +233,12 @@
         "DEFAULT": "Default thresholds: N1 below {n1}, N2 below {n2}, N3 above"
       }
     },
-    "directPurchaseSupplier": "Selected supplier: {supplier}"
+    "directPurchaseSupplier": "Selected supplier: {supplier}",
+    "split": {
+      "progress": "{done} / {total} orders",
+      "lotInfo": "{supplier} ({count} items)",
+      "taskOfLot": "{task} — {supplier}"
+    }
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -358,7 +365,8 @@
       "newSubmission": "New submission",
       "updatedSubmission": "Submission updated",
       "submitted": "{supplier} submitted a bid for {number}",
-      "resubmitted": "{supplier} updated their bid for {number}"
+      "resubmitted": "{supplier} updated their bid for {number}",
+      "wonItemsMessage": "You won {count} item(s) of {number}"
     },
     "stockIssue": {
       "issuedTitle": "Items handed over: {number}",
@@ -808,7 +816,8 @@
     "PROJECT_MEMBER_REMOVED": "Member removed from a project",
     "PROJECT_MEMBER_PROFILES_CHANGED": "Member profiles changed on a project",
     "APPROVAL_POLICY_CHANGED": "Approval thresholds changed",
-    "BUDGET_LINES_IMPORTED": "Budget register import"
+    "BUDGET_LINES_IMPORTED": "Budget register import",
+    "SUPPLIER_ALLOCATION_RECORDED": "Requisition split between several suppliers"
   },
   "auditExport": {
     "sheet": "Audit log",

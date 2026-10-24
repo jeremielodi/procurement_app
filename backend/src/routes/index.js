@@ -219,6 +219,15 @@ router.get('/requisitions/:id/direct-purchase', hasPermission('VIEW_REQUISITIONS
     res.status(500).json({ success: false, message: "Erreur lors de la lecture de l'achat direct" });
   }
 });
+// Réquisition répartie entre plusieurs fournisseurs : parts (fournisseur, articles, bon de commande), [] sinon
+const supplierAllocationService = require('../services/SupplierAllocationService');
+router.get('/requisitions/:id/supplier-lots', hasPermission('VIEW_REQUISITIONS'), async (req, res) => {
+  try { res.json({ success: true, data: await supplierAllocationService.list(req.params.id) }); }
+  catch (error) {
+    console.error('Répartition par fournisseur :', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la lecture de la répartition' });
+  }
+});
 router.put('/requisitions/:id',
   hasPermission('CREATE_REQUISITIONS'),
   onProject('CREATE_REQUISITIONS', 'project', from.body('projectId')),

@@ -55,7 +55,9 @@ class SupplierController {
       // Formulaire de bon de commande : tous les fournisseurs actifs, préqualifiés en tête (+ attributaire de l'AO)
       if (['1', 'true'].includes(String(req.query.forPurchaseOrder))) {
         const requisitionId = /^[0-9a-f-]{36}$/i.test(String(req.query.requisitionId || '')) ? req.query.requisitionId : null;
-        return res.json({ success: true, data: await supplierModel.getForPurchaseOrder(requisitionId) });
+        // Part d'une réquisition répartie entre plusieurs fournisseurs : son fournisseur (lot = true)
+        const lotId = /^[0-9a-f-]{36}$/i.test(String(req.query.supplierLotId || '')) ? req.query.supplierLotId : null;
+        return res.json({ success: true, data: await supplierModel.getForPurchaseOrder(requisitionId, lotId) });
       }
       const all = ['1', 'true'].includes(String(req.query.all));
       res.json({ success: true, data: all ? await supplierModel.getAll() : await supplierModel.getPrequalifiedSuppliers() });

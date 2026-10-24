@@ -238,6 +238,18 @@ async function getJobById(taskId) {
   }
 }
 /**
+ * Variables vues par une tâche (celles du processus, recouvertes par les variables locales de son sous-processus :
+ * part d'une réquisition répartie entre plusieurs fournisseurs) → { nom: valeur }. names : liste facultative.
+ */
+async function getTaskVariables(taskId, names = null) {
+  const params = names?.length ? { variableNames: names.join(',') } : {};
+  const response = await client.get(`/task/${taskId}/variables`, { params });
+  const out = {};
+  for (const [name, v] of Object.entries(response.data || {})) out[name] = v?.value;
+  return out;
+}
+
+/**
  * Récupérer les tâches candidates pour un groupe
  */
 async function getGroupTasks(candidateGroup, processInstanceId = null) {
@@ -731,6 +743,7 @@ module.exports = {
   getProcessTasks,
   getCompletedTasks,
   getJobById,
+  getTaskVariables,
   getUserTasks,
   getGroupTasks,
   completeTask,

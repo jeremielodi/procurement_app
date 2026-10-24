@@ -7,6 +7,7 @@
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const camundaService = require('./CamundaService');
+const orderTasks = require('./OrderTaskService');
 const notificationModel = require('../models/NotificationModel');
 const userModel = require('../models/UserModel');
 const i18n = require('../i18n');
@@ -22,11 +23,13 @@ const isoDate = (v) => {
   return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3] ? m[0] : null;
 };
 
-/** Tâche GoFlow « confirmation fournisseur » ouverte pour ce processus (null si GoFlow injoignable ou étape non atteinte) */
-async function openTask(processInstanceId) {
+/**
+ * Tâche GoFlow « confirmation fournisseur » ouverte pour CE bon de commande (réquisition répartie : une par part ;
+ * taskId retenu seulement s'il la désigne), null si GoFlow injoignable ou étape non atteinte
+ */
+async function openTask(processInstanceId, poId, taskId = null) {
   if (!processInstanceId) return null;
-  const tasks = (await camundaService.getProcessTasks(processInstanceId)) || [];
-  return tasks.find(t => t.taskDefinitionKey === TASK_KEY && t.processInstanceId === processInstanceId) || null;
+  return orderTasks.findForPurchaseOrder(processInstanceId, TASK_KEY, poId, taskId);
 }
 
 /** Utilisateurs à prévenir : achats actifs de l'entreprise du bon + son créateur (hors auteur de l'action) */
@@ -110,7 +113,7 @@ class SupplierConfirmationService {
     let taskCompleted = !!skipTask;
     if (resp === 'CONFIRMED' && !skipTask) {
       try {
-        const task = taskId ? { id: taskId } : await openTask(po.req_process || po.po_process);
+        const task = await openTask(po.req_process || po.po_process, po.id, taskId);
         if (task) {
           const result = await tenant.run({ enterpriseId: po.enterprise_id }, () =>
             camundaService.completeTask(task.id, { supplierConfirmed: true, confirmedDeliveryDate: date || '', supplierReference: ref || '' }));

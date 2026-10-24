@@ -145,7 +145,7 @@ class SupplierModel {
    * portail n'est pas préqualifié d'office), préqualifiés en tête (is_prequalified : même règle que
    * getPrequalifiedSuppliers) ; awarded = attributaire de l'appel d'offres de la réquisition.
    */
-  async getForPurchaseOrder(requisitionId = null) {
+  async getForPurchaseOrder(requisitionId = null, lotId = null) {
     const params = [];
     const preqFilter = tenant.filter('sp.enterprise_id', params);
     params.push(requisitionId || null);
@@ -159,11 +159,14 @@ class SupplierModel {
                         AND td.awarded_supplier_id = s.id) AS awarded,
               -- Fournisseur désigné (avec sa pro-forma) à l'étape « Achat direct » : la plus récente fait foi
               COALESCE((SELECT dp.supplier_id FROM direct_purchase_selections dp WHERE dp.requisition_id = ${reqParam}
-                        ORDER BY dp.created_at DESC LIMIT 1) = s.id, false) AS direct_purchase
+                        ORDER BY dp.created_at DESC LIMIT 1) = s.id, false) AS direct_purchase,
+              -- Fournisseur de la part (réquisition répartie entre plusieurs fournisseurs)
+              EXISTS (SELECT 1 FROM requisition_supplier_lots l WHERE l.id = $${params.length + 1}::uuid
+                        AND l.requisition_id = ${reqParam} AND l.supplier_id = s.id) AS lot
        FROM suppliers s
        WHERE s.status = 'ACTIVE'
        ORDER BY is_prequalified DESC, s.name`,
-      params
+      [...params, lotId || null]
     );
   }
 

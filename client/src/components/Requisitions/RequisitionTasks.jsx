@@ -54,6 +54,7 @@ const TASK_FORMS = {
   Activity_ValidationN3_DG: 'approval',
   Activity_DetermineType: 'method',
   Activity_DirectPurchase: 'directPurchase',
+  Activity_AllocateSuppliers: 'allocation', // page dédiée (répartition des articles entre fournisseurs)
   Activity_BudgetAdjustment: 'budget',
 };
 
@@ -191,7 +192,9 @@ export default function RequisitionTasks() {
   const resolveTaskTarget = async (task) => {
     const key = task.taskDefinitionKey;
     const q = (to) => `${to}${to.includes('?') ? '&' : '?'}taskId=${encodeURIComponent(task.id)}`;
-    if (key === 'Activity_CreatePO') return { url: `/purchase-orders/${id}/${task.id}` };
+    // Réquisition répartie : bon de commande de la part de cette tâche (fournisseur et articles imposés)
+    if (key === 'Activity_CreatePO') return { url: `/purchase-orders/${id}/${task.id}${task.lot ? `?supplierLotId=${task.lot.id}` : ''}` };
+    if (key === 'Activity_AllocateSuppliers') return { url: q(`/requisitions/${id}/allocation`) };
     if (key === 'Activity_RFPProcess') return { url: `/tenders/new?taskId=${encodeURIComponent(task.id)}&requisitionId=${id}` };
     if (key === 'Activity_BudgetAdjustment') return { url: `/requisitions/${id}` };
     // Correction demandée par l'approbateur (ou retrait) : formulaire de modification, puis nouvelle soumission
@@ -203,6 +206,8 @@ export default function RequisitionTasks() {
     const vars = (await requisitionService.getProcessVariables(requisition.process_instance_id).catch(() => null))?.data || {};
     const pos = (await purchaseOrderService.getAll({ requisitionId: id }).catch(() => null))?.data || [];
     const poFor = (statuses) => {
+      // Réquisition répartie : le bon de commande de la part de la tâche (fourni par le serveur)
+      if (task.lot?.poId) return pos.find(p => String(p.id) === String(task.lot.poId) && statuses.includes(p.status)) || null;
       const fromVars = pos.find(p => String(p.id) === String(vars.poId) && statuses.includes(p.status));
       return fromVars || pos.find(p => statuses.includes(p.status)) || null;
     };
@@ -224,9 +229,9 @@ export default function RequisitionTasks() {
       const grn = grns.find(g => String(g.id) === String(vars.grnId)) || grns.sort((a, b) => b.id - a.id)[0];
       return { url: q(`/invoices/new?poId=${po.id}${grn ? `&grnId=${grn.id}` : ''}`) };
     }
-    // Activity_ProcessPayment : facture non payée de cette réquisition
+    // Activity_ProcessPayment : facture non payée de cette réquisition (de la part de la tâche si elle est répartie)
     const invoices = [];
-    for (const p of pos.filter(x => PO_ACTIVE.includes(x.status))) {
+    for (const p of pos.filter(x => PO_ACTIVE.includes(x.status) && (!task.lot?.poId || String(x.id) === String(task.lot.poId)))) {
       invoices.push(...(((await invoiceService.getAll({ poId: p.id }).catch(() => null))?.data) || []));
     }
     const payable = invoices.filter(i => !['PAID', 'REJECTED', 'CANCELLED'].includes(i.status));
@@ -252,6 +257,7 @@ export default function RequisitionTasks() {
       comment: '',
       procurementMethod: '',
       justification: '',
+      multiSupplier: false,
       newBudgetAmount: '',
       adjustmentJustification: ''
     });
@@ -306,6 +312,7 @@ export default function RequisitionTasks() {
       if (formData.comment) variables.comment = formData.comment;
       if (formData.procurementMethod) variables.procurementMethod = formData.procurementMethod;
       if (formData.justification) variables.justification = formData.justification;
+      if (isMethodTask(selectedTask)) variables.multiSupplier = !!formData.multiSupplier && formData.procurementMethod !== 'RFP';
       if (formData.newBudgetAmount) variables.newBudgetAmount = parseFloat(formData.newBudgetAmount);
       if (formData.adjustmentJustification) variables.adjustmentJustification = formData.adjustmentJustification;
 
@@ -319,7 +326,7 @@ export default function RequisitionTasks() {
       if (proformaId) uploadService.deleteFile(proformaId).catch(() => {});
       const code = error.response?.data?.code;
       if (code && DIRECT_PURCHASE_ERRORS.includes(code)) { toast.error(t(`reqTasks.direct.err.${code}`)); return; }
-      toast.error(code && ['METHOD_BELOW_THRESHOLD', 'PROCUREMENT_METHOD_REQUIRED', 'JUSTIFICATION_REQUIRED'].includes(code)
+      toast.error(code && ['METHOD_BELOW_THRESHOLD', 'PROCUREMENT_METHOD_REQUIRED', 'JUSTIFICATION_REQUIRED', 'SPLIT_NOT_AVAILABLE_FOR_RFP', 'SPLIT_NEEDS_TWO_ITEMS'].includes(code)
         ? t(`reqTasks.err.${code}`)
         : code && ['RETURN_REASON_REQUIRED', 'DECISION_REQUIRED', 'RETURN_NOT_SUPPORTED'].includes(code)
           ? t(`revision.err.${code}`)
@@ -480,6 +487,12 @@ export default function RequisitionTasks() {
                       {getTaskIcon(getTaskName(task))}
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-800">{displayName(task)}</h3>
+                        {task.lot && (
+                          <p className="text-sm text-indigo-700 mt-0.5" data-testid="task-lot">
+                            {t('split.lotLabel', { number: task.lot.number, supplier: task.lot.supplierName })}
+                            {task.lot.poNumber ? ` — ${task.lot.poNumber}` : ''}
+                          </p>
+                        )}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 mt-2 text-sm">
                           <div className="text-gray-500">{t('reqTasks.requisitionLabel')}</div>
                           <div className="font-medium text-blue-600">{task.variables?.requisitionNumber || requisition?.requisition_number || '-'}</div>
@@ -771,6 +784,23 @@ export default function RequisitionTasks() {
                       })}
                     </div>
                   </div>
+                  {/* Répartition entre plusieurs fournisseurs : même méthode (calculée sur le total), une commande par fournisseur */}
+                  <label className={`flex items-start gap-3 p-3 border rounded-lg ${formData.procurementMethod === 'RFP' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}>
+                    <input
+                      type="checkbox"
+                      data-testid="method-multi-supplier"
+                      disabled={formData.procurementMethod === 'RFP'}
+                      checked={!!formData.multiSupplier && formData.procurementMethod !== 'RFP'}
+                      onChange={(e) => handleInputChange('multiSupplier', e.target.checked)}
+                      className="w-4 h-4 text-blue-600 mt-0.5"
+                    />
+                    <div>
+                      <span className="font-medium">{t('split.methodOption')}</span>
+                      <p className="text-xs text-gray-500">
+                        {formData.procurementMethod === 'RFP' ? t('split.notForRfp') : t('split.methodOptionHelp')}
+                      </p>
+                    </div>
+                  </label>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {t('reqForm.justification')}

@@ -35,6 +35,8 @@ const supplierConfirmationService = require('../services/SupplierConfirmationSer
 const invoiceModel = require('../models/InvoiceModel');
 const paymentModel = require('../models/PaymentModel');
 const directPurchaseService = require('../services/DirectPurchaseService');
+const allocationService = require('../services/SupplierAllocationService');
+const orderTasks = require('../services/OrderTaskService');
 
 // Task definition keys for each approval level (must match BPMN Activity IDs)
 const REQUISITION_APPROVAL_TASKS = [
@@ -139,8 +141,10 @@ async function getUserTasks(req, res) {
     ].filter(t => reqByProcess.has(t.processInstanceId));
 
     const conflicts = await segregation.taskConflicts((userTasks || []).filter(t => t.status !== 'completed'), currentUser.id);
+    // Réquisition répartie entre plusieurs fournisseurs : part (fournisseur, bon de commande) de chaque tâche de commande
+    const withLots = await orderTasks.withLots(userTasks);
     const enrichedTasks = await Promise.all(
-      (userTasks || []).map(async (task) => {
+      withLots.map(async (task) => {
         let variables = null;
         try {
           variables = await camundaService.getProcessVariables(task.processInstanceId);
@@ -167,6 +171,7 @@ async function getUserTasks(req, res) {
           requisitionId: reqByProcess.get(task.processInstanceId)?.id || null,
           requisitionNumber: reqByProcess.get(task.processInstanceId)?.requisition_number || null,
           requisitionTitle: reqByProcess.get(task.processInstanceId)?.title || null,
+          lot: task.lot || null,
           ...getTaskPermissions(task, currentUser, conflictOf(conflicts, task), projectOfTask(task), requesterOfTask(task))
         };
       })
@@ -433,11 +438,30 @@ async function completeTask(req, res) {
       if (method === 'SOLE_SOURCE' && !String(variables.justification || '').trim()) {
         return res.status(400).json({ success: false, code: 'JUSTIFICATION_REQUIRED', message: 'Justification obligatoire pour une source unique' });
       }
+      // Répartition entre plusieurs fournisseurs : même méthode (calculée sur le total), au moins deux articles ;
+      // appel d'offres : la répartition se décide à l'attribution (AO publié « par article », TenderController)
+      if (variables.multiSupplier === true || variables.multiSupplier === 'true') {
+        if (method === 'RFP') {
+          return res.status(400).json({ success: false, code: 'SPLIT_NOT_AVAILABLE_FOR_RFP', message: 'Appel d\'offres : la répartition se fait à l\'attribution (appel d\'offres publié « par article »)' });
+        }
+        const count = await db.one('SELECT COUNT(*)::int AS n FROM requisition_items WHERE requisition_id = $1', [requisitionId]);
+        if ((count?.n || 0) < 2) {
+          return res.status(400).json({ success: false, code: 'SPLIT_NEEDS_TWO_ITEMS', message: 'Une répartition demande au moins deux articles' });
+        }
+      }
     }
 
     // Achat direct : fournisseur retenu et pro-forma obligatoires (contrôlés avant de terminer l'étape)
     const directPurchase = taskDefinitionKey === directPurchaseService.TASK_KEY
       ? await directPurchaseService.validate(requisitionId, variables)
+      : null;
+    // Répartition entre fournisseurs : chaque article dans une seule part, au moins deux fournisseurs actifs
+    const allocation = taskDefinitionKey === allocationService.TASK_KEY
+      ? await allocationService.validate(requisitionId, variables)
+      : null;
+    // Étape du cycle de commande : bon de commande de CETTE part (lu avant la complétion, tant que la tâche existe)
+    const taskPoId = ['Activity_SupplierConfirmation', 'Activity_POApproval'].includes(taskDefinitionKey)
+      ? await orderTasks.purchaseOrderOfTask(taskId)
       : null;
 
     // Paiement saisi depuis la tâche : refusé AVANT de terminer l'étape si les coordonnées bancaires ne sont pas vérifiées
@@ -491,6 +515,13 @@ async function completeTask(req, res) {
     if (taskDefinitionKey === 'Activity_BudgetAdjustment' && typeof taskVariables.budgetAdjusted !== 'boolean') {
       taskVariables.budgetAdjusted = false;
     }
+    // Méthode d'achat : le BPMN attend toujours multiSupplier ; sans répartition, une seule part (MAIN) pour le
+    // sous-processus de commande (la répartition remplace supplierLots par les id de ses parts)
+    if (taskDefinitionKey === 'Activity_DetermineType') {
+      taskVariables.multiSupplier = variables.multiSupplier === true || variables.multiSupplier === 'true';
+      taskVariables.supplierLots = [orderTasks.MAIN_LOT];
+    }
+    if (allocation) delete taskVariables.lots;
 
     if (directPurchase) {
       Object.assign(taskVariables, {
@@ -502,17 +533,33 @@ async function completeTask(req, res) {
       });
     }
 
-    // 1. Complete the Camunda user task (achat direct : sélection enregistrée dans la même transaction)
+    // 1. Complete the Camunda user task (achat direct / répartition : enregistrés dans la même transaction)
     const result = directPurchase
       ? await directPurchaseService.recordAndComplete(
         { requisitionId, selection: directPurchase, userId, taskId },
         () => camundaService.completeTask(taskId, taskVariables)
       )
-      : await camundaService.completeTask(taskId, taskVariables);
+      : allocation
+        ? await allocationService.recordAndComplete(
+          { requisitionId, allocation, userId, taskId },
+          (lotIds) => camundaService.completeTask(taskId, { ...taskVariables, supplierLots: lotIds })
+        )
+        : await camundaService.completeTask(taskId, taskVariables);
     if (!result.success) {
       return res.status(500).json({
         success: false,
         message: result.error || 'Erreur lors de la complétion'
+      });
+    }
+
+    if (allocation) {
+      const reqRow = await db.one('SELECT requisition_number FROM requisitions WHERE id = $1', [requisitionId]);
+      await audit(req, AUDIT.SUPPLIER_ALLOCATION_RECORDED, {
+        entity: { type: 'requisition', id: requisitionId, label: reqRow?.requisition_number },
+        details: {
+          method: allocation.method,
+          lots: allocation.lots.map((l, i) => ({ lot: i + 1, supplier: l.supplier.name, items: l.itemIds.length })),
+        },
       });
     }
 
@@ -628,11 +675,14 @@ async function completeTask(req, res) {
 
         // --- Confirmation fournisseur (achats, depuis « Mes tâches ») : réponse enregistrée sur le bon ---
         if (taskDefinitionKey === 'Activity_SupplierConfirmation') {
-          const po = await db.one(
-            `SELECT id, supplier_response FROM purchase_orders WHERE requisition_id = $1 AND status IN ('PO_APPROVED', 'PO_SENT')
-             ORDER BY created_at DESC LIMIT 1`,
-            [requisitionId]
-          );
+          // Bon de la part de cette tâche (réquisition répartie), sinon le dernier bon envoyé de la réquisition
+          const po = taskPoId
+            ? await db.one('SELECT id, supplier_response FROM purchase_orders WHERE id = $1 AND requisition_id = $2', [taskPoId, requisitionId])
+            : await db.one(
+              `SELECT id, supplier_response FROM purchase_orders WHERE requisition_id = $1 AND status IN ('PO_APPROVED', 'PO_SENT')
+               ORDER BY created_at DESC LIMIT 1`,
+              [requisitionId]
+            );
           if (po && po.supplier_response !== 'CONFIRMED') {
             await supplierConfirmationService.respond(po.id, {
               response: 'CONFIRMED', deliveryDate: variables.confirmedDeliveryDate || null,
@@ -645,10 +695,12 @@ async function completeTask(req, res) {
         if (taskDefinitionKey === 'Activity_POApproval') {
           const poApproved = variables.poApproved;
 
-          const rows = await db.select(
-            'SELECT id FROM purchase_orders WHERE requisition_id = $1 ORDER BY created_at DESC LIMIT 1',
-            [requisitionId]
-          );
+          const rows = taskPoId
+            ? await db.select('SELECT id FROM purchase_orders WHERE id = $1 AND requisition_id = $2', [taskPoId, requisitionId])
+            : await db.select(
+              'SELECT id FROM purchase_orders WHERE requisition_id = $1 ORDER BY created_at DESC LIMIT 1',
+              [requisitionId]
+            );
 
           if (rows.length > 0) {
             const poId = rows[0].id;
@@ -708,7 +760,7 @@ async function getTasksByProcess(req, res) {
     const projectId = requisition?.project_id || null;
 
     const conflicts = await segregation.taskConflicts(activeTasks || [], currentUser.id);
-    const allTasks = [...(activeTasks || []), ...(completedTasks || [])].map(task => ({
+    const allTasks = [...await orderTasks.withLots(activeTasks || []), ...(completedTasks || [])].map(task => ({
       id: task.id,
       name: task.taskName || task.name,
       processInstanceId: task.processInstanceId,
@@ -722,6 +774,7 @@ async function getTasksByProcess(req, res) {
       priority: task.priority,
       completedAt: task.completedAt,
       status: task.status === 'completed' ? 'COMPLETED' : 'PENDING',
+      lot: task.lot || null,
       ...getTaskPermissions(task, currentUser, task.status === 'completed' ? null : conflictOf(conflicts, task), projectId, requisition?.requester_id)
     }));
 

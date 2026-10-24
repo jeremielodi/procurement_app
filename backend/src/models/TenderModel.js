@@ -12,6 +12,10 @@ const EFFECTIVE_STATUS_SQL = `
     ELSE 'OPEN'
   END`;
 
+// Attribution par article : fournisseurs retenus (ordre alphabétique), pour les listes et la fiche
+const AWARDED_NAMES_SQL = `SELECT string_agg(DISTINCT sa.name, ', ') FROM tender_awards ta JOIN suppliers sa ON sa.id = ta.supplier_id
+                             WHERE ta.tender_id = t.id`;
+
 class TenderModel {
 
   async getAll({ status, search } = {}) {
@@ -19,7 +23,7 @@ class TenderModel {
       SELECT t.*, ${EFFECTIVE_STATUS_SQL} AS effective_status,
              r.requisition_number, r.title AS requisition_title, r.estimated_amount,
              c.format_key AS currency_code,
-             s.name AS awarded_supplier_name,
+             COALESCE(s.name, (${AWARDED_NAMES_SQL})) AS awarded_supplier_name,
              ${localizedSql('mc')} AS category_name, loc.name AS location_name,
              (SELECT COUNT(*) FROM tender_submissions ts WHERE ts.tender_id = t.id)::int AS submission_count
       FROM tenders t
@@ -51,7 +55,7 @@ class TenderModel {
               r.estimated_amount, r.process_instance_id,
               c.format_key AS currency_code, c.symbol AS currency_symbol,
               d.name AS department_name, p.name AS project_name,
-              s.name AS awarded_supplier_name,
+              COALESCE(s.name, (${AWARDED_NAMES_SQL})) AS awarded_supplier_name,
               u.first_name || ' ' || u.last_name AS created_by_name,
               e.name AS enterprise_name, e.logo_path AS enterprise_logo_path,
               ${localizedSql('mc')} AS category_name, loc.name AS location_name
@@ -97,12 +101,12 @@ class TenderModel {
     return db.one(
       `INSERT INTO tenders
          (tender_number, requisition_id, task_id, title, description,
-          start_date, end_date, max_delivery_days, status, created_by, audience, category_id, location_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'OPEN', $9, $10, $11, $12)
+          start_date, end_date, max_delivery_days, status, created_by, audience, category_id, location_id, award_mode)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'OPEN', $9, $10, $11, $12, $13)
        RETURNING *`,
       [data.tenderNumber, data.requisitionId, data.taskId || null, data.title, data.description || null,
        data.startDate, data.endDate, data.maxDeliveryDays, data.createdBy,
-       data.audience, data.categoryId, data.locationId]
+       data.audience, data.categoryId, data.locationId, data.awardMode || 'SINGLE']
     );
   }
 
@@ -116,6 +120,7 @@ class TenderModel {
       audience: data.audience,
       category_id: data.categoryId,
       location_id: data.locationId,
+      ...(data.awardMode ? { award_mode: data.awardMode } : {}),
       updated_at: new Date()
     }, 'id', id);
   }
@@ -232,7 +237,8 @@ class TenderModel {
          SELECT t.id, t.tender_number, t.title, t.description, t.start_date, t.end_date,
                 t.max_delivery_days, ${EFFECTIVE_STATUS_SQL} AS effective_status,
                 t.audience, ${localizedSql('mc')} AS category_name, loc.name AS location_name,
-                (t.awarded_supplier_id = $1) AS is_awarded_to_me,
+                (t.awarded_supplier_id = $1 OR EXISTS (SELECT 1 FROM tender_awards ta WHERE ta.tender_id = t.id AND ta.supplier_id = $1)) AS is_awarded_to_me,
+                t.award_mode,
                 c.format_key AS currency_code,
                 e.id AS enterprise_id, e.name AS enterprise_name, e.logo_path AS enterprise_logo_path,
                 ts.id AS my_submission_id, ts.total_amount AS my_total, ts.updated_at AS my_submitted_at
@@ -333,6 +339,20 @@ class TenderModel {
       await db.exec('DELETE FROM tender_invitations WHERE tender_id = $1 AND supplier_id = ANY($2::int[])', [tenderId, removable]);
     }
     return { added, removed: removable, kept };
+  }
+
+  /** Articles attribués (attribution par article) : article, fournisseur, prix — [] sinon */
+  async getAwards(tenderId) {
+    return db.select(
+      `SELECT ta.requisition_item_id, ta.submission_id, ta.supplier_id, s.name AS supplier_name,
+              ta.unit_price::float8 AS unit_price, ta.total_price::float8 AS total_price, ri.item_description
+       FROM tender_awards ta
+       JOIN suppliers s ON s.id = ta.supplier_id
+       JOIN requisition_items ri ON ri.id = ta.requisition_item_id
+       WHERE ta.tender_id = $1
+       ORDER BY ta.requisition_item_id`,
+      [tenderId]
+    );
   }
 
   async isSupplierEligible(supplierId, tenderId) {

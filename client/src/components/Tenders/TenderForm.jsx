@@ -9,6 +9,7 @@ import { tenderService } from '../../services/tenderService';
 import requisitionService from '../../services/requisitionService';
 import { toLocalInput, fmtMoney } from '../../utils/tenderStatus';
 import TenderTargetingFields from './TenderTargetingFields';
+import AwardModeFields from './AwardModeFields';
 import { t } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 
@@ -34,6 +35,7 @@ export default function TenderForm() {
     startDate: toLocalInput(new Date()),
     endDate: toLocalInput(new Date(Date.now() + 7 * 86400000)),
     maxDeliveryDays: 30,
+    awardMode: 'SINGLE',
   });
   const [targeting, setTargeting] = useState({ audience: 'ALL', categoryId: '', locationId: '', supplierIds: [] });
 
@@ -219,6 +221,10 @@ export default function TenderForm() {
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="endDate">{t('tenders.deadline')}</label>
             <input id="endDate" type="datetime-local" className={inputCls} value={form.endDate} onChange={e => set('endDate', e.target.value)} />
           </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <AwardModeFields value={form.awardMode} onChange={(v) => set('awardMode', v)} />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">

@@ -9,6 +9,7 @@ import Layout from './components/Layout/Layout';
 import Dashboard from './components/Dashboard/Dashboard';
 import RequisitionList from './components/Requisitions/RequisitionList';
 import RequisitionForm from './components/Requisitions/RequisitionForm';
+import SupplierAllocationForm from './components/Requisitions/SupplierAllocationForm';
 import RequisitionDetail from './components/Requisitions/RequisitionDetail';
 import RequisitionTasks from './components/Requisitions/RequisitionTasks';
 import POList from './components/PurchaseOrders/POList';
@@ -157,6 +158,15 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <RequisitionDetail />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
+        {/* Répartition des articles entre plusieurs fournisseurs (tâche Activity_AllocateSuppliers) */}
+        <Route path="/requisitions/:id/allocation" element={
+          <ProtectedRoute>
+            <Layout>
+              <SupplierAllocationForm />
             </Layout>
           </ProtectedRoute>
         } />

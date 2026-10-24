@@ -2,6 +2,8 @@
 const db = require('../config/database');
 // Multi-entreprise : toutes les requêtes du tableau de bord sont restreintes à l'entreprise courante
 const { scopedDb } = require('../utils/tenantSql');
+// Fins du sous-processus de commande (une part d'une réquisition répartie) : le processus continue pour les autres parts
+const LOT_END_EVENTS = ['Event_LotCompleted', 'Event_POCancelled', 'Event_GRNDispute', 'Event_SANRejected', 'Event_InvoiceDispute'];
 const tenant = require('../utils/tenant');
 const { TASK_GROUPS, TASK_CANDIDATE_GROUPS, taskKey, taskLabel, groupLabel } = require('../utils/workflowLabels');
 const i18n = require('../i18n');
@@ -856,8 +858,13 @@ class DashboardModel {
         SELECT DISTINCT task_id FROM workflow_history WHERE action = 'TASK_COMPLETED' AND task_id IS NOT NULL
       ),
       ended AS (
-        SELECT DISTINCT process_instance_id FROM workflow_history
-        WHERE action = 'TASK_COMPLETED' AND comments LIKE '%"next_element":"Event\_%' ESCAPE '\'
+        -- Réquisition répartie entre plusieurs fournisseurs : la fin d'une part (sous-processus de commande) ne
+        -- termine pas le processus, les autres parts continuent
+        SELECT DISTINCT wh.process_instance_id FROM workflow_history wh
+        WHERE wh.action = 'TASK_COMPLETED' AND wh.comments LIKE '%"next_element":"Event\_%' ESCAPE '\'
+          AND NOT (wh.comments ~ '"next_element":"(${LOT_END_EVENTS.join('|')})"'
+                   AND EXISTS (SELECT 1 FROM requisitions rl JOIN requisition_supplier_lots l ON l.requisition_id = rl.id
+                               WHERE rl.process_instance_id = wh.process_instance_id))
       ),
       claimed AS (
         -- Dernière prise en charge / libération de chaque tâche : une tâche libérée n'a plus de responsable

@@ -76,7 +76,8 @@ export default function ProjectForm({ project, onClose }) {
       }
       onClose();
     } catch (error) {
-      toast.error(error.response?.data?.message || t('common.error'));
+      const code = error.response?.data?.code;
+      toast.error((code && t(`projects.err.${code}`, { defaultValue: '' })) || error.response?.data?.message || t('common.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -93,8 +94,13 @@ export default function ProjectForm({ project, onClose }) {
             onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
             required
+            maxLength={20}
+            data-testid="project-code"
             placeholder={t('projects.codePlaceholder')}
           />
+          {project && formData.code !== (project.code || '') && (
+            <p className="mt-1 text-xs text-amber-700" data-testid="project-code-change-hint">{t('projects.codeChangeHint')}</p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">{t('projects.nameRequired')}</label>

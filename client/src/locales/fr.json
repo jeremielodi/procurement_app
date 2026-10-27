@@ -2875,8 +2875,12 @@
     "err": {
       "ALREADY_MEMBER": "Cet utilisateur est déjà membre du projet",
       "INVALID_PROFILE": "Profil non détenu par l'utilisateur : ajoutez-le d'abord sur sa fiche",
-      "NOT_MEMBER": "Cet utilisateur n'est pas membre du projet"
-    }
+      "NOT_MEMBER": "Cet utilisateur n'est pas membre du projet",
+      "PROJECT_CODE_REQUIRED": "Le code du projet est obligatoire.",
+      "PROJECT_CODE_TOO_LONG": "Code du projet : 20 caractères maximum.",
+      "PROJECT_CODE_EXISTS": "Ce code est déjà utilisé par un autre projet de votre entreprise."
+    },
+    "codeChangeHint": "Les réquisitions, budgets, stocks et membres restent rattachés au projet. Utilisez le nouveau code dans vos prochains fichiers d'import."
   },
   "enterprises": {
     "notFound": "Entreprise introuvable",
@@ -5605,7 +5609,8 @@
       "APPROVAL_POLICY_CHANGED": "Seuils d'approbation modifiés",
       "BUDGET_LINES_IMPORTED": "Import du registre budgétaire",
       "SUPPLIER_ALLOCATION_RECORDED": "Réquisition répartie entre plusieurs fournisseurs",
-      "SUPPLIER_PORTAL_ACCESS_GRANTED": "Accès au portail fournisseur donné"
+      "SUPPLIER_PORTAL_ACCESS_GRANTED": "Accès au portail fournisseur donné",
+      "PROJECT_CODE_CHANGED": "Code de projet modifié"
     },
     "groups": {
       "all": "Tous les événements",

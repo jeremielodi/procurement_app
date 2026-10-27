@@ -78,10 +78,19 @@ class ProjectController {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const { name, description, projectManagerId, status, startDate, endDate, isActive } = req.body;
+      const { code, name, description, projectManagerId, status, startDate, endDate, isActive } = req.body;
       
       if ('approvalN1Max' in req.body || 'approvalN2Max' in req.body) approvalPolicy.parsePolicy(req.body.approvalN1Max, req.body.approvalN2Max);
-      await projectModel.update(id, { name, description, projectManagerId, status, startDate, endDate, isActive });
+      const before = await projectModel.findById(id);
+      await projectModel.update(id, { code, name, description, projectManagerId, status, startDate, endDate, isActive });
+      // Changement de code : tracé (les documents restent liés au projet par son identifiant)
+      const after = code !== undefined ? await projectModel.findById(id) : null;
+      if (before && after && after.code !== before.code) {
+        await audit(req, AUDIT.PROJECT_CODE_CHANGED, {
+          entity: { type: 'project', id, label: `${after.code} — ${after.name}` },
+          oldValue: { code: before.code }, details: { code: after.code },
+        });
+      }
       await saveApprovalPolicy(req, id);
       res.json({ success: true, message: 'Projet mis à jour' });
     } catch (error) {

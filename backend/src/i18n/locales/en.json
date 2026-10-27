@@ -825,7 +825,8 @@
     "APPROVAL_POLICY_CHANGED": "Approval thresholds changed",
     "BUDGET_LINES_IMPORTED": "Budget register import",
     "SUPPLIER_ALLOCATION_RECORDED": "Requisition split between several suppliers",
-    "SUPPLIER_PORTAL_ACCESS_GRANTED": "Supplier portal access granted"
+    "SUPPLIER_PORTAL_ACCESS_GRANTED": "Supplier portal access granted",
+    "PROJECT_CODE_CHANGED": "Project code changed"
   },
   "auditExport": {
     "sheet": "Audit log",

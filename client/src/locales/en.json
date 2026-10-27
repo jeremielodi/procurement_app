@@ -2875,8 +2875,12 @@
     "err": {
       "ALREADY_MEMBER": "This user is already a member of the project",
       "INVALID_PROFILE": "The user does not hold this profile: add it on their record first",
-      "NOT_MEMBER": "This user is not a member of the project"
-    }
+      "NOT_MEMBER": "This user is not a member of the project",
+      "PROJECT_CODE_REQUIRED": "The project code is required.",
+      "PROJECT_CODE_TOO_LONG": "Project code: 20 characters maximum.",
+      "PROJECT_CODE_EXISTS": "This code is already used by another project of your organisation."
+    },
+    "codeChangeHint": "Requisitions, budgets, stock and members stay linked to the project. Use the new code in your next import files."
   },
   "enterprises": {
     "notFound": "Company not found",
@@ -5605,7 +5609,8 @@
       "APPROVAL_POLICY_CHANGED": "Approval thresholds changed",
       "BUDGET_LINES_IMPORTED": "Budget register import",
       "SUPPLIER_ALLOCATION_RECORDED": "Requisition split between several suppliers",
-      "SUPPLIER_PORTAL_ACCESS_GRANTED": "Supplier portal access granted"
+      "SUPPLIER_PORTAL_ACCESS_GRANTED": "Supplier portal access granted",
+      "PROJECT_CODE_CHANGED": "Project code changed"
     },
     "groups": {
       "all": "All events",

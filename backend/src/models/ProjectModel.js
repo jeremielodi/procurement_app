@@ -3,9 +3,27 @@ const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const { v4: uuidv4 } = require('uuid');
 
+const fail = (status, code, message) => Object.assign(new Error(message), { status, code });
+
 class ProjectModel {
+  /**
+   * Code de projet normalisé (majuscules, sans espaces autour), unique par entreprise sans tenir compte de la casse.
+   * 400 PROJECT_CODE_REQUIRED / PROJECT_CODE_TOO_LONG, 409 PROJECT_CODE_EXISTS. excludeId : projet modifié.
+   */
+  async checkCode(code, { excludeId = null, enterpriseId = null } = {}) {
+    const value = String(code ?? '').trim().toUpperCase();
+    if (!value) throw fail(400, 'PROJECT_CODE_REQUIRED', 'Le code du projet est obligatoire');
+    if (value.length > 20) throw fail(400, 'PROJECT_CODE_TOO_LONG', 'Code du projet : 20 caractères maximum');
+    const params = [value, excludeId];
+    let sql = 'SELECT id FROM projects p WHERE UPPER(p.code) = $1 AND ($2::uuid IS NULL OR p.id <> $2::uuid)';
+    if (enterpriseId) { params.push(enterpriseId); sql += ` AND p.enterprise_id = $${params.length}`; } else sql += tenant.filter('p.enterprise_id', params);
+    if (await db.one(sql, params)) throw fail(409, 'PROJECT_CODE_EXISTS', `Le code ${value} est déjà utilisé par un autre projet`);
+    return value;
+  }
+
   async create(data) {
-    const { code, name, description, projectManagerId, startDate, endDate, createdBy } = data;
+    const { name, description, projectManagerId, startDate, endDate, createdBy } = data;
+    const code = await this.checkCode(data.code);
     const id = uuidv4();
     
     await db.insert('projects', {
@@ -90,10 +108,18 @@ class ProjectModel {
     return { ...project, members };
   }
 
+  /** code : absent = inchangé ; sinon contrôlé comme à la création (unique dans l'entreprise du projet) */
   async update(id, data) {
     const { name, description, projectManagerId, status, startDate, endDate, isActive } = data;
+    let code;
+    if (data.code !== undefined) {
+      const current = await db.one('SELECT enterprise_id FROM projects WHERE id = $1', [id]);
+      if (!current) throw fail(404, 'NOT_FOUND', 'Projet introuvable');
+      code = await this.checkCode(data.code, { excludeId: id, enterpriseId: current.enterprise_id });
+    }
     
     await db.update('projects', {
+      ...(code !== undefined && { code }),
       name,
       description,
       project_manager_id: projectManagerId,

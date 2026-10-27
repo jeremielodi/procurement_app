@@ -17,6 +17,7 @@ WWF n'est plus la marque de l'application : c'est la première entreprise client
   - Auditeur (`prof_auditor`, migration 21) : lecture seule (achats, stock, fournisseurs, budget via `AUDIT_ACCESS`, journal d'audit), aucune saisie ni tâche GoFlow
   - Fournisseurs : partagés (aucune entreprise), voient les AO de toutes les entreprises actives avec le nom de l'acheteur
 - Codes département/projet et n° d'appel d'offres uniques **par entreprise** ; numéros REQ/PO/GRN/… restent uniques sur la plateforme
+- **Code de projet modifiable** (2026-10-27) : `PUT /projects/:id { code }` (absent = inchangé) — `ProjectModel.checkCode` : majuscules, ≤ 20 car., unique dans l'entreprise sans tenir compte de la casse (400 `PROJECT_CODE_REQUIRED` / `PROJECT_CODE_TOO_LONG`, 409 `PROJECT_CODE_EXISTS`, aussi à la création) ; tout reste rattaché par l'id ; audit `PROJECT_CODE_CHANGED` (avant / après). Tests : `tests/api/project-code.spec.js`
 - Branding : `utils/enterpriseBranding.getBranding(enterpriseId)` (nom + logo data URI) dans les PDF ; front : `EnterpriseContext` (`useEnterprise`, `enterpriseLogoUrl`), logo plateforme `client/public/images/procureapp-logo.svg`
 - Tests : `tests/api/multi-enterprise.spec.js`
 

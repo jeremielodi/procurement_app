@@ -32,6 +32,7 @@ const AUDIT = {
   PROJECT_ACCESS_DENIED: 'PROJECT_ACCESS_DENIED', // profil non attribué sur le projet du document / de la tâche
   // Projets : membres et profils par projet (migration 24)
   PROJECT_MEMBER_ADDED: 'PROJECT_MEMBER_ADDED',
+  PROJECT_CODE_CHANGED: 'PROJECT_CODE_CHANGED',
   PROJECT_MEMBER_REMOVED: 'PROJECT_MEMBER_REMOVED',
   PROJECT_MEMBER_PROFILES_CHANGED: 'PROJECT_MEMBER_PROFILES_CHANGED',
   APPROVAL_POLICY_CHANGED: 'APPROVAL_POLICY_CHANGED', // seuils N1 / N2 d'un projet ou de l'entreprise (avant / après)

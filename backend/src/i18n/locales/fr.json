@@ -825,7 +825,8 @@
     "APPROVAL_POLICY_CHANGED": "Seuils d'approbation modifiés",
     "BUDGET_LINES_IMPORTED": "Import du registre budgétaire",
     "SUPPLIER_ALLOCATION_RECORDED": "Réquisition répartie entre plusieurs fournisseurs",
-    "SUPPLIER_PORTAL_ACCESS_GRANTED": "Accès au portail fournisseur donné"
+    "SUPPLIER_PORTAL_ACCESS_GRANTED": "Accès au portail fournisseur donné",
+    "PROJECT_CODE_CHANGED": "Code de projet modifié"
   },
   "auditExport": {
     "sheet": "Journal d'audit",

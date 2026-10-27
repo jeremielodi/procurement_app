@@ -210,11 +210,10 @@ export default function RequisitionForm() {
   // Vérifier si le formulaire global est valide
   const isFormValid = () => {
     const hasProject = !!projectId
-    const hasDepartment = !!getValues('departmentId')
     const hasTitle = !!getValues('title') && getValues('title').trim() !== ''
     const itemsComplete = areAllItemsComplete()
 
-    return hasProject && hasDepartment && hasTitle && itemsComplete
+    return hasProject && hasTitle && itemsComplete
   }
 
   // Calculer le total d'un article: quantity * frequency * unitPrice
@@ -243,7 +242,7 @@ export default function RequisitionForm() {
         description: data.description,
         justification: data.justification || '',
         priority: data.priority,
-        departmentId: data.departmentId,
+        departmentId: data.departmentId || null,
         projectId: data.projectId,
         items: data.items.map(item => ({
           id: item.itemId || undefined,
@@ -297,7 +296,7 @@ export default function RequisitionForm() {
       await createMutation.mutateAsync({
         title: data.title,
         description: data.description,
-        departmentId: data.departmentId,
+        departmentId: data.departmentId || null,
         projectId: data.projectId,
         estimatedAmount: totalAmount,
         currencyId: currency.id,
@@ -496,7 +495,7 @@ export default function RequisitionForm() {
                 {t('reqForm.departmentLabel')}
               </label>
               <SearchSelect
-                {...register('departmentId', { required: t('reqForm.departmentRequired') })}
+                {...register('departmentId')}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.departmentId ? 'border-red-500' : 'border-gray-300'
                   }`}
                 disabled={departmentsLoading}

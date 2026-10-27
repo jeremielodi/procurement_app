@@ -70,7 +70,7 @@ class RequisitionModel {
         requisition_number: requisitionNumber,
         title,
         description,
-        department_id: departmentId,
+        department_id: departmentId || null,
         project_id: projectId,
         estimated_amount: estimatedAmount,
         currency_id: currencyId,

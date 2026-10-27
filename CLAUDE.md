@@ -198,6 +198,8 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 
 ## Réquisitions — import & avancement
 
+- **Département facultatif** (2026-10-27) : création (`POST /requisitions`), correction (`RequisitionRevisionService.update`) et formulaire acceptent une réquisition sans département (`department_id` NULL ; variable GoFlow `departementCode` vide). Tests : `tests/api/requisition-no-department.spec.js`
+
 - Import d'articles : `POST /requisitions/import-items` (multipart `.xlsx`/`.csv`, ≤ 2 Mo, ≤ 500 lignes) → aperçu `{ items, errors }` sans stockage (`controllers/requisition/importItems.js`). Colonnes : Description, Quantité, Fréquence, Prix unitaire — **pas de ligne budgétaire** (assignée ensuite dans le formulaire). Le modèle est généré côté navigateur dans `ImportItemsModal` (CSV `;` + BOM UTF-8, ouvrable dans Excel)
 - Sélection multiple d'articles dans `RequisitionForm` → assignation d'une ligne budgétaire / suppression en une fois
 - Colonne « Avancement » de la liste : `progress_status` calculé en SQL (`PROGRESS_STATUS_SQL` dans `RequisitionModel`) — Brouillon / En cours / Terminé (tous les PO non rejetés ont une facture `PAID`) / Rejeté / Annulé ; filtre `?progress=`

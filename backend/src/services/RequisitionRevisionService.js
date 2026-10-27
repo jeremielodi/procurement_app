@@ -247,7 +247,6 @@ class RequisitionRevisionService {
   async update(requisitionId, data, userId) {
     const items = Array.isArray(data.items) ? data.items : null;
     if (!text(data.title)) throw fail(400, 'TITLE_REQUIRED', 'Le titre est obligatoire');
-    if (!data.departmentId) throw fail(400, 'DEPARTMENT_REQUIRED', 'Le département est obligatoire');
     if (!items || !items.length) throw fail(400, 'ITEMS_REQUIRED', 'Au moins un article est requis');
     items.forEach((it, line) => {
       if (!text(it.description)) throw fail(400, 'ITEM_INVALID', 'Désignation obligatoire', { line });
@@ -300,7 +299,7 @@ class RequisitionRevisionService {
         `UPDATE requisitions SET title = $2, description = $3, justification = $4, priority = $5, department_id = $6, project_id = $7,
                 estimated_amount = $8, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
         [req.id, text(data.title, 255), text(data.description, 5000) || null, text(data.justification, 5000) || null,
-         data.priority || req.priority, data.departmentId, projectId, total]
+         data.priority || req.priority, data.departmentId || null, projectId, total]
       );
       return { id: req.id, estimatedAmount: total };
     });

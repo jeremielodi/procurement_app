@@ -119,10 +119,11 @@ async create(req, res) {
       estimatedAmount, currencyId, currencyCode, priority, justification, items
     } = req.body;
 
-    if (!title || !departmentId || !currencyId || !Array.isArray(items) || items.length === 0) {
+    // Département facultatif
+    if (!title || !currencyId || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'title, departmentId, currencyId et au moins un item sont requis'
+        message: 'title, currencyId et au moins un item sont requis'
       });
     }
 
@@ -139,7 +140,7 @@ async create(req, res) {
     const projectName = projectDetails?.name || null;
 
     // recuperer le departement
-    const departement = await departmentModel.findById(departmentId);
+    const departement = departmentId ? await departmentModel.findById(departmentId) : null;
 
     // Préparer les items avec toutes les informations
     const itemsWithDetails = await Promise.all(items.map(async (item) => {
@@ -228,7 +229,7 @@ async create(req, res) {
           title: title || '',
           description: description || '',
           departmentId: departmentId || '',
-          departementCode: departement.code,
+          departementCode: departement?.code || '',
           priority: priority || 'MEDIUM',
           justification: justification || '',
           estimatedAmount: totalAmount,

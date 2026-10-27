@@ -1,5 +1,5 @@
 // src/components/Requisitions/BudgetLineSearchModal.jsx
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, MapPin, Building2, FileText, DollarSign, Filter, ChevronDown } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
@@ -9,32 +9,40 @@ import LoadingSpinner from '../Common/LoadingSpinner';
 import { t } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 
+// Recherche sur les colonnes Description et LOC (sans accents ni casse), dans les lignes du projet déjà chargées
+const normalize = (v) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
 export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, projectId }) {
   const { formatAmount } = useCurrency();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-    search: '',
-    fundingSource: 'all'
-  });
+  const [fundingSource, setFundingSource] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['budget-lines-search', filters, projectId],
+  const { data, isLoading } = useQuery({
+    queryKey: ['budget-lines-search', projectId],
     queryFn: () => budgetService.getByProject(projectId),
     enabled: isOpen
   });
 
-  const budgetLines = data?.data || [];
-
-  const handleSearch = () => {
-    setFilters({ ...filters, search: searchTerm });
-    refetch();
-  };
+  const allLines = useMemo(() => data?.data || [], [data]);
+  // Sources de financement réellement présentes sur les lignes du projet
+  const fundingSources = useMemo(
+    () => [...new Set(allLines.map(l => l.funding_source).filter(Boolean))].sort((x, y) => x.localeCompare(y)),
+    [allLines]
+  );
+  const budgetLines = useMemo(() => {
+    const words = normalize(searchTerm).split(/\s+/).filter(Boolean);
+    return allLines.filter((line) => {
+      if (fundingSource !== 'all' && line.funding_source !== fundingSource) return false;
+      if (!words.length) return true;
+      const haystack = `${normalize(line.description)} ${normalize(line.loc)}`;
+      return words.every(w => haystack.includes(w));
+    });
+  }, [allLines, searchTerm, fundingSource]);
 
   const handleReset = () => {
     setSearchTerm('');
-    setFilters({ search: '', fundingSource: 'all' });
-    refetch();
+    setFundingSource('all');
   };
 
   const handleSelect = (budgetLine) => {
@@ -58,7 +66,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
       showFooter={false}
     >
       <div className="space-y-4">
-        {/* Barre de recherche */}
+        {/* Barre de recherche : filtre au fil de la saisie */}
         <div className="flex flex-wrap gap-2">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -66,8 +74,9 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               placeholder={t('budgetSearch.placeholder')}
+              data-testid="budget-line-search"
+              autoFocus
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -77,15 +86,9 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
           >
             <Filter size={16} />
             {t('common.filters')}
-            {filters.fundingSource !== 'all' && (
+            {fundingSource !== 'all' && (
               <span className="w-2 h-2 bg-blue-600 rounded-full" />
             )}
-          </button>
-          <button
-            onClick={handleSearch}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            {t('common.search')}
           </button>
           <button
             onClick={handleReset}
@@ -102,17 +105,12 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
               <div>
                 <label className="block text-sm font-medium mb-1">{t('budgetSearch.fundingSource')}</label>
                 <SearchSelect
-                  value={filters.fundingSource}
-                  onChange={(e) => setFilters({ ...filters, fundingSource: e.target.value })}
+                  value={fundingSource}
+                  onChange={(e) => setFundingSource(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">{t('budgetSearch.all')}</option>
-                  <option value="WWF">WWF</option>
-                  <option value="UE">{t('budgetSearch.eu')}</option>
-                  <option value="PNUD">{t('budgetSearch.undp')}</option>
-                  <option value="Banque Mondiale">{t('budgetSearch.worldBank')}</option>
-                  <option value="USAID">USAID</option>
-                  <option value="GEF">GEF</option>
+                  {fundingSources.map(src => <option key={src} value={src}>{src}</option>)}
                 </SearchSelect>
               </div>
             </div>
@@ -160,9 +158,6 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
                       >
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className="font-medium text-blue-600">{line.entity_code}</span>
-                          {line.project_code && (
-                            <div className="text-xs text-gray-400">{line.project_code}</div>
-                          )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="max-w-xs">

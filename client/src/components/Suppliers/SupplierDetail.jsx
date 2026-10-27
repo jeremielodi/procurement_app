@@ -50,6 +50,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { SUPPLIER_TYPE_LABELS } from '../../utils/supplierDocs'
 import SupplierPrequalificationPanel from './prequal/SupplierPrequalificationPanel'
 import SupplierBankPanel from './SupplierBankPanel'
+import SupplierPortalAccessCard from './SupplierPortalAccessCard'
 import toast from 'react-hot-toast'
 import { t } from '../../i18n'
 
@@ -436,6 +437,9 @@ export default function SupplierDetail() {
                 </div>
               </div>
             </div>
+
+            {/* Accès au portail fournisseur */}
+            <SupplierPortalAccessCard supplier={supplier} canManage={hasPermission('MANAGE_SUPPLIERS')} onChanged={refetch} />
 
             {/* Contact */}
             <div className="bg-white rounded-lg shadow">

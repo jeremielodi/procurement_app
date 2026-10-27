@@ -348,6 +348,13 @@
       },
       "open": "Ouvrir les réquisitions",
       "why": "Vous recevez ce rapport quotidien car vous êtes administrateur ou manager et que votre entreprise l'a activé (Mon entreprise)."
+    },
+    "supplierAccess": {
+      "subject": "procureApp — Votre accès au portail fournisseur",
+      "intro": "<b>{buyer}</b> vous a ouvert un accès au portail fournisseur procureApp.",
+      "credentials": "Vos identifiants de connexion :",
+      "email": "Email :",
+      "features": "Depuis le portail, vous pouvez confirmer les bons de commande reçus, répondre aux appels d'offres et tenir à jour votre profil et vos documents."
     }
   },
   "notification": {
@@ -817,7 +824,8 @@
     "PROJECT_MEMBER_PROFILES_CHANGED": "Profils d'un membre modifiés sur un projet",
     "APPROVAL_POLICY_CHANGED": "Seuils d'approbation modifiés",
     "BUDGET_LINES_IMPORTED": "Import du registre budgétaire",
-    "SUPPLIER_ALLOCATION_RECORDED": "Réquisition répartie entre plusieurs fournisseurs"
+    "SUPPLIER_ALLOCATION_RECORDED": "Réquisition répartie entre plusieurs fournisseurs",
+    "SUPPLIER_PORTAL_ACCESS_GRANTED": "Accès au portail fournisseur donné"
   },
   "auditExport": {
     "sheet": "Journal d'audit",
@@ -1000,6 +1008,7 @@
       "fundingSource": "Source de financement",
       "subProject": "Sous-projet",
       "functionCode": "Code fonction",
+      "activityCode": "Code activité",
       "allocated": "Montant alloué",
       "active": "Active",
       "projectName": "Nom du projet",
@@ -1014,7 +1023,8 @@
       "loc": "Localisation (bureau, site).",
       "fundingSource": "Bailleur ou source de financement.",
       "subProject": "Sous-projet (facultatif).",
-      "functionCode": "Code fonction / activité (facultatif).",
+      "functionCode": "Code fonction (facultatif).",
+      "activityCode": "Code de l'activité financée par la ligne (facultatif).",
       "allocated": "Montant alloué, dans la devise de l'entreprise. Obligatoire pour une nouvelle ligne ; jamais inférieur au montant déjà utilisé.",
       "active": "Oui / Non. Une ligne inactive ne peut plus être choisie dans une réquisition. Oui par défaut."
     },

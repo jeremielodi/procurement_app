@@ -4,6 +4,7 @@
 const Handlebars = require('handlebars');
 const db = require('../config/database');
 const { renderPdf } = require('../utils/pdfRenderer');
+const { signatureDataUri } = require('../utils/userSignature');
 const { getBranding } = require('../utils/enterpriseBranding');
 const { pdfContext, rootLocale, rootLabels } = require('../utils/pdfI18n');
 
@@ -198,7 +199,8 @@ class InvoiceExportService {
 
     .sig-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; margin-top: 36px; page-break-inside: avoid; }
     .sig-box { border-top: 1.5px solid #D1D5DB; padding-top: 8px; text-align: center; font-size: 10px; color: #6B7280; }
-    .sig-box .sig-line { height: 44px; }
+    .sig-box .sig-line { height: 44px; display: flex; align-items: flex-end; justify-content: center; }
+    .sig-box .sig-line img { max-height: 44px; max-width: 170px; object-fit: contain; }
     .sig-box .sig-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; }
 
     .doc-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #E5E7EB; display: flex; justify-content: space-between; font-size: 9px; color: #9CA3AF; }
@@ -337,7 +339,7 @@ class InvoiceExportService {
 
 <div class="sig-grid">
   <div class="sig-box">
-    <div class="sig-line"></div>
+    <div class="sig-line">{{#if enteredBySignature}}<img src="{{enteredBySignature}}" alt="">{{/if}}</div>
     <div class="sig-label">{{L.sigEnteredBy}}</div>
     <div style="margin-top:4px;color:#9CA3AF">{{#if inv.created_by_name}}{{inv.created_by_name}}{{else}}{{L.nameSignature}}{{/if}}</div>
   </div>
@@ -384,7 +386,10 @@ class InvoiceExportService {
     const brandIds = [brand.taxId && `${ctx.L.taxId} ${brand.taxId}`, brand.registrationNumber && `${ctx.L.rccm} ${brand.registrationNumber}`]
       .filter(Boolean).join(' · ');
 
+    // Signature image de la personne qui a saisi la facture
+    const enteredBySignature = await signatureDataUri(inv.created_by);
     const html = Handlebars.compile(this.getTemplate())({
+      enteredBySignature,
       inv: { ...inv, currency },
       items: inv.items,
       payments: inv.payments,

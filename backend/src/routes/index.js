@@ -48,6 +48,7 @@ const { tenantContext, tenantGuard } = require('../middleware/tenant');
 const { requireProjectPermission: onProject, from, requisitionVisible } = require('../utils/projectAccess');
 const { logoMiddleware } = require('../utils/logoUpload');
 const avatar = require('../utils/userAvatar');
+const signature = require('../utils/userSignature');
 const { audit: auditAvatar, AUDIT: AVATAR_AUDIT } = require('../utils/auditLog');
 
 /** Photo de profil : enregistrement / retrait + trace USER_UPDATED (champ avatar) */
@@ -61,6 +62,20 @@ function avatarRoute(pickUserId, change) {
     } catch (error) {
       if (!error.status) console.error('Avatar :', error);
       res.status(error.status || 500).json({ success: false, code: error.code, message: error.status ? error.message : 'Erreur lors de l\'enregistrement de la photo' });
+    }
+  };
+}
+
+/** Signature image de l'utilisateur connecté (lui seul) : enregistrement / retrait + trace USER_UPDATED (champ signature) */
+function signatureRoute(change) {
+  return async (req, res) => {
+    try {
+      const data = change === 'REMOVED' ? await signature.removeSignature(req.user.id) : await signature.setSignature(req.user.id, req.file);
+      await auditAvatar(req, AVATAR_AUDIT.USER_UPDATED, { target: { id: req.user.id }, details: { signature: change } });
+      res.json({ success: true, data });
+    } catch (error) {
+      if (!error.status) console.error('Signature :', error);
+      res.status(error.status || 500).json({ success: false, code: error.code, message: error.status ? error.message : "Erreur lors de l'enregistrement de la signature" });
     }
   };
 }
@@ -89,6 +104,10 @@ router.put('/auth/language', authenticate, authController.setLanguage.bind(authC
 router.get('/auth/avatar', authenticate, (req, res) => avatar.sendAvatar(res, req.user.id));
 router.put('/auth/avatar', authenticate, avatar.avatarMiddleware, avatarRoute((req) => req.user.id, 'CHANGED'));
 router.delete('/auth/avatar', authenticate, avatarRoute((req) => req.user.id, 'REMOVED'));
+// Signature image (migration 41) : personnelle — seul l'utilisateur la dépose, la consulte ou la retire ; reprise dans les PDF
+router.get('/auth/signature', authenticate, (req, res) => signature.sendSignature(res, req.user.id));
+router.put('/auth/signature', authenticate, signature.signatureMiddleware, signatureRoute('CHANGED'));
+router.delete('/auth/signature', authenticate, signatureRoute('REMOVED'));
 
 // Inscription fournisseur + logo (publics)
 router.post('/auth/register-supplier',
@@ -351,6 +370,8 @@ router.get('/suppliers/:id/evaluations', authenticate, hasPermission('VIEW_SUPPL
 router.post('/suppliers', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.create.bind(sup));
 router.put('/suppliers/:id', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.update.bind(sup));
 router.delete('/suppliers/:id', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.delete.bind(sup));
+// Accès au portail pour un fournisseur saisi à la main (compte prof_supplier + identifiants par email)
+router.post('/suppliers/:id/portal-access', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.grantPortalAccess.bind(sup));
 router.post('/suppliers/:id/prequalify', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.prequalify.bind(sup));
 router.post('/suppliers/:id/evaluations', authenticate, hasPermission('MANAGE_SUPPLIERS'), sup.addEvaluation.bind(sup));
 router.get('/suppliers/:id/documents/:documentId/file', authenticate, hasPermission('VIEW_SUPPLIERS'), sup.getDocument.bind(sup));

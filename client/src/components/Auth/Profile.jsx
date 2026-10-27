@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { t, getLocale } from '../../i18n';
 import LanguageSwitcher from '../Common/LanguageSwitcher';
 import AvatarPicker from '../Common/AvatarPicker';
+import SignaturePicker from '../Common/SignaturePicker';
 
 export default function Profile() {
   const { user, updateUser } = useAuth();
@@ -183,6 +184,13 @@ export default function Profile() {
         <h2 className="mb-4 text-lg font-semibold text-gray-800">{t('avatar.title')}</h2>
         <AvatarPicker version={user?.avatarVersion} firstName={user?.firstName} lastName={user?.lastName}
           onChange={(avatarVersion) => updateUser({ ...user, avatarVersion })} />
+      </div>
+
+      {/* Signature : reprise dans les PDF des documents établis ou validés par l'utilisateur */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="mb-1 text-lg font-semibold text-gray-800">{t('signature.title')}</h2>
+        <p className="mb-4 text-sm text-gray-500">{t('signature.intro')}</p>
+        <SignaturePicker version={user?.signatureVersion} onChange={(signatureVersion) => updateUser({ ...user, signatureVersion })} />
       </div>
 
       {/* Informations personnelles */}

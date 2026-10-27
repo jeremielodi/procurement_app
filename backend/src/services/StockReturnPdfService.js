@@ -3,6 +3,7 @@
 // articles / lots / n° de série, état au retour, signatures (magasinier, personne qui rend). Helpers « sret_ ».
 const Handlebars = require('handlebars');
 const { renderPdf } = require('../utils/pdfRenderer');
+const { signatureDataUri } = require('../utils/userSignature');
 const { getBranding } = require('../utils/enterpriseBranding');
 const { pdfContext, rootLocale, rootLabels } = require('../utils/pdfI18n');
 const equipmentModel = require('../models/StockEquipmentModel');
@@ -40,6 +41,7 @@ const TEMPLATE = `<!doctype html>
   .signatures { display: flex; justify-content: space-between; gap: 16px; margin-top: 28px; page-break-inside: avoid; }
   .sig { flex: 1; border: 1px dashed #9CA3AF; border-radius: 6px; height: 110px; padding: 8px; color: #6B7280; }
   .sig b { display: block; color: #111827; margin: 4px 0; }
+  .sig img { display: block; max-height: 48px; max-width: 170px; object-fit: contain; margin-bottom: 4px; }
 </style></head>
 <body>
   <div class="header">
@@ -90,7 +92,7 @@ const TEMPLATE = `<!doctype html>
   </table>
 
   <div class="signatures">
-    <div class="sig">{{L.storekeeper}}<b>{{ret.received_by_name}}</b>{{L.signature}}</div>
+    <div class="sig">{{L.storekeeper}}<b>{{ret.received_by_name}}</b>{{#if receiverSignature}}<img src="{{receiverSignature}}" alt="">{{/if}}{{L.signature}}</div>
     <div class="sig">{{L.returnerSignature}}<b>{{#if ret.department_name}}{{ret.department_name}}{{else}}{{ret.returned_by_name}}{{/if}}</b>{{L.signature}}</div>
   </div>
 </body></html>`;
@@ -102,7 +104,9 @@ class StockReturnPdfService {
     if (!ret) return null;
     const ctx = pdfContext(lang, 'stockReturn');
     const brand = await getBranding(ret.enterprise_id);
-    const html = Handlebars.compile(TEMPLATE)({ ret, brand, ...ctx });
+    // Signature image du magasinier qui a enregistré le retour (la personne qui rend signe sur papier)
+    const receiverSignature = await signatureDataUri(ret.received_by);
+    const html = Handlebars.compile(TEMPLATE)({ ret, brand, receiverSignature, ...ctx });
     const esc = (v) => String(v ?? '').replace(/[<>&]/g, '');
     const pdf = await renderPdf(html, {
       displayHeaderFooter: true, headerTemplate: '<span></span>',

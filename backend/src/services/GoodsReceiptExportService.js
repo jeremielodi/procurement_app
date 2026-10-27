@@ -3,6 +3,7 @@
 const Handlebars = require('handlebars');
 const db = require('../config/database');
 const { renderPdf } = require('../utils/pdfRenderer');
+const { signatureDataUri } = require('../utils/userSignature');
 const { pdfContext, rootLocale, rootLabels } = require('../utils/pdfI18n');
 
 // Libellés : pdf.grn.status.<statut> des locales
@@ -98,6 +99,7 @@ class GoodsReceiptExportService {
   .signatures { display: flex; gap: 12px; margin-top: 28px; page-break-inside: avoid; }
   .sig { flex: 1; border: 1px dashed #9CA3AF; border-radius: 6px; height: 110px; padding: 8px; color: #6B7280; font-size: 10px; }
   .sig b { color: #111827; display: block; margin-top: 4px; }
+  .sig img { display: block; max-height: 48px; max-width: 170px; object-fit: contain; margin-top: 6px; }
 </style></head>
 <body>
   <div class="header">
@@ -161,7 +163,7 @@ class GoodsReceiptExportService {
   {{/if}}
 
   <div class="signatures">
-    <div class="sig">{{L.receivedBy}}<b>{{grn.received_by_name}}</b><br>{{L.signature}}</div>
+    <div class="sig">{{L.receivedBy}}<b>{{grn.received_by_name}}</b>{{#if receiverSignature}}<img src="{{receiverSignature}}" alt="">{{else}}<br>{{/if}}{{L.signature}}</div>
     <div class="sig">{{L.deliverer}}<br><br>{{L.nameSignature}}</div>
     <div class="sig">{{L.warehouse}}<br><br>{{L.signatureStamp}}</div>
   </div>
@@ -173,7 +175,9 @@ class GoodsReceiptExportService {
     const grn = await this.getData(id);
     if (!grn) return null;
     const ctx = pdfContext(lang, 'grn');
-    const html = Handlebars.compile(this.getTemplate())({ grn, items: grn.items, totals: grn.totals, ...ctx });
+    // Signature image de la personne qui a enregistré la réception
+    const receiverSignature = await signatureDataUri(grn.received_by);
+    const html = Handlebars.compile(this.getTemplate())({ grn, items: grn.items, totals: grn.totals, receiverSignature, ...ctx });
 
     const pdf = await renderPdf(html, {
       format: 'A4',

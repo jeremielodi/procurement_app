@@ -10,6 +10,8 @@ const { parseIdList, sendDocument } = require('./SupplierPortalController');
 const { generatePrequalifiedWorkbook } = require('../services/PrequalifiedSupplierExportService');
 const notificationModel = require('../models/NotificationModel');
 const supplierBankService = require('../services/SupplierBankService');
+const portalAccess = require('../services/SupplierPortalAccessService');
+const { getBranding } = require('../utils/enterpriseBranding');
 const { audit, AUDIT } = require('../utils/auditLog');
 
 // Champs suivis par le journal d'audit lors d'une modification par un acheteur (hors coordonnées bancaires, historisées à part)
@@ -72,8 +74,33 @@ class SupplierController {
       supplier.prequalification = await supplierModel.getPrequalification(supplier.id);
       // Coordonnées bancaires : dernier changement et sa vérification par l'entreprise (paiements bloqués si PENDING / REJECTED)
       supplier.bank_status = await supplierBankService.status(supplier.id);
+      // Compte du portail fournisseur (inscription ou accès donné par un acheteur)
+      supplier.portal_account = await portalAccess.accountOf(supplier);
       res.json({ success: true, data: supplier });
     } catch (error) { fail(res, error); }
+  }
+
+  /**
+   * POST /suppliers/:id/portal-access { language } — crée le compte portail d'un fournisseur saisi à la main
+   * et lui envoie ses identifiants (rien n'est créé si l'email ne part pas)
+   */
+  async grantPortalAccess(req, res) {
+    try {
+      // Entreprise de l'acheteur, citée dans l'email d'invitation
+      const buyerName = (await getBranding().catch(() => null))?.name;
+      const { supplier, account } = await portalAccess.grant(req.params.id, {
+        language: req.body?.language, grantedBy: req.user.id, buyerName,
+      });
+      await audit(req, AUDIT.SUPPLIER_PORTAL_ACCESS_GRANTED, {
+        entity: { type: 'supplier', id: supplier.id, label: supplier.name },
+        target: { id: account.id, email: account.email },
+        details: { email: account.email, language: account.language },
+      });
+      res.status(201).json({ success: true, data: account, message: 'Accès au portail créé, identifiants envoyés par email' });
+    } catch (error) {
+      if (!error.status) console.error('Accès portail fournisseur :', error);
+      res.status(error.status || 500).json({ success: false, code: error.code, message: error.message });
+    }
   }
 
   async create(req, res) {

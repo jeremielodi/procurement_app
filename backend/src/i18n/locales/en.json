@@ -348,6 +348,13 @@
       },
       "open": "Open requisitions",
       "why": "You receive this daily report because you are an administrator or manager and your company enabled it (My company)."
+    },
+    "supplierAccess": {
+      "subject": "procureApp — Your supplier portal access",
+      "intro": "<b>{buyer}</b> has opened a procureApp supplier portal account for you.",
+      "credentials": "Your sign-in details:",
+      "email": "Email:",
+      "features": "From the portal you can confirm the purchase orders you receive, respond to calls for tenders and keep your profile and documents up to date."
     }
   },
   "notification": {
@@ -817,7 +824,8 @@
     "PROJECT_MEMBER_PROFILES_CHANGED": "Member profiles changed on a project",
     "APPROVAL_POLICY_CHANGED": "Approval thresholds changed",
     "BUDGET_LINES_IMPORTED": "Budget register import",
-    "SUPPLIER_ALLOCATION_RECORDED": "Requisition split between several suppliers"
+    "SUPPLIER_ALLOCATION_RECORDED": "Requisition split between several suppliers",
+    "SUPPLIER_PORTAL_ACCESS_GRANTED": "Supplier portal access granted"
   },
   "auditExport": {
     "sheet": "Audit log",
@@ -1000,6 +1008,7 @@
       "fundingSource": "Funding source",
       "subProject": "Sub-project",
       "functionCode": "Function code",
+      "activityCode": "Activity code",
       "allocated": "Allocated amount",
       "active": "Active",
       "projectName": "Project name",
@@ -1014,7 +1023,8 @@
       "loc": "Location (office, site).",
       "fundingSource": "Donor or funding source.",
       "subProject": "Sub-project (optional).",
-      "functionCode": "Function / activity code (optional).",
+      "functionCode": "Function code (optional).",
+      "activityCode": "Code of the activity funded by the line (optional).",
       "allocated": "Allocated amount, in the company currency. Required for a new line; never lower than the amount already utilized.",
       "active": "Yes / No. An inactive line can no longer be chosen in a requisition. Yes by default."
     },

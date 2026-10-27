@@ -166,7 +166,7 @@ class UserModel {
           u.position, 
           u.enterprise_id,
           u.language,
-          u.avatar_updated_at,
+          u.avatar_updated_at, u.signature_updated_at,
           u.is_active, 
           u.last_login,
           u.created_at
@@ -194,6 +194,7 @@ class UserModel {
       position: user.position,
       enterpriseId: user.enterprise_id,
       avatarVersion: user.avatar_updated_at || null,
+      signatureVersion: user.signature_updated_at || null,
       language: user.language,
       isActive: user.is_active,
       lastLogin: user.last_login,
@@ -210,7 +211,7 @@ class UserModel {
       `SELECT u.id, u.username, u.email,
           u.first_name, u.last_name, 
           u.department, u.position,
-          u.enterprise_id, u.language, u.avatar_updated_at,
+          u.enterprise_id, u.language, u.avatar_updated_at, u.signature_updated_at,
           u.is_active, u.last_login,
           u.created_at
        FROM users u
@@ -238,6 +239,7 @@ class UserModel {
       isActive: user.is_active,
       enterpriseId: user.enterprise_id,
       avatarVersion: user.avatar_updated_at || null,
+      signatureVersion: user.signature_updated_at || null,
       lastLogin: user.last_login,
       createdAt: user.created_at,
       profiles
@@ -604,7 +606,7 @@ class UserModel {
 async authenticate(email, password) {
   const user = await db.one(
     `SELECT id, username, email, password_hash, first_name, last_name,
-            department, position, is_active, enterprise_id, language, avatar_updated_at
+            department, position, is_active, enterprise_id, language, avatar_updated_at, signature_updated_at
      FROM users WHERE email = $1 AND is_active = true`,
     [email]
   );
@@ -635,6 +637,7 @@ async authenticate(email, password) {
       isActive: user.is_active,
       enterpriseId: user.enterprise_id,
       avatarVersion: user.avatar_updated_at || null,
+      signatureVersion: user.signature_updated_at || null,
       profiles,
       permissions
     }

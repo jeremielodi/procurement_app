@@ -3,6 +3,7 @@ const Handlebars = require('handlebars');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { renderPdf } = require('../utils/pdfRenderer');
 const { getBranding } = require('../utils/enterpriseBranding');
+const { signatureDataUri } = require('../utils/userSignature');
 const { pdfContext, rootLocale, rootLabels } = require('../utils/pdfI18n');
 
 class PurchaseOrderExportService {
@@ -202,7 +203,8 @@ class PurchaseOrderExportService {
       font-size: 10px;
       color: #6B7280;
     }
-    .sig-box .sig-line { height: 44px; }
+    .sig-box .sig-line { height: 44px; display: flex; align-items: flex-end; justify-content: center; }
+    .sig-box .sig-line img { max-height: 44px; max-width: 180px; object-fit: contain; }
     .sig-box .sig-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; }
 
     /* ── FOOTER ── */
@@ -394,9 +396,9 @@ class PurchaseOrderExportService {
 <!-- SIGNATURES -->
 <div class="sig-grid">
   <div class="sig-box">
-    <div class="sig-line"></div>
+    <div class="sig-line">{{#if signer.signature}}<img src="{{signer.signature}}" alt="">{{/if}}</div>
     <div class="sig-label">{{T.buyerSignature}}</div>
-    <div style="margin-top:4px;color:#9CA3AF">{{L.nameSignature}}</div>
+    <div style="margin-top:4px;color:#9CA3AF">{{#if signer.name}}{{signer.name}}{{else}}{{L.nameSignature}}{{/if}}</div>
   </div>
   <div class="sig-box">
     <div class="sig-line"></div>
@@ -423,8 +425,14 @@ class PurchaseOrderExportService {
     const ctx = pdfContext(lang, 'po');
     const brand = await getBranding(po.enterprise_id);
     const fmtDay = (d) => (d ? new Date(d).toLocaleDateString(ctx.locale, { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
+    // Signataire côté acheteur : la personne qui a approuvé le bon de commande (sa signature image, si elle en a une)
+    const approval = (po.approvals || []).find(a => a.status === 'APPROVED');
+    const signer = approval
+      ? { name: [approval.first_name, approval.last_name].filter(Boolean).join(' '), signature: await signatureDataUri(approval.approver_id) }
+      : {};
     const template = Handlebars.compile(this.getTemplate());
     const html = template({
+      signer,
       po:          { ...po, currency },
       items:       po.items       || [],
       approvals:   po.approvals   || [],

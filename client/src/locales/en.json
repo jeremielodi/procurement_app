@@ -1334,6 +1334,7 @@
     "source": "Source",
     "subProject": "Sub-project",
     "functionCode": "Function code",
+    "activityCode": "Activity code",
     "select": "Select",
     "found": "{{count}} budget line(s) found"
   },
@@ -2677,7 +2678,9 @@
     "subProject": "Sub-project",
     "subProjectPlaceholder": "E.g. CONS-001, EDU-001...",
     "functionCode": "Function code",
+    "activityCode": "Activity code",
     "functionPlaceholder": "E.g. FUNC-01",
+    "activityPlaceholder": "E.g. A1.1",
     "linkedProject": "Linked project",
     "noProject": "-- No linked project --",
     "loadingProjects": "Loading projects...",
@@ -2768,6 +2771,7 @@
         "fundingSource": "Funding source",
         "subProject": "Sub-project",
         "functionCode": "Function code",
+        "activityCode": "Activity code",
         "allocated": "Allocated amount",
         "active": "Active"
       },
@@ -4309,6 +4313,14 @@
             "text": "The \"Bank details\" tab of the supplier page shows the current account, the change history and your company's decision. An unverified change blocks payments (see \"Internal control\")."
           },
           {
+            "type": "h",
+            "text": "Portal access for a supplier entered manually"
+          },
+          {
+            "type": "p",
+            "text": "A supplier created by a buyer has no account. On its record, \"Supplier portal access\" card → \"Grant portal access\": an account is created with the record's email and a password is emailed (in the chosen language). If the email is not sent, nothing is created. The supplier can then sign in, confirm purchase orders, respond to calls for tenders and change their password; if they forget it, they use \"Forgot password\". A valid email not used by another account and an active supplier are required."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -5338,6 +5350,14 @@
           {
             "type": "p",
             "text": "In \"My profile\", \"Add a photo\": choose a PNG, JPG or WEBP image, it is cropped to a square. Your photo replaces your initials in the header, the requisitions list (Requester column), the users list and project members. \"Remove\" goes back to initials. The administrator can also change the photo from the user record. Photos are only visible to signed-in users of your company."
+          },
+          {
+            "type": "h",
+            "text": "Signature"
+          },
+          {
+            "type": "p",
+            "text": "In \"My profile\", \"My signature\" section: \"Draw\" (mouse, stylus or finger) or \"Import an image\" (PNG, JPG or WEBP, ideally on a white or transparent background). Your signature is added automatically to the PDFs of documents you issued or approved yourself: a purchase order you approved, a goods receipt note you recorded, an invoice you entered, stock issue and return slips (storekeeper, and recipient after confirming receipt). It is personal: nobody else, not even the administrator, can upload or change it. \"Remove\" takes it off future PDFs."
           }
         ]
       },
@@ -5584,7 +5604,8 @@
       "PROJECT_MEMBER_PROFILES_CHANGED": "Member profiles changed on a project",
       "APPROVAL_POLICY_CHANGED": "Approval thresholds changed",
       "BUDGET_LINES_IMPORTED": "Budget register import",
-      "SUPPLIER_ALLOCATION_RECORDED": "Requisition split between several suppliers"
+      "SUPPLIER_ALLOCATION_RECORDED": "Requisition split between several suppliers",
+      "SUPPLIER_PORTAL_ACCESS_GRANTED": "Supplier portal access granted"
     },
     "groups": {
       "all": "All events",
@@ -6035,6 +6056,54 @@
       "LOT_SUPPLIER_MISMATCH": "This supplier does not match the lot of this step.",
       "LOT_ITEMS_MISMATCH": "The purchase order must cover exactly the items of the lot.",
       "LOT_ALREADY_ORDERED": "This lot already has its purchase order."
+    }
+  },
+  "supplierAccess": {
+    "title": "Supplier portal access",
+    "active": "Access active",
+    "disabled": "Account disabled",
+    "loginEmail": "Sign-in email:",
+    "lastLogin": "Last sign-in: {{date}}",
+    "neverLoggedIn": "Has not signed in yet",
+    "forgotHint": "Lost password: the supplier uses \"Forgot password\" on the sign-in page.",
+    "none": "This supplier has no account: they cannot sign in, confirm their purchase orders or respond to calls for tenders online.",
+    "emailMissing": "First enter a valid email on the supplier record (\"Edit\" button).",
+    "inactive": "Inactive supplier: reactivate it before granting access.",
+    "grant": "Grant portal access",
+    "confirmTitle": "Grant portal access",
+    "confirmText": "A supplier account will be created with the email {{email}} and a password will be sent to it by email. The supplier can change it as soon as they sign in.",
+    "language": "Account and email language",
+    "send": "Create and send sign-in details",
+    "sending": "Sending…",
+    "granted": "Access created: sign-in details sent to {{email}}",
+    "err": {
+      "ALREADY_HAS_ACCOUNT": "This supplier already has portal access.",
+      "SUPPLIER_INACTIVE": "Inactive supplier: reactivate it first.",
+      "EMAIL_REQUIRED": "Enter a valid email for this supplier.",
+      "EMAIL_IN_USE": "An account already uses this email (user or another supplier).",
+      "EMAIL_FAILED": "The email could not be sent: no account was created. Try again later.",
+      "NOT_FOUND": "Supplier not found.",
+      "GENERIC": "Unable to create the access. Please try again."
+    }
+  },
+  "signature": {
+    "title": "My signature",
+    "intro": "Your signature appears on the PDF documents you issue or approve yourself: purchase order (approval), goods receipt note, invoice (entry), stock issue and return slips.",
+    "none": "No signature",
+    "draw": "Draw",
+    "drawTitle": "Draw my signature",
+    "drawHint": "Sign inside the box with the mouse, a stylus or your finger.",
+    "clear": "Clear",
+    "import": "Import an image",
+    "remove": "Remove",
+    "usage": "PNG, JPG or WEBP image — ideally on a white or transparent background. Only you can change it.",
+    "saved": "Signature saved",
+    "removed": "Signature removed",
+    "err": {
+      "SIGNATURE_TYPE": "Accepted formats: PNG, JPG or WEBP",
+      "SIGNATURE_TOO_LARGE": "Image too large",
+      "SIGNATURE_REQUIRED": "Draw or choose a signature",
+      "generic": "Unable to save the signature"
     }
   }
 }

@@ -75,6 +75,10 @@ export default function BudgetDetail({ budget, onClose }) {
             <p className="font-semibold">{budget.function_code || '-'}</p>
           </div>
           <div>
+            <p className="text-xs text-gray-500">{t('budget.activityCode')}</p>
+            <p className="font-semibold">{budget.activity_code || '-'}</p>
+          </div>
+          <div>
             <p className="text-xs text-gray-500">{t('budget.project')}</p>
             <p className="font-semibold">{budget.project_name || '-'}</p>
           </div>

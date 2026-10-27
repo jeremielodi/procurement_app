@@ -11,12 +11,12 @@ import { useCurrency } from '../../contexts/EnterpriseContext';
 import { downloadBlob } from '../../utils/supplierDocs';
 import { t } from '../../i18n';
 
-const COLUMNS = ['project', 'entityCode', 'description', 'loc', 'fundingSource', 'subProject', 'functionCode', 'allocated', 'active'];
+const COLUMNS = ['project', 'entityCode', 'description', 'loc', 'fundingSource', 'subProject', 'functionCode', 'activityCode', 'allocated', 'active'];
 const REQUIRED = ['entityCode', 'allocated'];
 // Champs SQL modifiés → colonne du modèle
 const FIELD_COLUMN = {
   description: 'description', loc: 'loc', funding_source: 'fundingSource', sub_project: 'subProject',
-  function_code: 'functionCode', allocated_amount: 'allocated', is_active: 'active',
+  function_code: 'functionCode', activity_code: 'activityCode', allocated_amount: 'allocated', is_active: 'active',
 };
 const ACTION_STYLE = { CREATE: 'bg-green-100 text-green-800', UPDATE: 'bg-blue-100 text-blue-800', UNCHANGED: 'bg-gray-100 text-gray-600' };
 const FILE_ERRORS = ['UNREADABLE', 'EMPTY', 'MISSING_COLUMNS', 'TOO_MANY_ROWS', 'NOTHING_TO_IMPORT', 'NO_FILE', 'ALLOCATED_BELOW_UTILIZED'];

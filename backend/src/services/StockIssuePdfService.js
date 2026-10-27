@@ -3,6 +3,7 @@
 // signatures (magasinier, bénéficiaire). Helpers Handlebars préfixés « sis_ ».
 const Handlebars = require('handlebars');
 const { renderPdf } = require('../utils/pdfRenderer');
+const { signatureDataUri } = require('../utils/userSignature');
 const { getBranding } = require('../utils/enterpriseBranding');
 const { pdfContext, rootLocale } = require('../utils/pdfI18n');
 const stockIssueModel = require('../models/StockIssueModel');
@@ -41,6 +42,7 @@ const TEMPLATE = `<!doctype html>
   .signatures { display: flex; justify-content: space-between; gap: 16px; margin-top: 28px; page-break-inside: avoid; }
   .sig { flex: 1; border: 1px dashed #9CA3AF; border-radius: 6px; height: 110px; padding: 8px; color: #6B7280; }
   .sig b { display: block; color: #111827; margin: 4px 0; }
+  .sig img { display: block; max-height: 48px; max-width: 170px; object-fit: contain; margin-bottom: 4px; }
 </style></head>
 <body>
   <div class="header">
@@ -105,8 +107,8 @@ const TEMPLATE = `<!doctype html>
   {{/if}}
 
   <div class="signatures">
-    <div class="sig">{{L.storekeeper}}<b>{{issue.issued_by_name}}</b>{{L.signature}}</div>
-    <div class="sig">{{#if transfer}}{{L.receiverSignature}}<b>{{issue.destination_warehouse_name}}</b>{{else}}{{L.recipientSignature}}<b>{{T.receiverName}}</b>{{/if}}{{L.signature}}</div>
+    <div class="sig">{{L.storekeeper}}<b>{{issue.issued_by_name}}</b>{{#if sig.issuer}}<img src="{{sig.issuer}}" alt="">{{/if}}{{L.signature}}</div>
+    <div class="sig">{{#if transfer}}{{L.receiverSignature}}<b>{{issue.destination_warehouse_name}}</b>{{else}}{{L.recipientSignature}}<b>{{T.receiverName}}</b>{{/if}}{{#if sig.receiver}}<img src="{{sig.receiver}}" alt="">{{/if}}{{L.signature}}</div>
   </div>
 </body></html>`;
 
@@ -129,7 +131,12 @@ class StockIssuePdfService {
         ? ctx.t(transfer ? 'pdf.stockIssue.transferCancelledOn' : 'pdf.stockIssue.cancelledOn',
           { name: issue.cancelled_by_name || '—', date: dt(issue.cancelled_at), reason: issue.cancel_reason || '—' }) : '',
     };
-    const html = Handlebars.compile(TEMPLATE)({ issue, brand, cancelled: issue.status === 'CANCELLED', transfer, department, T, ...ctx });
+    // Signatures images : le magasinier qui a émis le bon ; à la réception, la personne qui l'a confirmée dans l'application
+    const sig = {
+      issuer: await signatureDataUri(issue.issued_by),
+      receiver: issue.acknowledged_at ? await signatureDataUri(issue.acknowledged_by) : null,
+    };
+    const html = Handlebars.compile(TEMPLATE)({ issue, brand, cancelled: issue.status === 'CANCELLED', transfer, department, T, sig, ...ctx });
     const pdf = await renderPdf(html, {
       format: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>',
       footerTemplate: `

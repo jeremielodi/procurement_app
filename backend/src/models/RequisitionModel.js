@@ -141,7 +141,7 @@ class RequisitionModel {
   async getBudgetLinesByProject(projectId) {
     let sql = `
       SELECT b.id, b.entity_code, b.loc, b.funding_source, b.sub_project, 
-             b.function_code, b.description, b.allocated_amount, 
+             b.function_code, b.activity_code, b.description, b.allocated_amount, 
              b.utilized_amount, b.remaining_amount
       FROM budget_allocations b
       WHERE b.is_active = true
@@ -164,7 +164,7 @@ class RequisitionModel {
   async searchBudgetLines(filters) {
     let sql = `
       SELECT b.id, b.entity_code, b.loc, b.funding_source, b.sub_project, 
-             b.function_code, b.description, b.allocated_amount, 
+             b.function_code, b.activity_code, b.description, b.allocated_amount, 
              b.utilized_amount, b.remaining_amount,
              p.name as project_name, p.code as project_code
       FROM budget_allocations b

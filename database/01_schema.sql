@@ -306,6 +306,7 @@ CREATE TABLE IF NOT EXISTS budget_allocations (
     funding_source VARCHAR(100),
     sub_project VARCHAR(100),
     function_code VARCHAR(50),
+    activity_code VARCHAR(50),
     description TEXT,
     allocated_amount DECIMAL(19,4) NOT NULL DEFAULT 0,
     utilized_amount DECIMAL(19,4) DEFAULT 0,

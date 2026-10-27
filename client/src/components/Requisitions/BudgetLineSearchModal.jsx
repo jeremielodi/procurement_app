@@ -140,6 +140,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budgetSearch.source')}</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budgetSearch.subProject')}</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budgetSearch.functionCode')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('budgetSearch.activityCode')}</th>
                     {/* <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Alloué</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Utilisé</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Restant</th>
@@ -186,6 +187,9 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                           {line.function_code || '-'}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          {line.activity_code || '-'}
                         </td>
                         {/* <td className="px-4 py-3 whitespace-nowrap text-right">
                           <span className="text-sm font-medium text-green-600">

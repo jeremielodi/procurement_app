@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 class BudgetModel {
   async create(data) {
     const {
-      entityCode, loc, fundingSource, subProject, functionCode,
+      entityCode, loc, fundingSource, subProject, functionCode, activityCode,
       description, allocatedAmount, projectId, createdBy
     } = data;
 
@@ -19,6 +19,7 @@ class BudgetModel {
       funding_source: typeof fundingSource === 'string' ? (fundingSource.trim() || null) : fundingSource,
       sub_project: subProject,
       function_code: functionCode,
+      activity_code: activityCode,
       description,
       allocated_amount: allocatedAmount,
       utilized_amount: 0,
@@ -113,12 +114,13 @@ class BudgetModel {
   }
 
   async update(id, data) {
-    const { loc, fundingSource, subProject, functionCode, description, allocatedAmount, projectId, isActive } = data;
+    const { loc, fundingSource, subProject, functionCode, activityCode, description, allocatedAmount, projectId, isActive } = data;
     await db.update('budget_allocations', {
       loc,
       funding_source: typeof fundingSource === 'string' ? (fundingSource.trim() || null) : fundingSource,
       sub_project: subProject,
       function_code: functionCode,
+      activity_code: activityCode,
       description,
       allocated_amount: allocatedAmount,
       project_id: projectId || null,
@@ -195,7 +197,7 @@ class BudgetModel {
   async searchBudgetLines(filters) {
     let sql = `
       SELECT b.id, b.entity_code, b.loc, b.funding_source, b.sub_project, 
-             b.function_code, b.description, b.allocated_amount, 
+             b.function_code, b.activity_code, b.description, b.allocated_amount, 
              b.utilized_amount, b.remaining_amount,
              p.name as project_name, p.code as project_code
       FROM budget_allocations b

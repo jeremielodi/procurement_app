@@ -121,6 +121,7 @@ export default function BudgetList() {
     },
     { title: t('budget.subProject'), dataIndex: 'sub_project', key: 'sub_project', render: (v) => v || <span className="text-gray-400">—</span> },
     { title: t('budget.functionCode'), dataIndex: 'function_code', key: 'function_code', render: (v) => v || <span className="text-gray-400">—</span> },
+    { title: t('budget.activityCode'), dataIndex: 'activity_code', key: 'activity_code', render: (v) => v || <span className="text-gray-400">—</span> },
     {
       title: t('budget.allocated'), dataIndex: 'allocated_amount', key: 'allocated_amount', align: 'right', sorter: true, sortOrder: sortOrder('allocated_amount'),
       render: (v) => <span className="font-medium tabular-nums whitespace-nowrap">{formatAmount(v || 0)}</span>,

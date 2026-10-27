@@ -62,10 +62,10 @@ test.describe.serial('API › Registre budgétaire (liste, export, import)', () 
 
   test('Confirmation : lignes valides écrites, puis mise à jour des seules cellules remplies', async ({ request }) => {
     const rows = [
-      ['Code projet', 'Code ligne', 'Description', 'Source de financement', 'Montant alloué', 'Active'],
-      [project.code, codeA, 'Ligne importée A', 'EU', '1500.50', 'Oui'],
-      [project.code, codeB, 'Ligne importée B', 'USAID', '2000', 'Non'],
-      ['PRJ-INCONNU-XYZ', 'X1', '', '', '10', ''],
+      ['Code projet', 'Code ligne', 'Description', 'Source de financement', 'Code activité', 'Montant alloué', 'Active'],
+      [project.code, codeA, 'Ligne importée A', 'EU', 'A1.1', '1500.50', 'Oui'],
+      [project.code, codeB, 'Ligne importée B', 'USAID', '', '2000', 'Non'],
+      ['PRJ-INCONNU-XYZ', 'X1', '', '', '', '10', ''],
     ];
     const res = await upload(request, csv(rows), { confirm: true });
     expect(res.status(), await res.text()).toBe(200);
@@ -73,8 +73,8 @@ test.describe.serial('API › Registre budgétaire (liste, export, import)', () 
 
     const list = await (await request.get(`/api/budget?page=1&limit=10&search=${stamp}&sort=code`, { headers: auth(admin) })).json();
     expect(list.pagination.total).toBe(2);
-    expect(list.data.map(b => [b.entity_code, b.allocated_amount, b.funding_source, b.is_active, b.project_code]))
-      .toEqual([[codeA, 1500.5, 'EU', true, project.code], [codeB, 2000, 'USAID', false, project.code]]);
+    expect(list.data.map(b => [b.entity_code, b.allocated_amount, b.funding_source, b.activity_code, b.is_active, b.project_code]))
+      .toEqual([[codeA, 1500.5, 'EU', 'A1.1', true, project.code], [codeB, 2000, 'USAID', null, false, project.code]]);
     expect(list.totals.allocated).toBe(3500.5);
     createdIds = list.data.map(b => b.id);
 
@@ -91,6 +91,7 @@ test.describe.serial('API › Registre budgétaire (liste, export, import)', () 
     const after = (await (await request.get(`/api/budget/${createdIds[0]}`, { headers: auth(admin) })).json()).data;
     expect(Number(after.allocated_amount)).toBe(1800);
     expect(after.description).toBe('Ligne importée A');
+    expect(after.activity_code).toBe('A1.1');
 
     // Rien à écrire → 400 NOTHING_TO_IMPORT
     const nothing = await upload(request, csv([['Code ligne', 'Code projet', 'Montant alloué'], [codeA, project.code, '1800']]), { confirm: true });

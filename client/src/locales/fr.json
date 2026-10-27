@@ -1334,6 +1334,7 @@
     "source": "Source",
     "subProject": "Sous-projet",
     "functionCode": "Code fonction",
+    "activityCode": "Code activité",
     "select": "Sélectionner",
     "found": "{{count}} ligne(s) budgétaire(s) trouvée(s)"
   },
@@ -2677,7 +2678,9 @@
     "subProject": "Sous-projet",
     "subProjectPlaceholder": "Ex : CONS-001, EDU-001...",
     "functionCode": "Code fonction",
+    "activityCode": "Code activité",
     "functionPlaceholder": "Ex : FUNC-01",
+    "activityPlaceholder": "Ex : A1.1",
     "linkedProject": "Projet associé",
     "noProject": "-- Aucun projet associé --",
     "loadingProjects": "Chargement des projets...",
@@ -2768,6 +2771,7 @@
         "fundingSource": "Source de financement",
         "subProject": "Sous-projet",
         "functionCode": "Code fonction",
+        "activityCode": "Code activité",
         "allocated": "Montant alloué",
         "active": "Active"
       },
@@ -4309,6 +4313,14 @@
             "text": "L'onglet « Coordonnées bancaires » de la fiche montre le compte actuel, l'historique des changements et la décision de votre entreprise. Un changement non vérifié bloque les paiements (voir « Contrôle interne »)."
           },
           {
+            "type": "h",
+            "text": "Accès au portail pour un fournisseur saisi à la main"
+          },
+          {
+            "type": "p",
+            "text": "Un fournisseur créé par un acheteur n'a pas de compte. Sur sa fiche, carte « Accès au portail fournisseur » → « Donner l'accès au portail » : un compte est créé avec l'email de la fiche et un mot de passe est envoyé par email (dans la langue choisie). Si l'email ne part pas, rien n'est créé. Le fournisseur peut ensuite se connecter, confirmer ses bons de commande, répondre aux appels d'offres et changer son mot de passe ; en cas d'oubli, il utilise « Mot de passe oublié ». Il faut un email valide, non utilisé par un autre compte, et un fournisseur actif."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -5338,6 +5350,14 @@
           {
             "type": "p",
             "text": "Dans « Mon profil », « Ajouter une photo » : choisissez une image PNG, JPG ou WEBP, elle est recadrée en carré. Votre photo remplace vos initiales dans l'en-tête, la liste des réquisitions (colonne Demandeur), la liste des utilisateurs et les membres des projets. « Retirer » revient aux initiales. L'administrateur peut aussi changer la photo depuis la fiche de l'utilisateur. Les photos ne sont visibles que par les utilisateurs connectés de votre entreprise."
+          },
+          {
+            "type": "h",
+            "text": "Signature"
+          },
+          {
+            "type": "p",
+            "text": "Dans « Mon profil », rubrique « Ma signature » : « Dessiner » (souris, stylet ou doigt) ou « Importer une image » (PNG, JPG ou WEBP, de préférence sur fond blanc ou transparent). Votre signature est reprise automatiquement sur les PDF des documents que vous avez vous-même établis ou validés : bon de commande que vous avez approuvé, bon de réception que vous avez enregistré, facture que vous avez saisie, bons de sortie et de retour (magasinier, et bénéficiaire après sa confirmation de réception). Elle est personnelle : personne d'autre, même l'administrateur, ne peut la déposer ou la modifier. « Retirer » la supprime des prochains PDF."
           }
         ]
       },
@@ -5584,7 +5604,8 @@
       "PROJECT_MEMBER_PROFILES_CHANGED": "Profils d'un membre modifiés sur un projet",
       "APPROVAL_POLICY_CHANGED": "Seuils d'approbation modifiés",
       "BUDGET_LINES_IMPORTED": "Import du registre budgétaire",
-      "SUPPLIER_ALLOCATION_RECORDED": "Réquisition répartie entre plusieurs fournisseurs"
+      "SUPPLIER_ALLOCATION_RECORDED": "Réquisition répartie entre plusieurs fournisseurs",
+      "SUPPLIER_PORTAL_ACCESS_GRANTED": "Accès au portail fournisseur donné"
     },
     "groups": {
       "all": "Tous les événements",
@@ -6035,6 +6056,54 @@
       "LOT_SUPPLIER_MISMATCH": "Ce fournisseur ne correspond pas à la part de cette étape.",
       "LOT_ITEMS_MISMATCH": "Le bon de commande doit reprendre exactement les articles de la part.",
       "LOT_ALREADY_ORDERED": "Cette part a déjà son bon de commande."
+    }
+  },
+  "supplierAccess": {
+    "title": "Accès au portail fournisseur",
+    "active": "Accès actif",
+    "disabled": "Compte désactivé",
+    "loginEmail": "Identifiant :",
+    "lastLogin": "Dernière connexion : {{date}}",
+    "neverLoggedIn": "Pas encore connecté",
+    "forgotHint": "Mot de passe perdu : le fournisseur utilise « Mot de passe oublié » sur la page de connexion.",
+    "none": "Ce fournisseur n'a pas de compte : il ne peut ni se connecter, ni confirmer ses bons de commande, ni répondre aux appels d'offres en ligne.",
+    "emailMissing": "Renseignez d'abord un email valide dans la fiche du fournisseur (bouton « Modifier »).",
+    "inactive": "Fournisseur inactif : réactivez-le avant de lui donner un accès.",
+    "grant": "Donner l'accès au portail",
+    "confirmTitle": "Donner l'accès au portail",
+    "confirmText": "Un compte fournisseur sera créé avec l'email {{email}} et un mot de passe lui sera envoyé par email. Le fournisseur pourra le changer dès sa connexion.",
+    "language": "Langue du compte et de l'email",
+    "send": "Créer et envoyer les identifiants",
+    "sending": "Envoi…",
+    "granted": "Accès créé : identifiants envoyés à {{email}}",
+    "err": {
+      "ALREADY_HAS_ACCOUNT": "Ce fournisseur a déjà un accès au portail.",
+      "SUPPLIER_INACTIVE": "Fournisseur inactif : réactivez-le d'abord.",
+      "EMAIL_REQUIRED": "Renseignez un email valide pour ce fournisseur.",
+      "EMAIL_IN_USE": "Un compte utilise déjà cet email (utilisateur ou autre fournisseur).",
+      "EMAIL_FAILED": "L'email n'a pas pu être envoyé : aucun compte n'a été créé. Réessayez plus tard.",
+      "NOT_FOUND": "Fournisseur introuvable.",
+      "GENERIC": "Impossible de créer l'accès. Réessayez."
+    }
+  },
+  "signature": {
+    "title": "Ma signature",
+    "intro": "Votre signature apparaît sur les documents PDF que vous établissez ou validez vous-même : bon de commande (approbation), bon de réception, facture (saisie), bons de sortie et de retour.",
+    "none": "Aucune signature",
+    "draw": "Dessiner",
+    "drawTitle": "Dessiner ma signature",
+    "drawHint": "Signez dans le cadre avec la souris, un stylet ou le doigt.",
+    "clear": "Effacer",
+    "import": "Importer une image",
+    "remove": "Retirer",
+    "usage": "Image PNG, JPG ou WEBP — de préférence sur fond blanc ou transparent. Vous seul pouvez la modifier.",
+    "saved": "Signature enregistrée",
+    "removed": "Signature retirée",
+    "err": {
+      "SIGNATURE_TYPE": "Formats acceptés : PNG, JPG ou WEBP",
+      "SIGNATURE_TOO_LARGE": "Image trop volumineuse",
+      "SIGNATURE_REQUIRED": "Dessinez ou choisissez une signature",
+      "generic": "Impossible d'enregistrer la signature"
     }
   }
 }

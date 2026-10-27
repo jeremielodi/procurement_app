@@ -51,6 +51,12 @@ export const supplierService = {
     return { success: true }
   },
 
+  /** Crée le compte portail d'un fournisseur saisi à la main ; identifiants envoyés par email */
+  grantPortalAccess: async (id, { language } = {}) => {
+    const response = await api.post(`/suppliers/${id}/portal-access`, { language }, { skipErrorToast: true })
+    return response.data
+  },
+
   prequalify: async (id, prequalified = true) => {
     const response = await api.post(`/suppliers/${id}/prequalify`, { prequalified })
     return response.data

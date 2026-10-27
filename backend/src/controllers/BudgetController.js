@@ -5,8 +5,8 @@ const register = require('../services/BudgetRegisterService');
 const i18n = require('../i18n');
 
 // Journal d'audit : libellé d'une ligne budgétaire et valeurs suivies
-const BUDGET_FIELDS = ['entity_code', 'loc', 'funding_source', 'sub_project', 'function_code', 'description', 'allocated_amount', 'project_id', 'is_active'];
-const budgetLabel = (b) => [b?.entity_code, b?.funding_source, b?.function_code].filter(Boolean).join(' / ') || b?.description || b?.id;
+const BUDGET_FIELDS = ['entity_code', 'loc', 'funding_source', 'sub_project', 'function_code', 'activity_code', 'description', 'allocated_amount', 'project_id', 'is_active'];
+const budgetLabel = (b) => [b?.entity_code, b?.funding_source, b?.function_code, b?.activity_code].filter(Boolean).join(' / ') || b?.description || b?.id;
 const budgetValues = (b) => Object.fromEntries(BUDGET_FIELDS.filter(f => b && b[f] !== undefined).map(f => [f, b[f]]));
 
 class BudgetController {

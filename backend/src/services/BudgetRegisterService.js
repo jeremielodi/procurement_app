@@ -29,6 +29,7 @@ const FIELDS = [
   { key: 'fundingSource', column: 'funding_source', max: 100 },
   { key: 'subProject', column: 'sub_project', max: 100 },
   { key: 'functionCode', column: 'function_code', max: 50 },
+  { key: 'activityCode', column: 'activity_code', max: 50 },
   { key: 'allocated', required: true, column: 'allocated_amount' },
   { key: 'active', column: 'is_active' },
 ];
@@ -44,6 +45,7 @@ const ALIASES = {
   fundingSource: ['source de financement', 'source', 'bailleur', 'funding source', 'donor'],
   subProject: ['sous-projet', 'sous projet', 'sub-project', 'sub project'],
   functionCode: ['code fonction', 'fonction', 'function code', 'function'],
+  activityCode: ['code activite', 'activite', 'activity code', 'activity'],
   allocated: ['montant alloue', 'alloue', 'budget alloue', 'budget', 'montant', 'allocated amount', 'allocated', 'amount'],
   active: ['active', 'actif', 'statut', 'active line', 'is active'],
 };
@@ -75,7 +77,7 @@ function listWhere(filters, params) {
     params.push(`%${String(filters.search).trim()}%`);
     const p = `$${params.length}`;
     where += ` AND (b.entity_code ILIKE ${p} OR b.description ILIKE ${p} OR b.loc ILIKE ${p} OR b.sub_project ILIKE ${p}
-               OR b.function_code ILIKE ${p} OR p.code ILIKE ${p} OR p.name ILIKE ${p})`;
+               OR b.function_code ILIKE ${p} OR b.activity_code ILIKE ${p} OR p.code ILIKE ${p} OR p.name ILIKE ${p})`;
   }
   if (filters.fundingSource && filters.fundingSource !== 'all') {
     params.push(filters.fundingSource);
@@ -94,7 +96,7 @@ const SORTS = {
 };
 
 const SELECT = `
-  SELECT b.id, b.entity_code, b.loc, b.funding_source, b.sub_project, b.function_code, b.description,
+  SELECT b.id, b.entity_code, b.loc, b.funding_source, b.sub_project, b.function_code, b.activity_code, b.description,
          b.allocated_amount::float8 AS allocated_amount, b.utilized_amount::float8 AS utilized_amount,
          b.remaining_amount::float8 AS remaining_amount, b.project_id, b.is_active, b.created_at, b.updated_at,
          p.code AS project_code, p.name AS project_name
@@ -164,7 +166,7 @@ async function exportXlsx(filters, { lang }) {
     const utilized = num(r.utilized_amount) || 0;
     ws.addRow({
       project: r.project_code || '', entityCode: r.entity_code, description: r.description || '', loc: r.loc || '',
-      fundingSource: r.funding_source || '', subProject: r.sub_project || '', functionCode: r.function_code || '',
+      fundingSource: r.funding_source || '', subProject: r.sub_project || '', functionCode: r.function_code || '', activityCode: r.activity_code || '',
       allocated, active: r.is_active ? yes : no,
       projectName: r.project_name || '', utilized, remaining: num(r.remaining_amount) || 0,
       rate: allocated > 0 ? utilized / allocated : null,
@@ -204,7 +206,7 @@ async function loadContext() {
   const bParams = [];
   const [projects, lines] = await Promise.all([
     db.select(`SELECT p.id, p.code, p.name FROM projects p WHERE 1=1${tenant.filter('p.enterprise_id', pParams)}`, pParams),
-    db.select(`SELECT b.id, b.entity_code, b.project_id, b.loc, b.funding_source, b.sub_project, b.function_code, b.description,
+    db.select(`SELECT b.id, b.entity_code, b.project_id, b.loc, b.funding_source, b.sub_project, b.function_code, b.activity_code, b.description,
                       b.allocated_amount::float8 AS allocated_amount, b.utilized_amount::float8 AS utilized_amount, b.is_active
                FROM budget_allocations b WHERE 1=1${tenant.filter('b.enterprise_id', bParams)}`, bParams),
   ]);
@@ -379,8 +381,8 @@ async function template({ lang, format = 'xlsx' }) {
   const yes = T('budgetImport.yes');
   const headers = FIELDS.map(f => T(`budgetImport.headers.${f.key}`));
   const examples = [
-    [prj, 'EX-6110', T('budgetImport.example.travel'), 'KIN', 'EU', 'SP-01', 'F100', 25000, yes],
-    [prj, 'EX-6230', T('budgetImport.example.equipment'), 'GOMA', 'USAID', '', 'F200', 120000, yes],
+    [prj, 'EX-6110', T('budgetImport.example.travel'), 'KIN', 'EU', 'SP-01', 'F100', 'A1.1', 25000, yes],
+    [prj, 'EX-6230', T('budgetImport.example.equipment'), 'GOMA', 'USAID', '', 'F200', 'A2.3', 120000, yes],
   ];
 
   if (format === 'csv') {

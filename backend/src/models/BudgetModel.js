@@ -110,7 +110,20 @@ class BudgetModel {
       ORDER BY e.expense_date DESC
     `, [id]);
 
-    return { ...budget, expenses };
+    // Bons de commande actifs qui consomment la ligne (même calcul que utilized_amount, migration 43)
+    const commitments = await db.select(`
+      SELECT po.id, po.po_number, po.status, po.order_date, po.delivery_closed_at,
+             r.id AS requisition_id, r.requisition_number, s.name AS supplier_name,
+             SUM(u.amount)::float8 AS amount
+      FROM budget_po_usage(ARRAY[$1::uuid]) u
+      JOIN purchase_orders po ON po.id = u.purchase_order_id
+      LEFT JOIN requisitions r ON r.id = po.requisition_id
+      LEFT JOIN suppliers s ON s.id = po.supplier_id
+      GROUP BY po.id, r.id, s.name
+      ORDER BY po.created_at DESC
+    `, [id]);
+
+    return { ...budget, expenses, commitments };
   }
 
   async update(id, data) {
@@ -153,11 +166,7 @@ class BudgetModel {
       created_at: new Date()
     });
 
-    // Utiliser addUpdateRawQuery pour l'incrémentation
-    transaction.addUpdateRawQuery('budget_allocations', {
-      utilized_amount: `utilized_amount + ${amount}`,  // Valeur brute
-      updated_at: 'NOW()'                              // Valeur brute
-    }, 'id', budgetId, ['utilized_amount', 'updated_at']);  // Spécifier les champs bruts
+    // Montant utilisé de la ligne recalculé par le trigger trg_budget_from_expense (migration 43)
 
     await transaction.execute();
 

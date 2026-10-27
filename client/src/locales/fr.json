@@ -2792,7 +2792,15 @@
         "NO_FILE": "Aucun fichier reçu",
         "ALLOCATED_BELOW_UTILIZED": "Ligne {{line}} : le montant utilisé a changé entre-temps et dépasse le nouveau montant alloué. Relancez l’aperçu."
       }
-    }
+    },
+    "commitments": "Bons de commande",
+    "commitmentsHint": "Montant utilisé = bons de commande actifs (en attente d'approbation compris, hors rejetés / annulés) + dépenses saisies à la main. Reliquat soldé : seule la quantité acceptée compte.",
+    "noCommitment": "Aucun bon de commande sur cette ligne",
+    "commitmentPo": "Bon de commande",
+    "commitmentRequisition": "Réquisition",
+    "commitmentSupplier": "Fournisseur",
+    "commitmentAmount": "Montant imputé",
+    "commitmentClosed": "reliquat soldé"
   },
   "departments": {
     "codeRequired": "Le code est requis",
@@ -5191,6 +5199,14 @@
           {
             "type": "p",
             "text": "Le module Budget est réservé à la Finance et aux administrateurs. Chaque projet a des lignes budgétaires (code, description, montant alloué). Les réquisitions consomment le disponible des lignes qui leur sont imputées ; une réquisition qui dépasse le disponible est arrêtée à la vérification du budget. Les demandeurs ne voient les lignes que pour les choisir dans leur réquisition."
+          },
+          {
+            "type": "h",
+            "text": "Montant utilisé"
+          },
+          {
+            "type": "p",
+            "text": "Le montant utilisé d'une ligne = ses bons de commande actifs (dès la création du bon, en attente d'approbation compris ; un bon rejeté ou annulé libère son montant) + les dépenses saisies à la main. Quand le reliquat d'une commande est soldé, seule la quantité acceptée reste imputée. La vérification du budget d'une nouvelle réquisition compare son montant au disponible (alloué − utilisé). Le détail d'une ligne liste les bons de commande qui la consomment."
           },
           {
             "type": "h",

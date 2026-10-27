@@ -1,7 +1,8 @@
 // src/components/Budget/BudgetDetail.jsx
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, DollarSign, Calendar, FileText } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Trash2, DollarSign, Calendar, FileText, ShoppingCart } from 'lucide-react';
 import { budgetService } from '../../services/budgetService';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import requisitionService from '../../services/requisitionService';
@@ -12,8 +13,14 @@ import { t, getLocale } from '../../i18n';
 import { usePermissions } from '../../hooks/usePermissions';
 import SearchSelect from '../Common/SearchSelect';
 
-export default function BudgetDetail({ budget, onClose }) {
+export default function BudgetDetail({ budget: row, onClose }) {
   const { formatAmount } = useCurrency();
+  // Fiche complète (bons de commande qui consomment la ligne, dépenses) ; la ligne de la liste s'affiche en attendant
+  const { data: detail } = useQuery({
+    queryKey: ['budget', row.id],
+    queryFn: () => budgetService.getById(row.id)
+  });
+  const budget = detail?.data || row;
   const queryClient = useQueryClient();
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const canManage = usePermissions().hasPermission('MANAGE_BUDGET'); // auditeur : consultation seule
@@ -38,6 +45,7 @@ export default function BudgetDetail({ budget, onClose }) {
     mutationFn: (data) => budgetService.addExpense(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['budgets']);
+      queryClient.invalidateQueries(['budget', row.id]);
       queryClient.invalidateQueries(['budget-summary']);
       toast.success(t('budget.expenseAdded'));
       setShowExpenseModal(false);
@@ -123,6 +131,50 @@ export default function BudgetDetail({ budget, onClose }) {
         </div>
       </div>
 
+      {/* Bons de commande qui consomment la ligne (= montant utilisé, avec les dépenses ci-dessous) */}
+      <div data-testid="budget-commitments">
+        <h3 className="font-semibold text-gray-800 flex items-center gap-2 mb-1">
+          <ShoppingCart size={18} />
+          {t('budget.commitments')}
+        </h3>
+        <p className="text-xs text-gray-500 mb-3">{t('budget.commitmentsHint')}</p>
+        {!budget.commitments ? null : budget.commitments.length === 0 ? (
+          <p className="text-center text-gray-500 py-4">{t('budget.noCommitment')}</p>
+        ) : (
+          <div className="border rounded-lg overflow-hidden max-h-72 overflow-y-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('budget.commitmentPo')}</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('budget.commitmentRequisition')}</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('budget.commitmentSupplier')}</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('common.status')}</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t('budget.commitmentAmount')}</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {budget.commitments.map((po) => (
+                  <tr key={po.id} data-testid="budget-commitment">
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <Link to={`/purchase-orders/${po.id}`} className="text-blue-600 hover:underline">{po.po_number}</Link>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {po.requisition_id ? <Link to={`/requisitions/${po.requisition_id}`} className="text-blue-600 hover:underline">{po.requisition_number}</Link> : '-'}
+                    </td>
+                    <td className="px-3 py-2">{po.supplier_name || '-'}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {t(`badge.${po.status}`)}
+                      {po.delivery_closed_at && <span className="ml-1 text-xs text-gray-500">({t('budget.commitmentClosed')})</span>}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap text-right font-medium">{formatCurrency(po.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Dépenses */}
       <div>
         <div className="flex justify-between items-center mb-4">
@@ -141,7 +193,7 @@ export default function BudgetDetail({ budget, onClose }) {
           )}
         </div>
 
-        {budget.expenses?.length === 0 ? (
+        {!budget.expenses ? null : budget.expenses.length === 0 ? (
           <p className="text-center text-gray-500 py-4">{t('budget.noExpense')}</p>
         ) : (
           <div className="space-y-2">

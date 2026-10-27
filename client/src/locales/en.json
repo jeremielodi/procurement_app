@@ -2792,7 +2792,15 @@
         "NO_FILE": "No file received",
         "ALLOCATED_BELOW_UTILIZED": "Line {{line}}: the utilized amount changed in the meantime and exceeds the new allocated amount. Run the preview again."
       }
-    }
+    },
+    "commitments": "Purchase orders",
+    "commitmentsHint": "Used amount = active purchase orders (including those awaiting approval, excluding rejected / cancelled) + manually entered expenses. Remaining quantity closed: only the accepted quantity counts.",
+    "noCommitment": "No purchase order on this line",
+    "commitmentPo": "Purchase order",
+    "commitmentRequisition": "Requisition",
+    "commitmentSupplier": "Supplier",
+    "commitmentAmount": "Amount charged",
+    "commitmentClosed": "remainder closed"
   },
   "departments": {
     "codeRequired": "Code is required",
@@ -5191,6 +5199,14 @@
           {
             "type": "p",
             "text": "The Budget module is reserved for Finance and administrators. Each project has budget lines (code, description, allocated amount). Requisitions consume the available amount of the lines charged; a requisition that exceeds the available amount is stopped at the budget check. Requesters only see the lines to choose them in their requisition."
+          },
+          {
+            "type": "h",
+            "text": "Used amount"
+          },
+          {
+            "type": "p",
+            "text": "A line's used amount = its active purchase orders (as soon as the order is created, including those awaiting approval; a rejected or cancelled order releases its amount) + manually entered expenses. When an order's remaining quantity is closed, only the accepted quantity stays charged. The budget check of a new requisition compares its amount with the available amount (allocated − used). A line's detail lists the purchase orders consuming it."
           },
           {
             "type": "h",

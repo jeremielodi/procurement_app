@@ -254,11 +254,7 @@ class RequisitionModel {
       created_at: new Date()
     });
     
-    // Mettre à jour le montant utilisé dans budget_allocations
-    transaction.addUpdateQuery('budget_allocations', {
-      utilized_amount: db.raw('utilized_amount + ' + amount),
-      updated_at: new Date()
-    }, 'id', budgetId);
+    // Montant utilisé de la ligne recalculé par le trigger trg_budget_from_expense (migration 43)
     
     await transaction.execute();
     

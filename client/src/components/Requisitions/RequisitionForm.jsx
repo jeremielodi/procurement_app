@@ -84,6 +84,8 @@ export default function RequisitionForm() {
 
   const projectId = watch('projectId')
   const items = watch('items')
+  // Suivi (watch) : le bouton de création se réactive dès la saisie du titre (getValues ne déclenche aucun rendu)
+  const title = watch('title')
 
   // Charger les projets actifs
   // Projets où l'utilisateur peut créer une réquisition (profils BPMN liés au projet)
@@ -210,7 +212,7 @@ export default function RequisitionForm() {
   // Vérifier si le formulaire global est valide
   const isFormValid = () => {
     const hasProject = !!projectId
-    const hasTitle = !!getValues('title') && getValues('title').trim() !== ''
+    const hasTitle = !!title && title.trim() !== ''
     const itemsComplete = areAllItemsComplete()
 
     return hasProject && hasTitle && itemsComplete

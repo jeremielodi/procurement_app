@@ -205,8 +205,9 @@ class GoodsReceiptModel {
 
   /**
    * Contrôles d'une ligne qui entre en stock : lot / péremption obligatoires selon l'article, lot périmé refusé ;
-   * équipements : un n° de série (+ n° d'inventaire facultatif) par unité, sans doublon ni n° déjà connu.
-   * → n° de série normalisés [{ serialNumber, assetTag }] ([] si l'article n'est pas suivi par n° de série)
+   * équipements : un n° de série par unité, sans doublon ni n° déjà connu. Le n° d'inventaire n'est jamais saisi à la
+   * réception : attribué par le trigger trg_stock_unit_asset_tag (INV-AAAA-NNNNN).
+   * → n° de série normalisés [{ serialNumber, assetTag: null }] ([] si l'article n'est pas suivi par n° de série)
    */
   async stockLineChecks(tx, { stockItem, accepted, lotNumber, expiryDate, serials: rawSerials, enterpriseId, index }) {
     const line = index === undefined ? {} : { line: index };
@@ -221,10 +222,10 @@ class GoodsReceiptModel {
     }
     if (!stockItem.track_serials) return [];
 
-    // Équipements suivis par n° de série : un n° (et éventuellement un n° d'inventaire) par unité acceptée
+    // Équipements suivis par n° de série : un n° par unité acceptée (n° d'inventaire envoyé par le client ignoré)
     if (!Number.isInteger(accepted)) throw fail(400, 'SERIAL_INTEGER', `${stockItem.name} : quantité entière obligatoire`, line);
     const serials = (rawSerials || []).map(s => (typeof s === 'string' ? { serialNumber: s } : s))
-      .map(s => ({ serialNumber: String(s.serialNumber || s.serial_number || '').trim(), assetTag: String(s.assetTag || s.asset_tag || '').trim() || null }))
+      .map(s => ({ serialNumber: String(s.serialNumber || s.serial_number || '').trim(), assetTag: null }))
       .filter(s => s.serialNumber);
     if (serials.length !== accepted) {
       throw fail(400, 'SERIALS_REQUIRED', `${stockItem.name} : ${accepted} n° de série attendu(s), ${serials.length} saisi(s)`, line);
@@ -240,7 +241,6 @@ class GoodsReceiptModel {
       [stockItem.id, [...seen]]
     );
     if (known.length) throw fail(400, 'SERIAL_EXISTS', `${stockItem.name} : n° de série déjà enregistré (${known.map(k => k.serial_number).join(', ')})`, line);
-    await require('./StockEquipmentModel').checkAssetTags(tx, enterpriseId, serials);
     return serials;
   }
 

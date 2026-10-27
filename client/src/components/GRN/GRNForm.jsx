@@ -109,9 +109,9 @@ export default function GRNForm() {
     if (toStock && l.stockItem.track_expiry && !l.expiryDate) errors.push(t('grn.err.expiryRequired'));
     if (toStock && l.expiryDate && l.expiryDate < today()) errors.push(t('grn.err.lotExpired'));
     const deferred = [t('grn.err.lotRequired'), t('grn.err.expiryRequired')]; // affichées après tentative d'enregistrement
-    // Équipements : une ligne « n° de série ; n° d'inventaire » par unité acceptée
+    // Équipements : un n° de série par ligne et par unité acceptée (n° d'inventaire attribué automatiquement)
     const serials = String(l.serialsText || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean)
-      .map(s => { const [serialNumber, assetTag] = s.split(';').map(x => x.trim()); return { serialNumber, assetTag: assetTag || undefined }; });
+      .map(serialNumber => ({ serialNumber }));
     if (toStock && l.stockItem.track_serials) {
       if (!Number.isInteger(accepted)) errors.push(t('grn.err.serialInteger'));
       else if (serials.length !== accepted) { const msg = t('grn.err.serialCount', { expected: accepted, count: serials.length }); errors.push(msg); deferred.push(msg); }

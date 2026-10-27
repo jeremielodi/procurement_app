@@ -44,7 +44,7 @@ export default function GRNStockEntryModal({ grn, item, onClose, onDone }) {
   }, [grn.warehouse_id]);
 
   const serials = serialsText.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
-    .map(s => { const [serialNumber, assetTag] = s.split(';').map(x => x.trim()); return { serialNumber, assetTag: assetTag || undefined }; });
+    .map(serialNumber => ({ serialNumber })); // n° d'inventaire attribué automatiquement
   const notStockable = stockItem && !stockItem.is_stockable;
   const canSubmit = !!stockItem && !notStockable && !!warehouseId && !saving
     && (!stockItem.track_lots || lotNumber.trim())

@@ -9,7 +9,7 @@ test.describe.serial('API › Équipements affectés et retours', () => {
   const logistic = { email: `eq.log.${stamp.toLowerCase()}@nowhere.test`, password: 'Secret123' };
   const employee = { email: `eq.emp.${stamp.toLowerCase()}@nowhere.test`, password: 'Secret123' };
   let admin, logToken, empToken, logisticId, employeeId;
-  let wh1, wh2, laptop, paper, po, poLines = {}, grnId, units = [], issue, holdings;
+  let wh1, wh2, laptop, paper, po, poLines = {}, grnId, units = [], issue, holdings, receiptTag;
   const S = (n) => `SN-${stamp}-${n}`;
 
   const json = async (res) => ({ status: res.status(), body: await res.json() });
@@ -79,10 +79,10 @@ test.describe.serial('API › Équipements affectés et retours', () => {
     const detail = (await (await request.get(`/api/goods-receipts/${grnId}`, { headers: L() })).json()).data;
     const laptopLine = detail.items.find(i => i.po_item_id === poLines.laptop.id);
     expect(laptopLine.serials).toEqual([S(1), S(2), S(3)]);
-    // N° d'inventaire : saisi = conservé, sinon attribué automatiquement (migration 35)
-    expect(laptopLine.asset_tags[1]).toBe(`INV-${stamp}-2`);
-    for (const k of [0, 2]) expect(laptopLine.asset_tags[k]).toMatch(/^INV-\d{4}-\d{5}$/);
-    expect(laptopLine.asset_tags[0]).not.toBe(laptopLine.asset_tags[2]);
+    // N° d'inventaire : jamais saisi à la réception — celui envoyé est ignoré, chaque unité en reçoit un automatiquement
+    for (const k of [0, 1, 2]) expect(laptopLine.asset_tags[k]).toMatch(/^INV-\d{4}-\d{5}$/);
+    expect(new Set(laptopLine.asset_tags).size).toBe(3);
+    receiptTag = laptopLine.asset_tags[1];
     units = await unitsOf(request);
     expect(units.map(u => [u.serial_number, u.status, u.warehouse_id])).toEqual([[S(1), 'IN_STOCK', wh1.id], [S(2), 'IN_STOCK', wh1.id], [S(3), 'IN_STOCK', wh1.id]]);
   });
@@ -92,7 +92,7 @@ test.describe.serial('API › Équipements affectés et retours', () => {
     expect(mv).toHaveLength(4);
     const groupIds = [...new Set(mv.map(m => m.group_id))];
     expect(groupIds).toHaveLength(1);
-    expect(mv.filter(m => m.asset_tag).map(m => m.asset_tag)).toContain(`INV-${stamp}-2`);
+    expect(mv.filter(m => m.asset_tag).map(m => m.asset_tag)).toContain(receiptTag);
 
     const g = await json(await request.get(`/api/stock/movement-groups/${groupIds[0]}`, { headers: L() }));
     expect(g.status).toBe(200);
@@ -101,7 +101,7 @@ test.describe.serial('API › Équipements affectés et retours', () => {
     expect(g.body.data.movements.map(m => m.serial_number).filter(Boolean).sort()).toEqual([S(1), S(2), S(3)]);
 
     // Recherche d'une opération par n° d'inventaire
-    const list = (await (await request.get(`/api/stock/movement-groups?search=INV-${stamp}-2`, { headers: L() })).json()).data;
+    const list = (await (await request.get(`/api/stock/movement-groups?search=${receiptTag}`, { headers: L() })).json()).data;
     expect(list.map(x => x.id)).toEqual([groupIds[0]]);
 
     const xlsx = await request.get(`/api/stock/movement-groups/${groupIds[0]}/export`, { headers: L() });

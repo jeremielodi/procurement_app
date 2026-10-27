@@ -183,8 +183,8 @@ export default function EquipmentList() {
               {warehouses.map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name}</option>)}
             </SearchSelect>
             <textarea rows={8} value={register.text} onChange={e => setRegister({ ...register, text: e.target.value })}
-              placeholder={t('grn.serialsPlaceholder')} aria-label={t('grn.serials')} className={`${inputCls} font-mono`} />
-            <SerialNumbersHelp text={register.text} />
+              placeholder={t('stock.equipment.serialsPlaceholder')} aria-label={t('grn.serials')} className={`${inputCls} font-mono`} />
+            <SerialNumbersHelp text={register.text} withAssetTag />
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">{t('stock.funding.label')}</label>
               <FundingProjectSelect value={register.projectId} onChange={(v) => setRegister({ ...register, projectId: v })} className={inputCls} />

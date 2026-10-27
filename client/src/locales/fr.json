@@ -2730,7 +2730,7 @@
       "templateFile": "modele_import_budget",
       "templateFailed": "Impossible de télécharger le modèle",
       "columnsTitle": "Colonnes :",
-      "rules": "Une ligne est identifiée par Code projet + Code ligne : une ligne existante est mise à jour avec les seules cellules remplies, sinon elle est créée (montant alloué obligatoire). Le montant utilisé est calculé par l'application et n'est jamais importé.",
+      "rules": "Plusieurs lignes peuvent avoir le même code ligne. Pour modifier des lignes existantes, partez de l'export du registre : sa colonne « ID » désigne la ligne à mettre à jour (seules les cellules remplies changent). Une ligne sans ID est toujours créée (code ligne et montant alloué obligatoires). Le montant utilisé est calculé par l'application et n'est jamais importé.",
       "chooseFile": "Choisir un fichier .xlsx ou .csv (5 Mo, 2 000 lignes au plus)",
       "analyzing": "Analyse…",
       "importing": "Import…",
@@ -2779,12 +2779,13 @@
         "CODE_REQUIRED": "code ligne manquant",
         "CODE_INVALID": "code ligne « {{value}} » invalide (lettres, chiffres, . - _ /)",
         "PROJECT_UNKNOWN": "projet « {{value}} » inconnu",
-        "DUPLICATE_LINE": "même projet et même code que la ligne {{line}}",
         "TOO_LONG": "« {{column}} » trop long ({{max}} caractères au plus)",
         "AMOUNT_REQUIRED": "montant alloué obligatoire pour une nouvelle ligne",
         "AMOUNT_INVALID": "montant alloué « {{value}} » invalide",
         "ALLOCATED_BELOW_UTILIZED": "montant alloué inférieur au montant déjà utilisé ({{utilized}})",
-        "BOOL_INVALID": "« {{column}} » : valeur « {{value}} » invalide (Oui / Non)"
+        "BOOL_INVALID": "« {{column}} » : valeur « {{value}} » invalide (Oui / Non)",
+        "LINE_ID_UNKNOWN": "ID « {{value}} » inconnu (ligne supprimée ou d'une autre entreprise) — videz la cellule pour créer une nouvelle ligne",
+        "DUPLICATE_ID": "même ID que la ligne {{line}}"
       },
       "fileErr": {
         "UNREADABLE": "Fichier illisible : vérifiez qu'il s'agit bien d'un .xlsx ou .csv",
@@ -5216,7 +5217,7 @@
               ],
               [
                 "Identification",
-                "Code projet + Code ligne. Projet vide = ligne sans projet."
+                "Colonne « ID » de l'export : remplie = mise à jour de cette ligne, vide = nouvelle ligne. Le code ligne peut être identique pour plusieurs lignes (même projet ou non)."
               ],
               [
                 "Ligne existante",

@@ -2730,7 +2730,7 @@
       "templateFile": "budget_import_template",
       "templateFailed": "Could not download the template",
       "columnsTitle": "Columns:",
-      "rules": "A line is identified by Project code + Line code: an existing line is updated with the filled cells only, otherwise it is created (allocated amount required). The utilized amount is computed by the application and never imported.",
+      "rules": "Several lines may share the same line code. To change existing lines, start from the register export: its \"ID\" column identifies the line to update (only filled cells change). A row without ID always creates a line (line code and allocated amount required). The used amount is computed by the application and never imported.",
       "chooseFile": "Choose an .xlsx or .csv file (5 MB, 2,000 lines max)",
       "analyzing": "Analysing…",
       "importing": "Importing…",
@@ -2779,12 +2779,13 @@
         "CODE_REQUIRED": "missing line code",
         "CODE_INVALID": "invalid line code “{{value}}” (letters, digits, . - _ /)",
         "PROJECT_UNKNOWN": "unknown project “{{value}}”",
-        "DUPLICATE_LINE": "same project and code as line {{line}}",
         "TOO_LONG": "“{{column}}” too long ({{max}} characters max)",
         "AMOUNT_REQUIRED": "allocated amount required for a new line",
         "AMOUNT_INVALID": "invalid allocated amount “{{value}}”",
         "ALLOCATED_BELOW_UTILIZED": "allocated amount lower than the amount already utilized ({{utilized}})",
-        "BOOL_INVALID": "“{{column}}”: invalid value “{{value}}” (Yes / No)"
+        "BOOL_INVALID": "“{{column}}”: invalid value “{{value}}” (Yes / No)",
+        "LINE_ID_UNKNOWN": "unknown ID \"{{value}}\" (deleted line or another organisation) — clear the cell to create a new line",
+        "DUPLICATE_ID": "same ID as row {{line}}"
       },
       "fileErr": {
         "UNREADABLE": "Unreadable file: make sure it is an .xlsx or .csv file",
@@ -5216,7 +5217,7 @@
               ],
               [
                 "Identification",
-                "Project code + Line code. Empty project = line without project."
+                "Export \"ID\" column: filled = update of that line, empty = new line. Several lines may share the same line code (same project or not)."
               ],
               [
                 "Existing line",

@@ -3,10 +3,12 @@
 // modèle d'import (.xlsx / .csv) et import depuis Excel / CSV.
 //
 // Import :
-//  - Une ligne du fichier = une ligne budgétaire, identifiée par (Code projet, Code ligne) — même unicité que la base
-//    (UNIQUE(entity_code, project_id)). Projet vide = ligne sans projet. Codes de ligne en majuscules (comme le formulaire).
-//  - Ligne existante : mise à jour des seules cellules remplies (une cellule vide ne change rien) ; nouvelle ligne :
-//    « Montant alloué » obligatoire. Le montant utilisé n'est jamais importé (il est calculé par l'application) :
+//  - Plusieurs lignes peuvent porter le même code (migration 42) : une ligne existante est identifiée par la colonne
+//    « ID » de l'export. Ligne du fichier AVEC ID = mise à jour de cette ligne (ID inconnu : LINE_ID_UNKNOWN) ;
+//    SANS ID = toujours une nouvelle ligne, même si le code existe déjà. Projet vide = ligne sans projet.
+//    Codes de ligne en majuscules (comme le formulaire).
+//  - Ligne existante : mise à jour des seules cellules remplies (une cellule vide ne change rien, code et projet
+//    compris) ; nouvelle ligne : « Code ligne » et « Montant alloué » obligatoires. Le montant utilisé n'est jamais importé (il est calculé par l'application) :
 //    un montant alloué inférieur au montant déjà utilisé est refusé (ALLOCATED_BELOW_UTILIZED).
 //  - Les colonnes de l'export (Utilisé, Disponible, Taux…) sont ignorées : un export modifié se réimporte tel quel.
 //  - preview() valide sans rien écrire ; apply() relit le fichier et écrit les lignes valides en une transaction.
@@ -35,6 +37,10 @@ const FIELDS = [
 ];
 // Colonnes en lecture seule ajoutées à l'export (ignorées à l'import)
 const EXPORT_ONLY = ['projectName', 'utilized', 'remaining', 'rate'];
+// Identifiant technique de la ligne : première colonne de l'export, relu à l'import (mise à jour de CETTE ligne)
+const ID_KEY = 'id';
+const ID_ALIASES = ['id', 'identifiant', 'line id', 'id ligne'];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // En-têtes acceptés en plus de ceux du modèle (toutes langues : budgetImport.headers.*)
 const ALIASES = {
@@ -58,6 +64,8 @@ const columnAliases = () => {
     const fromLocales = i18n.LANGS.map(l => normalize(i18n.translator(l)(`budgetImport.headers.${key}`)));
     out[key] = [...new Set([...fromLocales, ...ALIASES[key]])];
   }
+  const fromLocales = i18n.LANGS.map(l => normalize(i18n.translator(l)(`budgetImport.headers.${ID_KEY}`)));
+  out[ID_KEY] = [...new Set([...fromLocales, ...ID_ALIASES])];
   return out;
 };
 
@@ -149,22 +157,24 @@ async function exportXlsx(filters, { lang }) {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'procureApp';
   const ws = wb.addWorksheet(T('budgetImport.sheets.lines'), { views: [{ state: 'frozen', ySplit: 1 }] });
-  const keys = [...FIELDS.map(f => f.key), ...EXPORT_ONLY];
+  const keys = [ID_KEY, ...FIELDS.map(f => f.key), ...EXPORT_ONLY];
   ws.columns = keys.map(k => ({
     header: T(`budgetImport.headers.${k}`), key: k,
-    width: ['description', 'projectName'].includes(k) ? 40 : ['allocated', 'utilized', 'remaining'].includes(k) ? 18 : 16,
+    width: k === ID_KEY ? 38 : ['description', 'projectName'].includes(k) ? 40 : ['allocated', 'utilized', 'remaining'].includes(k) ? 18 : 16,
   }));
   const head = ws.getRow(1);
   head.font = { bold: true, color: { argb: 'FFFFFFFF' } };
   head.alignment = { vertical: 'middle', wrapText: true };
   head.height = 30;
   keys.forEach((k, i) => {
-    head.getCell(i + 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXPORT_ONLY.includes(k) ? 'FF64748B' : 'FF1D4ED8' } };
+    head.getCell(i + 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXPORT_ONLY.includes(k) || k === ID_KEY ? 'FF64748B' : 'FF1D4ED8' } };
+    if (k === ID_KEY) head.getCell(i + 1).note = T('budgetImport.help.id');
   });
   for (const r of rows) {
     const allocated = num(r.allocated_amount) || 0;
     const utilized = num(r.utilized_amount) || 0;
     ws.addRow({
+      id: r.id,
       project: r.project_code || '', entityCode: r.entity_code, description: r.description || '', loc: r.loc || '',
       fundingSource: r.funding_source || '', subProject: r.sub_project || '', functionCode: r.function_code || '', activityCode: r.activity_code || '',
       allocated, active: r.is_active ? yes : no,
@@ -213,7 +223,8 @@ async function loadContext() {
   return {
     enterpriseId,
     projectBy: new Map(projects.map(p => [String(p.code).toUpperCase(), p])),
-    lineBy: new Map(lines.map(l => [`${l.project_id || ''}|${String(l.entity_code).toUpperCase()}`, l])),
+    projectById: new Map(projects.map(p => [p.id, p])),
+    lineById: new Map(lines.map(l => [String(l.id).toLowerCase(), l])),
   };
 }
 
@@ -228,14 +239,15 @@ async function analyze(file) {
   dropLeadingBlankRows(rows);
   if (rows.length < 2) throw httpError(400, 'EMPTY', 'Le fichier ne contient aucune ligne budgétaire');
   const col = mapHeader(rows[0], columnAliases());
-  const missing = ['entityCode'].filter(k => col[k] === undefined);
+  // « Code ligne » obligatoire, sauf fichier de mise à jour (colonne ID) : le code est alors facultatif
+  const missing = col[ID_KEY] === undefined ? ['entityCode'].filter(k => col[k] === undefined) : [];
   if (missing.length) {
     throw httpError(400, 'MISSING_COLUMNS', 'Colonne « Code ligne » introuvable : utilisez le modèle proposé dans la fenêtre d\'import', { missing });
   }
   const dataRows = rows.slice(1).map((r, i) => ({ r, line: i + 2 })).filter(({ r }) => !isBlankRow(r));
   // Ligne « Total » d'un export : ignorée
   const totalLabels = i18n.LANGS.map(l => normalize(i18n.translator(l)('budgetImport.total')));
-  const usable = dataRows.filter(({ r }) => !totalLabels.includes(normalize(cellText(r[col.entityCode]))));
+  const usable = dataRows.filter(({ r }) => col.entityCode === undefined || !totalLabels.includes(normalize(cellText(r[col.entityCode]))));
   if (usable.length > MAX_ROWS) throw httpError(400, 'TOO_MANY_ROWS', `Maximum ${MAX_ROWS} lignes par import`, { max: MAX_ROWS });
 
   const ctx = await loadContext();
@@ -247,22 +259,32 @@ async function analyze(file) {
 
   for (const { r, line } of usable) {
     const problems = [];
-    const code = text(r, 'entityCode').toUpperCase();
-    if (!code) { errors.push(fail(line, 'CODE_REQUIRED')); continue; }
-    if (!CODE_RE.test(code)) { errors.push(fail(line, 'CODE_INVALID', { value: code })); continue; }
+    // Ligne existante : seulement par son ID (le code n'est pas unique)
+    const idText = text(r, ID_KEY).toLowerCase();
+    let existing = null;
+    if (idText) {
+      existing = UUID_RE.test(idText) ? ctx.lineById.get(idText) || null : null;
+      if (!existing) { errors.push(fail(line, 'LINE_ID_UNKNOWN', { value: text(r, ID_KEY) })); continue; }
+      if (seen.has(idText)) { errors.push(fail(line, 'DUPLICATE_ID', { line: seen.get(idText) })); continue; }
+      seen.set(idText, line);
+    }
 
-    let project = null;
+    const codeCell = text(r, 'entityCode').toUpperCase();
+    if (!codeCell && !existing) { errors.push(fail(line, 'CODE_REQUIRED')); continue; }
+    if (codeCell && !CODE_RE.test(codeCell)) { errors.push(fail(line, 'CODE_INVALID', { value: codeCell })); continue; }
+    const code = codeCell || existing.entity_code;
+
+    // Projet : cellule vide = sans projet pour une nouvelle ligne, inchangé pour une ligne existante
+    let project = existing?.project_id ? ctx.projectById.get(existing.project_id) || null : null;
     const projectCode = text(r, 'project').toUpperCase();
     if (projectCode) {
       project = ctx.projectBy.get(projectCode) || null;
       if (!project) { errors.push(fail(line, 'PROJECT_UNKNOWN', { value: projectCode })); continue; }
     }
-    const key = `${project?.id || ''}|${code}`;
-    if (seen.has(key)) { errors.push(fail(line, 'DUPLICATE_LINE', { line: seen.get(key) })); continue; }
-    seen.set(key, line);
-    const existing = ctx.lineBy.get(key) || null;
 
     const given = {};
+    if (codeCell) given.entity_code = codeCell;
+    if (projectCode) given.project_id = project.id;
     for (const f of FIELDS.filter(x => x.max)) {
       const v = text(r, f.key);
       if (!v) continue;
@@ -293,6 +315,7 @@ async function analyze(file) {
       const same = k === 'allocated_amount' ? Math.abs((before ?? NaN) - v) < 0.005 : (before ?? null) === v;
       if (!existing || !same) fields[k] = v;
     }
+    if (!existing) { delete fields.entity_code; delete fields.project_id; } // écrits à part à la création
     lines.push({
       line, id: existing?.id || null,
       action: !existing ? 'CREATE' : Object.keys(fields).length ? 'UPDATE' : 'UNCHANGED',

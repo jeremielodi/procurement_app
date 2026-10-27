@@ -1002,6 +1002,7 @@
       "help": "Instructions"
     },
     "headers": {
+      "id": "ID (do not change)",
       "project": "Project code",
       "entityCode": "Line code",
       "description": "Description",
@@ -1018,8 +1019,9 @@
       "rate": "Utilization rate"
     },
     "help": {
-      "project": "Project code (Projects sheet). Empty = line without project. Together with the line code it identifies the line: if it already exists, the line is updated.",
-      "entityCode": "Budget line code (letters, digits, . - _ /), stored in upper case. Required.",
+      "id": "Line identifier in procureApp. Filled = this line is updated; empty = a new line is created. Do not change it or copy it to another row.",
+      "project": "Project code (Projects sheet). Empty = line without project (new line); for an existing line, an empty cell keeps its project.",
+      "entityCode": "Budget line code (letters, digits, . - _ /), stored in upper case. Required for a new line. Several lines may share the same code.",
       "description": "Line label.",
       "loc": "Location (office, site).",
       "fundingSource": "Donor or funding source.",
@@ -1034,11 +1036,11 @@
       "required": "Required?",
       "description": "Description"
     },
-    "rules1": "A line is identified by Project code + Line code: an existing line is updated with the filled cells only (an empty cell changes nothing).",
+    "rules1": "Several lines may share the same code: an existing line is recognised by the \"ID\" column of the export. With ID = only filled cells are updated; without ID = new line.",
     "rules2": "The utilized amount is computed by the application (requisitions): it is never imported.",
     "rules3": "Lines with errors are skipped; the others are saved together once the preview is confirmed.",
     "rules4": "A register export can be edited and re-imported as is: grey columns (utilized, available, rate) are ignored.",
-    "exportNote1": "Register exported from procureApp. Blue columns can be edited and re-imported (Budget › Import); grey columns are computed and ignored on import.",
+    "exportNote1": "Register exported from procureApp. Blue columns can be edited and re-imported (Budget › Import); grey columns are computed and ignored on import, except \"ID\", which identifies the line to update (do not change it).",
     "exportNote2": "Utilized amount = amounts committed by requisitions on the line. Available = allocated − utilized.",
     "example": {
       "travel": "Travel and missions",

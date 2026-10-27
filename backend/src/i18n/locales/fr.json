@@ -1002,6 +1002,7 @@
       "help": "Mode d'emploi"
     },
     "headers": {
+      "id": "ID (ne pas modifier)",
       "project": "Code projet",
       "entityCode": "Code ligne",
       "description": "Description",
@@ -1018,8 +1019,9 @@
       "rate": "Taux d'utilisation"
     },
     "help": {
-      "project": "Code du projet (feuille Projets). Vide = ligne sans projet. Avec le code ligne, il identifie la ligne : s'il existe déjà, la ligne est mise à jour.",
-      "entityCode": "Code de la ligne budgétaire (lettres, chiffres, . - _ /), enregistré en majuscules. Obligatoire.",
+      "id": "Identifiant de la ligne dans procureApp. Rempli = cette ligne est mise à jour ; vide = une nouvelle ligne est créée. Ne le modifiez pas et ne le copiez pas sur une autre ligne.",
+      "project": "Code du projet (feuille Projets). Vide = ligne sans projet (nouvelle ligne) ; pour une ligne existante, une cellule vide ne change pas son projet.",
+      "entityCode": "Code de la ligne budgétaire (lettres, chiffres, . - _ /), enregistré en majuscules. Obligatoire pour une nouvelle ligne. Plusieurs lignes peuvent avoir le même code.",
       "description": "Libellé de la ligne.",
       "loc": "Localisation (bureau, site).",
       "fundingSource": "Bailleur ou source de financement.",
@@ -1034,11 +1036,11 @@
       "required": "Obligatoire ?",
       "description": "Description"
     },
-    "rules1": "Une ligne est identifiée par Code projet + Code ligne : une ligne existante est mise à jour avec les seules cellules remplies (une cellule vide ne change rien).",
+    "rules1": "Plusieurs lignes peuvent avoir le même code : une ligne existante est reconnue par la colonne « ID » de l'export. Avec ID = mise à jour des seules cellules remplies ; sans ID = nouvelle ligne.",
     "rules2": "Le montant utilisé est calculé par l'application (réquisitions) : il n'est jamais importé.",
     "rules3": "Les lignes en erreur sont ignorées ; les autres sont enregistrées ensemble après confirmation de l’aperçu.",
     "rules4": "Un export du registre peut être modifié puis réimporté tel quel : les colonnes en gris (utilisé, disponible, taux) sont ignorées.",
-    "exportNote1": "Registre exporté depuis procureApp. Les colonnes bleues peuvent être modifiées et réimportées (Budget › Importer) ; les colonnes grises sont calculées et ignorées à l'import.",
+    "exportNote1": "Registre exporté depuis procureApp. Les colonnes bleues peuvent être modifiées et réimportées (Budget › Importer) ; les colonnes grises sont calculées et ignorées à l'import, sauf « ID » qui désigne la ligne à mettre à jour (ne pas la modifier).",
     "exportNote2": "Montant utilisé = montants engagés par les réquisitions sur la ligne. Disponible = alloué − utilisé.",
     "example": {
       "travel": "Voyages et missions",

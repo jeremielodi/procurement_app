@@ -41,26 +41,27 @@ test.describe.serial('API › Registre budgétaire (liste, export, import)', () 
 
   test('Aperçu : création, erreurs par ligne, rien n\'est écrit', async ({ request }) => {
     const res = await upload(request, csv([
-      ['Code projet', 'Code ligne', 'Description', 'Source de financement', 'Montant alloué', 'Active'],
-      [project.code, codeA, 'Ligne importée A', 'EU', '1 500,50', 'Oui'],
-      [project.code, codeB.toLowerCase(), 'Ligne importée B', 'USAID', '2000', ''],
-      ['PRJ-INCONNU-XYZ', 'X1', '', '', '10', ''],
-      [project.code, codeA, 'doublon', '', '5', ''],
-      [project.code, `IMP-C-${stamp}`, '', '', '', ''],
-      [project.code, `IMP-D-${stamp}`, '', '', '-3', 'peut-être'],
+      ['ID', 'Code projet', 'Code ligne', 'Description', 'Source de financement', 'Montant alloué', 'Active'],
+      ['', project.code, codeA, 'Ligne importée A', 'EU', '1 500,50', 'Oui'],
+      ['', project.code, codeB.toLowerCase(), 'Ligne importée B', 'USAID', '2000', ''],
+      ['', 'PRJ-INCONNU-XYZ', 'X1', '', '', '10', ''],
+      ['', project.code, codeA, 'même code : nouvelle ligne', '', '5', ''],
+      ['', project.code, `IMP-C-${stamp}`, '', '', '', ''],
+      ['', project.code, `IMP-D-${stamp}`, '', '', '-3', 'peut-être'],
+      ['00000000-0000-4000-8000-000000000000', project.code, 'X2', '', '', '10', ''],
     ]));
     expect(res.status(), await res.text()).toBe(200);
     const { lines, errors, summary } = (await res.json()).data;
-    expect(summary).toMatchObject({ totalLines: 6, create: 2, update: 0, errors: 5, allocatedChange: 3500.5 });
-    expect(lines.map(l => [l.entityCode, l.action, l.allocated])).toEqual([[codeA, 'CREATE', 1500.5], [codeB, 'CREATE', 2000]]);
+    expect(summary).toMatchObject({ totalLines: 7, create: 3, update: 0, errors: 5, allocatedChange: 3505.5 });
+    expect(lines.map(l => [l.entityCode, l.action, l.allocated])).toEqual([[codeA, 'CREATE', 1500.5], [codeB, 'CREATE', 2000], [codeA, 'CREATE', 5]]);
     expect(errors.map(e => [e.line, e.code])).toEqual([
-      [4, 'PROJECT_UNKNOWN'], [5, 'DUPLICATE_LINE'], [6, 'AMOUNT_REQUIRED'], [7, 'AMOUNT_INVALID'], [7, 'BOOL_INVALID'],
+      [4, 'PROJECT_UNKNOWN'], [6, 'AMOUNT_REQUIRED'], [7, 'AMOUNT_INVALID'], [7, 'BOOL_INVALID'], [8, 'LINE_ID_UNKNOWN'],
     ]);
     const list = (await (await request.get(`/api/budget?page=1&search=${stamp}`, { headers: auth(admin) })).json());
     expect(list.pagination.total).toBe(0);
   });
 
-  test('Confirmation : lignes valides écrites, puis mise à jour des seules cellules remplies', async ({ request }) => {
+  test('Confirmation : lignes créées, mise à jour par ID des seules cellules remplies, codes en double', async ({ request }) => {
     const rows = [
       ['Code projet', 'Code ligne', 'Description', 'Source de financement', 'Code activité', 'Montant alloué', 'Active'],
       [project.code, codeA, 'Ligne importée A', 'EU', 'A1.1', '1500.50', 'Oui'],
@@ -76,25 +77,42 @@ test.describe.serial('API › Registre budgétaire (liste, export, import)', () 
     expect(list.data.map(b => [b.entity_code, b.allocated_amount, b.funding_source, b.activity_code, b.is_active, b.project_code]))
       .toEqual([[codeA, 1500.5, 'EU', 'A1.1', true, project.code], [codeB, 2000, 'USAID', null, false, project.code]]);
     expect(list.totals.allocated).toBe(3500.5);
+    const [lineA, lineB] = list.data;
     createdIds = list.data.map(b => b.id);
 
-    // Mise à jour : seule la cellule remplie change (description vide = inchangée) ; ligne identique = inchangée
+    // Avec ID : seule la cellule remplie change (description vide = inchangée) ; ligne identique = inchangée ;
+    // sans ID : nouvelle ligne, même avec un code déjà utilisé dans le projet
     const update = await upload(request, csv([
-      ['Code ligne', 'Code projet', 'Montant alloué', 'Description'],
-      [codeA, project.code, '1800', ''],
-      [codeB, project.code, '2000', 'Ligne importée B'],
+      ['ID', 'Code ligne', 'Code projet', 'Montant alloué', 'Description'],
+      [lineA.id, codeA, project.code, '1800', ''],
+      [lineB.id, codeB, project.code, '2000', 'Ligne importée B'],
+      ['', codeA, project.code, '500', 'Deuxième ligne A'],
     ]));
     const preview = (await update.json()).data;
-    expect(preview.summary).toMatchObject({ create: 0, update: 1, unchanged: 1, allocatedChange: 299.5 });
+    expect(preview.summary).toMatchObject({ create: 1, update: 1, unchanged: 1, allocatedChange: 799.5 });
     expect(preview.lines[0].changed).toEqual(['allocated_amount']);
-    expect((await upload(request, csv([['Code ligne', 'Code projet', 'Montant alloué'], [codeA, project.code, '1800']]), { confirm: true })).status()).toBe(200);
-    const after = (await (await request.get(`/api/budget/${createdIds[0]}`, { headers: auth(admin) })).json()).data;
+
+    // Même ID deux fois : refusé
+    const twice = (await (await upload(request, csv([['ID', 'Montant alloué'], [lineA.id, '1700'], [lineA.id, '1600']]))).json()).data;
+    expect(twice.errors.map(e => [e.line, e.code])).toEqual([[3, 'DUPLICATE_ID']]);
+
+    expect((await upload(request, csv([
+      ['ID', 'Code ligne', 'Code projet', 'Montant alloué', 'Description'],
+      [lineA.id, '', '', '1800', ''],
+      ['', codeA, project.code, '500', 'Deuxième ligne A'],
+    ]), { confirm: true })).status()).toBe(200);
+    const after = (await (await request.get(`/api/budget/${lineA.id}`, { headers: auth(admin) })).json()).data;
     expect(Number(after.allocated_amount)).toBe(1800);
     expect(after.description).toBe('Ligne importée A');
     expect(after.activity_code).toBe('A1.1');
+    expect(after.project_id).toBe(project.id); // projet vide = inchangé pour une ligne existante
+
+    const all = await (await request.get(`/api/budget?page=1&limit=10&search=${stamp}&sort=code`, { headers: auth(admin) })).json();
+    expect(all.data.filter(b => b.entity_code === codeA && b.project_code === project.code)).toHaveLength(2);
+    createdIds = all.data.map(b => b.id);
 
     // Rien à écrire → 400 NOTHING_TO_IMPORT
-    const nothing = await upload(request, csv([['Code ligne', 'Code projet', 'Montant alloué'], [codeA, project.code, '1800']]), { confirm: true });
+    const nothing = await upload(request, csv([['ID', 'Montant alloué'], [lineA.id, '1800']]), { confirm: true });
     expect(nothing.status()).toBe(400);
     expect((await nothing.json()).code).toBe('NOTHING_TO_IMPORT');
 
@@ -110,7 +128,7 @@ test.describe.serial('API › Registre budgétaire (liste, export, import)', () 
     expect(res.headers()['content-disposition']).toContain('registre_budgetaire');
     // Réimport du fichier exporté : aucune modification
     const again = await upload(request, buffer, { name: 'registre.xlsx' });
-    expect((await again.json()).data.summary).toMatchObject({ create: 0, update: 0, unchanged: 2, errors: 0 });
+    expect((await again.json()).data.summary).toMatchObject({ create: 0, update: 0, unchanged: 3, errors: 0 });
   });
 
   test('Liste : filtres, sources, tri, accès', async ({ request }) => {
@@ -121,10 +139,10 @@ test.describe.serial('API › Registre budgétaire (liste, export, import)', () 
     const inactive = await (await request.get(`/api/budget?page=1&search=${stamp}&status=inactive`, { headers: auth(admin) })).json();
     expect(inactive.data.map(b => b.entity_code)).toEqual([codeB]);
     const byAmount = await (await request.get(`/api/budget?page=1&search=${stamp}&sort=allocated&order=desc`, { headers: auth(admin) })).json();
-    expect(byAmount.data.map(b => b.entity_code)).toEqual([codeB, codeA]);
+    expect(byAmount.data.map(b => b.entity_code)).toEqual([codeB, codeA, codeA]);
     const paged = await (await request.get(`/api/budget?page=2&limit=1&search=${stamp}&sort=code`, { headers: auth(admin) })).json();
-    expect(paged.data.map(b => b.entity_code)).toEqual([codeB]);
-    expect(paged.pagination).toMatchObject({ page: 2, limit: 1, total: 2, pages: 2 });
+    expect(paged.data.map(b => b.entity_code)).toEqual([codeA]);
+    expect(paged.pagination).toMatchObject({ page: 2, limit: 1, total: 3, pages: 3 });
 
     // Demandeur : ni export ni import
     const email = `req.budget.${stamp.toLowerCase()}@example.com`;

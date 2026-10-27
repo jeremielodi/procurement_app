@@ -315,8 +315,7 @@ CREATE TABLE IF NOT EXISTS budget_allocations (
     is_active BOOLEAN DEFAULT true,
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(entity_code, project_id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 

@@ -130,7 +130,7 @@ const err = (status, code, message, details) => Object.assign(new Error(message)
  * Chaque article chiffré par au moins une offre est attribué à une offre qui l'a chiffré ; un article sans offre
  * n'est pas commandé. Un seul attributaire : chemin habituel (awarded_supplier_id). Plusieurs : une part par
  * fournisseur (requisition_supplier_lots), et l'étape Activity_RFPProcess se termine avec supplierLots = [parts] —
- * le sous-processus de commande du BPMN est répété par part. Écritures et complétion GoFlow dans une transaction.
+ * le sous-processus de commande du BPMN est répété par part. Écritures et complétion BpmnGo dans une transaction.
  */
 async function awardPerItem(req, res, tender, submissions) {
   try {
@@ -174,7 +174,7 @@ async function awardPerItem(req, res, tender, submissions) {
     const winners = [...bySupplier.values()];
     const split = winners.length > 1;
 
-    // Étape GoFlow « Appel d'offres » ouverte ; un processus démarré avant la répartition ne sait pas la traiter
+    // Étape BpmnGo « Appel d'offres » ouverte ; un processus démarré avant la répartition ne sait pas la traiter
     let rfpTask = null;
     if (tender.process_instance_id) {
       rfpTask = ((await camundaService.getProcessTasks(tender.process_instance_id)) || [])
@@ -215,9 +215,9 @@ async function awardPerItem(req, res, tender, submissions) {
           ...(lotIds ? { supplierLots: lotIds } : {}),
           ...(req.body.comment ? { comment: req.body.comment } : {}),
         };
-        // GoFlow en dernier : en cas de refus, l'attribution est annulée avec la transaction
+        // BpmnGo en dernier : en cas de refus, l'attribution est annulée avec la transaction
         const done = await camundaService.completeTask(rfpTask.id, vars);
-        if (!done?.success) throw err(502, 'GOFLOW_ERROR', done?.error || 'GoFlow n\'a pas accepté la fin de l\'étape');
+        if (!done?.success) throw err(502, 'BPMNGO_ERROR', done?.error || 'BpmnGo n\'a pas accepté la fin de l\'étape');
       }
       return { lotIds };
     });

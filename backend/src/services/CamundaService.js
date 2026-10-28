@@ -10,7 +10,7 @@ let bearerToken = process.env.CAMUNDA_BEARER_TOKEN || null;
 let username = process.env.CAMUNDA_USERNAME || null;
 let password = process.env.CAMUNDA_PASSWORD || null;
 
-// URL racine du serveur GoFlow (sans /engine-rest), utilisée pour l'authentification
+// URL racine du serveur BpmnGo (sans /engine-rest), utilisée pour l'authentification
 function getServerUrl() {
   return (process.env.CAMUNDA_URL || baseUrl.replace(/\/engine-rest\/?$/, '')).replace(/\/$/, '');
 }
@@ -326,7 +326,7 @@ async function assignTask(taskId, userId) {
 }
 
 /**
- * Libérer une tâche (GoFlow : POST /tasks/:id/unclaim, sans corps) — elle redevient disponible pour son groupe
+ * Libérer une tâche (BpmnGo : POST /tasks/:id/unclaim, sans corps) — elle redevient disponible pour son groupe
  */
 async function unassignTask(taskId) {
   try {
@@ -675,7 +675,7 @@ async function deployProcess(bpmnXml, deploymentName) {
     const blob = Buffer.from(bpmnXml, 'utf-8');
 
     formData.append('deployment-name', deploymentName);
-    formData.append('file', blob, `${deploymentName}.bpmn`); // champ attendu par GoFlow (POST /deployment/create)
+    formData.append('file', blob, `${deploymentName}.bpmn`); // champ attendu par BpmnGo (POST /deployment/create)
 
     const headers = {
       ...formData.getHeaders(),

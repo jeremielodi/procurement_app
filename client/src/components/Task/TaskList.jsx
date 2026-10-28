@@ -1,5 +1,5 @@
 // src/components/Task/TaskList.jsx
-// « Mes tâches » : vue d'ensemble des tâches GoFlow de mes groupes (en attente / terminées).
+// « Mes tâches » : vue d'ensemble des tâches BpmnGo de mes groupes (en attente / terminées).
 // Une tâche se prend en charge et se traite UNIQUEMENT depuis l'onglet tâches de sa réquisition
 // (/requisitions/:id/tasks) : c'est là que la commande, la réception, la facture ou le paiement sont rattachés à la
 // bonne réquisition et au bon bon de commande. Ici, chaque tâche renvoie vers cet onglet (?task= la met en évidence).

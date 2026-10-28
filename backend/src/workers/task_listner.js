@@ -22,7 +22,7 @@ const logDebug = debug('task-listener:debug');
 const logSse = debug('task-listener:sse');
 
 const BASE_URL = process.env.CAMUNDA_URL || 'http://localhost:8080';
-const USERNAME = process.env.CAMUNDA_USERNAME || 'superuser@goflow.com';
+const USERNAME = process.env.CAMUNDA_USERNAME || 'superuser@bpmngo.com';
 const PASSWORD = process.env.CAMUNDA_PASSWORD || 'superUser123';
 const PROCESS_KEY = process.env.PROCUREMENT_BPMN_PROCESS || '';
 
@@ -292,7 +292,7 @@ async function logWorkflowHistory(task) {
 async function handleTaskCreated(task) {
   logEvent('Task created: %s (ID: %s)', task.taskName, task.taskId);
 
-  // GoFlow peut envoyer la clé avec ou sans majuscule ; rôle déduit du BPMN si absent de l'événement
+  // BpmnGo peut envoyer la clé avec ou sans majuscule ; rôle déduit du BPMN si absent de l'événement
   const taskDefinitionKey = task.taskDefinitionKey || task.TaskDefinitionKey;
   const candidateGroup = task.candidateGroup || TASK_CANDIDATE_GROUPS[taskDefinitionKey];
   if (!candidateGroup) {

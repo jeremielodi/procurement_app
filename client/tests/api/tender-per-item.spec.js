@@ -9,7 +9,7 @@
  *     une étape « Créer le bon de commande » par part
  *   - chaque fournisseur ne voit que SES articles remportés
  *
- * Requiert GoFlow.
+ * Requiert BpmnGo.
  */
 import { test, expect } from '@playwright/test';
 import { getToken, getApproverToken, auth, supplierRegistration, firstReferenceIds } from './helpers.js';
@@ -38,7 +38,7 @@ async function waitForTasks(request, keys, count = 1) {
 const complete = (request, task, variables, tk = token) =>
   request.post(`/api/tasks/${task.id}/complete`, { headers: auth(tk), data: { variables } });
 
-test.describe.serial('Appel d\'offres attribué par article (GoFlow)', () => {
+test.describe.serial('Appel d\'offres attribué par article (BpmnGo)', () => {
   test('Trois fournisseurs inscrits ; réquisition de 36 000 approuvée → appel d\'offres', async ({ request }) => {
     token = await getToken(request);
     approverToken = await getApproverToken(request);

@@ -12,7 +12,7 @@ const supplierBankService = require('../services/SupplierBankService');
 const { audit, AUDIT } = require('../utils/auditLog');
 const projectAccess = require('../utils/projectAccess');
 
-/** Réquisitions de l'entreprise courante liées à ces process GoFlow → Map(processInstanceId → réquisition) */
+/** Réquisitions de l'entreprise courante liées à ces process BpmnGo → Map(processInstanceId → réquisition) */
 async function requisitionsOfEnterprise(processIds) {
   if (!processIds.length) return new Map();
   const params = [processIds];
@@ -79,7 +79,7 @@ const inGroupOnProject = (task, currentUser, projectId, requesterId = null) =>
 // Tâches attribuées par le processus à une personne (assignee ${requester}) : elle les traite sans le profil
 // (PERSONAL_TASKS : ajustement budgétaire, correction de la réquisition)
 
-// GoFlow stocke l'assignee par email (cf. claim) ; l'id est accepté pour les anciennes tâches
+// BpmnGo stocke l'assignee par email (cf. claim) ; l'id est accepté pour les anciennes tâches
 function isMine(task, currentUser) {
   return !!task.assignee && (task.assignee === currentUser.email || task.assignee === currentUser.id);
 }
@@ -124,7 +124,7 @@ async function getUserTasks(req, res) {
       camundaService.getCompletedTasks({ assignee: currentUser.email, processInstanceId })
     ]);
 
-    // Réquisition de chaque tâche, lue en base (les variables GoFlow peuvent manquer) : seulement les réquisitions
+    // Réquisition de chaque tâche, lue en base (les variables BpmnGo peuvent manquer) : seulement les réquisitions
     // existantes de l'entreprise courante. « Mes tâches » renvoie vers l'onglet tâches de la réquisition, seul
     // endroit où une tâche est prise en charge et traitée
     const reqByProcess = await requisitionsOfEnterprise(
@@ -291,7 +291,7 @@ async function claimTask(req, res) {
 }
 
 /**
- * POST /api/tasks/:taskId/unclaim — rend la tâche à son groupe (GoFlow : TASK_UNCLAIMED)
+ * POST /api/tasks/:taskId/unclaim — rend la tâche à son groupe (BpmnGo : TASK_UNCLAIMED)
  */
 async function unclaimTask(req, res) {
   try {
@@ -322,7 +322,7 @@ async function unclaimTask(req, res) {
 }
 
 /**
- * Document créé depuis une tâche GoFlow (GRN, SAN, facture, paiement) → workflow_history, rattaché à la RÉQUISITION
+ * Document créé depuis une tâche BpmnGo (GRN, SAN, facture, paiement) → workflow_history, rattaché à la RÉQUISITION
  * (entity_id est un UUID : l'id entier du bon de commande y échouait) ; le n° du bon et le document sont dans comments
  * (JSON lu par RequisitionTimelineService). N'interrompt jamais la complétion de la tâche.
  */
@@ -369,7 +369,7 @@ async function completeTask(req, res) {
     }
 
     // Contrôles côté serveur (jamais sur les valeurs envoyées par le client) : groupe de la tâche, prise en charge,
-    // séparation des tâches. La clé et la réquisition viennent de GoFlow / de la base.
+    // séparation des tâches. La clé et la réquisition viennent de BpmnGo / de la base.
     const taskDefinitionKey = task.taskDefinitionKey || bodyTaskKey;
     const currentUser = await getCurrentUserContext(userId);
     // Groupe de la tâche SUR LE PROJET de la réquisition (profils BPMN liés au projet) ; tâche personnelle

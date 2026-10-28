@@ -839,7 +839,7 @@ class DashboardModel {
     }
   }
   /**
-   * Tâches GoFlow en attente (TASK_CREATED sans TASK_COMPLETED, processus non terminé, réquisition active), avec la
+   * Tâches BpmnGo en attente (TASK_CREATED sans TASK_COMPLETED, processus non terminé, réquisition active), avec la
    * dernière prise en charge (TASK_CLAIMED / TASK_UNCLAIMED). Cloisonné par entreprise (scopedDb).
    * Partagé par « Qui bloque ? » et le volet Opérations du tableau de bord (DashboardOverviewService).
    */
@@ -913,9 +913,9 @@ class DashboardModel {
   }
 
   /**
-   * Tâches GoFlow en cours, regroupées par profil (candidateGroup) — « qui bloque ? ».
+   * Tâches BpmnGo en cours, regroupées par profil (candidateGroup) — « qui bloque ? ».
    * Source : workflow_history (TASK_CREATED sans TASK_COMPLETED), toujours disponible même si
-   * GoFlow est injoignable. Exclut les réquisitions terminées/annulées/rejetées et les processus
+   * BpmnGo est injoignable. Exclut les réquisitions terminées/annulées/rejetées et les processus
    * arrivés à un événement de fin. Restreint à l'entreprise courante (scopedDb).
    */
   async getPendingTasksByProfile({ projectId, lang = i18n.DEFAULT_LANG } = {}) {

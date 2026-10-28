@@ -61,7 +61,7 @@ class GoodsReceiptController {
         receiptStatus: result.status
       };
 
-      // Étape GoFlow de CE bon de commande (réquisition répartie : une réception par part) ; le taskId du client
+      // Étape BpmnGo de CE bon de commande (réquisition répartie : une réception par part) ; le taskId du client
       // n'est retenu que s'il désigne cette étape
       try {
         const row = await db.one(

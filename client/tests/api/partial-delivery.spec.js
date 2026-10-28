@@ -8,7 +8,7 @@
  *   3. 10 commandés : SAN → GRN 6 → SAN en attente → « Solder le reliquat » (fiche du PO) → facture
  *   + contrôles : motif obligatoire, rien de reçu → solde refusé, étapes SAN / GRN refusées hors formulaire
  *
- * Requiert GoFlow (BPMN redéployé).
+ * Requiert BpmnGo (BPMN redéployé).
  */
 import { test, expect } from '@playwright/test';
 import { getToken, getApproverToken, auth, directPurchaseVariables } from './helpers.js';
@@ -92,7 +92,7 @@ const delivery = async (request, ctx) => (await (await request.get(`/api/purchas
 const keys = async (request, ctx) => (await openTasks(request, ctx.pid)).map(t => t.taskDefinitionKey);
 
 test.describe.serial('Livraisons partielles : SAN puis GRN à chaque livraison', () => {
-  // Chaque test refait le circuit GoFlow jusqu'au PO confirmé (achat direct avec pro-forma compris) puis les livraisons
+  // Chaque test refait le circuit BpmnGo jusqu'au PO confirmé (achat direct avec pro-forma compris) puis les livraisons
   test.setTimeout(180_000);
   test.beforeAll(async ({ request }) => {
     token = await getToken(request);

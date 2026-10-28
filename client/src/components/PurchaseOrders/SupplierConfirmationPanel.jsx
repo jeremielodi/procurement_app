@@ -1,5 +1,5 @@
 // src/components/PurchaseOrders/SupplierConfirmationPanel.jsx
-// Confirmation de la commande par le fournisseur (étape GoFlow Activity_SupplierConfirmation) :
+// Confirmation de la commande par le fournisseur (étape BpmnGo Activity_SupplierConfirmation) :
 // état (en attente / déclinée / confirmée), date de livraison promise, référence, source (portail ou achats),
 // et saisie par les achats d'une réponse reçue par téléphone / email (CREATE_PURCHASE_ORDERS).
 // autoOpen : arrivée depuis « Mes tâches » (?confirm=1) → la fenêtre de saisie s'ouvre directement.

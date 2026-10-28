@@ -8,7 +8,7 @@
 --      APPROVE_PAYMENTS          : approbation d'un paiement  — admin, finance, DG, management
 --      VERIFY_SUPPLIER_BANK      : vérifier un changement de coordonnées bancaires — admin, finance
 --      AUDIT_ACCESS              : consultation des modules réservés (budget) par l'auditeur
--- 2. Profil « Auditeur » (prof_auditor) : lecture seule, journal d'audit, aucune tâche GoFlow
+-- 2. Profil « Auditeur » (prof_auditor) : lecture seule, journal d'audit, aucune tâche BpmnGo
 -- 3. Coordonnées bancaires des fournisseurs : historique des changements (supplier_bank_changes) et vérification
 --    PAR ENTREPRISE (supplier_bank_reviews) — un paiement est bloqué tant que le dernier changement n'est pas vérifié
 -- 4. Factures : n° de facture du fournisseur distinct du n° interne INV-… ; doublon refusé (entreprise × fournisseur × n°)

@@ -11,7 +11,7 @@
  *   - une part rejetée s'arrête sans bloquer les autres ; les deux autres vont, en parallèle, jusqu'au paiement
  *   - réquisition terminée (COMPLETED) quand toutes les commandes actives sont payées
  *
- * Requiert GoFlow.
+ * Requiert BpmnGo.
  */
 import { test, expect } from '@playwright/test';
 import { getToken, getApproverToken, auth, PDF_BUFFER } from './helpers.js';
@@ -52,7 +52,7 @@ async function proforma(request) {
   return (await upload.json()).data.id;
 }
 
-test.describe.serial('Réquisition répartie entre plusieurs fournisseurs (GoFlow)', () => {
+test.describe.serial('Réquisition répartie entre plusieurs fournisseurs (BpmnGo)', () => {
   test('Réquisition de 5 articles approuvée → « Déterminer la méthode d\'achat »', async ({ request }) => {
     token = await getToken(request);
     approverToken = await getApproverToken(request);
@@ -79,7 +79,7 @@ test.describe.serial('Réquisition répartie entre plusieurs fournisseurs (GoFlo
       req = (await (await request.get(`/api/requisitions/${req.id}`, { headers: H })).json()).data;
       return req.process_instance_id || null;
     }, { timeout: 15_000 }).toBeTruthy();
-    test.skip(!req.process_instance_id, 'GoFlow indisponible');
+    test.skip(!req.process_instance_id, 'BpmnGo indisponible');
 
     const [n1] = await waitForTasks(request, 'Activity_ValidationN1_Manager');
     expect((await complete(request, n1, { approved: true, comment: 'OK' }, approverToken)).status()).toBe(200);

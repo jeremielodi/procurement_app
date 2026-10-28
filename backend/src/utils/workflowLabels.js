@@ -1,5 +1,5 @@
 // backend/src/utils/workflowLabels.js
-// Libellés du workflow GoFlow (tâches, groupes, méthodes, messages des workers), traduits via src/i18n/locales.
+// Libellés du workflow BpmnGo (tâches, groupes, méthodes, messages des workers), traduits via src/i18n/locales.
 // Mêmes libellés que client/src/locales (tasks.labels) pour les tâches.
 // Les constantes exportées (TASK_LABELS, TASK_GROUPS…) sont en français (langue par défaut : emails, journaux) ;
 // les fonctions acceptent une langue : taskLabel(key, 'en'), groupLabel(key, 'en')…

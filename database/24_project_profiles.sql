@@ -7,7 +7,7 @@
 -- (user_profiles.all_projects). Le profil global (user_profiles) reste le plafond : un profil attribué sur un
 -- projet sans le profil global ne donne rien. Les autres profils (admin, magasinier, auditeur…) restent globaux.
 --
--- Contrôles : tâches GoFlow (liste, prise en charge, complétion), formulaires qui les terminent (PO, GRN, SAN,
+-- Contrôles : tâches BpmnGo (liste, prise en charge, complétion), formulaires qui les terminent (PO, GRN, SAN,
 -- facture, paiement, AO, ajustement budgétaire), création de réquisition, destinataires des emails de tâche.
 -- Réquisition sans projet : profils globaux (pas de cloisonnement possible).
 -- ============================================================================

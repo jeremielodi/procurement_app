@@ -7,7 +7,7 @@
  * Prérequis :
  *   - Backend démarré  (http://localhost:5000)
  *   - PostgreSQL accessible
- *   - Camunda/GoFlow en cours (pour les étapes 4-6) — sinon, ces steps sont skipped
+ *   - Camunda/BpmnGo en cours (pour les étapes 4-6) — sinon, ces steps sont skipped
  *   - Au moins un département et un fournisseur dans la DB
  *
  * Lancer avec :
@@ -248,7 +248,7 @@ test.describe.serial('🔄 BPMN Procurement Flow — end to end', () => {
         currency:        'USD',
         orderDate:       '2026-06-23',
         deliveryDate:    '2026-08-01',
-        shippingAddress: 'WWF HQ — Test',
+        shippingAddress: 'Siège — Test',
         items: [
           {
             description: 'Article test Playwright',

@@ -647,7 +647,7 @@ class RequisitionExportService {
    * Personnes ayant approuvé la réquisition (étapes N1 / N2 / N3), de la première à la dernière — seule la dernière
    * soumission compte (une version renvoyée pour correction est ré-approuvée).
    * Source : ligne APPROVED écrite par TaskController (auteur toujours connu) ; à défaut (données antérieures) la ligne
-   * TASK_COMPLETED de GoFlow avec approved = true, dont l'auteur n'est connu que si la tâche avait été prise en charge.
+   * TASK_COMPLETED de BpmnGo avec approved = true, dont l'auteur n'est connu que si la tâche avait été prise en charge.
    */
   async requisitionApprovers(requisitionId) {
     const rows = await db.select(
@@ -661,7 +661,7 @@ class RequisitionExportService {
        ORDER BY h.performed_at`,
       [requisitionId, APPROVAL_TASKS]
     );
-    let approvals = new Map(); // tâche GoFlow → approbation (une seule par étape)
+    let approvals = new Map(); // tâche BpmnGo → approbation (une seule par étape)
     for (const row of rows) {
       if (row.action === 'RESUBMITTED') { approvals = new Map(); continue; }
       if (!row.performed_by) continue;

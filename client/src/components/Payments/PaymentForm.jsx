@@ -90,7 +90,7 @@ export default function PaymentForm() {
   }
 
   // Document rattaché obligatoirement : création uniquement depuis la tâche « Traiter le paiement » de la réquisition
-  // (facture ET tâche GoFlow dans l'URL)
+  // (facture ET tâche BpmnGo dans l'URL)
   if (!invoiceId || !taskId) return <WorkflowOnlyPage title={t('payment.newTitle')} icon={CreditCard} doc="payment" />;
 
   return (

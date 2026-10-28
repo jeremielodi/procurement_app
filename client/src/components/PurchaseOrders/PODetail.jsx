@@ -487,7 +487,7 @@ export default function PODetail() {
                 </h2>
               </div>
               <div className="p-4 space-y-3">
-                {/* Note GoFlow */}
+                {/* Note BpmnGo */}
                 <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg p-2.5">
                   <Info size={13} className="text-blue-500 mt-0.5 shrink-0" />
                   <p className="text-xs text-blue-700">

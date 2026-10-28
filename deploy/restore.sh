@@ -24,8 +24,8 @@ done
 [ -n "$SRC" ] && [ -d "$SRC" ] || { echo "Usage : $0 <dossier de sauvegarde> [--db-only|--files-only] [--yes]"; exit 2; }
 
 COMPOSE_DIR="${COMPOSE_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-PG_CONTAINER="${PG_CONTAINER:-wwf_postgres}"
-MINIO_VOLUME="${MINIO_VOLUME:-wwf_minio_data}"
+PG_CONTAINER="${PG_CONTAINER:-procureapp_postgres}"
+MINIO_VOLUME="${MINIO_VOLUME:-procureapp_minio_data}"
 HELPER_IMAGE="${HELPER_IMAGE:-alpine:3}"
 log() { echo "[$(date '+%F %T')] $*"; }
 compose() { (cd "$COMPOSE_DIR" && docker compose "$@"); }

@@ -1,5 +1,5 @@
 /**
- * Libellés traduits des tâches GoFlow (Camunda) — locales : tasks.labels.<taskDefinitionKey>
+ * Libellés traduits des tâches BpmnGo (Camunda) — locales : tasks.labels.<taskDefinitionKey>
  * Clé : taskDefinitionKey (Activity ID dans le BPMN)
  */
 import { t, labelMap } from '../i18n';

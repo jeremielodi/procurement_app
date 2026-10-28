@@ -91,7 +91,7 @@ class PurchaseOrderController {
         createdBy: req.user.id // jamais une valeur du client (séparation des tâches)
       });
 
-      // Étape GoFlow « Créer le bon de commande » de CETTE réquisition et de CETTE part (le taskId du client n'est
+      // Étape BpmnGo « Créer le bon de commande » de CETTE réquisition et de CETTE part (le taskId du client n'est
       // retenu que s'il correspond : une autre tâche ne doit jamais être terminée par la création d'une commande)
       try {
         const camundaTaskId = requisition.process_instance_id
@@ -173,7 +173,7 @@ class PurchaseOrderController {
 
   /**
    * POST /purchase-orders/:id/close-delivery { reason } — solde le reliquat (le fournisseur ne livrera pas le reste)
-   * sans nouvelle réception. L'étape GoFlow en attente pour cette livraison (SAN ou GRN) est terminée avec
+   * sans nouvelle réception. L'étape BpmnGo en attente pour cette livraison (SAN ou GRN) est terminée avec
    * deliveryComplete = true : le workflow passe à la facture.
    */
   async closeDelivery(req, res) {
@@ -206,7 +206,7 @@ class PurchaseOrderController {
              JSON.stringify({ poId: result.poId, poNumber: result.poNumber, comment: reason }), req.user.id]
           );
         } catch (e) {
-          console.error('[PO] Solde du reliquat — étape GoFlow (non bloquant) :', e.message);
+          console.error('[PO] Solde du reliquat — étape BpmnGo (non bloquant) :', e.message);
         }
       }
       res.json({ success: true, data: { ...result, camundaTaskCompleted }, message: 'Reliquat soldé' });

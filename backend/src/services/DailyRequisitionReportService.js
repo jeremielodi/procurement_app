@@ -4,7 +4,7 @@
 //  - Chaque nuit à minuit (fuseau APP_TIMEZONE) : un email à chaque administrateur (prof_admin) et manager (prof_manager, niveaux 2 et 3 compris)
 //    actif de l'entreprise, dans SA langue (users.language) ; administrateur = tous les projets, manager = les projets
 //    dont il est membre ou responsable
-//  - Projet par projet : synthèse + les 20 dernières réquisitions (statut, avancement, étape GoFlow en cours et
+//  - Projet par projet : synthèse + les 20 dernières réquisitions (statut, avancement, étape BpmnGo en cours et
 //    ancienneté — « bloqué » à partir de 7 jours)
 //  - Un seul envoi par entreprise et par jour (daily_report_runs) ; nuit manquée (serveur arrêté) rattrapée avant 6 h
 //  - sendTest : exemple immédiat pour l'administrateur qui le demande (hors daily_report_runs)
@@ -81,7 +81,7 @@ class DailyRequisitionReportService {
     );
   }
 
-  /** 20 dernières réquisitions d'un projet, avec l'étape GoFlow en cours (tâche créée non terminée) */
+  /** 20 dernières réquisitions d'un projet, avec l'étape BpmnGo en cours (tâche créée non terminée) */
   async latestRequisitions(projectId) {
     return db.select(
       `WITH latest AS (

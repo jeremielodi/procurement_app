@@ -81,7 +81,7 @@ class InvoiceController {
         matchStatus: result.match_status
       };
 
-      // Étape GoFlow de CE bon de commande (réquisition répartie : une facture par part) ; le taskId du client
+      // Étape BpmnGo de CE bon de commande (réquisition répartie : une facture par part) ; le taskId du client
       // n'est retenu que s'il désigne cette étape
       if (processInstanceId) {
         try {

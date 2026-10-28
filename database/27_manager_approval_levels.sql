@@ -2,7 +2,7 @@
 -- 27_manager_approval_levels.sql — Approbation des réquisitions par trois niveaux de Manager (idempotente)
 -- ----------------------------------------------------------------------------
 -- Une seule approbation, au niveau donné par le montant (seuils du projet, sinon de l'entreprise, sinon par défaut) :
---   N1 → « Manager niveau 1 » (prof_manager, groupe GoFlow manager)
+--   N1 → « Manager niveau 1 » (prof_manager, groupe BpmnGo manager)
 --   N2 → « Manager niveau 2 » (prof_manager_n2, groupe manager_n2)     — avant : Finance
 --   N3 → « Manager niveau 3 » (prof_manager_n3, groupe manager_n3)     — avant : DG
 -- Finance garde ses autres rôles (factures, paiements, budget) ; le profil DG n'approuve plus les réquisitions.

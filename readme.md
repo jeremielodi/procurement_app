@@ -1,6 +1,6 @@
 # procureApp
 
-Plateforme multi-entreprise de gestion des achats (e-procurement) : réquisition → approbation → bon de commande → réception (GRN / SAN) → facture → paiement, avec portail fournisseur et appels d'offres. Le circuit d'approbation est piloté par un moteur de workflow **GoFlow** (Camunda).
+Plateforme multi-entreprise de gestion des achats (e-procurement) : réquisition → approbation → bon de commande → réception (GRN / SAN) → facture → paiement, avec portail fournisseur et appels d'offres. Le circuit d'approbation est piloté par un moteur de workflow **BpmnGo** (Camunda).
 
 - [Installation avec Docker](#installation-avec-docker)
 - [Variables d'environnement](#variables-denvironnement-backendenv)
@@ -17,15 +17,17 @@ Plateforme multi-entreprise de gestion des achats (e-procurement) : réquisition
 
 ### Ce que contient le déploiement
 
-`docker compose` démarre trois conteneurs sur le réseau `wwf_network` :
+`docker compose` démarre trois conteneurs sur le réseau `procureapp_network` :
 
 | Conteneur | Image | Rôle | Port exposé | Volume (données persistantes) |
 |---|---|---|---|---|
-| `wwf_app` | construite depuis `dockerfile` | API Node.js + interface React (servie par le même serveur) | `5000` | `wwf_uploads_data`, `wwf_logs_data` |
-| `wwf_postgres` | `postgres:16` | Base de données | `5435` → 5432 | `wwf_postgres_data` |
-| `wwf_minio` | `cgr.dev/chainguard/minio` | Stockage des fichiers (pièces jointes, logos), bucket privé et versionné | `127.0.0.1:9000` (API), `127.0.0.1:9001` (console) | `wwf_minio_data` |
+| `procureapp_app` | construite depuis `dockerfile` | API Node.js + interface React (servie par le même serveur) | `5000` | `procureapp_uploads_data`, `procureapp_logs_data` |
+| `procureapp_postgres` | `postgres:16` | Base de données | `5435` → 5432 | `procureapp_postgres_data` |
+| `procureapp_minio` | `cgr.dev/chainguard/minio` | Stockage des fichiers (pièces jointes, logos), bucket privé et versionné | `127.0.0.1:9000` (API), `127.0.0.1:9001` (console) | `procureapp_minio_data` |
 
-Le moteur de workflow **GoFlow n'est pas inclus** : l'application se connecte à une instance GoFlow existante (variables `CAMUNDA_*`).
+> **Serveur installé avant le renommage** (conteneurs et volumes `wwf_*`) : lancer une fois `deploy/migrate-docker-names.sh` **avant** `docker compose up -d`. Il supprime les anciens conteneurs, copie chaque volume `wwf_*` vers `procureapp_*` (les anciens sont conservés, à supprimer après vérification) et retire l'ancien réseau. Sans cette étape, Docker créerait des volumes vides (base et fichiers absents). Garder `DB_NAME` / `POSTGRES_DB` de `backend/.env` inchangés.
+
+Le moteur de workflow **BpmnGo n'est pas inclus** : l'application se connecte à une instance BpmnGo existante (variables `CAMUNDA_*`).
 
 Toute la configuration est dans **un seul fichier : `backend/.env`**. Il est lu par les trois conteneurs (`env_file`), n'est jamais copié dans l'image et n'est pas versionné dans git.
 
@@ -33,7 +35,7 @@ Toute la configuration est dans **un seul fichier : `backend/.env`**. Il est lu 
 
 - Docker Engine 24+ avec le plugin **Docker Compose v2** (`docker compose version`)
 - 2 Go de RAM minimum (Chromium génère les PDF), 10 Go de disque
-- Une instance **GoFlow** accessible depuis le serveur, avec le processus `backend/src/bpmn/procurement-workflow.bpmn` déployé (clé `ProcurementProcess`)
+- Une instance **BpmnGo** accessible depuis le serveur, avec le processus `backend/src/bpmn/procurement-workflow.bpmn` déployé (clé `ProcurementProcess`)
 - Un compte **SMTP** pour l'envoi des emails (Gmail avec mot de passe d'application, ou serveur SMTP de l'entreprise)
 - En production : un nom de domaine pointant vers le serveur (pour le HTTPS)
 
@@ -50,7 +52,7 @@ cd procureapp
 cp backend/.env_sample backend/.env
 ```
 
-Puis modifier `backend/.env` : au minimum les variables marquées **À changer** dans les tableaux ci-dessous (mots de passe, `JWT_SECRET`, `APP_URL`, SMTP, GoFlow).
+Puis modifier `backend/.env` : au minimum les variables marquées **À changer** dans les tableaux ci-dessous (mots de passe, `JWT_SECRET`, `APP_URL`, SMTP, BpmnGo).
 
 Pour générer des secrets aléatoires :
 
@@ -77,7 +79,7 @@ Le premier démarrage prend quelques minutes (construction du client React, inst
 ### 4. Vérifier
 
 ```bash
-docker compose ps                      # les 3 conteneurs « Up », wwf_app « healthy » après ~40 s
+docker compose ps                      # les 3 conteneurs « Up », procureapp_app « healthy » après ~40 s
 curl http://localhost:5000/health      # {"status":"OK",...}
 docker compose logs -f app             # suivre le démarrage
 ```
@@ -107,15 +109,15 @@ Légende : **À changer** = valeur à personnaliser avant toute mise en producti
 
 | Variable | Statut | Exemple / défaut | Description |
 |---|---|---|---|
-| `POSTGRES_DB` | Optionnel | `wwf_procurement` | Nom de la base créée par le conteneur PostgreSQL au premier démarrage. |
+| `POSTGRES_DB` | Optionnel | `procureapp` | Nom de la base créée par le conteneur PostgreSQL au premier démarrage. |
 | `POSTGRES_USER` | Optionnel | `camunda` | Utilisateur PostgreSQL créé au premier démarrage. |
 | `POSTGRES_PASSWORD` | **À changer** | `camunda` | Mot de passe de cet utilisateur. |
-| `DB_NAME` | Optionnel | `wwf_procurement` | Base utilisée par l'application. **Doit être égal à `POSTGRES_DB`.** |
+| `DB_NAME` | Optionnel | `procureapp` | Base utilisée par l'application. **Doit être égal à `POSTGRES_DB`.** |
 | `DB_USER` | Optionnel | `camunda` | **Doit être égal à `POSTGRES_USER`.** |
 | `DB_PASSWORD` | **À changer** | — | **Doit être égal à `POSTGRES_PASSWORD`.** |
 | `DB_HOST`, `DB_PORT` | Ignorées sous Docker | `localhost`, `5432` | Forcées à `postgres` / `5432` par `docker-compose.yml`. Servent seulement à lancer le backend hors Docker. |
 
-> ⚠️ Les variables `POSTGRES_*` ne sont prises en compte **qu'à la création du volume**. Pour changer le mot de passe d'une base existante : `docker exec -it wwf_postgres psql -U <user> -d <base> -c "ALTER USER <user> PASSWORD '<nouveau>';"`, puis mettre à jour `POSTGRES_PASSWORD` **et** `DB_PASSWORD`, et `docker compose up -d`.
+> ⚠️ Les variables `POSTGRES_*` ne sont prises en compte **qu'à la création du volume**. Pour changer le mot de passe d'une base existante : `docker exec -it procureapp_postgres psql -U <user> -d <base> -c "ALTER USER <user> PASSWORD '<nouveau>';"`, puis mettre à jour `POSTGRES_PASSWORD` **et** `DB_PASSWORD`, et `docker compose up -d`.
 
 ### Serveur et sécurité
 
@@ -169,25 +171,25 @@ Seules les tentatives **échouées** comptent ; une connexion réussie remet le 
 
 > Derrière un reverse proxy, celui-ci doit transmettre l'en-tête `X-Forwarded-For`, sinon tous les utilisateurs apparaissent avec l'IP du proxy (et partagent le même compteur par IP). Caddy le fait par défaut ; avec Nginx, ajouter `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`. L'en-tête n'est pris en compte que si la connexion vient d'une adresse locale ou privée (le proxy), jamais directement d'Internet.
 
-### Workflow GoFlow (Camunda)
+### Workflow BpmnGo (Camunda)
 
 | Variable | Statut | Exemple / défaut | Description |
 |---|---|---|---|
-| `CAMUNDA_URL` | **À changer** | `http://goflow.mondomaine.com:8081` | Adresse de base de GoFlow (flux d'événements des tâches, santé). |
-| `CAMUNDA_REST_URL` | **À changer** | `http://goflow.mondomaine.com:8081/engine-rest` | API REST du moteur (démarrage des processus, tâches, workers). En général `CAMUNDA_URL` + `/engine-rest`. |
-| `CAMUNDA_USERNAME` | **À changer** | `admin@goflow.com` | Compte GoFlow utilisé par l'application. |
+| `CAMUNDA_URL` | **À changer** | `http://bpmngo.mondomaine.com:8081` | Adresse de base de BpmnGo (flux d'événements des tâches, santé). |
+| `CAMUNDA_REST_URL` | **À changer** | `http://bpmngo.mondomaine.com:8081/engine-rest` | API REST du moteur (démarrage des processus, tâches, workers). En général `CAMUNDA_URL` + `/engine-rest`. |
+| `CAMUNDA_USERNAME` | **À changer** | `admin@bpmngo.com` | Compte BpmnGo utilisé par l'application. |
 | `CAMUNDA_PASSWORD` | **À changer** | — | Mot de passe de ce compte. |
-| `CAMUNDA_BEARER_TOKEN` | *Optionnel* | — | Jeton d'accès, si GoFlow est configuré pour l'authentification par jeton plutôt que par identifiant / mot de passe. |
-| `PROCUREMENT_BPMN_PROCESS` | Optionnel | `ProcurementProcess` | Clé du processus BPMN déployé dans GoFlow. |
+| `CAMUNDA_BEARER_TOKEN` | *Optionnel* | — | Jeton d'accès, si BpmnGo est configuré pour l'authentification par jeton plutôt que par identifiant / mot de passe. |
+| `PROCUREMENT_BPMN_PROCESS` | Optionnel | `ProcurementProcess` | Clé du processus BPMN déployé dans BpmnGo. |
 
-> Depuis un conteneur, `localhost` désigne le conteneur lui-même : si GoFlow tourne sur le même serveur, utiliser l'IP du serveur, ou `http://host.docker.internal:8081` (Docker Desktop).
+> Depuis un conteneur, `localhost` désigne le conteneur lui-même : si BpmnGo tourne sur le même serveur, utiliser l'IP du serveur, ou `http://host.docker.internal:8081` (Docker Desktop).
 
 ### Stockage des fichiers (MinIO)
 
 | Variable | Statut | Exemple / défaut | Description |
 |---|---|---|---|
 | `MINIO_ROOT_USER` | Optionnel | `procureapp` | Identifiant administrateur de MinIO, utilisé aussi par l'application. |
-| `MINIO_ROOT_PASSWORD` | **À changer** | 32 caractères aléatoires | Mot de passe MinIO (8 caractères minimum). Comme pour PostgreSQL, il est fixé à la **première** initialisation du volume `wwf_minio_data`. |
+| `MINIO_ROOT_PASSWORD` | **À changer** | 32 caractères aléatoires | Mot de passe MinIO (8 caractères minimum). Comme pour PostgreSQL, il est fixé à la **première** initialisation du volume `procureapp_minio_data`. |
 | `MINIO_BUCKET` | Optionnel | `procureapp` | Bucket créé au démarrage (privé, versionné). |
 | `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` | *Optionnel* | — | Identifiants dédiés à l'application, si vous ne voulez pas qu'elle utilise le compte root. |
 | `STORAGE_DRIVER`, `MINIO_ENDPOINT`, `MINIO_PORT`, `MINIO_USE_SSL` | Ignorées sous Docker | `local`, `localhost`, `9000`, `false` | Forcées à `minio` / `minio` / `9000` / `false` par `docker-compose.yml`. Servent hors Docker (`local` = disque, dossier `UPLOAD_DIR`). |
@@ -242,7 +244,7 @@ Les scripts SQL de `database/` ne sont exécutés automatiquement **qu'à la cr�
 
 ```bash
 for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations 12_audit_logs 13_stock_management 14_stock_issues 15_stock_equipment 16_stock_issue_destinations 17_supplier_order_confirmation 18_stock_counts 19_stock_transfers_in_transit 20_audit_log_access 21_internal_control 22_daily_requisition_report 23_po_delivery_closure 24_project_profiles 25_requisition_revisions 26_approval_policies 27_manager_approval_levels 28_stock_funding_project 29_stock_balances_by_project 30_requisition_visibility 31_user_avatars 32_activate_orphan_project_profiles 33_direct_purchase_selection 34_receipt_permissions 35_asset_tag_auto 36_stock_movement_groups 37_finance_permissions 38_supplier_split 39_tender_per_item_award 40_budget_activity_code 41_user_signatures 42_budget_duplicate_codes 43_budget_utilization 44_document_templates 45_document_positions 46_units; do
-  docker exec -i wwf_postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < database/$f.sql
+  docker exec -i procureapp_postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < database/$f.sql
 done
 ```
 
@@ -259,15 +261,15 @@ done
 >
 > `21_internal_control.sql` (contrôle interne) peut signaler des **factures déjà en double** : l'index d'unicité n'est alors pas créé (le contrôle applicatif reste actif). Les lister : `SELECT enterprise_id, supplier_id, LOWER(TRIM(supplier_invoice_number)), COUNT(*) FROM invoices WHERE supplier_invoice_number IS NOT NULL AND status NOT IN ('REJECTED','CANCELLED') GROUP BY 1,2,3 HAVING COUNT(*) > 1;`, rejeter les doublons, puis rejouer la migration. Après la mise à jour, **attribuer les profils** : au moins deux approbateurs par niveau (séparation des tâches), et le profil « Auditeur » aux auditeurs.
 >
-> `27_manager_approval_levels.sql` : les réquisitions sont approuvées par **Manager niveau 1 / 2 / 3** (N1 / N2 / N3, une seule approbation selon le montant) au lieu de Manager / Finance / DG. **Redéployer `procurement-workflow.bpmn` dans GoFlow**, puis attribuer les profils « Manager niveau 2 » et « Manager niveau 3 » aux approbateurs concernés, sur leurs projets. Les réquisitions déjà en attente d'approbation N2 / N3 restent dans les groupes Finance / DG.
+> `27_manager_approval_levels.sql` : les réquisitions sont approuvées par **Manager niveau 1 / 2 / 3** (N1 / N2 / N3, une seule approbation selon le montant) au lieu de Manager / Finance / DG. **Redéployer `procurement-workflow.bpmn` dans BpmnGo**, puis attribuer les profils « Manager niveau 2 » et « Manager niveau 3 » aux approbateurs concernés, sur leurs projets. Les réquisitions déjà en attente d'approbation N2 / N3 restent dans les groupes Finance / DG.
 >
-> `26_approval_policies.sql` (seuils d'approbation par projet) : **redéployer `backend/src/bpmn/procurement-workflow.bpmn` dans GoFlow** — le niveau N1 / N2 / N3 est désormais calculé par le serveur (variable `approvalLevel`) ; sans redéploiement, les nouveaux processus resteraient sur les seuils fixes 25 000 / 100 000. Par défaut (aucune politique saisie), rien ne change.
+> `26_approval_policies.sql` (seuils d'approbation par projet) : **redéployer `backend/src/bpmn/procurement-workflow.bpmn` dans BpmnGo** — le niveau N1 / N2 / N3 est désormais calculé par le serveur (variable `approvalLevel`) ; sans redéploiement, les nouveaux processus resteraient sur les seuils fixes 25 000 / 100 000. Par défaut (aucune politique saisie), rien ne change.
 >
-> `25_requisition_revisions.sql` (renvoi pour correction, retrait et versions des réquisitions) : **redéployer aussi `backend/src/bpmn/procurement-workflow.bpmn` dans GoFlow** (nouvelle étape « Corriger la réquisition »). Les processus déjà démarrés restent sur l'ancienne définition : leurs approbations n'ont pas la décision « Renvoyer pour correction » côté GoFlow.
+> `25_requisition_revisions.sql` (renvoi pour correction, retrait et versions des réquisitions) : **redéployer aussi `backend/src/bpmn/procurement-workflow.bpmn` dans BpmnGo** (nouvelle étape « Corriger la réquisition »). Les processus déjà démarrés restent sur l'ancienne définition : leurs approbations n'ont pas la décision « Renvoyer pour correction » côté BpmnGo.
 >
 > `24_project_profiles.sql` (profils BPMN liés au projet) : les profils de workflow s'exercent désormais projet par projet. La migration reprend les membres actuels de chaque projet avec leurs profils, et coche « Tous les projets » pour finance, DG, management, achats et logistique (et pour les managers / demandeurs membres d'aucun projet) : aucun circuit en cours ne reste sans approbateur. Vérifier ensuite les projets sans manager : `SELECT p.code FROM projects p WHERE p.is_active AND NOT EXISTS (SELECT 1 FROM users u WHERE u.is_active AND u.enterprise_id = p.enterprise_id AND user_has_project_profile(u.id, 'prof_manager', p.id));`
 >
-> **Workflow GoFlow** : quand `backend/src/bpmn/procurement-workflow.bpmn` change (ex. boucle « ajustement du budget → nouvelle vérification »), le redéployer dans GoFlow (`POST /engine-rest/deployment/create`, champ `file`) : les nouvelles réquisitions utilisent la nouvelle version, les processus en cours gardent la leur.
+> **Workflow BpmnGo** : quand `backend/src/bpmn/procurement-workflow.bpmn` change (ex. boucle « ajustement du budget → nouvelle vérification »), le redéployer dans BpmnGo (`POST /engine-rest/deployment/create`, champ `file`) : les nouvelles réquisitions utilisent la nouvelle version, les processus en cours gardent la leur.
 
 ---
 
@@ -275,7 +277,7 @@ done
 
 ### Sauvegarde automatique (recommandé)
 
-`deploy/backup.sh` sauvegarde la base (`pg_dump`, vérifié par `pg_restore --list`), les fichiers MinIO (volume `wwf_minio_data` : toutes les versions des fichiers) et l'ancien dossier d'uploads, écrit les empreintes `SHA256SUMS`, supprime les sauvegardes de plus de `BACKUP_RETENTION_DAYS` jours (14 par défaut) et peut copier le résultat hors du serveur. Il ne lit aucun mot de passe.
+`deploy/backup.sh` sauvegarde la base (`pg_dump`, vérifié par `pg_restore --list`), les fichiers MinIO (volume `procureapp_minio_data` : toutes les versions des fichiers) et l'ancien dossier d'uploads, écrit les empreintes `SHA256SUMS`, supprime les sauvegardes de plus de `BACKUP_RETENTION_DAYS` jours (14 par défaut) et peut copier le résultat hors du serveur. Il ne lit aucun mot de passe.
 
 ```bash
 cp deploy/backup.env.example deploy/backup.env      # dossier, rétention, copie distante (facultatif)
@@ -300,15 +302,15 @@ bash deploy/restore.sh /var/backups/procureapp/2026-10-09_020000 --db-only    # 
 
 ```bash
 # Sauvegarde
-docker exec wwf_postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > procureapp_$(date +%F).dump
+docker exec procureapp_postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > procureapp_$(date +%F).dump
 # Restauration (base existante écrasée)
-docker exec -i wwf_postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists' < procureapp_2026-10-05.dump
+docker exec -i procureapp_postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists' < procureapp_2026-10-05.dump
 ```
 
-**Fichiers (MinIO)** : sauvegarder le volume `wwf_minio_data` :
+**Fichiers (MinIO)** : sauvegarder le volume `procureapp_minio_data` :
 
 ```bash
-docker run --rm -v wwf_minio_data:/data -v "$PWD":/backup alpine tar czf /backup/minio_$(date +%F).tar.gz -C /data .
+docker run --rm -v procureapp_minio_data:/data -v "$PWD":/backup alpine tar czf /backup/minio_$(date +%F).tar.gz -C /data .
 ```
 
 Conserver aussi une copie de `backend/.env` en lieu sûr (il contient les secrets).
@@ -324,8 +326,8 @@ docker compose ps                         # état des conteneurs
 docker compose logs -f app                # logs de l'application
 docker compose restart app                # redémarrer l'application (sans relire .env)
 docker compose up -d                      # appliquer une modification de backend/.env
-docker exec -it wwf_postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'   # console SQL
-docker exec wwf_app node scripts/migrate-uploads-to-minio.js --dry-run              # migration disque → MinIO
+docker exec -it procureapp_postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'   # console SQL
+docker exec procureapp_app node scripts/migrate-uploads-to-minio.js --dry-run              # migration disque → MinIO
 ```
 
 Console MinIO : `http://127.0.0.1:9001` depuis le serveur (ou tunnel SSH : `ssh -L 9001:127.0.0.1:9001 user@serveur`), identifiants `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`.
@@ -338,10 +340,10 @@ Console MinIO : `http://127.0.0.1:9001` depuis le serveur (ou tunnel SSH : `ssh 
 |---|---|---|
 | Page blanche, `ERR_SSL_PROTOCOL_ERROR` dans la console du navigateur | `APP_URL` commence par `https://` alors que le site est servi en `http://` | Mettre l'adresse réelle dans `APP_URL` (ou installer le reverse proxy HTTPS), puis `docker compose up -d`. |
 | Les liens des emails pointent vers `localhost` | `APP_URL` absent ou non relu | Définir `APP_URL`, puis `docker compose up -d` (pas `restart`). Un avertissement apparaît au démarrage dans `docker compose logs app`. |
-| `wwf_app` redémarre en boucle, `password authentication failed` | `DB_PASSWORD` ≠ mot de passe réel de la base | Aligner `DB_*` sur `POSTGRES_*` ; si le volume existait déjà avec un autre mot de passe, voir la note de la section *Base de données*. |
+| `procureapp_app` redémarre en boucle, `password authentication failed` | `DB_PASSWORD` ≠ mot de passe réel de la base | Aligner `DB_*` sur `POSTGRES_*` ; si le volume existait déjà avec un autre mot de passe, voir la note de la section *Base de données*. |
 | Aucun email envoyé (`EmailNotification : Error occurred` dans les logs) | Identifiants SMTP refusés | Pour Gmail : mot de passe d'application (pas le mot de passe du compte), `SMTP_FROM` = adresse du compte. |
 | « Compte non rattaché à une entreprise » à la connexion | Utilisateur sans entreprise | Le recréer depuis un administrateur d'entreprise, ou relancer `07_multi_enterprise.sql` (rattache les comptes orphelins à la première entreprise). |
-| Les tâches n'apparaissent pas / réquisition bloquée après soumission | GoFlow injoignable ou processus non déployé | Vérifier `CAMUNDA_*` (`curl $CAMUNDA_URL/health` depuis le serveur), et que `ProcurementProcess` est déployé dans GoFlow. |
+| Les tâches n'apparaissent pas / réquisition bloquée après soumission | BpmnGo injoignable ou processus non déployé | Vérifier `CAMUNDA_*` (`curl $CAMUNDA_URL/health` depuis le serveur), et que `ProcurementProcess` est déployé dans BpmnGo. |
 | Erreur sur les pièces jointes au démarrage (`MinIO`) | MinIO pas encore prêt ou mot de passe différent de celui du volume | L'application réessaie plusieurs fois ; sinon vérifier `docker compose logs minio` et `MINIO_ROOT_*`. |
 | PDF non générés | Chromium manquant / mémoire insuffisante | Image construite avec le `dockerfile` fourni ; prévoir 2 Go de RAM. |
 

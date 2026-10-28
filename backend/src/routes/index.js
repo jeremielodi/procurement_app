@@ -202,7 +202,7 @@ router.post('/requisitions/import-items',
   requisitionImport.importItems
 );
 
-// Ajustement budgétaire (étape GoFlow Activity_BudgetAdjustment) : synthèse par ligne, changement de lignes,
+// Ajustement budgétaire (étape BpmnGo Activity_BudgetAdjustment) : synthèse par ligne, changement de lignes,
 // décision (RETRY : nouvelle vérification du budget sur la même réquisition ; ABANDON : réquisition annulée)
 const budgetAdjustmentService = require('../services/BudgetAdjustmentService');
 const budgetAdjustmentError = (res, error) => (error.status
@@ -555,7 +555,7 @@ router.get('/dashboard/kpis', dashboardController.getKPIs);
 // Tableau de bord de pilotage : volets selon le profil (opérations / pilotage / finance / contrôle)
 router.get('/dashboard/overview', hasPermission('VIEW_DASHBOARD'), dashboardController.getOverview.bind(dashboardController));
 
-// Tâches GoFlow en cours par profil (goulots d'étranglement)
+// Tâches BpmnGo en cours par profil (goulots d'étranglement)
 router.get('/dashboard/pending-tasks', hasPermission('VIEW_DASHBOARD'), dashboardController.getPendingTasksByProfile.bind(dashboardController));
 
 // Alertes

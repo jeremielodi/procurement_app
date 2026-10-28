@@ -1,5 +1,5 @@
 // src/services/OrderTaskService.js
-// Tâches GoFlow du cycle de commande (bon de commande → paiement). Elles vivent dans le sous-processus
+// Tâches BpmnGo du cycle de commande (bon de commande → paiement). Elles vivent dans le sous-processus
 // SubProcess_SupplierOrder du BPMN, répété une fois par part (migration 38_supplier_split.sql) : une réquisition
 // répartie entre plusieurs fournisseurs a donc plusieurs tâches de même clé ouvertes en même temps (ex. deux
 // réceptions). Chaque tâche voit les variables locales de sa part : supplierLotId (id de la part, 'MAIN' sans
@@ -14,7 +14,7 @@ const ORDER_TASKS = ['Activity_CreatePO', 'Activity_POApproval', 'Activity_Suppl
   'Activity_GoodsReceipt', 'Activity_EnterInvoice', 'Activity_ProcessPayment'];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// GoFlow initialise les variables locales à 0 (source « =null ») : 0 / vide = pas encore de bon de commande
+// BpmnGo initialise les variables locales à 0 (source « =null ») : 0 / vide = pas encore de bon de commande
 const idOf = (v) => (Number(v) > 0 ? Number(v) : null);
 const lotIdOf = (v) => (typeof v === 'string' && UUID_RE.test(v) ? v : null);
 
@@ -22,7 +22,7 @@ class OrderTaskService {
   get MAIN_LOT() { return MAIN_LOT; }
   get ORDER_TASKS() { return ORDER_TASKS; }
 
-  /** { lotId (UUID d'une part, sinon null), poId } d'une tâche — variables lues dans GoFlow */
+  /** { lotId (UUID d'une part, sinon null), poId } d'une tâche — variables lues dans BpmnGo */
   async varsOf(taskId) {
     try {
       const vars = await camundaService.getTaskVariables(taskId, ['supplierLotId', 'poId']);
@@ -48,7 +48,7 @@ class OrderTaskService {
     if (!tasks.length) return null;
     const po = await db.one('SELECT id, supplier_lot_id FROM purchase_orders WHERE id = $1', [poId]);
     if (!po) return null;
-    // Sans répartition et une seule tâche : pas besoin d'interroger GoFlow (processus d'avant le sous-processus)
+    // Sans répartition et une seule tâche : pas besoin d'interroger BpmnGo (processus d'avant le sous-processus)
     if (!po.supplier_lot_id && tasks.length === 1) return tasks[0];
     const matches = [];
     for (const t of tasks) {

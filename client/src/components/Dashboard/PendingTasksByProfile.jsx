@@ -1,5 +1,5 @@
 // src/components/Dashboard/PendingTasksByProfile.jsx
-// « Qui bloque ? » : tâches GoFlow en attente, regroupées par profil (rôle).
+// « Qui bloque ? » : tâches BpmnGo en attente, regroupées par profil (rôle).
 // Barres horizontales (une seule série → une couleur, pas de légende), valeur au bout de la barre.
 // L'ancienneté est affichée en texte + statut (icône + libellé), jamais par la couleur seule.
 // Chaque ligne se déplie en tableau des tâches (vue tabulaire accessible).

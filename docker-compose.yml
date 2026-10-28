@@ -4,7 +4,7 @@ services:
   # Service PostgreSQL
   postgres:
     image: postgres:16
-    container_name: wwf_postgres
+    container_name: procureapp_postgres
     restart: unless-stopped
     # POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD : lus depuis backend/.env (identiques à DB_NAME / DB_USER / DB_PASSWORD)
     env_file: ./backend/.env
@@ -16,7 +16,7 @@ services:
     ports:
       - "5435:5432"
     networks:
-      - wwf_network
+      - procureapp_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -30,7 +30,7 @@ services:
   # depuis les sources officielles et la maintient à jour (image minimale, utilisateur non-root 65532).
   minio:
     image: cgr.dev/chainguard/minio:latest
-    container_name: wwf_minio
+    container_name: procureapp_minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     env_file: ./backend/.env
@@ -40,14 +40,14 @@ services:
       - "127.0.0.1:9000:9000"   # API S3 (scripts, développement local)
       - "127.0.0.1:9001:9001"   # Console web d'administration
     networks:
-      - wwf_network
+      - procureapp_network
 
   # Service Application Node.js
   app:
     build:
       context: .
       dockerfile: dockerfile
-    container_name: wwf_app
+    container_name: procureapp_app
     restart: unless-stopped
     depends_on:
       postgres:
@@ -78,7 +78,7 @@ services:
     ports:
       - "5000:5000"
     networks:
-      - wwf_network
+      - procureapp_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
@@ -88,17 +88,17 @@ services:
 
 # Networks
 networks:
-  wwf_network:
+  procureapp_network:
     driver: bridge
-    name: wwf_network
+    name: procureapp_network
 
 # Volumes
 volumes:
   postgres_data:
-    name: wwf_postgres_data
+    name: procureapp_postgres_data
   uploads_data:
-    name: wwf_uploads_data
+    name: procureapp_uploads_data
   minio_data:
-    name: wwf_minio_data
+    name: procureapp_minio_data
   logs_data:
-    name: wwf_logs_data
+    name: procureapp_logs_data

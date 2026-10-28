@@ -1,6 +1,6 @@
 // backend/src/services/BudgetAdjustmentService.js
-// Ajustement budgétaire (étape GoFlow Activity_BudgetAdjustment, après une vérification du budget insuffisante) :
-//  - summary : besoin / disponible par ligne budgétaire, articles et leur ligne, tâche GoFlow ouverte
+// Ajustement budgétaire (étape BpmnGo Activity_BudgetAdjustment, après une vérification du budget insuffisante) :
+//  - summary : besoin / disponible par ligne budgétaire, articles et leur ligne, tâche BpmnGo ouverte
 //  - changeBudgetLines : le demandeur affecte d'autres lignes (du projet de la réquisition) à ses articles
 //  - decide : RETRY → la vérification du budget est relancée sur la MÊME réquisition (budgetAdjusted = true),
 //             refusée tant qu'une ligne reste insuffisante ; ABANDON → réquisition annulée (budgetAdjusted = false)
@@ -71,7 +71,7 @@ class BudgetAdjustmentService {
     if (!req) throw fail(404, 'NOT_FOUND', 'Réquisition introuvable');
     const { items, lines } = await this.lines(requisitionId);
     let task = null;
-    try { task = await openTask(req.process_instance_id); } catch { /* GoFlow injoignable */ }
+    try { task = await openTask(req.process_instance_id); } catch { /* BpmnGo injoignable */ }
     return {
       status: req.status, projectId: req.project_id, reason: req.rejected_reason,
       items, lines, allOk: lines.every(l => l.ok),
@@ -118,11 +118,11 @@ class BudgetAdjustmentService {
     }
 
     let task = null;
-    try { task = await openTask(req.process_instance_id); } catch { /* GoFlow injoignable */ }
-    if (!task && d === 'RETRY') throw fail(409, 'TASK_NOT_FOUND', 'Étape « Ajustement budgétaire » introuvable dans GoFlow (moteur injoignable ou processus terminé)');
+    try { task = await openTask(req.process_instance_id); } catch { /* BpmnGo injoignable */ }
+    if (!task && d === 'RETRY') throw fail(409, 'TASK_NOT_FOUND', 'Étape « Ajustement budgétaire » introuvable dans BpmnGo (moteur injoignable ou processus terminé)');
     if (task) {
       const result = await camundaService.completeTask(task.id, { budgetAdjusted: d === 'RETRY', comment: String(comment || '').slice(0, 1000) });
-      if (!result.success) throw fail(502, 'GOFLOW_ERROR', result.error || 'GoFlow n\'a pas accepté la décision');
+      if (!result.success) throw fail(502, 'BPMNGO_ERROR', result.error || 'BpmnGo n\'a pas accepté la décision');
     }
 
     if (d === 'ABANDON') {

@@ -1,7 +1,7 @@
 /**
  * tests/api/procurement-method.spec.js
  *
- * Méthode d'achat choisie par les achats (Activity_DetermineType) puis cycle complet piloté par GoFlow :
+ * Méthode d'achat choisie par les achats (Activity_DetermineType) puis cycle complet piloté par BpmnGo :
  * la classification (worker classify_procurement) reprend le choix au lieu de le recalculer d'après le montant.
  *   - choix obligatoire, refusé s'il est moins exigeant que le montant (sauf source unique justifiée)
  *   - Source unique → « Justification source unique » → « Créer le bon de commande »
@@ -9,7 +9,7 @@
  *     avec ce fournisseur proposé d'office
  *   - puis approbation du PO, confirmation fournisseur, réception, SAN, facture, paiement → processus terminé
  *
- * Requiert GoFlow (sinon les tests s'ignorent).
+ * Requiert BpmnGo (sinon les tests s'ignorent).
  */
 import { test, expect } from '@playwright/test';
 import { getToken, getApproverToken, auth } from './helpers.js';
@@ -44,7 +44,7 @@ const complete = (request, task, variables, tk = token) =>
  * refused : méthode moins exigeante que le montant (refusée) + méthode exigée, ou null
  */
 function scenario({ method, sourcingTask, amount, justification, refused }) {
-  test.describe.serial(`${method} (${amount}) → cycle complet GoFlow`, () => {
+  test.describe.serial(`${method} (${amount}) → cycle complet BpmnGo`, () => {
     let req, po, grn;
     let directSupplier = null; // achat direct : fournisseur désigné avec la pro-forma
 

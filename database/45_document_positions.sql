@@ -1,7 +1,7 @@
 -- 45_document_positions.sql (idempotente)
 -- Fonction (users.position) figée au moment où la personne agit : un document déjà émis garde la fonction de
 -- l'époque, même si le poste de la personne change ensuite (réquisition, bon de commande, approbations).
--- Remplie par des triggers : tout chemin d'écriture (contrôleurs, workers GoFlow) est couvert sans changer le code.
+-- Remplie par des triggers : tout chemin d'écriture (contrôleurs, workers BpmnGo) est couvert sans changer le code.
 
 ALTER TABLE requisitions     ADD COLUMN IF NOT EXISTS requester_position    VARCHAR(100);
 ALTER TABLE workflow_history ADD COLUMN IF NOT EXISTS performed_by_position VARCHAR(100);

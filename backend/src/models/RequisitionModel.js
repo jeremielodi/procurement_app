@@ -7,7 +7,7 @@ const { localizedSql } = require('../utils/requestLang');
 const { v4: uuidv4 } = require('uuid');
 
 // Avancement global du cycle procure-to-pay (colonne « Avancement » de la liste)
-// Source de vérité : la fin du processus GoFlow (événement de fin atteint par la dernière tâche).
+// Source de vérité : la fin du processus BpmnGo (événement de fin atteint par la dernière tâche).
 // Sans processus : terminé si tous les bons de commande non rejetés ont une facture payée.
 const processEndedAt = (endEvent) => `EXISTS (
            SELECT 1 FROM workflow_history wh
@@ -22,7 +22,7 @@ const PROGRESS_STATUS_SQL = `
     WHEN ${processEndedAt('Event_Completed')} THEN 'COMPLETED'
     WHEN ${processEndedAt('Event_Rejected')} THEN 'REJECTED'
     WHEN r.process_instance_id IS NOT NULL THEN 'IN_PROGRESS'
-    -- Hors workflow (aucun processus GoFlow) : terminée quand tous les PO actifs ont une facture payée,
+    -- Hors workflow (aucun processus BpmnGo) : terminée quand tous les PO actifs ont une facture payée,
     -- même si la réquisition est restée en brouillon (même règle que RequisitionTimelineService)
     WHEN EXISTS (
            SELECT 1 FROM purchase_orders po
@@ -617,7 +617,7 @@ class RequisitionModel {
    * l'utilisateur à l'étape « Déterminer la méthode d'achat » (Activity_DetermineType, contrôlée à la complétion par
    * TaskController : obligatoire, au moins aussi exigeante que le montant). Le système ne la détermine jamais :
    * aucun calcul par montant, aucun historique en son nom ; seul le statut CLASSIFIED_* de la réquisition est mis à jour.
-   * Choix absent ou inconnu → erreur (incident GoFlow) plutôt qu'une méthode inventée.
+   * Choix absent ou inconnu → erreur (incident BpmnGo) plutôt qu'une méthode inventée.
    */
   async applyChosenMethod(requisitionId, chosenMethod) {
     if (!PROCUREMENT_METHODS.includes(chosenMethod)) {

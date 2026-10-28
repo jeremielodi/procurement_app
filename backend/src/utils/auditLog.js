@@ -28,7 +28,7 @@ const AUDIT = {
   AUDIT_LOG_EXPORTED: 'AUDIT_LOG_EXPORTED', // export Excel du journal (filtres, nombre de lignes)
   // Séparation des tâches : tentative refusée (approuver sa propre demande, son propre bon, son propre paiement…)
   SOD_VIOLATION_BLOCKED: 'SOD_VIOLATION_BLOCKED',
-  TASK_COMPLETION_DENIED: 'TASK_COMPLETION_DENIED', // tâche GoFlow d'un autre groupe ou prise par quelqu'un d'autre
+  TASK_COMPLETION_DENIED: 'TASK_COMPLETION_DENIED', // tâche BpmnGo d'un autre groupe ou prise par quelqu'un d'autre
   PROJECT_ACCESS_DENIED: 'PROJECT_ACCESS_DENIED', // profil non attribué sur le projet du document / de la tâche
   // Projets : membres et profils par projet (migration 24)
   PROJECT_MEMBER_ADDED: 'PROJECT_MEMBER_ADDED',

@@ -77,7 +77,7 @@ test.describe.serial('API › GRN : entrée en stock après la réception', () =
         items: detail.items.map(i => ({ description: i.item_description, quantity: Number(i.quantity), unitPrice: Number(i.unit_price), requisitionItemId: i.id })),
       },
     }));
-    test.skip(created.status >= 300, `PO non créé (GoFlow requis ?) : ${JSON.stringify(created.body)}`);
+    test.skip(created.status >= 300, `PO non créé (BpmnGo requis ?) : ${JSON.stringify(created.body)}`);
     po = (await (await request.get(`/api/purchase-orders/${created.body.data.id}`, { headers: asAdmin() })).json()).data;
     const byName = (prefix) => po.items.find(i => i.item_description.startsWith(prefix));
 

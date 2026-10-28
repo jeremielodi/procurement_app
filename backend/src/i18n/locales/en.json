@@ -855,7 +855,7 @@
     "WAREHOUSE_ACCESS_CHANGED": "Warehouse access changed",
     "AUDIT_LOG_EXPORTED": "Audit log exported",
     "SOD_VIOLATION_BLOCKED": "Segregation of duties: action refused",
-    "TASK_COMPLETION_DENIED": "GoFlow task refused (other group / claimed by someone else)",
+    "TASK_COMPLETION_DENIED": "BpmnGo task refused (other group / claimed by someone else)",
     "BUDGET_LINE_CREATED": "Budget line created",
     "BUDGET_LINE_UPDATED": "Budget line updated",
     "BUDGET_LINE_DELETED": "Budget line deleted",

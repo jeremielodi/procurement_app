@@ -1,7 +1,7 @@
 /**
  * tests/api/document-signatures.spec.js
  *
- * Signatures dans les PDF (cycle GoFlow réel) :
+ * Signatures dans les PDF (cycle BpmnGo réel) :
  *   - réquisition : signature du demandeur, puis celle de l'approbateur N1 une fois l'étape approuvée — étape terminée
  *     sans prise en charge préalable, comme depuis la fenêtre de l'onglet tâches (l'auteur n'est alors connu que par
  *     la ligne APPROVED de TaskController)
@@ -11,7 +11,7 @@
  * Une signature = une image intégrée au PDF : on compte les images avant / après chaque approbation.
  * Fonction (poste) figée au moment de l'action (migration 45) : changer le poste ensuite ne modifie pas les documents.
  *
- * Requiert GoFlow (sinon les tests s'ignorent).
+ * Requiert BpmnGo (sinon les tests s'ignorent).
  */
 import { test, expect } from '@playwright/test';
 import zlib from 'node:zlib';
@@ -129,7 +129,7 @@ test.describe.serial('API › Signatures dans les PDF de réquisition et de bon 
       req = (await (await request.get(`/api/requisitions/${req.id}`, { headers: H })).json()).data;
       return req.process_instance_id || null;
     }, { timeout: 15_000 }).toBeTruthy();
-    test.skip(!req.process_instance_id, 'GoFlow requis');
+    test.skip(!req.process_instance_id, 'BpmnGo requis');
 
     const before = imageCount(await pdf(request, `/api/requisitions/${req.id}/export/pdf`));
     expect(before, 'signature du demandeur').toBeGreaterThanOrEqual(1);
@@ -144,7 +144,7 @@ test.describe.serial('API › Signatures dans les PDF de réquisition et de bon 
   });
 
   test('Bon de commande : signature du créateur, puis de l\'approbateur après approbation', async ({ request }) => {
-    test.skip(!req?.process_instance_id, 'GoFlow requis');
+    test.skip(!req?.process_instance_id, 'BpmnGo requis');
     const H = auth(token);
     const method = await waitForTask(request, 'Activity_DetermineType');
     expect((await complete(request, method, { procurementMethod: 'DIRECT_PURCHASE' })).status()).toBe(200);
@@ -180,7 +180,7 @@ test.describe.serial('API › Signatures dans les PDF de réquisition et de bon 
   });
 
   test('Fonction figée : un changement de poste ne modifie pas les documents déjà émis', async ({ request }) => {
-    test.skip(!po, 'Bon de commande non créé (GoFlow requis)');
+    test.skip(!po, 'Bon de commande non créé (BpmnGo requis)');
     const H = auth(token);
     for (const who of ['requester', 'approver']) await setPosition(request, users[who], `Nouveau poste ${stamp}`);
 

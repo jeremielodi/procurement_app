@@ -375,7 +375,7 @@ class RequisitionTimelineService {
         for (const t of await orderTasks.withLots(await camundaService.getProcessTasks(req.process_instance_id))) {
           if (t.lot) lotOfTask.set(t.id, t.lot);
         }
-      } catch { /* GoFlow injoignable : sans le fournisseur */ }
+      } catch { /* BpmnGo injoignable : sans le fournisseur */ }
     }
     for (const [taskId, t] of tasks) if (lotOfTask.has(taskId)) t.lot = lotOfTask.get(taskId);
     for (const t of pending) {
@@ -397,7 +397,7 @@ class RequisitionTimelineService {
     const directPurchase = await directPurchaseService.latest(requisitionId);
     const activePos = pos.filter(p => !PO_REJECTED.includes(p.status));
     const paid = payments.some(p => ['PAID', 'COMPLETED'].includes(p.status)) || invoices.some(i => i.status === 'PAID');
-    // Même règle que la colonne « Avancement » (RequisitionModel) : la fin du processus GoFlow fait foi
+    // Même règle que la colonne « Avancement » (RequisitionModel) : la fin du processus BpmnGo fait foi
     const endedAt = (endEvent) => rows.some(r => r.action === 'TASK_COMPLETED' && (r.comments || '').includes(`"next_element":"${endEvent}"`));
     const processCompleted = endedAt('Event_Completed');
     // Hors workflow : terminée quand TOUS les PO actifs ont une facture payée (même règle que la colonne « Avancement »)

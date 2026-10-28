@@ -59,8 +59,8 @@ const PROJECTS = [
     ] },
   { code: 'PRJ-KIN-ADM', name: 'Fonctionnement du bureau de Kinshasa', description: 'Frais de fonctionnement et équipements de bureau', manager: 'dg',
     budgets: [
-      { entityCode: 'KIN-INF', loc: 'Kinshasa',  fundingSource: 'Fonds propres WWF', subProject: 'Informatique',            functionCode: 'INF', description: 'Ordinateurs, imprimantes et licences',        allocatedAmount: 50000 },
-      { entityCode: 'KIN-FOU', loc: 'Kinshasa',  fundingSource: 'Fonds propres WWF', subProject: 'Fournitures',             functionCode: 'FOU', description: 'Fournitures de bureau et consommables',       allocatedAmount: 20000 },
+      { entityCode: 'KIN-INF', loc: 'Kinshasa',  fundingSource: 'Fonds propres', subProject: 'Informatique',            functionCode: 'INF', description: 'Ordinateurs, imprimantes et licences',        allocatedAmount: 50000 },
+      { entityCode: 'KIN-FOU', loc: 'Kinshasa',  fundingSource: 'Fonds propres', subProject: 'Fournitures',             functionCode: 'FOU', description: 'Fournitures de bureau et consommables',       allocatedAmount: 20000 },
     ] },
 ];
 

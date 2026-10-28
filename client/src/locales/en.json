@@ -1585,7 +1585,7 @@
     "notSpecified": "Not specified",
     "linkedRequisition": "Linked requisition",
     "p2pFlow": "P2P flow",
-    "p2pNoteBefore": "Actions (GRN, SAN, invoice, payment) are triggered by GoFlow and appear in your",
+    "p2pNoteBefore": "Actions (GRN, SAN, invoice, payment) are triggered by BpmnGo and appear in your",
     "taskList": "task list",
     "grns": "Goods receipts (GRN)",
     "sans": "Service acceptances (SAN)",
@@ -1626,11 +1626,11 @@
         "CONFIRMED": "Confirms the order",
         "DECLINED": "Declines the order"
       },
-      "confirmEffect": "The order becomes \"Confirmed\" and the GoFlow \"Supplier confirmation\" step is completed: receiving can start.",
+      "confirmEffect": "The order becomes \"Confirmed\" and the BpmnGo \"Supplier confirmation\" step is completed: receiving can start.",
       "declineEffect": "The step stays open: follow up or renegotiate with the supplier, then record their confirmation (or cancel the order).",
       "hint": "The supplier can answer from their portal (if they have an account); otherwise record here the answer received by phone or email.",
       "recorded": "Confirmation recorded",
-      "recordedTask": "Confirmation recorded: the GoFlow step is completed",
+      "recordedTask": "Confirmation recorded: the BpmnGo step is completed",
       "declinedRecorded": "Refusal recorded",
       "err": {
         "ALREADY_CONFIRMED": "This order is already confirmed",
@@ -2115,7 +2115,7 @@
     "publish": "Publish and notify suppliers",
     "notFound": "Tender not found",
     "updated": "Tender updated — suppliers notified",
-    "taskNotCompleted": "GoFlow task not found/completed — check the task list",
+    "taskNotCompleted": "BpmnGo task not found/completed — check the task list",
     "awarded": "Contract awarded",
     "requisition": "Requisition",
     "availableAfterClose": "Available after submissions close",
@@ -2166,7 +2166,7 @@
     "notCheapest": "This is not the cheapest complete bid: justify your choice below.",
     "incompleteOffer": "Incomplete bid ({{done}}/{{total}} items priced).",
     "justification": "Comment / justification",
-    "awardTaskHint": "The GoFlow “Tender” task will be completed and bidders notified.",
+    "awardTaskHint": "The BpmnGo “Tender” task will be completed and bidders notified.",
     "cancelTitle": "Cancel tender",
     "cancelled": "Cancelled",
     "closed": "Closed",
@@ -2203,7 +2203,7 @@
         "AWARD_REQUIRED": "No item awarded.",
         "SPLIT_NOT_SUPPORTED": "Process started before supplier splitting: award every item to a single supplier.",
         "ALLOCATION_LOCKED": "Purchase orders already exist for this requisition.",
-        "GOFLOW_ERROR": "The workflow engine did not accept the end of the step: nothing was saved.",
+        "BPMNGO_ERROR": "The workflow engine did not accept the end of the step: nothing was saved.",
         "default": "Award failed"
       }
     }
@@ -3724,7 +3724,7 @@
     "sections": {
       "overview": {
         "title": "How procureApp works",
-        "summary": "The complete purchasing cycle, from request to payment, and the role of GoFlow.",
+        "summary": "The complete purchasing cycle, from request to payment, and the role of BpmnGo.",
         "blocks": [
           {
             "type": "p",
@@ -3751,11 +3751,11 @@
           },
           {
             "type": "h",
-            "text": "GoFlow: the engine that drives the process"
+            "text": "BpmnGo: the engine that drives the process"
           },
           {
             "type": "p",
-            "text": "The flow is orchestrated by GoFlow, a workflow engine. As soon as a requisition is submitted, GoFlow creates the tasks in the right order and for the right group of people: for example, an invoice cannot be entered before the goods receipt. Automatic steps (budget, classification, sending the purchase order, matching) are run by the application without human action."
+            "text": "The flow is orchestrated by BpmnGo, a workflow engine. As soon as a requisition is submitted, BpmnGo creates the tasks in the right order and for the right group of people: for example, an invoice cannot be entered before the goods receipt. Automatic steps (budget, classification, sending the purchase order, matching) are run by the application without human action."
           },
           {
             "type": "list",
@@ -3900,11 +3900,11 @@
       },
       "tasks": {
         "title": "My tasks",
-        "summary": "Claim, process or release the tasks GoFlow assigns to you.",
+        "summary": "Claim, process or release the tasks BpmnGo assigns to you.",
         "blocks": [
           {
             "type": "p",
-            "text": "\"My tasks\" lists the actions waiting for you: approvals, choosing the purchasing method, creating the purchase order, goods receipt, service acceptance, invoice, payment… A task appears when GoFlow reaches the corresponding step, for the people holding the required profile on the requisition's project. You also receive an email and a notification."
+            "text": "\"My tasks\" lists the actions waiting for you: approvals, choosing the purchasing method, creating the purchase order, goods receipt, service acceptance, invoice, payment… A task appears when BpmnGo reaches the corresponding step, for the people holding the required profile on the requisition's project. You also receive an email and a notification."
           },
           {
             "type": "h",
@@ -3916,7 +3916,7 @@
               "In \"My tasks\", click the task (or \"Process in the requisition\"): the requisition's \"Tasks\" tab opens with the task highlighted.",
               "Click \"Claim\": a confirmation is shown, because the task will be assigned to you and disappear from your colleagues' list.",
               "Click \"Process\". Depending on the task, a window opens (approval, choice…) or the dedicated screen, already linked to the right document of the requisition (purchase order, receipt, invoice, payment, call for tenders). If a document is missing (e.g. no invoice to pay), a message says so.",
-              "Complete and validate: GoFlow automatically moves to the next step and notifies the next group."
+              "Complete and validate: BpmnGo automatically moves to the next step and notifies the next group."
             ]
           },
           {
@@ -3965,7 +3965,7 @@
               "Fill in the title, description, justification, priority, department and project. The project determines the available budget lines and the people who will receive the tasks.",
               "Add the items: description, quantity, frequency and unit price. Line total = quantity × frequency × unit price.",
               "Assign a budget line to each item (search button). You can tick several items and assign them the same line at once.",
-              "Attach documents if needed (quotes, specifications…) then save: the requisition is submitted and GoFlow starts the process."
+              "Attach documents if needed (quotes, specifications…) then save: the requisition is submitted and BpmnGo starts the process."
             ]
           },
           {
@@ -4288,7 +4288,7 @@
               "Sealed bids: while the call is open, you only see the bidders' names and submission dates, never the prices.",
               "You can close it before the planned date. Once closed with bids, the call can no longer be extended.",
               "Excel comparison after closing: items × suppliers matrix, bid details and list of suppliers.",
-              "Award to the selected supplier: the GoFlow task is completed and the process continues to the purchase order. Suppliers are informed of the result."
+              "Award to the selected supplier: the BpmnGo task is completed and the process continues to the purchase order. Suppliers are informed of the result."
             ]
           },
           {
@@ -4409,7 +4409,7 @@
           {
             "type": "list",
             "items": [
-              "Once sent, the order waits for the supplier's confirmation (GoFlow step \"Supplier confirmation\"). A registered supplier answers from their portal (\"My orders\"): they confirm with the planned delivery date, or decline and explain why.",
+              "Once sent, the order waits for the supplier's confirmation (BpmnGo step \"Supplier confirmation\"). A registered supplier answers from their portal (\"My orders\"): they confirm with the planned delivery date, or decline and explain why.",
               "If the supplier answers by phone or email, procurement records their answer on the purchase order page: \"Record the supplier's answer\".",
               "Confirmed: the order becomes \"Confirmed\" and receiving can start. Declined: the step stays open; follow up or renegotiate, then record the confirmation (or cancel the order)."
             ]
@@ -5103,7 +5103,7 @@
           },
           {
             "type": "p",
-            "text": "In \"My tasks\", a request you cannot process shows \"Your own request: another member of the group must process it\". On a purchase order or payment, the approval button is replaced by an explanation. A GoFlow task can only be processed by a member of its group (or an administrator), and not if someone else has claimed it."
+            "text": "In \"My tasks\", a request you cannot process shows \"Your own request: another member of the group must process it\". On a purchase order or payment, the approval button is replaced by an explanation. A BpmnGo task can only be processed by a member of its group (or an administrator), and not if someone else has claimed it."
           },
           {
             "type": "tip",
@@ -5139,7 +5139,7 @@
           },
           {
             "type": "p",
-            "text": "The administrator can create accounts with the \"Auditor\" profile: read access to requisitions, orders, receipts, invoices, payments, suppliers, stock (including valuation), budget and the audit log, with exports. No data entry, no approval, no GoFlow task."
+            "text": "The administrator can create accounts with the \"Auditor\" profile: read access to requisitions, orders, receipts, invoices, payments, suppliers, stock (including valuation), budget and the audit log, with exports. No data entry, no approval, no BpmnGo task."
           },
           {
             "type": "h",
@@ -5326,7 +5326,7 @@
             "type": "list",
             "items": [
               "Users: creation with profiles and language (French or English, used for the interface and emails), password reset, activation / deactivation.",
-              "Projects and departments: on a project's record, add members and choose the workflow profiles each one holds there (manager, finance, procurement…) — they are the ones who receive and process the GoFlow tasks of its requisitions. \"All projects\" is ticked on the user's record.",
+              "Projects and departments: on a project's record, add members and choose the workflow profiles each one holds there (manager, finance, procurement…) — they are the ones who receive and process the BpmnGo tasks of its requisitions. \"All projects\" is ticked on the user's record.",
               "\"My company\": name, logo, address, contacts, tax ID / trade register, currency. They appear on every PDF.",
               "Warehouses and logistics access (see \"Stock\").",
               "Supplier prequalification and verification of their documents.",
@@ -5600,11 +5600,11 @@
     "abandoned": "Requisition abandoned",
     "err": {
       "STILL_INSUFFICIENT": "The budget is still insufficient on at least one line",
-      "TASK_NOT_FOUND": "\"Budget adjustment\" step not found in GoFlow (engine unreachable or process ended)",
+      "TASK_NOT_FOUND": "\"Budget adjustment\" step not found in BpmnGo (engine unreachable or process ended)",
       "NOT_BUDGET_INSUFFICIENT": "This requisition is not waiting for a budget adjustment",
       "BUDGET_LINE_INVALID": "Invalid budget line (inactive or from another project)",
       "FORBIDDEN": "Only the requester (or Finance / an administrator) can adjust the budget",
-      "GOFLOW_ERROR": "GoFlow did not accept the decision"
+      "BPMNGO_ERROR": "BpmnGo did not accept the decision"
     }
   },
   "search": {
@@ -5643,7 +5643,7 @@
       "WAREHOUSE_ACCESS_CHANGED": "Warehouse access changed",
       "AUDIT_LOG_EXPORTED": "Audit log exported",
       "SOD_VIOLATION_BLOCKED": "Segregation of duties: action refused",
-      "TASK_COMPLETION_DENIED": "GoFlow task refused (other group / claimed by someone else)",
+      "TASK_COMPLETION_DENIED": "BpmnGo task refused (other group / claimed by someone else)",
       "BUDGET_LINE_CREATED": "Budget line created",
       "BUDGET_LINE_UPDATED": "Budget line updated",
       "BUDGET_LINE_DELETED": "Budget line deleted",
@@ -6022,8 +6022,8 @@
       "NOT_EDITABLE": "The requisition is not (or no longer) \"To be corrected\"",
       "NOT_WITHDRAWABLE": "The requisition is not awaiting approval",
       "APPROVAL_IN_PROGRESS": "Approval already claimed by {{assignee}}: ask them to return it for correction",
-      "TASK_NOT_FOUND": "Step not found in GoFlow (engine unreachable or process ended)",
-      "GOFLOW_ERROR": "GoFlow did not accept the action, try again",
+      "TASK_NOT_FOUND": "Step not found in BpmnGo (engine unreachable or process ended)",
+      "BPMNGO_ERROR": "BpmnGo did not accept the action, try again",
       "REASON_REQUIRED": "Reason required",
       "TITLE_REQUIRED": "The title is required",
       "ITEMS_REQUIRED": "At least one item is required",

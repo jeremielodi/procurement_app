@@ -31,7 +31,7 @@ BEGIN
   END LOOP;
 END $$;
 
--- 3. Données sans entreprise → première entreprise (WWF). Rappelé à la fin de data.sql.
+-- 3. Données sans entreprise → première entreprise. Rappelé à la fin de data.sql.
 CREATE OR REPLACE FUNCTION procureapp_assign_orphans() RETURNS void AS $$
 DECLARE first_ent UUID;
 BEGIN

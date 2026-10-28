@@ -1,6 +1,6 @@
 // backend/src/services/DashboardOverviewService.js
 // Tableau de bord de pilotage, contenu selon le profil (GET /dashboard/overview?period=&projectId=) :
-//   - operations : mes tâches GoFlow en attente, en retard (≥ LATE_DAYS jours dans l'étape actuelle) — tout le monde
+//   - operations : mes tâches BpmnGo en attente, en retard (≥ LATE_DAYS jours dans l'étape actuelle) — tout le monde
 //   - steering   : cycle P2P, tâches en retard, complétion, conversion, livraisons, fournisseurs — STEERING_PROFILES
 //   - finance    : budget consommé (= PAYÉ), engagements ouverts, délais de paiement — MANAGE_BUDGET ou AUDIT_ACCESS
 //   - control    : rejets / renvois, mise en concurrence, écarts de rapprochement, blocages — AUDIT_ACCESS ou VIEW_AUDIT_LOGS
@@ -456,7 +456,7 @@ class DashboardOverviewService {
     return { decisions, methods, discrepancies, blocked };
   }
 
-  /** Étapes terminées dans la période (TASK_COMPLETED) avec leurs variables GoFlow (user_vars) */
+  /** Étapes terminées dans la période (TASK_COMPLETED) avec leurs variables BpmnGo (user_vars) */
   async completedTasks(ctx, keys) {
     const params = [];
     const since = this.since(ctx, params);

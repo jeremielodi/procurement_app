@@ -1,5 +1,5 @@
 // src/components/Requisitions/RequisitionTasks.jsx
-// Onglet tâches d'une réquisition : SEUL endroit où une tâche GoFlow est prise en charge et traitée (« Mes tâches »
+// Onglet tâches d'une réquisition : SEUL endroit où une tâche BpmnGo est prise en charge et traitée (« Mes tâches »
 // renvoie ici avec ?task=<id>, mis en évidence). « Traiter » ouvre le formulaire dédié avec le document de CETTE
 // réquisition (resolveTaskTarget : bon de commande selon son statut, dernière réception, facture non payée), ou un
 // message clair s'il manque — jamais de document orphelin ni de tâche terminée sans son document.
@@ -186,7 +186,7 @@ export default function RequisitionTasks() {
   };
 
   /**
-   * Formulaire dédié d'une tâche, avec les documents de CETTE réquisition (lus en base ; les variables GoFlow ne
+   * Formulaire dédié d'une tâche, avec les documents de CETTE réquisition (lus en base ; les variables BpmnGo ne
    * servent qu'à départager). Renvoie { url } ou { missing: <code> } (document manquant), null = fenêtre générique.
    */
   const resolveTaskTarget = async (task) => {

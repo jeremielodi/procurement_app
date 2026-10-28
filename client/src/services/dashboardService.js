@@ -58,7 +58,7 @@ export const dashboardService = {
     return response.data;
   },
 
-  /** Tâches GoFlow en cours par profil (projectId optionnel) */
+  /** Tâches BpmnGo en cours par profil (projectId optionnel) */
   async getPendingTasks(projectId) {
     const response = await apiClient.get('/dashboard/pending-tasks', {
       params: projectId ? { projectId } : {}

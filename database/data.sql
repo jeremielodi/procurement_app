@@ -20,7 +20,7 @@ ON CONFLICT (id) DO UPDATE SET
 
 
 INSERT INTO enterprise(name,code, currency_id)VALUES
-('World Wide Fund for Nature', 'WWF', 1);
+('Entreprise par défaut', 'DEFAULT', 1);
 
 INSERT INTO permissions (id, name, description, resource, action)
 SELECT * FROM (VALUES

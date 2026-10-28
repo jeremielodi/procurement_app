@@ -15,7 +15,7 @@ const groupOf = (profileId) => String(profileId).replace(/^prof_/, '');
 const OWN_ONLY_GROUPS = new Set(['requester', 'user', 'supplier', 'superadmin']);
 
 /**
- * Profils de l'utilisateur, en une lecture : sert à calculer ses groupes GoFlow sur n'importe quel projet
+ * Profils de l'utilisateur, en une lecture : sert à calculer ses groupes BpmnGo sur n'importe quel projet
  * (listes de tâches). → { isAdmin, global: Set(groupes globaux), scoped: Set(groupes soumis au projet),
  *   everywhere: Set(groupes « tous les projets »), byProject: Map(projectId → Set(groupes)) }
  */
@@ -55,7 +55,7 @@ async function loadScope(userId) {
   return scope;
 }
 
-/** Groupes GoFlow de l'utilisateur sur un projet (projet inconnu : tous ses groupes) */
+/** Groupes BpmnGo de l'utilisateur sur un projet (projet inconnu : tous ses groupes) */
 function groupsOnProject(scope, projectId) {
   if (!projectId) return new Set([...scope.global, ...scope.scoped]);
   return new Set([...scope.global, ...scope.everywhere, ...(scope.byProject.get(String(projectId)) || [])]);

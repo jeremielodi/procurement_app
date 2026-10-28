@@ -1,4 +1,4 @@
-# Guide utilisateur — WWF Procurement App
+# Guide utilisateur — procureApp
 
 **Système de gestion des achats électroniques (e-procurement)**
 Cycle complet : Réquisition → Approbation → Commande → Réception (GRN) → Acceptation (SAN) → Facture → Paiement
@@ -16,7 +16,7 @@ Cycle complet : Réquisition → Approbation → Commande → Réception (GRN) �
 7. [Étape 5 — Acceptation de service (SAN)](#7-étape-5--acceptation-de-service-san)
 8. [Étape 6 — Facture et rapprochement 3 voies](#8-étape-6--facture-et-rapprochement-3-voies)
 9. [Étape 7 — Paiement](#9-étape-7--paiement)
-10. [Mes tâches — Comment GoFlow pilote le workflow](#10-mes-tâches--comment-goflow-pilote-le-workflow)
+10. [Mes tâches — Comment BpmnGo pilote le workflow](#10-mes-tâches--comment-bpmngo-pilote-le-workflow)
 11. [Profils et permissions](#11-profils-et-permissions)
 12. [Cas particuliers](#12-cas-particuliers)
 13. [Navigation et recherche](#13-navigation-et-recherche)
@@ -103,7 +103,7 @@ Le **Total général** se calcule automatiquement.
 
 **Pièces jointes :** Glissez-déposez des fichiers (PDF, DOC, XLS, JPG, PNG — max. 10 Mo) pour joindre devis, cahier des charges ou tout document justificatif.
 
-Cliquez sur **Créer la réquisition** pour soumettre. Le workflow GoFlow démarre immédiatement.
+Cliquez sur **Créer la réquisition** pour soumettre. Le workflow BpmnGo démarre immédiatement.
 
 ### Statuts possibles
 
@@ -120,7 +120,7 @@ Cliquez sur **Créer la réquisition** pour soumettre. Le workflow GoFlow démar
 
 ## 4. Étape 2 — Circuit d'approbation
 
-Dès qu'une réquisition est soumise, GoFlow déclenche automatiquement la vérification du budget et achemine la tâche vers le bon approbateur selon le montant.
+Dès qu'une réquisition est soumise, BpmnGo déclenche automatiquement la vérification du budget et achemine la tâche vers le bon approbateur selon le montant.
 
 ### Seuils d'approbation
 
@@ -188,7 +188,7 @@ Dès qu'un PO est au statut `PO_APPROVED` ou supérieur, un panneau **Flux P2P**
 - Les **bons de réception (GRN)** liés à ce PO, avec leur statut
 - Les **acceptations de service (SAN)** liées, avec leur statut
 
-> **Important :** Ce panneau est informatif uniquement. Les actions de création (GRN, SAN, Facture, Paiement) sont déclenchées par GoFlow et apparaissent dans **Mes tâches** selon votre profil.
+> **Important :** Ce panneau est informatif uniquement. Les actions de création (GRN, SAN, Facture, Paiement) sont déclenchées par BpmnGo et apparaissent dans **Mes tâches** selon votre profil.
 
 ### Export PDF
 
@@ -208,7 +208,7 @@ Le bouton **PDF** en haut du détail génère un bon de commande complet au form
 
 ### Approbation PO
 
-Le management (profil `management`) reçoit une tâche GoFlow **Approuver Purchase Order** dans **Mes tâches**. L'approbation envoie automatiquement le bon de commande au fournisseur par e-mail.
+Le management (profil `management`) reçoit une tâche BpmnGo **Approuver Purchase Order** dans **Mes tâches**. L'approbation envoie automatiquement le bon de commande au fournisseur par e-mail.
 
 ---
 
@@ -218,11 +218,11 @@ Quand les marchandises arrivent, la **Logistique** (profil `logistic`) enregistr
 
 ### Comment y accéder
 
-GoFlow crée automatiquement la tâche **Goods Receipt Note (GRN)** dans **Mes tâches** pour tous les utilisateurs du profil `logistic`, après confirmation du fournisseur.
+BpmnGo crée automatiquement la tâche **Goods Receipt Note (GRN)** dans **Mes tâches** pour tous les utilisateurs du profil `logistic`, après confirmation du fournisseur.
 
 Depuis la sidebar **PRINCIPAL → Mes tâches**, cliquez sur **Ouvrir le formulaire** sur la tâche GRN. Vous êtes redirigé vers le formulaire GRN pré-configuré avec la commande liée.
 
-> **Note :** Le formulaire peut aussi être accessible via **ACHATS → Réceptions GRN → + Nouveau GRN** (usage administratif ou correction), mais dans ce cas la tâche GoFlow correspondante ne sera pas complétée automatiquement.
+> **Note :** Le formulaire peut aussi être accessible via **ACHATS → Réceptions GRN → + Nouveau GRN** (usage administratif ou correction), mais dans ce cas la tâche BpmnGo correspondante ne sera pas complétée automatiquement.
 
 ![Liste des bons de réception](screenshots/11-grn-list.png)
 
@@ -234,7 +234,7 @@ Depuis la sidebar **PRINCIPAL → Mes tâches**, cliquez sur **Ouvrir le formula
 
 | Champ | Description |
 |-------|-------------|
-| **Commande (PO)** | Pré-rempli automatiquement depuis la tâche GoFlow |
+| **Commande (PO)** | Pré-rempli automatiquement depuis la tâche BpmnGo |
 | **Observations** | Notes libres sur la réception (état des colis, conditions, etc.) |
 | **Articles reçus** | Pour chaque ligne : quantité reçue, acceptée, rejetée, motif de rejet |
 
@@ -246,7 +246,7 @@ Depuis la sidebar **PRINCIPAL → Mes tâches**, cliquez sur **Ouvrir le formula
 | `PARTIAL` | Des articles ont été rejetés (endommagés, non conformes) |
 | `PENDING` | Aucun article enregistré |
 
-Une fois soumis, GoFlow avance automatiquement à l'étape suivante : l'**Acceptation de service (SAN)**.
+Une fois soumis, BpmnGo avance automatiquement à l'étape suivante : l'**Acceptation de service (SAN)**.
 
 ---
 
@@ -256,7 +256,7 @@ Après la réception physique, le **Demandeur** (profil `requester`) confirme qu
 
 ### Comment y accéder
 
-GoFlow crée la tâche **Service Acceptance Note (SAN)** dans **Mes tâches** pour l'utilisateur `requester` ayant initié la réquisition.
+BpmnGo crée la tâche **Service Acceptance Note (SAN)** dans **Mes tâches** pour l'utilisateur `requester` ayant initié la réquisition.
 
 Cliquez sur **Ouvrir le formulaire** sur la tâche SAN. Vous êtes redirigé vers le formulaire d'acceptation avec le PO pré-rempli.
 
@@ -277,7 +277,7 @@ Le formulaire présente deux options claires :
 
 | Statut | Signification |
 |--------|---------------|
-| `ACCEPTED` | Prestation acceptée — GoFlow avance vers la facturation |
+| `ACCEPTED` | Prestation acceptée — BpmnGo avance vers la facturation |
 | `REJECTED` | Prestation rejetée — litige à résoudre avec le fournisseur |
 | `DRAFT` | Créé mais décision non encore enregistrée |
 
@@ -289,7 +289,7 @@ Le service **Finance** (profil `finance`) saisit la facture fournisseur. Le syst
 
 ### Comment y accéder
 
-GoFlow crée la tâche **Enter Supplier Invoice** dans **Mes tâches** pour les utilisateurs `finance`, après acceptation du service (SAN).
+BpmnGo crée la tâche **Enter Supplier Invoice** dans **Mes tâches** pour les utilisateurs `finance`, après acceptation du service (SAN).
 
 Cliquez sur **Ouvrir le formulaire** sur la tâche Facture. Vous êtes redirigé vers le formulaire pré-configuré avec la commande liée.
 
@@ -335,7 +335,7 @@ Une fois la facture rapprochée (`MATCHED`), le service Finance enregistre le pa
 
 ### Comment y accéder
 
-GoFlow crée la tâche **Process Payment** dans **Mes tâches** pour les utilisateurs `finance`, après validation du rapprochement.
+BpmnGo crée la tâche **Process Payment** dans **Mes tâches** pour les utilisateurs `finance`, après validation du rapprochement.
 
 Cliquez sur **Ouvrir le formulaire** sur la tâche Paiement. Le formulaire est pré-rempli avec les informations de la facture.
 
@@ -371,26 +371,26 @@ La liste affiche les 3 cartes de résumé en haut (total engagé, paiements en a
 
 ---
 
-## 10. Mes tâches — Comment GoFlow pilote le workflow
+## 10. Mes tâches — Comment BpmnGo pilote le workflow
 
-**GoFlow (Camunda) est le moteur qui orchestre toutes les étapes du cycle P2P.** Chaque action débloque automatiquement la suivante, dans le bon ordre, pour le bon utilisateur.
+**BpmnGo (Camunda) est le moteur qui orchestre toutes les étapes du cycle P2P.** Chaque action débloque automatiquement la suivante, dans le bon ordre, pour le bon utilisateur.
 
 ### Principe de fonctionnement
 
 ```
 Réquisition soumise
-  → GoFlow vérifie le budget automatiquement
-  → GoFlow crée la tâche d'approbation (N1/N2/N3 selon le montant)
+  → BpmnGo vérifie le budget automatiquement
+  → BpmnGo crée la tâche d'approbation (N1/N2/N3 selon le montant)
   → Approbation accordée
-  → GoFlow crée la tâche "Create PO" pour les Achats
+  → BpmnGo crée la tâche "Create PO" pour les Achats
   → PO approuvé + envoyé fournisseur
-  → GoFlow crée la tâche "GRN" pour la Logistique
+  → BpmnGo crée la tâche "GRN" pour la Logistique
   → GRN enregistré
-  → GoFlow crée la tâche "SAN" pour le Demandeur
+  → BpmnGo crée la tâche "SAN" pour le Demandeur
   → Service accepté
-  → GoFlow crée la tâche "Facture" pour la Finance
+  → BpmnGo crée la tâche "Facture" pour la Finance
   → Facture rapprochée
-  → GoFlow crée la tâche "Paiement" pour la Finance
+  → BpmnGo crée la tâche "Paiement" pour la Finance
 ```
 
 ### Types de tâches dans Mes tâches
@@ -416,7 +416,7 @@ Si une tâche affiche le bouton **Prendre en charge**, cela signifie qu'elle n'e
 
 L'application gère les accès par profil. Chaque utilisateur se voit attribuer un ou plusieurs profils lors de la création de son compte.
 
-| Profil | Rôle | Tâches GoFlow reçues |
+| Profil | Rôle | Tâches BpmnGo reçues |
 |--------|------|----------------------|
 | `prof_requester` | Demandeur | Créer réquisitions, **SAN** (acceptation service) |
 | `prof_manager` | Manager N1 | Approbation réquisitions < 25 000 |
@@ -427,7 +427,7 @@ L'application gère les accès par profil. Chaque utilisateur se voit attribuer 
 | `prof_logistic` | Logistique | **GRN** (réception marchandises) |
 | `prof_admin` | Administrateur | Accès complet, gestion des utilisateurs |
 
-> La section **MES PROFILS BPMN** en bas de la sidebar affiche vos profils GoFlow actifs.
+> La section **MES PROFILS BPMN** en bas de la sidebar affiche vos profils BpmnGo actifs.
 
 ---
 
@@ -435,7 +435,7 @@ L'application gère les accès par profil. Chaque utilisateur se voit attribuer 
 
 ### Budget insuffisant
 
-Si une réquisition est soumise sans ligne budgétaire valide ou si le budget est épuisé, GoFlow détecte automatiquement l'insuffisance. La réquisition passe en statut `BUDGET_INSUFFICIENT` et le demandeur reçoit une tâche **Budget Adjustment** dans Mes tâches pour ajustement.
+Si une réquisition est soumise sans ligne budgétaire valide ou si le budget est épuisé, BpmnGo détecte automatiquement l'insuffisance. La réquisition passe en statut `BUDGET_INSUFFICIENT` et le demandeur reçoit une tâche **Budget Adjustment** dans Mes tâches pour ajustement.
 
 ### Réquisition rejetée
 
@@ -496,4 +496,4 @@ Chaque liste propose :
 
 ---
 
-*Documentation mise à jour le 24/06/2026 — WWF Procurement App v1.1*
+*Documentation mise à jour le 24/06/2026 — procureApp v1.1*

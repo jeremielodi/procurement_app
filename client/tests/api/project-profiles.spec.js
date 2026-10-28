@@ -4,7 +4,7 @@ import { getToken, auth } from './helpers.js';
 // Profils BPMN liés au projet (migration 24_project_profiles.sql) :
 //  - un profil de workflow (manager, finance, requester…) ne s'exerce que sur les projets où il est attribué au
 //    membre (fiche du projet), ou partout avec « Tous les projets » (fiche de l'utilisateur)
-//  - contrôlé par le serveur : création de réquisition, formulaires (facture…), tâches GoFlow (liste, prise en charge)
+//  - contrôlé par le serveur : création de réquisition, formulaires (facture…), tâches BpmnGo (liste, prise en charge)
 //  - refus 403 NOT_ON_PROJECT tracé (PROJECT_ACCESS_DENIED) ; membres et profils tracés dans le journal d'audit
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const WAIT = 40_000;
@@ -186,7 +186,7 @@ test.describe.serial('API › Profils liés au projet', () => {
     expect(logged.some(r => r.new_value?.projectProfiles && r.old_value?.projectProfiles)).toBe(true);
   });
 
-  test('Tâche GoFlow : un manager d\'un autre projet ne peut pas la prendre ; une fois le profil attribué sur le projet, oui', async ({ request }) => {
+  test('Tâche BpmnGo : un manager d\'un autre projet ne peut pas la prendre ; une fois le profil attribué sur le projet, oui', async ({ request }) => {
     const req = (await (await request.post('/api/requisitions', { headers: H(), data: requisition(projectA.id, lineA.id, 'tâche N1') })).json()).data;
     expect(req?.id).toBeTruthy();
     // Manager membre du projet B uniquement
@@ -204,7 +204,7 @@ test.describe.serial('API › Profils liés au projet', () => {
       }
       await sleep(1500);
     }
-    test.skip(!task, 'GoFlow indisponible');
+    test.skip(!task, 'BpmnGo indisponible');
     expect([task.canClaim, task.blockedReason]).toEqual([false, 'NOT_ON_PROJECT']);
     // Absente de « Mes tâches »
     const mine = (await (await request.get('/api/tasks/user', { headers: auth(token) })).json()).data || [];

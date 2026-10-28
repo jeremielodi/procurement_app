@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { getToken, getApproverToken, auth, supplierRegistration, firstReferenceIds } from './helpers.js';
 
-// Confirmation de commande par le fournisseur (étape GoFlow Activity_SupplierConfirmation) :
+// Confirmation de commande par le fournisseur (étape BpmnGo Activity_SupplierConfirmation) :
 // portail fournisseur (mes commandes, détail, PDF, refus motivé puis confirmation), saisie par les achats,
 // cloisonnement entre fournisseurs, droits, suivi du workflow de la réquisition.
 test.describe.serial('API › Confirmation de commande par le fournisseur', () => {

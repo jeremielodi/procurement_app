@@ -1,5 +1,5 @@
 // src/components/Dashboard/overview/OperationsSection.jsx
-// Volet « Opérations » (tous les profils) : mes tâches GoFlow en attente, celles en retard (≥ 2 jours dans l'étape
+// Volet « Opérations » (tous les profils) : mes tâches BpmnGo en attente, celles en retard (≥ 2 jours dans l'étape
 // actuelle) et la liste « À traiter aujourd'hui » — chaque ligne ouvre la tâche dans l'onglet de sa réquisition.
 import React from 'react';
 import { Link } from 'react-router-dom';

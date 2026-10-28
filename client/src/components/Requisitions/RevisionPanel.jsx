@@ -13,7 +13,7 @@ import { t } from '../../i18n'
 import { formatDateTime } from '../../utils/formatters'
 import { TASK_LABELS } from '../../utils/taskLabels'
 
-export const REVISION_ERRORS = ['NOT_REQUESTER', 'NOT_EDITABLE', 'NOT_WITHDRAWABLE', 'APPROVAL_IN_PROGRESS', 'TASK_NOT_FOUND', 'GOFLOW_ERROR',
+export const REVISION_ERRORS = ['NOT_REQUESTER', 'NOT_EDITABLE', 'NOT_WITHDRAWABLE', 'APPROVAL_IN_PROGRESS', 'TASK_NOT_FOUND', 'BPMNGO_ERROR',
   'RETURN_NOT_SUPPORTED', 'REASON_REQUIRED', 'TITLE_REQUIRED', 'ITEMS_REQUIRED', 'ITEM_INVALID', 'BUDGET_LINE_REQUIRED', 'BUDGET_LINE_INVALID', 'NOT_ON_PROJECT']
 
 export const revisionError = (err) => {

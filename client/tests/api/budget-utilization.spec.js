@@ -47,7 +47,7 @@ test.describe.serial('API › Budget : montant utilisé', () => {
         { description: `Encre ${stamp}`, quantity: 1, unitPrice: 300 },                                // même désignation
       ],
     } });
-    test.skip(created.status() >= 300, `PO non créé (GoFlow requis ?) : ${await created.text()}`);
+    test.skip(created.status() >= 300, `PO non créé (BpmnGo requis ?) : ${await created.text()}`);
     po = (await created.json()).data;
 
     expect(await used(request, l1.id)).toBe(180);

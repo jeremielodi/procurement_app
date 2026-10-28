@@ -1,7 +1,7 @@
 // src/services/DirectPurchaseService.js
 // Achat direct (migration 33_direct_purchase_selection.sql) : l'étape Activity_DirectPurchase exige le fournisseur
 // retenu et sa facture pro-forma (pièce jointe de la réquisition, déposée juste avant par le formulaire de la tâche).
-// La sélection est enregistrée dans la même transaction que la complétion GoFlow : refus de GoFlow = rien d'écrit.
+// La sélection est enregistrée dans la même transaction que la complétion BpmnGo : refus de BpmnGo = rien d'écrit.
 // Le bon de commande propose ensuite ce fournisseur d'office (SupplierModel.getForPurchaseOrder → direct_purchase).
 const db = require('../config/database');
 
@@ -57,7 +57,7 @@ class DirectPurchaseService {
     };
   }
 
-  /** Enregistre la sélection puis termine l'étape GoFlow (complete) dans la même transaction */
+  /** Enregistre la sélection puis termine l'étape BpmnGo (complete) dans la même transaction */
   async recordAndComplete({ requisitionId, selection, userId, taskId }, complete) {
     return db.withTransaction(async (tx) => {
       await tx.exec(
@@ -68,9 +68,9 @@ class DirectPurchaseService {
         [requisitionId, selection.supplier.id, selection.attachment.id, selection.proformaNumber, selection.proformaDate,
           selection.proformaAmount, selection.currency, selection.comment, taskId, userId]
       );
-      // GoFlow en dernier : en cas de refus, la sélection est annulée avec la transaction
+      // BpmnGo en dernier : en cas de refus, la sélection est annulée avec la transaction
       const result = await complete();
-      if (!result?.success) throw fail(502, 'GOFLOW_ERROR', result?.error || 'GoFlow n\'a pas accepté la fin de l\'étape');
+      if (!result?.success) throw fail(502, 'BPMNGO_ERROR', result?.error || 'BpmnGo n\'a pas accepté la fin de l\'étape');
       return result;
     });
   }

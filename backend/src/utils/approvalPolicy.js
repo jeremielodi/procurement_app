@@ -1,12 +1,12 @@
 // backend/src/utils/approvalPolicy.js
 // Seuils d'approbation N1 / N2 / N3 (migration 26_approval_policies.sql) : politique du projet, sinon de l'entreprise,
-// sinon valeurs par défaut. Le niveau est calculé ici (jamais dans le BPMN) : check_budget le transmet à GoFlow
+// sinon valeurs par défaut. Le niveau est calculé ici (jamais dans le BPMN) : check_budget le transmet à BpmnGo
 // (variable approvalLevel) et l'enregistre sur la réquisition avec la politique appliquée.
 const db = require('../config/database');
 
 const DEFAULT_POLICY = { n1Max: 25000, n2Max: 100000 };
 const LEVELS = ['N1', 'N2', 'N3'];
-// Étape GoFlow de chaque niveau (approbation directe : une seule étape selon le montant)
+// Étape BpmnGo de chaque niveau (approbation directe : une seule étape selon le montant)
 const LEVEL_TASKS = { N1: 'Activity_ValidationN1_Manager', N2: 'Activity_ValidationN2_Finance', N3: 'Activity_ValidationN3_DG' };
 
 const num = (v) => (v === null || v === undefined || v === '' ? null : Number(v));

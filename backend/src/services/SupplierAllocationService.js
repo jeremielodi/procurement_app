@@ -18,13 +18,13 @@ const text = (v, max = 2000) => (v === undefined || v === null ? '' : String(v).
 class SupplierAllocationService {
   get TASK_KEY() { return TASK_KEY; }
 
-  /** Méthode d'achat choisie (variable GoFlow, sinon statut CLASSIFIED_*) */
+  /** Méthode d'achat choisie (variable BpmnGo, sinon statut CLASSIFIED_*) */
   async methodOf(requisition) {
     try {
       const vars = await camundaService.getProcessVariables(requisition.process_instance_id);
       const method = vars?.procurementMethod?.value ?? vars?.procurementMethod;
       if (method) return method;
-    } catch { /* GoFlow injoignable : statut */ }
+    } catch { /* BpmnGo injoignable : statut */ }
     return String(requisition.status || '').startsWith('CLASSIFIED_') ? requisition.status.slice('CLASSIFIED_'.length) : null;
   }
 
@@ -108,7 +108,7 @@ class SupplierAllocationService {
   }
 
   /**
-   * Enregistre les parts puis termine l'étape GoFlow (complete(lotIds)) dans la même transaction : refus de GoFlow =
+   * Enregistre les parts puis termine l'étape BpmnGo (complete(lotIds)) dans la même transaction : refus de BpmnGo =
    * rien d'écrit. Une répartition précédente sans bon de commande (étape reprise) est remplacée.
    */
   async recordAndComplete({ requisitionId, allocation, userId, taskId }, complete) {
@@ -121,9 +121,9 @@ class SupplierAllocationService {
       const lotIds = await this.insertLots(tx, requisitionId, allocation.lots.map(l => ({
         supplierId: l.supplier.id, itemIds: l.itemIds, attachmentId: l.attachment?.id, amount: l.amount, justification: l.justification,
       })), { userId, taskId });
-      // GoFlow en dernier : en cas de refus, la répartition est annulée avec la transaction
+      // BpmnGo en dernier : en cas de refus, la répartition est annulée avec la transaction
       const result = await complete(lotIds);
-      if (!result?.success) throw fail(502, 'GOFLOW_ERROR', result?.error || 'GoFlow n\'a pas accepté la fin de l\'étape');
+      if (!result?.success) throw fail(502, 'BPMNGO_ERROR', result?.error || 'BpmnGo n\'a pas accepté la fin de l\'étape');
       return { ...result, lotIds };
     });
   }

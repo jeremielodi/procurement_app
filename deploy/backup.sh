@@ -9,7 +9,7 @@
 #   BACKUP_RETENTION_DAYS  nombre de jours conservés                   (défaut : 14)
 #   BACKUP_REMOTE          copie hors serveur après la sauvegarde :
 #                            « user@hote:/chemin » → rsync ; « remote:chemin » d'rclone → rclone copy
-#   PG_CONTAINER / MINIO_VOLUME / UPLOADS_VOLUME                     (défaut : wwf_postgres / wwf_minio_data / wwf_uploads_data)
+#   PG_CONTAINER / MINIO_VOLUME / UPLOADS_VOLUME                     (défaut : procureapp_postgres / procureapp_minio_data / procureapp_uploads_data)
 #
 # Produit, dans BACKUP_DIR/AAAA-MM-JJ_HHMMSS/ :
 #   procureapp.dump      pg_dump au format custom (vérifié par pg_restore --list)
@@ -25,9 +25,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/procureapp}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
-PG_CONTAINER="${PG_CONTAINER:-wwf_postgres}"
-MINIO_VOLUME="${MINIO_VOLUME:-wwf_minio_data}"
-UPLOADS_VOLUME="${UPLOADS_VOLUME:-wwf_uploads_data}"
+PG_CONTAINER="${PG_CONTAINER:-procureapp_postgres}"
+MINIO_VOLUME="${MINIO_VOLUME:-procureapp_minio_data}"
+UPLOADS_VOLUME="${UPLOADS_VOLUME:-procureapp_uploads_data}"
 HELPER_IMAGE="${HELPER_IMAGE:-alpine:3}"
 
 STAMP="$(date +%F_%H%M%S)"

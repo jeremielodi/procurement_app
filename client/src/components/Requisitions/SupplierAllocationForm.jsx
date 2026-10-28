@@ -1,5 +1,5 @@
 // src/components/Requisitions/SupplierAllocationForm.jsx
-// Étape GoFlow « Répartition par fournisseur » (Activity_AllocateSuppliers) : les achats attribuent chaque article
+// Étape BpmnGo « Répartition par fournisseur » (Activity_AllocateSuppliers) : les achats attribuent chaque article
 // de la réquisition à un fournisseur. Une part par fournisseur, chaque article dans une seule part, tous les articles
 // répartis, au moins deux fournisseurs. Achat direct : pro-forma obligatoire par fournisseur ; source unique :
 // justification obligatoire. Chaque part suit ensuite son propre cycle (bon de commande → paiement).
@@ -52,7 +52,7 @@ export default function SupplierAllocationForm() {
         const req = reqRes.data || reqRes;
         setRequisition(req);
         setSuppliers(supRes.data || supRes || []);
-        // Méthode choisie à l'étape précédente (variable GoFlow, sinon statut CLASSIFIED_*)
+        // Méthode choisie à l'étape précédente (variable BpmnGo, sinon statut CLASSIFIED_*)
         const vars = req.process_instance_id
           ? (await requisitionService.getProcessVariables(req.process_instance_id).catch(() => null))?.data || {}
           : {};

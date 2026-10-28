@@ -48,7 +48,7 @@ class ServiceAcceptanceController {
         sanStatus: result.status
       };
 
-      // Étape GoFlow de CE bon de commande (réquisition répartie : une SAN par part) ; le taskId du client n'est
+      // Étape BpmnGo de CE bon de commande (réquisition répartie : une SAN par part) ; le taskId du client n'est
       // retenu que s'il désigne cette étape
       try {
         const row = await db.one(

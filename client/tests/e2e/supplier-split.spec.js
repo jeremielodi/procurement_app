@@ -3,7 +3,7 @@
 //  - page « Répartition par fournisseur » : un fournisseur par article, pro-forma par fournisseur, validation
 //  - onglet tâches : une étape « Créer le bon de commande » par part, libellé de la part ; fiche : répartition
 //  - centre d'aide : rubrique « Méthode d'achat » › « Répartir entre plusieurs fournisseurs »
-// Requiert GoFlow (sinon le test s'ignore).
+// Requiert BpmnGo (sinon le test s'ignore).
 import { test, expect } from '@playwright/test';
 import { getApproverToken, auth, PDF_BUFFER } from '../api/helpers.js';
 
@@ -52,7 +52,7 @@ test('Répartition de 5 articles entre 3 fournisseurs depuis l\'onglet tâches',
     req = (await (await page.request.get(`/api/requisitions/${req.id}`, { headers: H })).json()).data;
     return req.process_instance_id || null;
   }, { timeout: 15_000 }).toBeTruthy().catch(() => {});
-  test.skip(!req.process_instance_id, 'GoFlow indisponible');
+  test.skip(!req.process_instance_id, 'BpmnGo indisponible');
 
   const approver = auth(await getApproverToken(page.request));
   const [n1] = await waitForTask(page, H, req.process_instance_id, 'Activity_ValidationN1_Manager');

@@ -1,6 +1,6 @@
 // backend/src/services/SupplierConfirmationService.js
-// Réponse du fournisseur à un bon de commande (étape GoFlow Activity_SupplierConfirmation) :
-//   CONFIRMED → PO_CONFIRMED (date de livraison promise, référence fournisseur) + tâche GoFlow complétée
+// Réponse du fournisseur à un bon de commande (étape BpmnGo Activity_SupplierConfirmation) :
+//   CONFIRMED → PO_CONFIRMED (date de livraison promise, référence fournisseur) + tâche BpmnGo complétée
 //   DECLINED  → motif obligatoire ; la tâche reste ouverte, les achats décident (nouvelle négociation, annulation…)
 // Source : PORTAL (le fournisseur, depuis son portail) ou PROCUREMENT (confirmation reçue par téléphone / email).
 // Un refus peut être suivi d'une confirmation (après négociation) ; une confirmation est définitive.
@@ -24,8 +24,8 @@ const isoDate = (v) => {
 };
 
 /**
- * Tâche GoFlow « confirmation fournisseur » ouverte pour CE bon de commande (réquisition répartie : une par part ;
- * taskId retenu seulement s'il la désigne), null si GoFlow injoignable ou étape non atteinte
+ * Tâche BpmnGo « confirmation fournisseur » ouverte pour CE bon de commande (réquisition répartie : une par part ;
+ * taskId retenu seulement s'il la désigne), null si BpmnGo injoignable ou étape non atteinte
  */
 async function openTask(processInstanceId, poId, taskId = null) {
   if (!processInstanceId) return null;
@@ -62,7 +62,7 @@ class SupplierConfirmationService {
    * @param {number} poId
    * @param {object} data { response: 'CONFIRMED' | 'DECLINED', deliveryDate, reference, comment }
    * @param {object} ctx  { userId, source: 'PORTAL' | 'PROCUREMENT', supplierId (PORTAL : contrôle d'appartenance), io, taskId,
-   *                        skipTask (tâche GoFlow déjà complétée par « Mes tâches ») }
+   *                        skipTask (tâche BpmnGo déjà complétée par « Mes tâches ») }
    * @returns {{ poId, poNumber, response, taskCompleted }}
    */
   async respond(poId, { response, deliveryDate, reference, comment }, { userId, source, supplierId, io, taskId, skipTask } = {}) {
@@ -109,7 +109,7 @@ class SupplierConfirmationService {
       return row;
     });
 
-    // Confirmation : l'étape GoFlow est terminée (contexte de l'entreprise du bon : un compte fournisseur n'en a pas)
+    // Confirmation : l'étape BpmnGo est terminée (contexte de l'entreprise du bon : un compte fournisseur n'en a pas)
     let taskCompleted = !!skipTask;
     if (resp === 'CONFIRMED' && !skipTask) {
       try {
@@ -118,10 +118,10 @@ class SupplierConfirmationService {
           const result = await tenant.run({ enterpriseId: po.enterprise_id }, () =>
             camundaService.completeTask(task.id, { supplierConfirmed: true, confirmedDeliveryDate: date || '', supplierReference: ref || '' }));
           taskCompleted = !!result.success;
-          if (!result.success) console.warn(`[SupplierConfirmation] ${po.po_number} : tâche GoFlow non complétée — ${result.error}`);
+          if (!result.success) console.warn(`[SupplierConfirmation] ${po.po_number} : tâche BpmnGo non complétée — ${result.error}`);
         }
       } catch (error) {
-        console.warn(`[SupplierConfirmation] ${po.po_number} : GoFlow injoignable — ${error.message}`);
+        console.warn(`[SupplierConfirmation] ${po.po_number} : BpmnGo injoignable — ${error.message}`);
       }
     }
 

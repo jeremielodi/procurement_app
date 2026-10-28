@@ -9,7 +9,7 @@
 //   node migrate-uploads-to-minio.js --dry-run       # liste ce qui serait copié, sans rien envoyer
 //   node migrate-uploads-to-minio.js --dir="D:\autre\dossier"
 //   node migrate-uploads-to-minio.js --skip-db-check # ne pas vérifier les références en base
-//   docker exec wwf_app node scripts/migrate-uploads-to-minio.js   # depuis le conteneur
+//   docker exec procureapp_app node scripts/migrate-uploads-to-minio.js   # depuis le conteneur
 //
 // Configuration (backend/.env) :
 //   UPLOAD_DIR                          dossier source

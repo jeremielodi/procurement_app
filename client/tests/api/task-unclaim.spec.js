@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { getToken, auth } from './helpers.js';
 
-// Libération d'une tâche GoFlow (POST /api/tasks/:id/unclaim)
-// Les cas avec une vraie tâche (propriétaire / admin / collègue) nécessitent GoFlow : vérifiés hors suite
+// Libération d'une tâche BpmnGo (POST /api/tasks/:id/unclaim)
+// Les cas avec une vraie tâche (propriétaire / admin / collègue) nécessitent BpmnGo : vérifiés hors suite
 test.describe('API › Tâches › libération', () => {
   test('401 sans authentification', async ({ request }) => {
     expect((await request.post('/api/tasks/inconnue/unclaim')).status()).toBe(401);

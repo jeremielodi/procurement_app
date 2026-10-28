@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { getToken, auth } from './helpers.js';
 
 // Budget insuffisant → ajustement → nouvelle vérification sur la MÊME réquisition (BPMN : Gateway_BudgetAdjustmentDecision).
-// Nécessite GoFlow avec la version du BPMN contenant la boucle ; sans GoFlow les tests du circuit sont ignorés.
+// Nécessite BpmnGo avec la version du BPMN contenant la boucle ; sans BpmnGo les tests du circuit sont ignorés.
 const WAIT = 40_000;
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -19,7 +19,7 @@ test.describe.serial('API › Ajustement budgétaire', () => {
     const body = await (await request.get(`/api/tasks/process/${req.process_instance_id}`, { headers: H() })).json();
     return (body.data || body.tasks || []).filter(tk => tk.status !== 'COMPLETED');
   };
-  /** Attend un statut (et, si demandé, la tâche GoFlow correspondante) */
+  /** Attend un statut (et, si demandé, la tâche BpmnGo correspondante) */
   async function waitFor(request, req, { status, taskKey }) {
     const start = Date.now();
     while (Date.now() - start < WAIT) {
@@ -59,7 +59,7 @@ test.describe.serial('API › Ajustement budgétaire', () => {
   test('Budget insuffisant : la réquisition attend l\'ajustement (tâche du demandeur), le processus continue', async ({ request }) => {
     reqRetry = await createRequisition(request, 5_000);
     const waited = await waitFor(request, reqRetry, { status: 'BUDGET_INSUFFICIENT', taskKey: 'Activity_BudgetAdjustment' });
-    test.skip(!waited, 'GoFlow (avec le BPMN à jour) indisponible');
+    test.skip(!waited, 'BpmnGo (avec le BPMN à jour) indisponible');
     reqRetry = waited;
     const summary = await json(await request.get(`/api/requisitions/${reqRetry.id}/budget-adjustment`, { headers: H() }));
     expect(summary.status).toBe(200);
@@ -100,7 +100,7 @@ test.describe.serial('API › Ajustement budgétaire', () => {
   test('Abandon : réquisition annulée, plus aucune tâche', async ({ request }) => {
     reqAbandon = await createRequisition(request, 7_000);
     const waited = await waitFor(request, reqAbandon, { status: 'BUDGET_INSUFFICIENT', taskKey: 'Activity_BudgetAdjustment' });
-    test.skip(!waited, 'GoFlow (avec le BPMN à jour) indisponible');
+    test.skip(!waited, 'BpmnGo (avec le BPMN à jour) indisponible');
     const res = await json(await request.post(`/api/requisitions/${reqAbandon.id}/budget-adjustment`, { headers: H(), data: { decision: 'ABANDON', comment: 'Plus nécessaire' } }));
     expect(res.status, JSON.stringify(res.body)).toBe(200);
     const after = await getReq(request, reqAbandon.id);

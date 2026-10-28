@@ -1,5 +1,5 @@
 // src/components/Requisitions/BudgetAdjustmentPanel.jsx
-// Budget insuffisant (étape GoFlow Activity_BudgetAdjustment) : besoin / disponible par ligne budgétaire,
+// Budget insuffisant (étape BpmnGo Activity_BudgetAdjustment) : besoin / disponible par ligne budgétaire,
 // changement de ligne des articles, puis « Relancer la vérification » (même réquisition) ou « Abandonner ».
 // Visible seulement au statut BUDGET_INSUFFICIENT ; actions réservées au demandeur, à la finance et à l'administrateur.
 import React, { useEffect, useState } from 'react'
@@ -11,7 +11,7 @@ import requisitionService from '../../services/requisitionService'
 import { useCurrency } from '../../contexts/EnterpriseContext'
 import { t } from '../../i18n'
 
-const ERROR_CODES = ['STILL_INSUFFICIENT', 'TASK_NOT_FOUND', 'NOT_BUDGET_INSUFFICIENT', 'BUDGET_LINE_INVALID', 'FORBIDDEN', 'GOFLOW_ERROR']
+const ERROR_CODES = ['STILL_INSUFFICIENT', 'TASK_NOT_FOUND', 'NOT_BUDGET_INSUFFICIENT', 'BUDGET_LINE_INVALID', 'FORBIDDEN', 'BPMNGO_ERROR']
 
 export default function BudgetAdjustmentPanel({ requisition, onChanged }) {
   const { formatAmount } = useCurrency()

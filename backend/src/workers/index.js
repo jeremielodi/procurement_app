@@ -373,7 +373,7 @@ async function processClassifyProcurement(task) {
 
   // La méthode est choisie par l'utilisateur à l'étape Activity_DetermineType : ce worker la transmet seulement
   // (statut de la réquisition) — il ne la recalcule jamais et n'écrit rien dans l'historique en son nom.
-  // Choix absent : erreur → nouvelle tentative puis incident GoFlow (jamais de méthode inventée)
+  // Choix absent : erreur → nouvelle tentative puis incident BpmnGo (jamais de méthode inventée)
   const chosenMethod = getVariableValue(task.variables, 'procurementMethod');
   const result = await requisitionModel.applyChosenMethod(requisitionId, chosenMethod);
 

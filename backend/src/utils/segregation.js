@@ -20,7 +20,7 @@ function sodError(code, message) {
 }
 
 /**
- * Conflits des tâches GoFlow pour un utilisateur, en lot (liste « Mes tâches », prise en charge, complétion).
+ * Conflits des tâches BpmnGo pour un utilisateur, en lot (liste « Mes tâches », prise en charge, complétion).
  * @param {Array<{ processInstanceId, taskDefinitionKey }>} tasks
  * @returns {Map<processInstanceId|taskDefinitionKey, code>} clé `${processInstanceId}|${taskDefinitionKey}` → code
  */

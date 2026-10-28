@@ -94,13 +94,13 @@ test.describe.serial('API › Modèles de documents (réquisition, bon de comman
   });
 
   test('Bon de commande : conditions de paiement / livraison, instructions, PDF', async ({ request }) => {
-    // La commande exige une réquisition active (démarrée dans GoFlow)
+    // La commande exige une réquisition active (démarrée dans BpmnGo)
     let status = 'DRAFT';
     for (let i = 0; i < 15 && status === 'DRAFT'; i++) {
       await new Promise(r => setTimeout(r, 1000));
       status = (await (await request.get(`/api/requisitions/${requisitionId}`, { headers: auth(admin) })).json()).data.status;
     }
-    test.skip(status === 'DRAFT' || !supplier, 'GoFlow requis : réquisition restée en brouillon');
+    test.skip(status === 'DRAFT' || !supplier, 'BpmnGo requis : réquisition restée en brouillon');
 
     const req = (await (await request.get(`/api/requisitions/${requisitionId}`, { headers: auth(admin) })).json()).data;
     const res = await request.post('/api/purchase-orders', { headers: auth(admin), data: {

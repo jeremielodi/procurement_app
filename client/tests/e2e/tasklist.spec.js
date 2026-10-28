@@ -53,12 +53,12 @@ test.describe('📋 TaskList — Mes tâches Camunda', () => {
   });
 });
 
-test.describe('📋 TaskList — Redirect vers formulaires dédiés (GoFlow)', () => {
+test.describe('📋 TaskList — Redirect vers formulaires dédiés (BpmnGo)', () => {
 
   // Vérifie que les formulaires dédiés reçoivent correctement taskId + poId depuis l'URL
-  // (simule le redirect que fait TaskList quand une tâche GoFlow est ouverte)
+  // (simule le redirect que fait TaskList quand une tâche BpmnGo est ouverte)
 
-  test('GRN form : accepte taskId + poId depuis URL (redirect GoFlow)', async ({ page }) => {
+  test('GRN form : accepte taskId + poId depuis URL (redirect BpmnGo)', async ({ page }) => {
     await page.goto('/goods-receipts/new?taskId=fake-task-001&poId=99999');
     await page.waitForTimeout(2000);
     // Le formulaire se charge (titre visible)
@@ -70,7 +70,7 @@ test.describe('📋 TaskList — Redirect vers formulaires dédiés (GoFlow)', (
     expect(body).not.toContain('Cannot GET');
   });
 
-  test('SAN form : accepte taskId + poId depuis URL (redirect GoFlow)', async ({ page }) => {
+  test('SAN form : accepte taskId + poId depuis URL (redirect BpmnGo)', async ({ page }) => {
     await page.goto('/service-acceptance-notes/new?taskId=fake-task-002&poId=99999');
     await page.waitForTimeout(2000);
     // Le formulaire SAN se charge
@@ -79,7 +79,7 @@ test.describe('📋 TaskList — Redirect vers formulaires dédiés (GoFlow)', (
     expect(body).not.toContain('Cannot GET');
   });
 
-  test('Invoice form : accepte taskId + poId depuis URL (redirect GoFlow)', async ({ page }) => {
+  test('Invoice form : accepte taskId + poId depuis URL (redirect BpmnGo)', async ({ page }) => {
     await page.goto('/invoices/new?taskId=fake-task-003&poId=99999');
     await page.waitForTimeout(2000);
     await expect(page.locator('h1')).toContainText('Facture', { timeout: 8_000 });
@@ -87,7 +87,7 @@ test.describe('📋 TaskList — Redirect vers formulaires dédiés (GoFlow)', (
     expect(body).not.toContain('Cannot GET');
   });
 
-  test('Payment form : accepte taskId depuis URL (redirect GoFlow)', async ({ page }) => {
+  test('Payment form : accepte taskId depuis URL (redirect BpmnGo)', async ({ page }) => {
     await page.goto('/payments/new?taskId=fake-task-004');
     await page.waitForTimeout(2000);
     await expect(page.locator('h1')).toContainText('Paiement', { timeout: 8_000 });

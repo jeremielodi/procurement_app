@@ -1,7 +1,7 @@
 -- ============================================================================
 -- 38_supplier_split.sql — Réquisition répartie entre plusieurs fournisseurs (idempotente)
 -- ----------------------------------------------------------------------------
--- Les achats peuvent répartir les articles d'une réquisition entre plusieurs fournisseurs (étape GoFlow
+-- Les achats peuvent répartir les articles d'une réquisition entre plusieurs fournisseurs (étape BpmnGo
 -- Activity_AllocateSuppliers) : une « part » par fournisseur, chaque article dans une seule part. Chaque part suit
 -- ensuite son propre cycle de commande (sous-processus SubProcess_SupplierOrder du BPMN, répété par part :
 -- bon de commande → approbation → envoi → confirmation → SAN / GRN → facture → paiement).

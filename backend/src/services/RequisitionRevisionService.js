@@ -2,7 +2,7 @@
 // Renvoi pour correction, retrait, modification et versions d'une réquisition (migration 25_requisition_revisions.sql).
 //  - Renvoi : un approbateur (N1 / N2 / N3) termine son étape avec returnedForCorrection = true (TaskController) ;
 //    le retrait par le demandeur termine de la même façon l'étape d'approbation que personne n'a prise en charge
-//  - La réquisition passe « À corriger » (RETURNED) ; GoFlow ouvre Activity_ReviseRequisition pour le demandeur
+//  - La réquisition passe « À corriger » (RETURNED) ; BpmnGo ouvre Activity_ReviseRequisition pour le demandeur
 //  - update : seul le demandeur modifie, et seulement dans cet état ; resubmit : nouvelle version (photo complète),
 //    étape terminée avec resubmitted = true (nouvelle vérification du budget, circuit d'approbation selon le NOUVEAU
 //    montant) ; abandon : resubmitted = false, réquisition annulée
@@ -19,8 +19,8 @@ const REVISE_TASK = 'Activity_ReviseRequisition';
 const fail = (status, code, message, extra = {}) => Object.assign(new Error(message), { status, code, ...extra });
 
 /**
- * Le processus GoFlow connaît-il « Corriger la réquisition » ? Variable revisionSupported posée au démarrage
- * (RequisitionController) : un processus démarré avant la mise à jour du BPMN irait au rejet. GoFlow injoignable : non.
+ * Le processus BpmnGo connaît-il « Corriger la réquisition » ? Variable revisionSupported posée au démarrage
+ * (RequisitionController) : un processus démarré avant la mise à jour du BPMN irait au rejet. BpmnGo injoignable : non.
  */
 async function supportsRevision(processInstanceId) {
   if (!processInstanceId) return false;
@@ -171,7 +171,7 @@ class RequisitionRevisionService {
   }
 
   /**
-   * Après le renvoi par un approbateur (étape déjà terminée dans GoFlow par TaskController) ou le retrait :
+   * Après le renvoi par un approbateur (étape déjà terminée dans BpmnGo par TaskController) ou le retrait :
    * version courante close avec le motif, réquisition « À corriger », demandeur notifié
    */
   async markReturned(requisitionId, { kind = 'RETURNED', reason, userId, taskKey = null, io = null }) {
@@ -201,7 +201,7 @@ class RequisitionRevisionService {
 
   /**
    * Retrait par le demandeur : l'étape d'approbation en cours (que personne n'a prise en charge) est terminée avec
-   * returnedForCorrection = true → GoFlow ouvre « Corriger la réquisition »
+   * returnedForCorrection = true → BpmnGo ouvre « Corriger la réquisition »
    */
   async withdraw(requisitionId, { reason } = {}, userId, io = null) {
     const req = await loadRequisition(requisitionId);
@@ -214,7 +214,7 @@ class RequisitionRevisionService {
     const result = await camundaService.completeTask(task.id, {
       approved: false, returnedForCorrection: true, withdrawnByRequester: true, comment: text(reason, 1000),
     });
-    if (!result.success) throw fail(502, 'GOFLOW_ERROR', result.error || 'GoFlow n\'a pas accepté le retrait');
+    if (!result.success) throw fail(502, 'BPMNGO_ERROR', result.error || 'BpmnGo n\'a pas accepté le retrait');
     await this.markReturned(req.id, { kind: 'WITHDRAWN', reason, userId, taskKey: task.taskDefinitionKey, io });
     return { status: 'RETURNED' };
   }
@@ -226,7 +226,7 @@ class RequisitionRevisionService {
     const isRequester = same(req.requester_id, userId);
     let approval = null;
     if (isRequester && ['IN_PROGRESS', 'PENDING'].includes(req.status)) {
-      try { approval = (await openTasks(req.process_instance_id)).find(t => APPROVAL_TASKS.includes(t.taskDefinitionKey)) || null; } catch { /* GoFlow injoignable */ }
+      try { approval = (await openTasks(req.process_instance_id)).find(t => APPROVAL_TASKS.includes(t.taskDefinitionKey)) || null; } catch { /* BpmnGo injoignable */ }
     }
     const lastReturn = await db.one(
       `SELECT v.version, v.return_kind AS kind, v.return_reason AS reason, v.returned_at AS at, v.returned_task AS task,
@@ -319,7 +319,7 @@ class RequisitionRevisionService {
 
   /**
    * Nouvelle soumission : nouvelle version (photo), « Corriger la réquisition » terminée avec resubmitted = true et les
-   * valeurs à jour (montant → niveau d'approbation, articles). GoFlow relance la vérification du budget.
+   * valeurs à jour (montant → niveau d'approbation, articles). BpmnGo relance la vérification du budget.
    */
   async resubmit(requisitionId, { comment } = {}, userId, io = null) {
     const req = await loadRequisition(requisitionId);
@@ -327,7 +327,7 @@ class RequisitionRevisionService {
     if (!same(req.requester_id, userId)) throw fail(403, 'NOT_REQUESTER', 'Seul le demandeur peut soumettre à nouveau sa réquisition');
     if (req.status !== 'RETURNED') throw fail(409, 'NOT_EDITABLE', 'La réquisition n\'est pas « À corriger »');
     const task = (await openTasks(req.process_instance_id)).find(t => t.taskDefinitionKey === REVISE_TASK);
-    if (!task) throw fail(409, 'TASK_NOT_FOUND', 'Étape « Corriger la réquisition » introuvable dans GoFlow (moteur injoignable ou processus terminé)');
+    if (!task) throw fail(409, 'TASK_NOT_FOUND', 'Étape « Corriger la réquisition » introuvable dans BpmnGo (moteur injoignable ou processus terminé)');
 
     const photo = await snapshot(req.id);
     const previous = await db.one('SELECT snapshot FROM requisition_versions WHERE requisition_id = $1 AND version = $2', [req.id, req.version || 1]);
@@ -344,7 +344,7 @@ class RequisitionRevisionService {
         requisition: req, userId, taskName: REVISE_TASK, action: 'RESUBMITTED',
         comments: JSON.stringify({ version, comment: text(comment, 1000) || null, changed: hasChanges(changes) }),
       });
-      // GoFlow en dernier : en cas de refus, la transaction est annulée (la réquisition reste « À corriger »)
+      // BpmnGo en dernier : en cas de refus, la transaction est annulée (la réquisition reste « À corriger »)
       const result = await camundaService.completeTask(task.id, {
         resubmitted: true,
         estimatedAmount: photo.amount,
@@ -364,7 +364,7 @@ class RequisitionRevisionService {
         requisitionVersion: version,
         resubmitComment: text(comment, 1000),
       });
-      if (!result.success) throw fail(502, 'GOFLOW_ERROR', result.error || 'GoFlow n\'a pas accepté la nouvelle soumission');
+      if (!result.success) throw fail(502, 'BPMNGO_ERROR', result.error || 'BpmnGo n\'a pas accepté la nouvelle soumission');
     });
     return { version, status: 'IN_PROGRESS', changes };
   }
@@ -377,10 +377,10 @@ class RequisitionRevisionService {
     if (req.status !== 'RETURNED') throw fail(409, 'NOT_EDITABLE', 'La réquisition n\'est pas « À corriger »');
     if (!text(reason)) throw fail(400, 'REASON_REQUIRED', 'Motif obligatoire');
     let task = null;
-    try { task = (await openTasks(req.process_instance_id)).find(t => t.taskDefinitionKey === REVISE_TASK); } catch { /* GoFlow injoignable */ }
+    try { task = (await openTasks(req.process_instance_id)).find(t => t.taskDefinitionKey === REVISE_TASK); } catch { /* BpmnGo injoignable */ }
     if (task) {
       const result = await camundaService.completeTask(task.id, { resubmitted: false, comment: text(reason, 1000) });
-      if (!result.success) throw fail(502, 'GOFLOW_ERROR', result.error || 'GoFlow n\'a pas accepté l\'abandon');
+      if (!result.success) throw fail(502, 'BPMNGO_ERROR', result.error || 'BpmnGo n\'a pas accepté l\'abandon');
     }
     await db.withTransaction(async (tx) => {
       await tx.exec(

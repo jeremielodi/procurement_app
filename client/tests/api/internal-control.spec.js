@@ -3,7 +3,7 @@ import { getToken, getApproverToken, auth } from './helpers.js';
 
 // Contrôle interne (migration 21_internal_control.sql) :
 //  - permissions d'écriture dédiées (réception, SAN, facture, paiement) ; profil Auditeur en lecture seule
-//  - séparation des tâches : bon de commande, facture, paiement, tâches GoFlow d'approbation
+//  - séparation des tâches : bon de commande, facture, paiement, tâches BpmnGo d'approbation
 //  - coordonnées bancaires modifiées → paiement bloqué jusqu'à vérification par une autre personne
 //  - facture en double (même fournisseur, même n° de facture fournisseur) refusée
 //  - journal d'audit : tentatives refusées et actions sensibles tracées
@@ -11,7 +11,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const WAIT = 40_000;
 
 test.describe.serial('API › Contrôle interne', () => {
-  test.describe.configure({ timeout: 120_000 }); // création de la réquisition + démarrage GoFlow
+  test.describe.configure({ timeout: 120_000 }); // création de la réquisition + démarrage BpmnGo
   const stamp = Date.now().toString(36);
   const viewer = { email: `ic.viewer.${stamp}@nowhere.test`, password: 'Secret123' };
   const auditor = { email: `ic.auditor.${stamp}@nowhere.test`, password: 'Secret123' };
@@ -77,7 +77,7 @@ test.describe.serial('API › Contrôle interne', () => {
     ]) {
       expect((await request[method](url, { headers: auth(auditorToken), data })).status(), `${method} ${url}`).toBe(403);
     }
-    // Aucune tâche GoFlow à traiter
+    // Aucune tâche BpmnGo à traiter
     const tasks = await json(await request.get('/api/tasks/user', { headers: auth(auditorToken) }));
     expect((tasks.body.data || []).filter(tk => tk.canClaim || tk.canComplete)).toHaveLength(0);
   });
@@ -213,7 +213,7 @@ test.describe.serial('API › Contrôle interne', () => {
     expect(failures.some(r => r.action === 'PAYMENT_BLOCKED')).toBe(true);
   });
 
-  test('Tâche GoFlow : hors groupe refusée ; le demandeur ne peut ni prendre ni approuver sa propre réquisition', async ({ request }) => {
+  test('Tâche BpmnGo : hors groupe refusée ; le demandeur ne peut ni prendre ni approuver sa propre réquisition', async ({ request }) => {
     // Réquisition de l'admin → tâche d'approbation N1
     let current;
     const start = Date.now();
@@ -227,7 +227,7 @@ test.describe.serial('API › Contrôle interne', () => {
       }
       await sleep(1500);
     }
-    test.skip(!task, 'GoFlow indisponible');
+    test.skip(!task, 'BpmnGo indisponible');
     expect([task.canClaim, task.canComplete, task.blockedReason]).toEqual([false, false, 'SELF_APPROVAL']);
 
     const outsider = await json(await request.post(`/api/tasks/${task.id}/complete`, { headers: auth(logisticToken), data: { variables: { approved: true } } }));

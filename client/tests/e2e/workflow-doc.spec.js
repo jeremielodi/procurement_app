@@ -519,7 +519,7 @@ test.describe.serial('Workflow documentation screenshots', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 18 · SAN form (via poId param — simule redirect GoFlow)
+  // 18 · SAN form (via poId param — simule redirect BpmnGo)
   // -------------------------------------------------------------------------
   test('18 - SAN form', async ({ page }) => {
     await test.step('Open SAN form with PO context', async () => {

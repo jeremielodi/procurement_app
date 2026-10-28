@@ -3,7 +3,7 @@ import { getToken, getApproverToken, auth } from './helpers.js';
 
 // Seuils d'approbation par projet (migration 26_approval_policies.sql) : politique du projet, sinon de l'entreprise,
 // sinon 25 000 / 100 000. Le niveau est calculé par check_budget (variable approvalLevel lue par le BPMN) et
-// enregistré sur la réquisition avec la politique appliquée. GoFlow requis pour les circuits (sinon ignorés).
+// enregistré sur la réquisition avec la politique appliquée. BpmnGo requis pour les circuits (sinon ignorés).
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const WAIT = 45_000;
 const KEYS = { N1: 'Activity_ValidationN1_Manager', N2: 'Activity_ValidationN2_Finance', N3: 'Activity_ValidationN3_DG' };
@@ -82,7 +82,7 @@ test.describe.serial('API › Seuils d\'approbation par projet', () => {
   test('2 000 sur le projet A (N1 < 1 000, N2 < 5 000) → N2 : Manager niveau 2 (Finance ne l\'approuve plus) ; une seule approbation', async ({ request }) => {
     const req = await requisition(request, projectA, 2000, 'N2');
     const found = await approvalTask(request, req);
-    test.skip(!found, 'GoFlow indisponible');
+    test.skip(!found, 'BpmnGo indisponible');
     expect(found.task.taskDefinitionKey).toBe(KEYS.N2);
     expect(found.requisition.approval_level).toBe('N2');
     expect(found.requisition.approval_policy).toMatchObject({ n1Max: 1000, n2Max: 5000, source: 'PROJECT' });
@@ -91,7 +91,7 @@ test.describe.serial('API › Seuils d\'approbation par projet', () => {
     expect(event?.details?.[0]).toContain('Politique du projet');
     expect(event?.title).toContain('Manager niveau 2');
 
-    // Groupe GoFlow manager_n2 (migration 27) : un compte Finance ne peut plus prendre l'approbation N2,
+    // Groupe BpmnGo manager_n2 (migration 27) : un compte Finance ne peut plus prendre l'approbation N2,
     // un « Manager niveau 2 » si (profils valables sur tous les projets pour ce test)
     const mk = async (key, profile) => {
       const u = { email: `ap.${key}.${stamp}@nowhere.test`, password: 'Secret123' };
@@ -118,7 +118,7 @@ test.describe.serial('API › Seuils d\'approbation par projet', () => {
   test('6 000 sur le projet A → N3 ; même montant sur le projet B (défaut) → N1', async ({ request }) => {
     const [n3, n1] = await Promise.all([requisition(request, projectA, 6000, 'N3'), requisition(request, projectB, 6000, 'défaut N1')]);
     const [a, b] = await Promise.all([approvalTask(request, n3), approvalTask(request, n1)]);
-    test.skip(!a || !b, 'GoFlow indisponible');
+    test.skip(!a || !b, 'BpmnGo indisponible');
     expect([a.task.taskDefinitionKey, b.task.taskDefinitionKey]).toEqual([KEYS.N3, KEYS.N1]);
     expect(b.requisition.approval_policy.source).toBe('DEFAULT');
   });
@@ -135,7 +135,7 @@ test.describe.serial('API › Seuils d\'approbation par projet', () => {
 
     const req = await requisition(request, projectB, 600, 'entreprise N3');
     const found = await approvalTask(request, req);
-    test.skip(!found, 'GoFlow indisponible');
+    test.skip(!found, 'BpmnGo indisponible');
     expect(found.task.taskDefinitionKey).toBe(KEYS.N3); // 600 ≥ 500 et pas de niveau N2
     expect(found.requisition.approval_policy).toMatchObject({ n1Max: 500, n2Max: 500, source: 'ENTERPRISE' });
 

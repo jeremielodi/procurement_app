@@ -1,5 +1,5 @@
 // src/components/Task/ClaimTaskConfirm.jsx
-// Confirmation avant de prendre en charge une tâche GoFlow (évite une prise en charge par erreur :
+// Confirmation avant de prendre en charge une tâche BpmnGo (évite une prise en charge par erreur :
 // la tâche est alors assignée à l'utilisateur et retirée des autres membres de son groupe)
 // ou avant de la libérer (mode="unclaim" : elle redevient disponible pour le groupe).
 import React from 'react';

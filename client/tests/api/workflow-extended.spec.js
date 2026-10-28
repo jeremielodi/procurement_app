@@ -15,7 +15,7 @@
  * Prérequis :
  *   - Backend démarré          (http://localhost:5000)
  *   - PostgreSQL accessible
- *   - Camunda/GoFlow en cours  (scénarios Camunda sont skippés si absent)
+ *   - Camunda/BpmnGo en cours  (scénarios Camunda sont skippés si absent)
  *
  * Lancer avec :
  *   npx playwright test tests/api/workflow-extended.spec.js --project=api --reporter=line
@@ -61,7 +61,7 @@ async function waitForTask(request, token, processInstanceId, taskKey, timeout =
 }
 
 /**
- * Le processus GoFlow est démarré juste après la création : relit la réquisition jusqu'à obtenir
+ * Le processus BpmnGo est démarré juste après la création : relit la réquisition jusqu'à obtenir
  * son process_instance_id (10 s max). Renvoie la réquisition à jour.
  */
 async function refreshProcess(request, token, req, timeout = 10_000) {
@@ -76,7 +76,7 @@ async function refreshProcess(request, token, req, timeout = 10_000) {
 }
 
 /**
- * Attend une tâche GoFlow OU l'arrêt du circuit (budget insuffisant, rejet).
+ * Attend une tâche BpmnGo OU l'arrêt du circuit (budget insuffisant, rejet).
  * Retourne { task } ou { stopped: statut } ou {} (délai dépassé).
  */
 async function waitForTaskOrStop(request, token, req, taskKey, timeout = POLL_TIMEOUT) {
@@ -160,7 +160,7 @@ async function createPO(request, token, { requisitionId, supplierId, amount }) {
       currency:        'USD',
       orderDate:       '2026-06-24',
       deliveryDate:    '2026-08-01',
-      shippingAddress: 'WWF HQ — Test étendu',
+      shippingAddress: 'Siège — Test étendu',
       items: [
         {
           description: 'Article test étendu',
@@ -291,7 +291,7 @@ test.beforeAll(async ({ request }) => {
 
 test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () => {
   const AMOUNT = 50_000;  // 25 000 ≤ 50 000 < 100 000 → Finance N2
-  test.setTimeout(120_000); // circuit GoFlow réel (attente de tâche jusqu'à 30 s)
+  test.setTimeout(120_000); // circuit BpmnGo réel (attente de tâche jusqu'à 30 s)
 
   let req          = null;
   let approvalTask = null;
@@ -343,7 +343,7 @@ test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () =
     approvalTask = r.task || null;
 
     if (!approvalTask) {
-      test.skip('Tâche Activity_ValidationN2_Finance non apparue dans le délai — GoFlow peut être lent');
+      test.skip('Tâche Activity_ValidationN2_Finance non apparue dans le délai — BpmnGo peut être lent');
       return;
     }
 
@@ -386,7 +386,7 @@ test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () =
 
 test.describe.serial('Scénario 2 — Approbation N3 DG (150 000 XAF)', () => {
   const AMOUNT = 150_000;  // ≥ 100 000 → DG N3
-  test.setTimeout(120_000); // circuit GoFlow réel (attente de tâche jusqu'à 30 s)
+  test.setTimeout(120_000); // circuit BpmnGo réel (attente de tâche jusqu'à 30 s)
 
   let req          = null;
   let approvalTask = null;

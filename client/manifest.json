@@ -1,6 +1,6 @@
 {
-  "short_name": "Procurement PMS",
-  "name": "WWF Procurement Management System",
+  "short_name": "procureApp",
+  "name": "procureApp — Procurement Management System",
   "icons": [
     {
       "src": "favicon.ico",

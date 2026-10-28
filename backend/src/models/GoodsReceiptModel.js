@@ -193,7 +193,7 @@ class GoodsReceiptModel {
         id: grn.id, grnNumber: grn.grn_number, status: grn.status, grnCompliant,
         warehouseId: warehouse?.id || null, stockMovements: movementCount,
         poFullyDelivered, deliveryClosed,
-        // Variable GoFlow : plus rien à réceptionner → facture ; sinon nouvelle SAN puis nouveau GRN
+        // Variable BpmnGo : plus rien à réceptionner → facture ; sinon nouvelle SAN puis nouveau GRN
         deliveryComplete: poFullyDelivered || deliveryClosed,
       };
     });

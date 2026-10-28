@@ -71,7 +71,7 @@ class PaymentController {
         paymentComplete: true
       };
 
-      // Étape GoFlow du bon de commande de la facture (réquisition répartie : un paiement par part) ; le taskId du
+      // Étape BpmnGo du bon de commande de la facture (réquisition répartie : un paiement par part) ; le taskId du
       // client n'est retenu que s'il désigne cette étape
       if (processInstanceId && poId) {
         try {

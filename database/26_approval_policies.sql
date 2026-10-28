@@ -5,7 +5,7 @@
 --   montant < n1_max           → N1 (Manager)
 --   n1_max ≤ montant < n2_max  → N2 (Finance)      — n1_max = n2_max : pas de niveau N2
 --   montant ≥ n2_max           → N3 (DG)
--- Le niveau est calculé par le serveur à la vérification du budget (worker check_budget) et transmis à GoFlow
+-- Le niveau est calculé par le serveur à la vérification du budget (worker check_budget) et transmis à BpmnGo
 -- (variable approvalLevel, lue par Gateway_AmountDecision) : changer une politique ne demande aucun redéploiement.
 -- Une réquisition déjà en attente d'approbation garde son niveau ; la politique appliquée est conservée.
 -- ============================================================================

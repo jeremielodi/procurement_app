@@ -1,8 +1,8 @@
 -- ============================================
--- CONFIRMATION DE COMMANDE PAR LE FOURNISSEUR (étape GoFlow Activity_SupplierConfirmation)
+-- CONFIRMATION DE COMMANDE PAR LE FOURNISSEUR (étape BpmnGo Activity_SupplierConfirmation)
 -- - Le fournisseur confirme (date de livraison promise, sa référence) ou décline (motif) depuis son portail ;
 --   les achats peuvent aussi enregistrer la confirmation reçue par téléphone / email (source PROCUREMENT)
--- - Confirmation → PO_CONFIRMED + tâche GoFlow complétée ; refus → tâche laissée ouverte, achats prévenus
+-- - Confirmation → PO_CONFIRMED + tâche BpmnGo complétée ; refus → tâche laissée ouverte, achats prévenus
 -- Idempotent : peut être rejoué sur une base existante.
 -- ============================================
 

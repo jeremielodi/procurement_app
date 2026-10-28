@@ -1585,7 +1585,7 @@
     "notSpecified": "Non spécifiée",
     "linkedRequisition": "Réquisition associée",
     "p2pFlow": "Flux P2P",
-    "p2pNoteBefore": "Les actions (GRN, SAN, Facture, Paiement) sont déclenchées par GoFlow et apparaissent dans votre",
+    "p2pNoteBefore": "Les actions (GRN, SAN, Facture, Paiement) sont déclenchées par BpmnGo et apparaissent dans votre",
     "taskList": "liste des tâches",
     "grns": "Bons de réception (GRN)",
     "sans": "Acceptations service (SAN)",
@@ -1626,11 +1626,11 @@
         "CONFIRMED": "Confirme la commande",
         "DECLINED": "Décline la commande"
       },
-      "confirmEffect": "La commande passe à « Confirmée » et l'étape GoFlow « Confirmation fournisseur » est terminée : la réception peut commencer.",
+      "confirmEffect": "La commande passe à « Confirmée » et l'étape BpmnGo « Confirmation fournisseur » est terminée : la réception peut commencer.",
       "declineEffect": "L'étape reste ouverte : relancez ou renégociez avec le fournisseur, puis enregistrez sa confirmation (ou annulez la commande).",
       "hint": "Le fournisseur peut répondre lui-même depuis son portail (s'il a un compte) ; sinon, enregistrez ici la réponse reçue par téléphone ou email.",
       "recorded": "Confirmation enregistrée",
-      "recordedTask": "Confirmation enregistrée : l'étape GoFlow est terminée",
+      "recordedTask": "Confirmation enregistrée : l'étape BpmnGo est terminée",
       "declinedRecorded": "Refus enregistré",
       "err": {
         "ALREADY_CONFIRMED": "Cette commande est déjà confirmée",
@@ -2115,7 +2115,7 @@
     "publish": "Publier et notifier les fournisseurs",
     "notFound": "Appel d'offres introuvable",
     "updated": "Appel d'offres modifié — fournisseurs notifiés",
-    "taskNotCompleted": "Tâche GoFlow non trouvée/complétée — vérifiez la TaskList",
+    "taskNotCompleted": "Tâche BpmnGo non trouvée/complétée — vérifiez la TaskList",
     "awarded": "Marché attribué",
     "requisition": "Réquisition",
     "availableAfterClose": "Disponible après la clôture des soumissions",
@@ -2166,7 +2166,7 @@
     "notCheapest": "Ce n'est pas l'offre complète la moins chère : justifiez votre choix ci-dessous.",
     "incompleteOffer": "Offre incomplète ({{done}}/{{total}} items chiffrés).",
     "justification": "Commentaire / justification",
-    "awardTaskHint": "La tâche GoFlow « Appel d'offres » sera complétée et les soumissionnaires notifiés.",
+    "awardTaskHint": "La tâche BpmnGo « Appel d'offres » sera complétée et les soumissionnaires notifiés.",
     "cancelTitle": "Annuler l'appel d'offres",
     "cancelled": "Annulé",
     "closed": "Clôturé",
@@ -2203,7 +2203,7 @@
         "AWARD_REQUIRED": "Aucun article attribué.",
         "SPLIT_NOT_SUPPORTED": "Processus démarré avant la répartition par fournisseur : attribuez tous les articles à un seul fournisseur.",
         "ALLOCATION_LOCKED": "Des bons de commande existent déjà pour cette réquisition.",
-        "GOFLOW_ERROR": "Le moteur de workflow n'a pas accepté la fin de l'étape : rien n'a été enregistré.",
+        "BPMNGO_ERROR": "Le moteur de workflow n'a pas accepté la fin de l'étape : rien n'a été enregistré.",
         "default": "Attribution impossible"
       }
     }
@@ -3724,7 +3724,7 @@
     "sections": {
       "overview": {
         "title": "Comment fonctionne procureApp",
-        "summary": "Le cycle complet d'un achat, de la demande au paiement, et le rôle de GoFlow.",
+        "summary": "Le cycle complet d'un achat, de la demande au paiement, et le rôle de BpmnGo.",
         "blocks": [
           {
             "type": "p",
@@ -3751,11 +3751,11 @@
           },
           {
             "type": "h",
-            "text": "GoFlow : le moteur qui pilote le circuit"
+            "text": "BpmnGo : le moteur qui pilote le circuit"
           },
           {
             "type": "p",
-            "text": "Le déroulement est orchestré par GoFlow, un moteur de workflow. Dès qu'une réquisition est soumise, GoFlow crée les tâches dans le bon ordre et pour le bon groupe de personnes : il est impossible, par exemple, de saisir une facture avant la réception. Les étapes automatiques (budget, classification, envoi du bon de commande, rapprochement) sont exécutées par l'application sans intervention."
+            "text": "Le déroulement est orchestré par BpmnGo, un moteur de workflow. Dès qu'une réquisition est soumise, BpmnGo crée les tâches dans le bon ordre et pour le bon groupe de personnes : il est impossible, par exemple, de saisir une facture avant la réception. Les étapes automatiques (budget, classification, envoi du bon de commande, rapprochement) sont exécutées par l'application sans intervention."
           },
           {
             "type": "list",
@@ -3900,11 +3900,11 @@
       },
       "tasks": {
         "title": "Mes tâches",
-        "summary": "Prendre en charge, traiter ou libérer les tâches que GoFlow vous assigne.",
+        "summary": "Prendre en charge, traiter ou libérer les tâches que BpmnGo vous assigne.",
         "blocks": [
           {
             "type": "p",
-            "text": "« Mes tâches » liste les actions qui vous attendent : approbations, choix de la méthode d'achat, création du bon de commande, réception, acceptation de service, facture, paiement… Une tâche apparaît quand GoFlow atteint l'étape correspondante, pour les personnes ayant le profil requis sur le projet de la réquisition. Vous recevez aussi un email et une notification."
+            "text": "« Mes tâches » liste les actions qui vous attendent : approbations, choix de la méthode d'achat, création du bon de commande, réception, acceptation de service, facture, paiement… Une tâche apparaît quand BpmnGo atteint l'étape correspondante, pour les personnes ayant le profil requis sur le projet de la réquisition. Vous recevez aussi un email et une notification."
           },
           {
             "type": "h",
@@ -3916,7 +3916,7 @@
               "Dans « Mes tâches », cliquez sur la tâche (ou « Traiter dans la réquisition ») : l'onglet « Tâches » de la réquisition s'ouvre, la tâche est mise en évidence.",
               "Cliquez « Prendre en charge » : une confirmation s'affiche, car la tâche vous sera assignée et disparaîtra de la liste de vos collègues.",
               "Cliquez « Traiter ». Selon la tâche, une fenêtre s'ouvre (approbation, choix…) ou l'écran dédié, déjà rattaché au bon document de la réquisition (bon de commande, réception, facture, paiement, appel d'offres). S'il manque un document (ex. aucune facture à payer), un message l'indique.",
-              "Complétez et validez : GoFlow passe automatiquement à l'étape suivante et prévient le groupe suivant."
+              "Complétez et validez : BpmnGo passe automatiquement à l'étape suivante et prévient le groupe suivant."
             ]
           },
           {
@@ -3965,7 +3965,7 @@
               "Renseignez le titre, la description, la justification, la priorité, le département et le projet. Le projet détermine les lignes budgétaires disponibles et les personnes qui recevront les tâches.",
               "Ajoutez les articles : description, quantité, fréquence et prix unitaire. Total de la ligne = quantité × fréquence × prix unitaire.",
               "Affectez une ligne budgétaire à chaque article (bouton de recherche). Vous pouvez cocher plusieurs articles et leur affecter la même ligne en une fois.",
-              "Joignez si besoin des pièces (devis, cahier des charges…) puis enregistrez : la réquisition est soumise et GoFlow démarre le circuit."
+              "Joignez si besoin des pièces (devis, cahier des charges…) puis enregistrez : la réquisition est soumise et BpmnGo démarre le circuit."
             ]
           },
           {
@@ -4288,7 +4288,7 @@
               "Offres scellées : tant que l'appel est ouvert, vous ne voyez que le nom des soumissionnaires et la date de dépôt, jamais les prix.",
               "Vous pouvez clôturer avant la date prévue. Après clôture avec des offres, l'appel ne peut plus être prolongé.",
               "Comparatif Excel après clôture : tableau croisé articles × fournisseurs, détail des offres et liste des fournisseurs.",
-              "Attribution au fournisseur retenu : la tâche GoFlow est terminée et le circuit continue vers le bon de commande. Les fournisseurs sont informés du résultat."
+              "Attribution au fournisseur retenu : la tâche BpmnGo est terminée et le circuit continue vers le bon de commande. Les fournisseurs sont informés du résultat."
             ]
           },
           {
@@ -4409,7 +4409,7 @@
           {
             "type": "list",
             "items": [
-              "Après l'envoi, la commande attend la confirmation du fournisseur (étape GoFlow « Confirmation fournisseur »). Un fournisseur inscrit répond lui-même depuis son portail (« Mes commandes ») : il confirme en indiquant la date de livraison prévue, ou décline en expliquant pourquoi.",
+              "Après l'envoi, la commande attend la confirmation du fournisseur (étape BpmnGo « Confirmation fournisseur »). Un fournisseur inscrit répond lui-même depuis son portail (« Mes commandes ») : il confirme en indiquant la date de livraison prévue, ou décline en expliquant pourquoi.",
               "Si le fournisseur répond par téléphone ou par email, les achats enregistrent sa réponse sur la fiche du bon de commande : « Enregistrer la réponse du fournisseur ».",
               "Confirmée : la commande passe « Confirmée » et la réception peut commencer. Déclinée : l'étape reste ouverte ; relancez ou renégociez, puis enregistrez la confirmation (ou annulez la commande)."
             ]
@@ -5103,7 +5103,7 @@
           },
           {
             "type": "p",
-            "text": "Dans « Mes tâches », une demande que vous ne pouvez pas traiter affiche « Votre propre demande : un autre membre du groupe doit la traiter ». Sur un bon de commande ou un paiement, le bouton d'approbation est remplacé par une explication. Une tâche GoFlow ne peut être traitée que par un membre de son groupe (ou un administrateur), et pas si quelqu'un d'autre l'a prise en charge."
+            "text": "Dans « Mes tâches », une demande que vous ne pouvez pas traiter affiche « Votre propre demande : un autre membre du groupe doit la traiter ». Sur un bon de commande ou un paiement, le bouton d'approbation est remplacé par une explication. Une tâche BpmnGo ne peut être traitée que par un membre de son groupe (ou un administrateur), et pas si quelqu'un d'autre l'a prise en charge."
           },
           {
             "type": "tip",
@@ -5139,7 +5139,7 @@
           },
           {
             "type": "p",
-            "text": "L'administrateur peut créer des comptes avec le profil « Auditeur » : consultation des réquisitions, commandes, réceptions, factures, paiements, fournisseurs, stock (dont la valorisation), budget et journal d'audit, avec les exports. Aucune saisie, aucune approbation, aucune tâche GoFlow."
+            "text": "L'administrateur peut créer des comptes avec le profil « Auditeur » : consultation des réquisitions, commandes, réceptions, factures, paiements, fournisseurs, stock (dont la valorisation), budget et journal d'audit, avec les exports. Aucune saisie, aucune approbation, aucune tâche BpmnGo."
           },
           {
             "type": "h",
@@ -5326,7 +5326,7 @@
             "type": "list",
             "items": [
               "Utilisateurs : création avec profils et langue (français ou anglais, utilisée pour l'interface et les emails), réinitialisation du mot de passe, activation / désactivation.",
-              "Projets et départements : sur la fiche d'un projet, ajoutez les membres et choisissez les profils de workflow que chacun y exerce (manager, finance, achats…) — ce sont eux qui reçoivent et traitent les tâches GoFlow de ses réquisitions. « Tous les projets » se coche sur la fiche de l'utilisateur.",
+              "Projets et départements : sur la fiche d'un projet, ajoutez les membres et choisissez les profils de workflow que chacun y exerce (manager, finance, achats…) — ce sont eux qui reçoivent et traitent les tâches BpmnGo de ses réquisitions. « Tous les projets » se coche sur la fiche de l'utilisateur.",
               "« Mon entreprise » : nom, logo, adresse, contacts, NIF / RCCM, devise. Ils apparaissent sur tous les PDF.",
               "Dépôts et accès de la logistique (voir « Stock »).",
               "Préqualification des fournisseurs et vérification de leurs documents.",
@@ -5600,11 +5600,11 @@
     "abandoned": "Réquisition abandonnée",
     "err": {
       "STILL_INSUFFICIENT": "Le budget est encore insuffisant sur au moins une ligne",
-      "TASK_NOT_FOUND": "Étape « Ajustement budgétaire » introuvable dans GoFlow (moteur injoignable ou processus terminé)",
+      "TASK_NOT_FOUND": "Étape « Ajustement budgétaire » introuvable dans BpmnGo (moteur injoignable ou processus terminé)",
       "NOT_BUDGET_INSUFFICIENT": "Cette réquisition n'attend pas d'ajustement budgétaire",
       "BUDGET_LINE_INVALID": "Ligne budgétaire invalide (inactive ou d'un autre projet)",
       "FORBIDDEN": "Seul le demandeur (ou la Finance / un administrateur) peut ajuster le budget",
-      "GOFLOW_ERROR": "GoFlow n'a pas accepté la décision"
+      "BPMNGO_ERROR": "BpmnGo n'a pas accepté la décision"
     }
   },
   "search": {
@@ -5643,7 +5643,7 @@
       "WAREHOUSE_ACCESS_CHANGED": "Accès à un dépôt modifiés",
       "AUDIT_LOG_EXPORTED": "Journal d'audit exporté",
       "SOD_VIOLATION_BLOCKED": "Séparation des tâches : action refusée",
-      "TASK_COMPLETION_DENIED": "Tâche GoFlow refusée (hors groupe / prise par un autre)",
+      "TASK_COMPLETION_DENIED": "Tâche BpmnGo refusée (hors groupe / prise par un autre)",
       "BUDGET_LINE_CREATED": "Ligne budgétaire créée",
       "BUDGET_LINE_UPDATED": "Ligne budgétaire modifiée",
       "BUDGET_LINE_DELETED": "Ligne budgétaire supprimée",
@@ -6022,8 +6022,8 @@
       "NOT_EDITABLE": "La réquisition n'est pas (ou plus) « À corriger »",
       "NOT_WITHDRAWABLE": "La réquisition n'est pas en attente d'approbation",
       "APPROVAL_IN_PROGRESS": "Approbation déjà prise en charge par {{assignee}} : demandez-lui de la renvoyer pour correction",
-      "TASK_NOT_FOUND": "Étape introuvable dans GoFlow (moteur injoignable ou processus terminé)",
-      "GOFLOW_ERROR": "GoFlow n'a pas accepté l'action, réessayez",
+      "TASK_NOT_FOUND": "Étape introuvable dans BpmnGo (moteur injoignable ou processus terminé)",
+      "BPMNGO_ERROR": "BpmnGo n'a pas accepté l'action, réessayez",
       "REASON_REQUIRED": "Motif obligatoire",
       "TITLE_REQUIRED": "Le titre est obligatoire",
       "ITEMS_REQUIRED": "Au moins un article est requis",

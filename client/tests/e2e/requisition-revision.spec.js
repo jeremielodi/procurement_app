@@ -20,7 +20,7 @@ async function setup(request) {
     title: `[E2E CORRECTION] ${stamp}`, description: 'x', departmentId: dept.id, projectId: project.id, currencyId: 1, currencyCode: 'USD',
     priority: 'MEDIUM', justification: 'x', items: [{ description: 'Cartouches', quantity: 2, frequency: 1, unitPrice: 50, budgetLineId: line.id }],
   } })).json()).data;
-  // Tâche d'approbation N1 (GoFlow)
+  // Tâche d'approbation N1 (BpmnGo)
   let task = null;
   for (let i = 0; i < 30 && !task; i++) {
     const r = (await (await request.get(`/api/requisitions/${req.id}`, { headers: H })).json()).data;
@@ -36,7 +36,7 @@ async function setup(request) {
 test('Renvoyée pour correction : motif affiché, correction puis nouvelle soumission (version 2)', async ({ page, request }) => {
   test.setTimeout(120_000);
   const { approver, req, task } = await setup(request);
-  test.skip(!task, 'GoFlow indisponible');
+  test.skip(!task, 'BpmnGo indisponible');
   const done = await request.post(`/api/tasks/${task.id}/complete`, { headers: auth(approver), data: {
     variables: { returnedForCorrection: true, comment: 'Précisez la référence des cartouches' },
   } });
@@ -70,7 +70,7 @@ test('Renvoyée pour correction : motif affiché, correction puis nouvelle soumi
 test('Retrait par le demandeur avant prise en charge de l\'approbation', async ({ page, request }) => {
   test.setTimeout(120_000);
   const { req, task } = await setup(request);
-  test.skip(!task, 'GoFlow indisponible');
+  test.skip(!task, 'BpmnGo indisponible');
   await page.goto(`/requisitions/${req.id}`);
   await page.getByTestId('revision-withdraw').click();
   await page.getByTestId('revision-reason').fill('Je dois ajouter un article');

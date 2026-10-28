@@ -6,7 +6,7 @@ import { getToken, getApproverToken, auth } from './helpers.js';
 //  - seul le demandeur modifie, et seulement dans cet état ; nouvelle soumission = version 2, nouveau circuit
 //    d'approbation selon le NOUVEAU montant (ici N1 → N2)
 //  - le demandeur peut retirer sa réquisition tant que personne n'a pris l'approbation ; abandon = annulée
-// GoFlow requis (sinon les tests s'ignorent).
+// BpmnGo requis (sinon les tests s'ignorent).
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const WAIT = 45_000;
 
@@ -73,7 +73,7 @@ test.describe.serial('API › Correction des réquisitions', () => {
 
   test('Renvoi pour correction par l\'approbateur : motif obligatoire, « À corriger », étape personnelle du demandeur', async ({ request }) => {
     task = await waitTask(request, 'Activity_ValidationN1_Manager');
-    test.skip(!task, 'GoFlow indisponible');
+    test.skip(!task, 'BpmnGo indisponible');
     const noReason = await json(await request.post(`/api/tasks/${task.id}/complete`, { headers: A(), data: { variables: { returnedForCorrection: true } } }));
     expect([noReason.status, noReason.body.code]).toEqual([400, 'RETURN_REASON_REQUIRED']);
     const noDecision = await json(await request.post(`/api/tasks/${task.id}/complete`, { headers: A(), data: { variables: {} } }));
@@ -98,7 +98,7 @@ test.describe.serial('API › Correction des réquisitions', () => {
   });
 
   test('Correction puis nouvelle soumission : version 2, changements visibles, nouveau circuit selon le nouveau montant (N2)', async ({ request }) => {
-    test.skip(!task, 'GoFlow indisponible');
+    test.skip(!task, 'BpmnGo indisponible');
     const current = await getReq(request);
     const [item] = current.items || (await (await request.get(`/api/requisitions/${req.id}`, { headers: H() })).json()).data.items;
     const itemId = item.id;
@@ -141,7 +141,7 @@ test.describe.serial('API › Correction des réquisitions', () => {
   });
 
   test('Retrait par le demandeur : refusé si l\'approbation est prise en charge, accepté sinon', async ({ request }) => {
-    test.skip(!task, 'GoFlow indisponible');
+    test.skip(!task, 'BpmnGo indisponible');
     const n2 = await waitTask(request, 'Activity_ValidationN2_Finance');
     expect((await request.post(`/api/tasks/${n2.id}/claim`, { headers: A() })).status()).toBe(200);
     const claimed = await json(await request.post(`/api/requisitions/${req.id}/withdraw`, { headers: H(), data: {} }));
@@ -160,7 +160,7 @@ test.describe.serial('API › Correction des réquisitions', () => {
   });
 
   test('Abandon pendant la correction : motif obligatoire, réquisition annulée', async ({ request }) => {
-    test.skip(!task, 'GoFlow indisponible');
+    test.skip(!task, 'BpmnGo indisponible');
     const noReason = await json(await request.post(`/api/requisitions/${req.id}/abandon`, { headers: H(), data: {} }));
     expect([noReason.status, noReason.body.code]).toEqual([400, 'REASON_REQUIRED']);
     const ok = await json(await request.post(`/api/requisitions/${req.id}/abandon`, { headers: H(), data: { reason: 'Besoin couvert autrement' } }));

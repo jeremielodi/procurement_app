@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const ExcelJS = require('exceljs');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
-const { getBranding } = require('../utils/enterpriseBranding');
+const { getBranding, brandContact } = require('../utils/enterpriseBranding');
 const i18n = require('../i18n');
 const { renderPdf } = require('../utils/pdfRenderer');
 const { pdfContext, labels, rootLocale } = require('../utils/pdfI18n');
@@ -24,12 +24,14 @@ const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 9.5px; color: #111; line-height: 1.3; }
-  .annex { text-align: right; font-weight: 700; font-size: 9px; margin-bottom: 4px; }
+  .brand { display: flex; align-items: center; gap: 12px; padding-bottom: 6px; margin-bottom: 8px; border-bottom: 2px solid #000; }
+  .brand img { max-height: 48px; max-width: 140px; object-fit: contain; }
+  .brand .name { font-size: 15px; font-weight: 700; }
+  .brand .info { font-size: 8.5px; color: #333; margin-top: 1px; }
   table { width: 100%; border-collapse: collapse; }
   td, th { border: 1px solid #000; padding: 3px 5px; vertical-align: top; }
   .head td { height: 38px; }
   .doc-title { font-size: 17px; font-weight: 700; vertical-align: middle; }
-  .doc-title img { max-height: 30px; max-width: 110px; vertical-align: middle; margin-right: 8px; }
   .doc-title .ref { display: block; font-size: 9px; font-weight: 400; color: #444; margin-top: 2px; }
   .lbl { font-weight: 400; }
   .val { font-weight: 700; }
@@ -59,12 +61,19 @@ const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
 </style>
 </head>
 <body>
-  <div class="annex">{{brand.name}}</div>
+  <div class="brand">
+    {{#if brand.logo}}<img src="{{brand.logo}}" alt="{{brand.name}}">{{/if}}
+    <div>
+      <div class="name">{{brand.name}}</div>
+      {{#if brand.address}}<div class="info">{{brand.address}}</div>{{/if}}
+      {{#if brandContact}}<div class="info">{{brandContact}}</div>{{/if}}
+    </div>
+  </div>
 
   <table class="head">
     <tr>
       <td class="doc-title" style="width:34%">
-        {{#if brand.logo}}<img src="{{brand.logo}}" alt="">{{/if}}{{L.title}}
+        {{L.title}}
         <span class="ref">{{r.requisition_number}}</span>
       </td>
       <td style="width:33%"><b>{{L.instructions}}</b><br>{{L.instructionsText}}</td>
@@ -596,6 +605,7 @@ class RequisitionExportService {
     const data = {
       ...ctx,
       brand,
+      brandContact: brandContact(brand),
       r: requisition,
       symbol,
       submittedAt: date(submitted),

@@ -2604,7 +2604,10 @@
     "removeProject": "Remove from this project",
     "loadingProjects": "Loading projects…",
     "total_one": "{{count}} user",
-    "total_other": "{{count}} users"
+    "total_other": "{{count}} users",
+    "positionLabel": "Position (job title)",
+    "positionPlaceholder": "E.g. Supply Chain Officer",
+    "positionHint": "Printed as the person's title on requisitions and purchase orders (requester, approvers, “Requested by”)."
   },
   "profiles": {
     "deleted": "Profile deleted",

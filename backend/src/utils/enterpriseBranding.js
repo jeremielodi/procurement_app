@@ -28,4 +28,11 @@ async function getBranding(enterpriseId) {
   };
 }
 
-module.exports = { getBranding, APP_NAME };
+/** Ligne de coordonnées de l'en-tête des documents : téléphone · email · site · NIF · RCCM (champs renseignés) */
+function brandContact(brand) {
+  return [brand.phone, brand.email, brand.website,
+    brand.taxId && `NIF : ${brand.taxId}`, brand.registrationNumber && `RCCM : ${brand.registrationNumber}`]
+    .filter(Boolean).join(' · ');
+}
+
+module.exports = { getBranding, brandContact, APP_NAME };

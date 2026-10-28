@@ -83,6 +83,8 @@ export default function UserList() {
     },
     { title: t('common.email'), dataIndex: 'email', key: 'email', render: (v) => <span className="text-gray-600">{v}</span> },
     { title: t('common.department'), dataIndex: 'department', key: 'department', render: (v) => <span className="text-gray-600">{v || '-'}</span> },
+    // Poste = fonction imprimée sur les réquisitions et bons de commande (« Nom et titre », « Title »)
+    { title: t('profile.position'), dataIndex: 'position', key: 'position', render: (v) => <span className="text-gray-600" data-testid="user-position-cell">{v || '-'}</span> },
     {
       title: t('users.profiles'),
       key: 'profiles',

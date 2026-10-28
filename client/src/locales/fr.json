@@ -2604,7 +2604,10 @@
     "removeProject": "Retirer de ce projet",
     "loadingProjects": "Chargement des projets…",
     "total_one": "{{count}} utilisateur",
-    "total_other": "{{count}} utilisateurs"
+    "total_other": "{{count}} utilisateurs",
+    "positionLabel": "Poste (fonction)",
+    "positionPlaceholder": "Ex : Supply Chain Officer",
+    "positionHint": "Imprimé comme fonction / titre de la personne sur les réquisitions et les bons de commande (demandeur, approbateurs, « Demandé par »)."
   },
   "profiles": {
     "deleted": "Profil supprimé",

@@ -2,7 +2,7 @@
 const Handlebars = require('handlebars');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { renderPdf } = require('../utils/pdfRenderer');
-const { getBranding } = require('../utils/enterpriseBranding');
+const { getBranding, brandContact } = require('../utils/enterpriseBranding');
 const { signatureDataUri } = require('../utils/userSignature');
 const { pdfContext, rootLocale, rootLabels } = require('../utils/pdfI18n');
 
@@ -73,10 +73,11 @@ class PurchaseOrderExportService {
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 10px; color: #000; line-height: 1.35; }
 
-    .top { position: relative; height: 54px; margin-bottom: 14px; }
-    .top img { position: absolute; left: 0; top: 0; max-height: 50px; max-width: 130px; object-fit: contain; }
-    .top .org { position: absolute; left: 0; top: 0; font-weight: 700; font-size: 11px; }
-    .top h1 { text-align: center; font-size: 20px; font-weight: 700; padding-top: 12px; }
+    .brand { display: flex; align-items: center; gap: 12px; padding-bottom: 6px; margin-bottom: 8px; border-bottom: 2px solid #000; }
+    .brand img { max-height: 48px; max-width: 140px; object-fit: contain; }
+    .brand .name { font-size: 15px; font-weight: 700; }
+    .brand .info { font-size: 8.5px; color: #333; margin-top: 1px; }
+    h1 { text-align: center; font-size: 20px; font-weight: 700; margin: 4px 0 12px; }
 
     .rows { width: 100%; border-collapse: collapse; }
     .rows td { padding: 4px 4px 1px; vertical-align: bottom; }
@@ -117,10 +118,15 @@ class PurchaseOrderExportService {
 </head>
 <body>
 
-<div class="top">
-  {{#if brand.logo}}<img src="{{brand.logo}}" alt="{{brand.name}}">{{else}}<div class="org">{{brand.name}}</div>{{/if}}
-  <h1>{{L.heading}}</h1>
+<div class="brand">
+  {{#if brand.logo}}<img src="{{brand.logo}}" alt="{{brand.name}}">{{/if}}
+  <div>
+    <div class="name">{{brand.name}}</div>
+    {{#if brand.address}}<div class="info">{{brand.address}}</div>{{/if}}
+    {{#if brandContact}}<div class="info">{{brandContact}}</div>{{/if}}
+  </div>
 </div>
+<h1>{{L.heading}}</h1>
 
 <table class="rows">
   <tr>
@@ -282,6 +288,7 @@ class PurchaseOrderExportService {
       po:          { ...po, currency },
       items,
       brand,
+      brandContact: brandContact(brand),
       symbol,
       total: amount(po.total_amount),
       orderDate: fmtDay(po.order_date),

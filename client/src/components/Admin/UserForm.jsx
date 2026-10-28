@@ -218,13 +218,18 @@ export default function UserForm({ user, onClose }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">{t('profile.position')}</label>
+          <label htmlFor="user-position" className="block text-sm font-medium mb-1">{t('users.positionLabel')}</label>
           <input
+            id="user-position"
             type="text"
+            maxLength={100}
+            data-testid="user-position"
             value={formData.position}
             onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+            placeholder={t('users.positionPlaceholder')}
             className="w-full px-3 py-2 border rounded-lg"
           />
+          <p className="text-xs text-gray-500 mt-1">{t('users.positionHint')}</p>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">{t('users.language')}</label>

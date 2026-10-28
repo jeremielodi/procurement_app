@@ -485,7 +485,6 @@
       "signature": "Signature",
       "titleCap": "Fonction",
       "approvedBy": "Approuvé par (nom)",
-      "secondApproval": "Deuxième approbation (nom)",
       "vendorMustSign": "Le fournisseur est tenu de signer et de retourner une copie de ce bon de commande :",
       "name": "Nom :",
       "vendorRepresentative": "Représentant autorisé du fournisseur",

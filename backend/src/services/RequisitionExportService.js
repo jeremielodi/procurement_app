@@ -557,7 +557,7 @@ class RequisitionExportService {
     const brand = await getBranding(requisition.enterprise_id);
 
     const requester = requisition.requester_id
-      ? await db.one('SELECT first_name, last_name, position FROM users WHERE id = $1', [requisition.requester_id])
+      ? await db.one('SELECT first_name, last_name FROM users WHERE id = $1', [requisition.requester_id])
       : null;
     const approvers = await this.requisitionApprovers(requisition.id);
     const person = async (a) => (a ? {
@@ -613,7 +613,7 @@ class RequisitionExportService {
       service: [requisition.department_name, requisition.project_name].filter(Boolean).join(' — '),
       requester: requester ? {
         name: [requester.first_name, requester.last_name].filter(Boolean).join(' '),
-        title: requester.position || '',
+        title: requisition.requester_position || '', // fonction figée à la création (migration 45)
         signature: await signatureDataUri(requisition.requester_id),
       } : {},
       approver: await person(approvers[0]),
@@ -648,7 +648,8 @@ class RequisitionExportService {
    */
   async requisitionApprovers(requisitionId) {
     const rows = await db.select(
-      `SELECT h.task_id, h.performed_by, h.performed_at, h.comments, h.action, u.first_name, u.last_name, u.position
+      `SELECT h.task_id, h.performed_by, h.performed_at, h.comments, h.action, u.first_name, u.last_name,
+              h.performed_by_position AS position -- fonction au moment de l'approbation (migration 45)
        FROM workflow_history h LEFT JOIN users u ON u.id = h.performed_by
        WHERE h.entity_type = 'requisition' AND h.entity_id = $1
          AND (h.action = 'RESUBMITTED'

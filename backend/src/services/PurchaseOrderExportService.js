@@ -209,18 +209,19 @@ class PurchaseOrderExportService {
   </tr>
   <tr><td class="cap">{{L.titleCap}}</td><td class="cap i">{{L.date}}</td><td></td><td></td></tr>
 
+  <!-- Une seule approbation du bon de commande (Activity_POApproval) -->
   <tr>
     <td class="line">{{approvedBy.name}}</td>
     <td class="line">{{#if approvedBy.signature}}<img src="{{approvedBy.signature}}" alt="">{{/if}}</td>
-    <td class="line">{{secondApproval.name}}</td>
-    <td class="line">{{#if secondApproval.signature}}<img src="{{secondApproval.signature}}" alt="">{{/if}}</td>
+    <td></td><td></td>
   </tr>
-  <tr><td class="cap">{{L.approvedBy}}</td><td class="cap">{{L.signature}}</td><td class="cap">{{L.secondApproval}}</td><td class="cap">{{L.signature}}</td></tr>
+  <tr><td class="cap">{{L.approvedBy}}</td><td class="cap">{{L.signature}}</td><td></td><td></td></tr>
   <tr>
-    <td class="line">{{approvedBy.title}}</td><td class="line">{{approvedBy.date}}</td>
-    <td class="line">{{secondApproval.title}}</td><td class="line">{{secondApproval.date}}</td>
+    <td class="line">{{approvedBy.title}}</td>
+    <td class="line" style="font-style:italic;text-decoration:underline">{{approvedBy.date}}</td>
+    <td></td><td></td>
   </tr>
-  <tr><td class="cap">{{L.titleCap}}</td><td class="cap i">{{L.date}}</td><td class="cap">{{L.titleCap}}</td><td class="cap i">{{L.date}}</td></tr>
+  <tr><td class="cap">{{L.titleCap}}</td><td class="cap i">{{L.date}}</td><td></td><td></td></tr>
 </table>
 
 <div class="vendor">
@@ -264,15 +265,15 @@ class PurchaseOrderExportService {
       symbol = new Intl.NumberFormat(ctx.locale, { style: 'currency', currency, currencyDisplay: 'narrowSymbol' }).formatToParts(0).find(p => p.type === 'currency')?.value || currency;
     } catch { /* code devise inconnu d'Intl : code affiché */ }
 
-    // Signataires : la personne qui a créé le bon (« Demandé par ») et celles qui l'ont approuvé (dernières décisions
-    // APPROVED, de la plus ancienne à la plus récente) — signature image seulement pour qui a réellement agi
+    // Signataires : la personne qui a créé le bon (« Demandé par ») et celle qui l'a approuvé (« Approuvé par ») —
+    // signature image seulement pour qui a réellement agi
     const fullName = (...parts) => parts.filter(Boolean).join(' ');
     const approved = (po.approvals || []).filter(a => a.status === 'APPROVED')
       .sort((a, b) => new Date(a.approved_at) - new Date(b.approved_at));
     // Pas d'historique (approbation antérieure à la migration 44) : approbateur enregistré sur le bon
     if (!approved.length && po.approved_by) {
-      const u = await db.one('SELECT first_name, last_name, position FROM users WHERE id = $1', [po.approved_by]);
-      if (u) approved.push({ ...u, approver_id: po.approved_by, approved_at: po.approved_at });
+      const u = await db.one('SELECT first_name, last_name FROM users WHERE id = $1', [po.approved_by]);
+      if (u) approved.push({ ...u, position: po.approved_by_position, approver_id: po.approved_by, approved_at: po.approved_at });
     }
     const approver = async (a) => (a ? {
       name: fullName(a.first_name, a.last_name),
@@ -309,8 +310,8 @@ class PurchaseOrderExportService {
         date: fmtDay(po.created_at || po.order_date),
         signature: po.created_by ? await signatureDataUri(po.created_by) : null,
       },
-      approvedBy: await approver(approved[0]),
-      secondApproval: await approver(approved[1]),
+      // Un seul approbateur : la décision APPROVED la plus récente
+      approvedBy: await approver(approved[approved.length - 1]),
       ...ctx,
       T: { title: ctx.t('pdf.po.title', { number: po.po_number }) },
     });

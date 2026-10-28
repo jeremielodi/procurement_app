@@ -210,8 +210,8 @@ class PurchaseOrderModel {
         s.payment_terms as supplier_payment_terms,
         s.delivery_terms as supplier_delivery_terms,
         r.delivery_address as requisition_delivery_address,
-        ru.first_name as requester_first_name, ru.last_name as requester_last_name, ru.position as requester_position,
-        u.last_name as created_by_last_name, u.position as created_by_position,
+        ru.first_name as requester_first_name, ru.last_name as requester_last_name,
+        u.last_name as created_by_last_name, -- fonction : po.created_by_position, figée à la création (migration 45)
         su.language as supplier_language,
         s.user_id as supplier_user_id,
         u.first_name as created_by_name,
@@ -246,7 +246,7 @@ class PurchaseOrderModel {
           a.*,
           u.first_name,
           u.last_name,
-          u.position
+          a.approver_position AS position -- fonction au moment de la décision (migration 45)
         FROM approvals a
         LEFT JOIN users u ON a.approver_id = u.id
         WHERE a.entity_type = 'purchase_order' AND a.entity_id::text = $1::text

@@ -485,7 +485,6 @@
       "signature": "Signature",
       "titleCap": "Title",
       "approvedBy": "Approved by (Print Name)",
-      "secondApproval": "Second Approval (Print Name)",
       "vendorMustSign": "The vendor is required to sign and return a copy of this Purchase Order:",
       "name": "Name:",
       "vendorRepresentative": "Vendor's authorized representative",

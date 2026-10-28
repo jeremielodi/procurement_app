@@ -9,6 +9,7 @@
  *     l'étape Activity_POApproval terminée — approbation historisée (approvals.entity_id TEXT, migration 44) et
  *     approved_by renseigné
  * Une signature = une image intégrée au PDF : on compte les images avant / après chaque approbation.
+ * Fonction (poste) figée au moment de l'action (migration 45) : changer le poste ensuite ne modifie pas les documents.
  *
  * Requiert GoFlow (sinon les tests s'ignorent).
  */
@@ -44,6 +45,18 @@ const imageCount = (pdf) => (pdf.toString('latin1').match(/\/Subtype\s*\/Image/g
 test.describe.serial('API › Signatures dans les PDF de réquisition et de bon de commande', () => {
   let token, approverToken, approverId, req, po, line;
   const saved = {}; // signatures existantes, rétablies à la fin
+  const stamp = Date.now().toString(36);
+  const positions = { requester: `Chargé des achats ${stamp}`, approver: `Directeur pays ${stamp}` };
+  const users = {}; // { requester, approver } : fiche avant le test (poste rétabli à la fin)
+
+  /** Change le poste d'un utilisateur (PUT complet : profils et « tous les projets » inchangés) */
+  async function setPosition(request, user, position) {
+    const res = await request.put(`/api/users/${user.id}`, { headers: auth(token), data: {
+      firstName: user.firstName, lastName: user.lastName, department: user.department, position, language: user.language,
+      profileIds: user.profiles.map(p => p.id), allProjectsProfileIds: user.profiles.filter(p => p.all_projects).map(p => p.id),
+    } });
+    expect(res.status(), await res.text()).toBe(200);
+  }
 
   async function openTasks(request, pid) {
     const res = await request.get(`/api/tasks/process/${pid}`, { headers: auth(token) });
@@ -71,6 +84,11 @@ test.describe.serial('API › Signatures dans les PDF de réquisition et de bon 
     token = await getToken(request);
     approverToken = await getApproverToken(request);
     approverId = (await (await request.get('/api/auth/profile', { headers: auth(approverToken) })).json()).data?.id;
+    const requesterId = (await (await request.get('/api/auth/profile', { headers: auth(token) })).json()).data?.id;
+    for (const [who, id] of [['requester', requesterId], ['approver', approverId]]) {
+      users[who] = (await (await request.get(`/api/users/${id}`, { headers: auth(token) })).json()).data;
+      await setPosition(request, users[who], positions[who]);
+    }
     for (const [who, tk, color] of [['requester', token, [20, 40, 160]], ['approver', approverToken, [160, 20, 40]]]) {
       const current = await request.get('/api/auth/signature', { headers: auth(tk) });
       saved[who] = current.ok() ? { buffer: await current.body(), mimeType: current.headers()['content-type'] } : null;
@@ -82,6 +100,7 @@ test.describe.serial('API › Signatures dans les PDF de réquisition et de bon 
   });
 
   test.afterAll(async ({ request }) => {
+    for (const who of ['requester', 'approver']) if (users[who]) await setPosition(request, users[who], users[who].position || '');
     for (const [who, tk] of [['requester', token], ['approver', approverToken]]) {
       if (saved[who]) {
         await request.put('/api/auth/signature', { headers: auth(tk), multipart: {
@@ -158,5 +177,25 @@ test.describe.serial('API › Signatures dans les PDF de réquisition et de bon 
 
     const after = imageCount(await pdf(request, `/api/purchase-orders/${po.id}/pdf`));
     expect(after, 'signature de l\'approbateur (« Approuvé par ») ajoutée').toBe(before + 1);
+  });
+
+  test('Fonction figée : un changement de poste ne modifie pas les documents déjà émis', async ({ request }) => {
+    test.skip(!po, 'Bon de commande non créé (GoFlow requis)');
+    const H = auth(token);
+    for (const who of ['requester', 'approver']) await setPosition(request, users[who], `Nouveau poste ${stamp}`);
+
+    const requisition = (await (await request.get(`/api/requisitions/${req.id}`, { headers: H })).json()).data;
+    expect(requisition.requester_position).toBe(positions.requester);
+    const approval = requisition.history.find(h => h.action === 'APPROVED' && h.performed_by === approverId);
+    expect(approval?.performed_by_position).toBe(positions.approver);
+
+    const order = (await (await request.get(`/api/purchase-orders/${po.id}`, { headers: H })).json()).data;
+    expect(order.created_by_position).toBe(positions.requester);
+    expect(order.approved_by_position).toBe(positions.approver);
+    expect(order.approvals.map(a => a.position)).toEqual([positions.approver]);
+
+    // Les PDF sont toujours générés (fonctions lues sur les documents)
+    expect(imageCount(await pdf(request, `/api/requisitions/${req.id}/export/pdf`))).toBeGreaterThanOrEqual(2);
+    expect(imageCount(await pdf(request, `/api/purchase-orders/${po.id}/pdf`))).toBeGreaterThanOrEqual(2);
   });
 });

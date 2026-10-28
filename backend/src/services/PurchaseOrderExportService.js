@@ -83,9 +83,12 @@ class PurchaseOrderExportService {
     .rows { width: 100%; border-collapse: collapse; }
     .rows td { padding: 4px 4px 1px; vertical-align: bottom; }
     .rows .k { font-weight: 700; text-align: right; white-space: nowrap; width: 1%; padding-right: 6px; }
-    .rows .v { border-bottom: 1px solid #000; text-align: center; font-weight: 700; }
+    /* Valeurs saisies à l'encre bleue (comme écrites au stylo) ; texte du formulaire en noir */
+    :root { --ink: #1E3FA8; }
+    .ink { color: var(--ink); }
+    .rows .v { border-bottom: 1px solid #000; text-align: center; font-weight: 700; color: var(--ink); }
     .rows .v.l { text-align: left; }
-    .rows .v a { color: #0563C1; }
+    .rows .v a { color: var(--ink); text-decoration: underline; }
     .multi { white-space: pre-wrap; }
 
     .items { width: 100%; border-collapse: collapse; margin-top: 16px; }
@@ -96,7 +99,10 @@ class PurchaseOrderExportService {
     .items td.money { white-space: nowrap; }
     .items td.money span { float: left; }
     .items td.money b { float: right; }
-    .items .spec { color: #333; font-size: 9px; margin-top: 2px; }
+    .items tr.data td { color: var(--ink); }
+    .items tr.data td.no, .items td.money span { color: #000; }
+    .items td.money b { color: var(--ink); }
+    .items .spec { opacity: .85; font-size: 9px; margin-top: 2px; }
     .items tr.total td { border: none; }
     .items tr.total td.box { border: 1.5px solid #000; font-weight: 700; }
 
@@ -104,7 +110,7 @@ class PurchaseOrderExportService {
 
     .sig { width: 100%; border-collapse: collapse; margin-top: 26px; }
     .sig td { padding: 0 8px; vertical-align: bottom; text-align: center; }
-    .sig .line { border-bottom: 1px solid #000; font-weight: 700; height: 34px; vertical-align: bottom; }
+    .sig .line { border-bottom: 1px solid #000; font-weight: 700; height: 34px; vertical-align: bottom; color: var(--ink); }
     .sig .line img { max-height: 32px; max-width: 150px; object-fit: contain; display: block; margin: 0 auto; }
     .sig .cap { font-weight: 700; padding-top: 1px; padding-bottom: 10px; }
     .sig .cap.i { font-style: italic; }
@@ -173,8 +179,8 @@ class PurchaseOrderExportService {
   </thead>
   <tbody>
     {{#each items}}
-    <tr>
-      <td class="c">{{this.no}}</td>
+    <tr class="data">
+      <td class="c no">{{this.no}}</td>
       <td class="c">{{this.qty}}</td>
       <td class="c">{{this.unitLabel}}</td>
       <td>{{this.item_description}}{{#if this.specifications}}<div class="spec">{{this.specifications}}</div>{{/if}}</td>

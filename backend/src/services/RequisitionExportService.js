@@ -32,8 +32,11 @@ const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
   td, th { border: 1px solid #000; padding: 3px 5px; vertical-align: top; }
   .head td { height: 38px; }
   .doc-title { font-size: 17px; font-weight: 700; vertical-align: middle; }
-  .doc-title .ref { display: block; font-size: 9px; font-weight: 400; color: #444; margin-top: 2px; }
-  .lbl { font-weight: 400; }
+  .doc-title .ref { display: block; font-size: 9px; font-weight: 400; color: var(--ink); margin-top: 2px; }
+  /* Valeurs saisies à l'encre bleue (comme écrites au stylo) ; texte du formulaire en noir */
+  :root { --ink: #1E3FA8; }
+  .ink, .val, td.ink, .items tr.data td.ink, .coding tr.data td { color: var(--ink); }
+  .lbl { font-weight: 400; color: #111; }
   .val { font-weight: 700; }
   .section { font-weight: 700; margin: 9px 0 2px; }
   .sig { height: 34px; }
@@ -44,7 +47,7 @@ const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
   .items td.money { white-space: nowrap; }
   .items td.money span { float: left; }
   .items td.money b, .items td.money i { float: right; font-style: normal; }
-  .items .spec { color: #444; font-size: 8.5px; }
+  .items .spec { color: var(--ink); opacity: .85; font-size: 8.5px; }
   .warn { color: #C00000; font-weight: 700; text-align: center; font-size: 9px; }
   .total td { border: none; }
   .total td.box { border: 1px solid #000; font-weight: 700; }
@@ -53,8 +56,8 @@ const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
   .coding td.r { text-align: right; white-space: nowrap; }
   .box { border: 1px solid #000; padding: 5px 7px; margin-top: 10px; min-height: 46px; }
   .box .t { text-align: center; }
-  .box .red { color: #C00000; text-align: center; margin-top: 3px; white-space: pre-wrap; }
-  .box .txt { margin-top: 3px; white-space: pre-wrap; }
+  .box .red { color: var(--ink); text-align: center; margin-top: 3px; white-space: pre-wrap; }
+  .box .txt { color: var(--ink); margin-top: 3px; white-space: pre-wrap; }
   .notes { color: #C00000; font-style: italic; font-weight: 700; font-size: 8.5px; margin-top: 8px; }
   .notes u { text-decoration: underline; }
   .notes p { margin-top: 4px; }
@@ -77,22 +80,22 @@ const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
         <span class="ref">{{r.requisition_number}}</span>
       </td>
       <td style="width:33%"><b>{{L.instructions}}</b><br>{{L.instructionsText}}</td>
-      <td>{{L.submittedOn}} {{submittedAt}}</td>
+      <td>{{L.submittedOn}} <span class="ink">{{submittedAt}}</span></td>
     </tr>
   </table>
 
   <div class="section">{{L.s1}}</div>
   <table>
     <tr>
-      <td style="width:22%" class="sig"><span class="lbl">{{L.requesterName}}</span> <span class="val">{{requester.name}}</span>{{#if requester.title}}<br>{{requester.title}}{{/if}}</td>
+      <td style="width:22%" class="sig"><span class="lbl">{{L.requesterName}}</span> <span class="val">{{requester.name}}</span>{{#if requester.title}}<br><span class="ink">{{requester.title}}</span>{{/if}}</td>
       <td style="width:40%" colspan="2"><span class="lbl">{{L.service}}</span> <span class="val">{{service}}</span></td>
-      <td><span class="lbl">{{L.requesterSignature}}</span> {{submittedAt}}{{#if requester.signature}}<img src="{{requester.signature}}" alt="">{{/if}}</td>
+      <td><span class="lbl">{{L.requesterSignature}}</span> <span class="ink">{{submittedAt}}</span>{{#if requester.signature}}<img src="{{requester.signature}}" alt="">{{/if}}</td>
     </tr>
     <tr>
-      <td class="sig"><span class="lbl">{{L.approverName}}</span> <span class="val">{{approver.name}}</span>{{#if approver.title}}<br>{{approver.title}}{{/if}}</td>
-      <td style="width:20%"><span class="lbl">{{L.approverSignature}}</span> {{approver.date}}{{#if approver.signature}}<img src="{{approver.signature}}" alt="">{{/if}}</td>
-      <td style="width:20%"><span class="lbl">{{L.secondApproverName}}</span> <span class="val">{{secondApprover.name}}</span>{{#if secondApprover.title}}<br>{{secondApprover.title}}{{/if}}</td>
-      <td><span class="lbl">{{L.secondApproverSignature}}</span> {{secondApprover.date}}{{#if secondApprover.signature}}<img src="{{secondApprover.signature}}" alt="">{{/if}}</td>
+      <td class="sig"><span class="lbl">{{L.approverName}}</span> <span class="val">{{approver.name}}</span>{{#if approver.title}}<br><span class="ink">{{approver.title}}</span>{{/if}}</td>
+      <td style="width:20%"><span class="lbl">{{L.approverSignature}}</span> <span class="ink">{{approver.date}}</span>{{#if approver.signature}}<img src="{{approver.signature}}" alt="">{{/if}}</td>
+      <td style="width:20%"><span class="lbl">{{L.secondApproverName}}</span> <span class="val">{{secondApprover.name}}</span>{{#if secondApprover.title}}<br><span class="ink">{{secondApprover.title}}</span>{{/if}}</td>
+      <td><span class="lbl">{{L.secondApproverSignature}}</span> <span class="ink">{{secondApprover.date}}</span>{{#if secondApprover.signature}}<img src="{{secondApprover.signature}}" alt="">{{/if}}</td>
     </tr>
   </table>
 
@@ -100,9 +103,9 @@ const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
   <table>
     <tr>
       <td style="width:22%"><span class="lbl">{{L.deliveryAddress}}</span> <span class="val">{{r.delivery_address}}</span></td>
-      <td style="width:16%"><span class="lbl">{{L.neededBy}}</span> {{neededBy}}</td>
-      <td style="width:26%"><span class="lbl">{{L.recipient}}</span> {{r.delivery_recipient}}</td>
-      <td><span class="lbl">{{L.contact}}</span> {{r.delivery_contact}}</td>
+      <td style="width:16%"><span class="lbl">{{L.neededBy}}</span> <span class="ink">{{neededBy}}</span></td>
+      <td style="width:26%"><span class="lbl">{{L.recipient}}</span> <span class="ink">{{r.delivery_recipient}}</span></td>
+      <td><span class="lbl">{{L.contact}}</span> <span class="ink">{{r.delivery_contact}}</span></td>
     </tr>
   </table>
 
@@ -120,13 +123,13 @@ const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
     </thead>
     <tbody>
       {{#each items}}
-      <tr>
+      <tr class="data">
         <td class="c">{{this.no}}</td>
-        <td>{{this.item_description}}{{#if this.specifications}}<div class="spec">{{this.specifications}}</div>{{/if}}</td>
-        <td class="c">{{this.unitLabel}}</td>
-        <td class="c">{{this.qtyLabel}}</td>
-        <td class="money"><span>{{@root.symbol}}</span><i>{{this.unitPrice}}</i></td>
-        <td class="money"><span>{{@root.symbol}}</span><b>{{this.totalAmount}}</b></td>
+        <td class="ink">{{this.item_description}}{{#if this.specifications}}<div class="spec">{{this.specifications}}</div>{{/if}}</td>
+        <td class="c ink">{{this.unitLabel}}</td>
+        <td class="c ink">{{this.qtyLabel}}</td>
+        <td class="money"><span>{{@root.symbol}}</span><i class="ink">{{this.unitPrice}}</i></td>
+        <td class="money"><span>{{@root.symbol}}</span><b class="ink">{{this.totalAmount}}</b></td>
       </tr>
       {{/each}}
       <tr><td colspan="6" class="warn">{{L.statement}}</td></tr>
@@ -136,7 +139,7 @@ const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
     <tr>
       <td style="width:72%"></td>
       <td class="box" style="text-align:right;width:15%">{{L.grandTotal}} {{symbol}}</td>
-      <td class="box" style="text-align:right">{{grandTotal}}</td>
+      <td class="box ink" style="text-align:right">{{grandTotal}}</td>
     </tr>
   </table>
 
@@ -157,7 +160,7 @@ const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
     </thead>
     <tbody>
       {{#each coding}}
-      <tr>
+      <tr class="data">
         <td>{{this.entity_code}}</td>
         <td>{{this.loc}}</td>
         <td>{{this.funding_source}}</td>

@@ -1270,7 +1270,33 @@
     "noItems": "No items. Click “Add an item”",
     "attachments": "Attachments",
     "creating": "Creating...",
-    "create": "Create requisition"
+    "create": "Create requisition",
+    "unit": "Unit",
+    "unitPlaceholder": "day, piece…",
+    "unitSuggestions": [
+      "piece",
+      "day",
+      "month",
+      "hour",
+      "lump sum",
+      "box",
+      "pack",
+      "ream",
+      "litre",
+      "kg",
+      "metre",
+      "lot"
+    ],
+    "delivery": {
+      "title": "Delivery",
+      "hint": "Shown in section 2 of the purchase request form (optional).",
+      "address": "Delivery address",
+      "addressPlaceholder": "E.g. Bunia office",
+      "neededBy": "Date needed",
+      "recipient": "Recipient (if applicable)",
+      "contact": "Contact details (phone, e-mail…)",
+      "contactPlaceholder": "E.g. +243 … / name@example.org"
+    }
   },
   "reqDetail": {
     "cancelled": "Requisition cancelled successfully",
@@ -1624,7 +1650,12 @@
     "suppliersNotPrequalified": "Not prequalified",
     "notPrequalifiedWarning": "This supplier is not yet prequalified by your company (registered on the portal, file to be checked).",
     "openPrequalification": "View prequalification",
-    "directPurchaseSupplier": "selected at the \"Direct purchase\" step"
+    "directPurchaseSupplier": "selected at the \"Direct purchase\" step",
+    "paymentTerms": "Payment terms",
+    "paymentTermsPlaceholder": "E.g. 100% after delivery",
+    "deliveryTerms": "Delivery terms",
+    "deliveryTermsPlaceholder": "E.g. delivered to the office, costs included",
+    "specialInstructions": "Special instructions to vendor"
   },
   "grnStatus": {
     "DRAFT": "Draft",
@@ -2959,7 +2990,10 @@
     ],
     "create": "Create company",
     "settingsUpdated": "Company information updated",
-    "settingsHint": "Name, contact details and logo used in the application and on your documents (purchase orders, requisitions, payments…)."
+    "settingsHint": "Name, contact details and logo used in the application and on your documents (purchase orders, requisitions, payments…).",
+    "poTerms": "Purchase order terms and conditions",
+    "poTermsPlaceholder": "1. Acceptance of the Purchase Order\n…",
+    "poTermsHint": "Printed on the last page of every purchase order (PDF). Leave empty to add no page. Line breaks are kept."
   },
   "app": {
     "title": "procureApp — Procurement management"
@@ -4000,6 +4034,14 @@
             ]
           },
           {
+            "type": "h",
+            "text": "Delivery and purchase request form"
+          },
+          {
+            "type": "p",
+            "text": "The form's “Delivery” section (address, date needed, recipient, contact details) and the items' “Unit” column (day, piece, box…) appear on the requisition PDF, laid out like the company's purchase request form: requester and approver with their signatures, items, budget coding per budget line (entity code, expense object, funding source, project, sub-project, function, activity, amount and item numbers), statement (justification) and additional information (description)."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -4384,6 +4426,14 @@
           {
             "type": "tip",
             "text": "The purchase order is approved by someone other than the person who created it (and the requester of the requisition)."
+          },
+          {
+            "type": "h",
+            "text": "Purchase order terms"
+          },
+          {
+            "type": "p",
+            "text": "When creating the order, fill in the payment terms, delivery terms (taken from the supplier file by default) and special instructions to the vendor. They appear on the purchase order PDF, with the “Requested by” and “Approved by” signatures and the vendor signature block. The company's terms and conditions (My company) are printed on the last page."
           },
           {
             "type": "links",
@@ -5310,6 +5360,10 @@
             ]
           },
           {
+            "type": "tip",
+            "text": "My company → “Purchase order terms and conditions”: text printed on the last page of every purchase order. Empty = no page."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -5891,7 +5945,11 @@
       "priority": "Priority",
       "amount": "Amount",
       "department": "Department",
-      "project": "Project"
+      "project": "Project",
+      "deliveryAddress": "Delivery address",
+      "neededBy": "Date needed",
+      "deliveryRecipient": "Recipient",
+      "deliveryContact": "Contact details"
     },
     "itemFields": {
       "description": "Description",
@@ -5900,7 +5958,8 @@
       "unitPrice": "Unit price",
       "total": "Total",
       "budgetLineCode": "Budget line",
-      "specifications": "Specifications"
+      "specifications": "Specifications",
+      "unit": "Unit"
     },
     "toCorrectTitle": "Your requisition needs to be corrected",
     "inCorrectionTitle": "Requisition being corrected by the requester",

@@ -9,129 +9,176 @@ const i18n = require('../i18n');
 const { renderPdf } = require('../utils/pdfRenderer');
 const { pdfContext, labels, rootLocale } = require('../utils/pdfI18n');
 const db = require('../config/database');
-const approvalPolicy = require('../utils/approvalPolicy');
-const { groupLabel } = require('../utils/workflowLabels');
+const { signatureDataUri } = require('../utils/userSignature');
 
-// Couleurs des badges (étape = statut technique, avancement = cycle complet)
-const STATUS_COLORS = {
-  DRAFT: '#6B7280', PENDING: '#F59E0B', PENDING_APPROVAL: '#F59E0B', BUDGET_CHECKED: '#3B82F6',
-  BUDGET_INSUFFICIENT: '#F97316', APPROVED: '#10B981', REJECTED: '#EF4444', IN_PROGRESS: '#8B5CF6',
-  COMPLETED: '#10B981', CANCELLED: '#6B7280',
-  CLASSIFIED_DIRECT_PURCHASE: '#2563EB', CLASSIFIED_MULTIPLE_QUOTATIONS: '#2563EB',
-  CLASSIFIED_RFP: '#2563EB', CLASSIFIED_SOLE_SOURCE: '#2563EB',
-};
-const PROGRESS_COLORS = { DRAFT: '#6B7280', IN_PROGRESS: '#2563EB', COMPLETED: '#059669', REJECTED: '#DC2626', CANCELLED: '#6B7280' };
+// Étapes d'approbation de la réquisition (signataires du formulaire de demande d'achat)
+const APPROVAL_TASKS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
 
-// PDF détaillé d'une réquisition — libellés fournis par i18n (data.L), valeurs déjà formatées
+// Formulaire de demande d'achat (modèle de l'entreprise) — libellés : pdf.prf des locales (data.L), valeurs déjà formatées.
+// Sections : 1. demandeur / approbateurs, 2. livraison, 3. articles + codage budgétaire, déclaration, informations supplémentaires.
 const REQUISITION_DETAIL_TEMPLATE = `<!DOCTYPE html>
 <html lang="{{lang}}">
 <head>
-  <meta charset="UTF-8">
-  <title>{{L.docTitle}} {{r.requisition_number}}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 36px; color: #1F2937; font-size: 12px; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;
-              border-bottom: 3px solid #2563EB; padding-bottom: 16px; margin-bottom: 24px; }
-    .company { display: flex; gap: 14px; align-items: center; }
-    .company img { max-height: 60px; max-width: 140px; object-fit: contain; }
-    .company .name { font-size: 17px; font-weight: 700; color: #1E3A8A; }
-    .company .info { color: #4B5563; font-size: 11px; line-height: 1.5; margin-top: 2px; }
-    .doc { text-align: right; }
-    .doc .title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #374151; }
-    .doc .number { font-size: 20px; font-weight: 700; color: #2563EB; margin-top: 2px; }
-    .doc .generated { font-size: 10px; color: #6B7280; margin-top: 4px; }
-    .badges { margin-top: 8px; display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 10px; font-weight: 700; color: #fff; }
-    .badge small { font-weight: 400; opacity: .85; margin-right: 4px; }
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; margin-bottom: 24px; padding: 16px;
-                 background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; }
-    .info-item .label { font-size: 10px; color: #6B7280; font-weight: 600; text-transform: uppercase; }
-    .info-item .value { font-size: 13px; font-weight: 500; margin-top: 2px; }
-    .full { grid-column: span 2; }
-    .priority-LOW { color: #374151; } .priority-MEDIUM { color: #92400E; } .priority-HIGH { color: #78350F; } .priority-URGENT { color: #991B1B; font-weight: 700; }
-    .section-title { font-size: 14px; font-weight: 700; margin: 18px 0 8px; padding-bottom: 6px; border-bottom: 1px solid #E5E7EB; }
-    table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    th { background: #1E3A8A; color: #fff; padding: 7px 8px; text-align: left; font-size: 10px; text-transform: uppercase; }
-    td { padding: 7px 8px; border-bottom: 1px solid #E5E7EB; vertical-align: top; }
-    tr:nth-child(even) td { background: #F9FAFB; }
-    .num { text-align: right; white-space: nowrap; }
-    .muted { color: #6B7280; font-size: 10px; }
-    tfoot td { font-weight: 700; background: #DBEAFE !important; font-size: 12px; }
-    .attachments { padding: 12px; background: #F9FAFB; border-radius: 8px; }
-    .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #E5E7EB; text-align: center; font-size: 10px; color: #6B7280; }
-  </style>
+<meta charset="UTF-8">
+<title>{{L.title}} {{r.requisition_number}}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 9.5px; color: #111; line-height: 1.3; }
+  .annex { text-align: right; font-weight: 700; font-size: 9px; margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { border: 1px solid #000; padding: 3px 5px; vertical-align: top; }
+  .head td { height: 38px; }
+  .doc-title { font-size: 17px; font-weight: 700; vertical-align: middle; }
+  .doc-title img { max-height: 30px; max-width: 110px; vertical-align: middle; margin-right: 8px; }
+  .doc-title .ref { display: block; font-size: 9px; font-weight: 400; color: #444; margin-top: 2px; }
+  .lbl { font-weight: 400; }
+  .val { font-weight: 700; }
+  .section { font-weight: 700; margin: 9px 0 2px; }
+  .sig { height: 34px; }
+  .sig img { max-height: 30px; max-width: 150px; display: block; margin-top: 2px; }
+  .items th { background: #fff; font-weight: 700; text-align: center; vertical-align: middle; }
+  .items td { vertical-align: middle; }
+  .items td.c { text-align: center; }
+  .items td.money { white-space: nowrap; }
+  .items td.money span { float: left; }
+  .items td.money b, .items td.money i { float: right; font-style: normal; }
+  .items .spec { color: #444; font-size: 8.5px; }
+  .warn { color: #C00000; font-weight: 700; text-align: center; font-size: 9px; }
+  .total td { border: none; }
+  .total td.box { border: 1px solid #000; font-weight: 700; }
+  .coding th { font-weight: 700; text-align: center; vertical-align: middle; font-size: 9px; }
+  .coding td { height: 16px; }
+  .coding td.r { text-align: right; white-space: nowrap; }
+  .box { border: 1px solid #000; padding: 5px 7px; margin-top: 10px; min-height: 46px; }
+  .box .t { text-align: center; }
+  .box .red { color: #C00000; text-align: center; margin-top: 3px; white-space: pre-wrap; }
+  .box .txt { margin-top: 3px; white-space: pre-wrap; }
+  .notes { color: #C00000; font-style: italic; font-weight: 700; font-size: 8.5px; margin-top: 8px; }
+  .notes u { text-decoration: underline; }
+  .notes p { margin-top: 4px; }
+</style>
 </head>
 <body>
-  <div class="header">
-    <div class="company">
-      {{#if brand.logo}}<img src="{{brand.logo}}" alt="{{brand.name}}">{{/if}}
-      <div>
-        <div class="name">{{brand.name}}</div>
-        <div class="info">
-          {{#if brand.address}}{{brand.address}}<br>{{/if}}
-          {{#if brand.phone}}{{brand.phone}}{{/if}}{{#if brand.email}}{{#if brand.phone}} · {{/if}}{{brand.email}}{{/if}}
-          {{#if brand.website}}<br>{{brand.website}}{{/if}}
-          {{#if brand.taxId}}<br>{{L.taxId}} : {{brand.taxId}}{{/if}}{{#if brand.registrationNumber}}{{#if brand.taxId}} · {{else}}<br>{{/if}}{{L.registration}} : {{brand.registrationNumber}}{{/if}}
-        </div>
-      </div>
-    </div>
-    <div class="doc">
-      <div class="title">{{L.docTitle}}</div>
-      <div class="number">{{r.requisition_number}}</div>
-      <div class="generated">{{L.generatedOn}}</div>
-      <div class="badges">
-        <span class="badge" style="background: {{stepColor}}"><small>{{L.step}}</small>{{stepLabel}}</span>
-        {{#if progressLabel}}<span class="badge" style="background: {{progressColor}}"><small>{{L.progress}}</small>{{progressLabel}}</span>{{/if}}
-        {{#if approvalText}}<span class="badge" style="background: #4B5563"><small>{{L.approvalLevel}}</small>{{approvalText}}</span>{{/if}}
-      </div>
-    </div>
-  </div>
+  <div class="annex">{{brand.name}}</div>
 
-  <div class="info-grid">
-    <div class="info-item full"><div class="label">{{L.title}}</div><div class="value">{{r.title}}</div></div>
-    <div class="info-item"><div class="label">{{L.department}}</div><div class="value">{{r.department_name}}</div></div>
-    <div class="info-item"><div class="label">{{L.project}}</div><div class="value">{{r.project_name}}</div></div>
-    <div class="info-item"><div class="label">{{L.requester}}</div><div class="value">{{r.first_name}} {{r.last_name}}</div></div>
-    <div class="info-item"><div class="label">{{L.createdAt}}</div><div class="value">{{createdAt}}</div></div>
-    <div class="info-item"><div class="label">{{L.estimatedAmount}}</div><div class="value">{{estimated}}</div></div>
-    <div class="info-item"><div class="label">{{L.priority}}</div><div class="value priority-{{r.priority}}">{{priorityText}}</div></div>
-    {{#if r.description}}<div class="info-item full"><div class="label">{{L.description}}</div><div class="value">{{r.description}}</div></div>{{/if}}
-    {{#if r.justification}}<div class="info-item full"><div class="label">{{L.justification}}</div><div class="value">{{r.justification}}</div></div>{{/if}}
-  </div>
+  <table class="head">
+    <tr>
+      <td class="doc-title" style="width:34%">
+        {{#if brand.logo}}<img src="{{brand.logo}}" alt="">{{/if}}{{L.title}}
+        <span class="ref">{{r.requisition_number}}</span>
+      </td>
+      <td style="width:33%"><b>{{L.instructions}}</b><br>{{L.instructionsText}}</td>
+      <td>{{L.submittedOn}} {{submittedAt}}</td>
+    </tr>
+  </table>
 
-  {{#if items.length}}
-  <div class="section-title">{{L.items}}</div>
+  <div class="section">{{L.s1}}</div>
   <table>
-    <thead><tr>
-      <th>{{L.itemDescription}}</th><th>{{L.budgetLine}}</th>
-      <th class="num">{{L.quantity}}</th><th class="num">{{L.frequency}}</th>
-      <th class="num">{{L.unitPrice}}</th><th class="num">{{L.total}}</th>
-    </tr></thead>
+    <tr>
+      <td style="width:22%" class="sig"><span class="lbl">{{L.requesterName}}</span> <span class="val">{{requester.name}}</span>{{#if requester.title}}<br>{{requester.title}}{{/if}}</td>
+      <td style="width:40%" colspan="2"><span class="lbl">{{L.service}}</span> <span class="val">{{service}}</span></td>
+      <td><span class="lbl">{{L.requesterSignature}}</span> {{submittedAt}}{{#if requester.signature}}<img src="{{requester.signature}}" alt="">{{/if}}</td>
+    </tr>
+    <tr>
+      <td class="sig"><span class="lbl">{{L.approverName}}</span> <span class="val">{{approver.name}}</span>{{#if approver.title}}<br>{{approver.title}}{{/if}}</td>
+      <td style="width:20%"><span class="lbl">{{L.approverSignature}}</span> {{approver.date}}{{#if approver.signature}}<img src="{{approver.signature}}" alt="">{{/if}}</td>
+      <td style="width:20%"><span class="lbl">{{L.secondApproverName}}</span> <span class="val">{{secondApprover.name}}</span>{{#if secondApprover.title}}<br>{{secondApprover.title}}{{/if}}</td>
+      <td><span class="lbl">{{L.secondApproverSignature}}</span> {{secondApprover.date}}{{#if secondApprover.signature}}<img src="{{secondApprover.signature}}" alt="">{{/if}}</td>
+    </tr>
+  </table>
+
+  <div class="section">{{L.s2}}</div>
+  <table>
+    <tr>
+      <td style="width:22%"><span class="lbl">{{L.deliveryAddress}}</span> <span class="val">{{r.delivery_address}}</span></td>
+      <td style="width:16%"><span class="lbl">{{L.neededBy}}</span> {{neededBy}}</td>
+      <td style="width:26%"><span class="lbl">{{L.recipient}}</span> {{r.delivery_recipient}}</td>
+      <td><span class="lbl">{{L.contact}}</span> {{r.delivery_contact}}</td>
+    </tr>
+  </table>
+
+  <div class="section">{{L.s3}}</div>
+  <table class="items">
+    <thead>
+      <tr>
+        <th style="width:6%">{{L.lineNo}}</th>
+        <th>{{L.itemDescription}}</th>
+        <th style="width:11%">{{L.unit}}</th>
+        <th style="width:9%">{{L.quantity}}</th>
+        <th style="width:15%">{{L.unitPrice}}</th>
+        <th style="width:13%">{{L.total}}</th>
+      </tr>
+    </thead>
     <tbody>
       {{#each items}}
       <tr>
-        <td>{{this.item_description}}{{#if this.specifications}}<div class="muted">{{this.specifications}}</div>{{/if}}</td>
-        <td>{{#if this.budgetLine}}{{this.budgetLine}}{{else}}—{{/if}}</td>
-        <td class="num">{{this.qty}}</td>
-        <td class="num">{{this.freq}}</td>
-        <td class="num">{{this.unitPrice}}</td>
-        <td class="num">{{this.totalAmount}}</td>
+        <td class="c">{{this.no}}</td>
+        <td>{{this.item_description}}{{#if this.specifications}}<div class="spec">{{this.specifications}}</div>{{/if}}</td>
+        <td class="c">{{this.unitLabel}}</td>
+        <td class="c">{{this.qtyLabel}}</td>
+        <td class="money"><span>{{@root.symbol}}</span><i>{{this.unitPrice}}</i></td>
+        <td class="money"><span>{{@root.symbol}}</span><b>{{this.totalAmount}}</b></td>
       </tr>
       {{/each}}
+      <tr><td colspan="6" class="warn">{{L.statement}}</td></tr>
     </tbody>
-    <tfoot><tr><td colspan="5" class="num">{{L.grandTotal}}</td><td class="num">{{estimated}}</td></tr></tfoot>
   </table>
-  {{/if}}
+  <table class="total">
+    <tr>
+      <td style="width:72%"></td>
+      <td class="box" style="text-align:right;width:15%">{{L.grandTotal}} {{symbol}}</td>
+      <td class="box" style="text-align:right">{{grandTotal}}</td>
+    </tr>
+  </table>
 
-  {{#if attachments.length}}
-  <div class="section-title">{{L.attachments}}</div>
-  <div class="attachments">
-    {{#each attachments}}<div>📎 {{this.file_name}} <span class="muted">({{this.file_size}} {{../L.bytes}})</span></div>{{/each}}
+  <table class="coding" style="margin-top:10px">
+    <thead>
+      <tr>
+        <th style="width:7%">{{L.entityCode}}</th>
+        <th style="width:12%">{{L.expenseCode}}</th>
+        <th style="width:11%">{{L.fundingSource}}</th>
+        <th style="width:15%">{{L.projectCode}}</th>
+        <th style="width:9%">{{L.reportingOffice}}</th>
+        <th style="width:10%">{{L.subProject}}</th>
+        <th style="width:8%">{{L.functionCode}}</th>
+        <th style="width:11%">{{L.activityCode}}</th>
+        <th style="width:9%">{{L.amount}}</th>
+        <th>{{L.lineRefs}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each coding}}
+      <tr>
+        <td>{{this.entity_code}}</td>
+        <td>{{this.loc}}</td>
+        <td>{{this.funding_source}}</td>
+        <td>{{this.project}}</td>
+        <td></td>
+        <td>{{this.sub_project}}</td>
+        <td>{{this.function_code}}</td>
+        <td>{{this.activity_code}}</td>
+        <td class="r">{{this.amount}}</td>
+        <td>{{this.lines}}</td>
+      </tr>
+      {{/each}}
+      <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    </tbody>
+  </table>
+
+  <div class="box">
+    <div class="t">{{L.declaration}}</div>
+    <div class="red">{{r.justification}}</div>
   </div>
-  {{/if}}
 
-  <div class="footer">{{L.footer}}</div>
+  <div class="box">
+    <div class="t"><b>{{L.additionalInfo}}</b></div>
+    <div class="txt">{{r.description}}</div>
+  </div>
+
+  <div class="notes">
+    <p><u>{{L.note1Title}}</u> {{L.note1}}</p>
+    <p>{{L.note2}}</p>
+  </div>
 </body>
 </html>`;
 
@@ -483,68 +530,87 @@ class RequisitionExportService {
   async generateRequisitionDetailPDF(requisition, { lang = 'fr' } = {}) {
     if (!requisition) throw new Error('requisition is required');
 
-    const t = i18n.translator(lang);
-    const locale = i18n.locale(lang);
+    const ctx = pdfContext(lang, 'prf');
+    const { locale } = ctx;
     const currencyRow = requisition.currency_id
       ? await db.one('SELECT format_key FROM currency WHERE id = $1', [requisition.currency_id])
       : null;
     const currency = currencyRow?.format_key || await getEnterpriseCurrencyCode();
-    const money = (n) => {
+    // Montants en colonnes « symbole | nombre » comme le formulaire papier
+    const symbol = (() => {
       try {
-        return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(parseFloat(n) || 0);
-      } catch {
-        return `${parseFloat(n) || 0} ${currency}`;
-      }
-    };
+        return new Intl.NumberFormat(locale, { style: 'currency', currency, currencyDisplay: 'narrowSymbol' }).formatToParts(0).find(p => p.type === 'currency')?.value || currency;
+      } catch { return currency; }
+    })();
+    const amount = (n) => new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(n) || 0);
     const num = (n) => new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(parseFloat(n) || 0);
-    const date = (d) => (d ? new Date(d).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
-    const now = new Date();
+    const date = (d) => (d ? new Date(d).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
     const brand = await getBranding(requisition.enterprise_id);
-    const progress = requisition.progress_status;
 
+    const requester = requisition.requester_id
+      ? await db.one('SELECT first_name, last_name, position FROM users WHERE id = $1', [requisition.requester_id])
+      : null;
+    const approvers = await this.requisitionApprovers(requisition.id);
+    const person = async (a) => (a ? {
+      name: [a.first_name, a.last_name].filter(Boolean).join(' '),
+      title: a.position || '',
+      date: date(a.performed_at),
+      signature: await signatureDataUri(a.performed_by),
+    } : {});
+
+    const items = (requisition.items || []).map((i, index) => {
+      const frequency = parseFloat(i.frequency) || 1;
+      return {
+        ...i,
+        no: index + 1,
+        unitLabel: i.item_unit || i.unit || '',
+        // Fréquence (ex. nombre de mois) : quantité × fréquence, comme le total de la ligne
+        qtyLabel: frequency !== 1 ? `${num(i.quantity)} × ${num(frequency)}` : num(i.quantity),
+        unitPrice: amount(i.unit_price),
+        totalAmount: amount(i.total_amount),
+      };
+    });
+
+    // Codage du grand livre : une ligne par ligne budgétaire, montant et n° des articles de la section 3
+    const lineIds = [...new Set((requisition.items || []).map(i => i.budget_line_id).filter(Boolean))];
+    const budgetLines = lineIds.length
+      ? await db.select(
+        `SELECT b.id, b.entity_code, b.loc, b.funding_source, b.sub_project, b.function_code, b.activity_code,
+                p.code AS project_code, p.name AS project_name
+         FROM budget_allocations b LEFT JOIN projects p ON p.id = b.project_id
+         WHERE b.id = ANY($1::uuid[])`,
+        [lineIds]
+      )
+      : [];
+    const coding = budgetLines.map(b => {
+      const own = items.filter(i => String(i.budget_line_id) === String(b.id));
+      return {
+        ...b,
+        project: [b.project_code || requisition.project_code, b.project_name || requisition.project_name].filter(Boolean).join(' – '),
+        amount: amount(own.reduce((s, i) => s + (parseFloat(i.total_amount) || 0), 0)),
+        lines: own.map(i => i.no).join(', '),
+      };
+    });
+
+    const submitted = requisition.submitted_at || requisition.created_at;
     const data = {
-      L: {
-        docTitle: t('requisition.docTitle'),
-        generatedOn: t('requisition.generatedOn', {
-          date: date(now),
-          time: now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
-        }),
-        title: t('requisition.title'), step: t('requisition.step'), progress: t('requisition.progress'), approvalLevel: t('requisition.approvalLevel'),
-        department: t('requisition.department'), project: t('requisition.project'),
-        estimatedAmount: t('requisition.estimatedAmount'), priority: t('requisition.priority'),
-        requester: t('requisition.requester'), createdAt: t('requisition.createdAt'),
-        description: t('requisition.description'), justification: t('requisition.justification'),
-        items: t('requisition.items'), itemDescription: t('requisition.itemDescription'),
-        quantity: t('requisition.quantity'), frequency: t('requisition.frequency'),
-        unitPrice: t('requisition.unitPrice'), total: t('requisition.total'), grandTotal: t('requisition.grandTotal'),
-        budgetLine: t('requisition.budgetLine'), attachments: t('requisition.attachments'), bytes: t('requisition.bytes'),
-        taxId: t('requisition.taxId'), registration: t('requisition.registration'),
-        footer: t('requisition.footer', { enterprise: brand.name, app: brand.appName }),
-      },
-      lang: i18n.normalizeLang(lang),
+      ...ctx,
       brand,
       r: requisition,
-      stepLabel: t(`status.${requisition.status}`),
-      stepColor: STATUS_COLORS[requisition.status] || '#6B7280',
-      progressLabel: progress ? t(`progress.${progress}`) : null,
-      progressColor: PROGRESS_COLORS[progress] || '#6B7280',
-      // Niveau d'approbation retenu (politique du projet), ex. « N2 — Finance »
-      approvalText: requisition.approval_level
-        ? `${requisition.approval_level} — ${groupLabel(approvalPolicy.LEVEL_TASKS[requisition.approval_level], lang) || ''}`
-        : null,
-      // (nom distinct du helper Handlebars « priorityLabel »)
-      priorityText: requisition.priority ? t(`priority.${requisition.priority}`) : '—',
-      createdAt: date(requisition.created_at),
-      estimated: money(requisition.estimated_amount),
-      items: (requisition.items || []).map(i => ({
-        ...i,
-        qty: num(i.quantity),
-        freq: num(i.frequency),
-        unitPrice: money(i.unit_price),
-        totalAmount: money(i.total_amount),
-        budgetLine: i.budget_line_code || null,
-      })),
-      attachments: requisition.attachments || [],
+      symbol,
+      submittedAt: date(submitted),
+      neededBy: date(requisition.needed_by),
+      service: [requisition.department_name, requisition.project_name].filter(Boolean).join(' — '),
+      requester: requester ? {
+        name: [requester.first_name, requester.last_name].filter(Boolean).join(' '),
+        title: requester.position || '',
+        signature: await signatureDataUri(requisition.requester_id),
+      } : {},
+      approver: await person(approvers[0]),
+      secondApprover: await person(approvers[1]),
+      items,
+      coding,
+      grandTotal: amount(requisition.estimated_amount),
     };
 
     const html = Handlebars.compile(REQUISITION_DETAIL_TEMPLATE)(data);
@@ -553,12 +619,38 @@ class RequisitionExportService {
       return await renderPdf(html, {
         format: 'A4',
         printBackground: true,
-        margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' },
+        displayHeaderFooter: true,
+        headerTemplate: '<span></span>',
+        footerTemplate: `<div style="width:100%;font-size:8px;color:#555;text-align:center"><span class="pageNumber"></span></div>`,
+        margin: { top: '12mm', bottom: '14mm', left: '10mm', right: '10mm' },
       });
     } catch (error) {
       console.error('Error generating requisition detail PDF:', error);
       throw error;
     }
+  }
+
+  /**
+   * Personnes ayant approuvé la réquisition (étapes N1 / N2 / N3 terminées avec approved = true), de la première à la
+   * dernière — seule la dernière soumission compte (une version renvoyée pour correction est ré-approuvée).
+   */
+  async requisitionApprovers(requisitionId) {
+    const rows = await db.select(
+      `SELECT h.performed_by, h.performed_at, h.comments, h.action, u.first_name, u.last_name, u.position
+       FROM workflow_history h LEFT JOIN users u ON u.id = h.performed_by
+       WHERE h.entity_type = 'requisition' AND h.entity_id = $1
+         AND (h.action = 'RESUBMITTED' OR (h.action = 'TASK_COMPLETED' AND h.task_definition_id = ANY($2)))
+       ORDER BY h.performed_at`,
+      [requisitionId, APPROVAL_TASKS]
+    );
+    let approvers = [];
+    for (const row of rows) {
+      if (row.action === 'RESUBMITTED') { approvers = []; continue; }
+      let vars = {};
+      try { vars = JSON.parse(row.comments || '{}').user_vars || {}; } catch { /* commentaire libre */ }
+      if ((vars.approved === true || vars.approved === 'true') && row.performed_by) approvers.push(row);
+    }
+    return approvers;
   }
 
 

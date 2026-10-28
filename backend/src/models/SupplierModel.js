@@ -151,7 +151,7 @@ class SupplierModel {
     params.push(requisitionId || null);
     const reqParam = `$${params.length}::uuid`;
     return db.select(
-      `SELECT s.id, s.name, s.email, s.self_registered,
+      `SELECT s.id, s.name, s.email, s.self_registered, s.payment_terms, s.delivery_terms,
               (s.prequalified = true OR EXISTS (
                  SELECT 1 FROM supplier_prequalifications sp
                  WHERE sp.supplier_id = s.id AND sp.status = 'APPROVED'${preqFilter})) AS is_prequalified,

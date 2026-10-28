@@ -526,6 +526,21 @@ const handleGeneratePDF = async () => {
                       <p className="text-sm text-gray-600">{requisition.justification}</p>
                     </div>
                   )}
+                  {(requisition.delivery_address || requisition.needed_by || requisition.delivery_recipient || requisition.delivery_contact) && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg" data-testid="requisition-delivery-info">
+                      <p className="text-sm font-medium text-gray-700 mb-2">{t('reqForm.delivery.title')}</p>
+                      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                        {[
+                          ['address', requisition.delivery_address],
+                          ['neededBy', requisition.needed_by && formatDate(requisition.needed_by)],
+                          ['recipient', requisition.delivery_recipient],
+                          ['contact', requisition.delivery_contact],
+                        ].filter(([, v]) => v).map(([k, v]) => (
+                          <div key={k}><dt className="inline text-gray-500">{t(`reqForm.delivery.${k}`)} : </dt><dd className="inline text-gray-700">{v}</dd></div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -689,7 +704,7 @@ const handleGeneratePDF = async () => {
                           )}
                          </td>
                         <td className="px-6 py-4 text-sm text-gray-800 text-center">
-                          {item.quantity || 0}
+                          {item.quantity || 0}{item.item_unit ? ` ${item.item_unit}` : ''}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-800 text-right">
                           {formatCurrency(item.unit_price || item.unitPrice || 0, requisition.currency)}

@@ -6,7 +6,7 @@ const SELECT = `
   SELECT
     e.id, e.name, e.code, e.currency_id,
     c.name AS currency_name, c.symbol AS currency_symbol, c.format_key AS currency_code, c.intel_number_format,
-    e.logo_path, e.address, e.phone, e.email, e.website, e.tax_id, e.registration_number,
+    e.logo_path, e.address, e.phone, e.email, e.website, e.tax_id, e.registration_number, e.po_terms,
     e.is_active, e.created_at, e.last_update,
     (SELECT COUNT(*) FROM users u WHERE u.enterprise_id = e.id)::int AS user_count,
     (SELECT COUNT(*) FROM requisitions r WHERE r.enterprise_id = e.id)::int AS requisition_count
@@ -17,6 +17,7 @@ const SELECT = `
 const FIELDS = {
   name: 'name', code: 'code', currencyId: 'currency_id', address: 'address', phone: 'phone',
   email: 'email', website: 'website', taxId: 'tax_id', registrationNumber: 'registration_number',
+  poTerms: 'po_terms', // conditions générales du bon de commande (dernière page du PDF)
 };
 
 class EnterpriseModel {

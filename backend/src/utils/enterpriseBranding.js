@@ -11,7 +11,7 @@ const APP_NAME = 'procureApp';
 async function getBranding(enterpriseId) {
   const id = enterpriseId || tenant.enterpriseId();
   const e = id
-    ? await db.one('SELECT name, code, logo_path, address, phone, email, website, tax_id, registration_number FROM enterprise WHERE id = $1', [id])
+    ? await db.one('SELECT name, code, logo_path, address, phone, email, website, tax_id, registration_number, po_terms FROM enterprise WHERE id = $1', [id])
     : null;
   return {
     appName: APP_NAME,
@@ -23,6 +23,7 @@ async function getBranding(enterpriseId) {
     website: e?.website || null,
     taxId: e?.tax_id || null,
     registrationNumber: e?.registration_number || null,
+    poTerms: e?.po_terms || null,
     logo: await logoDataUri(e?.logo_path),
   };
 }

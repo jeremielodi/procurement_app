@@ -11,6 +11,7 @@ const db = require('../config/database');
 const camundaService = require('./CamundaService');
 const notificationService = require('./NotificationService');
 const i18n = require('../i18n');
+const { requisitionDelivery } = require('../utils/requisitionDelivery');
 
 const APPROVAL_TASKS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
 const REVISE_TASK = 'Activity_ReviseRequisition';
@@ -75,6 +76,7 @@ async function history(tx, { requisition, action, comments, userId, taskName = '
 async function snapshot(requisitionId, tx = db) {
   const r = await tx.one(
     `SELECT r.title, r.description, r.justification, r.priority, r.estimated_amount::float8 AS amount,
+            r.delivery_address, to_char(r.needed_by, 'YYYY-MM-DD') AS needed_by, r.delivery_recipient, r.delivery_contact,
             r.department_id, d.code AS department_code, d.name AS department_name,
             r.project_id, p.code AS project_code, p.name AS project_name, c.format_key AS currency
      FROM requisitions r
@@ -85,7 +87,7 @@ async function snapshot(requisitionId, tx = db) {
     [requisitionId]
   );
   const items = await tx.select(
-    `SELECT ri.id, ri.item_description AS description, ri.quantity::float8 AS quantity, COALESCE(ri.frequency, 1)::float8 AS frequency,
+    `SELECT ri.id, ri.item_description AS description, ri.quantity::float8 AS quantity, COALESCE(ri.frequency, 1)::float8 AS frequency, ri.unit,
             ri.unit_price::float8 AS "unitPrice", COALESCE(ri.total_amount, ri.quantity * COALESCE(ri.frequency, 1) * ri.unit_price)::float8 AS total,
             ri.budget_line_id AS "budgetLineId", COALESCE(ba.entity_code, ri.budget_line_code) AS "budgetLineCode", ri.specifications
      FROM requisition_items ri LEFT JOIN budget_allocations ba ON ba.id = ri.budget_line_id
@@ -94,6 +96,8 @@ async function snapshot(requisitionId, tx = db) {
   );
   return {
     title: r.title, description: r.description || '', justification: r.justification || '', priority: r.priority,
+    deliveryAddress: r.delivery_address || '', neededBy: r.needed_by || '',
+    deliveryRecipient: r.delivery_recipient || '', deliveryContact: r.delivery_contact || '',
     amount: num(r.amount), currency: r.currency || null,
     department: r.department_id ? { id: r.department_id, label: `${r.department_code} - ${r.department_name}` } : null,
     project: r.project_id ? { id: r.project_id, label: `${r.project_code} - ${r.project_name}` } : null,
@@ -101,8 +105,8 @@ async function snapshot(requisitionId, tx = db) {
   };
 }
 
-const FIELDS = ['title', 'description', 'justification', 'priority'];
-const ITEM_FIELDS = ['description', 'quantity', 'frequency', 'unitPrice', 'total', 'budgetLineCode', 'specifications'];
+const FIELDS = ['title', 'description', 'justification', 'priority', 'deliveryAddress', 'neededBy', 'deliveryRecipient', 'deliveryContact'];
+const ITEM_FIELDS = ['description', 'quantity', 'frequency', 'unit', 'unitPrice', 'total', 'budgetLineCode', 'specifications'];
 
 /**
  * Changements entre deux photos → { fields: [{ field, before, after }], items: { added, removed, changed: [{ id, description, changes }] } }
@@ -248,6 +252,8 @@ class RequisitionRevisionService {
     const items = Array.isArray(data.items) ? data.items : null;
     if (!text(data.title)) throw fail(400, 'TITLE_REQUIRED', 'Le titre est obligatoire');
     if (!items || !items.length) throw fail(400, 'ITEMS_REQUIRED', 'Au moins un article est requis');
+    const delivery = requisitionDelivery(data);
+    if (delivery.error) throw fail(400, delivery.error, 'Date nécessaire invalide');
     items.forEach((it, line) => {
       if (!text(it.description)) throw fail(400, 'ITEM_INVALID', 'Désignation obligatoire', { line });
       if (!(num(it.quantity) > 0) || !(num(it.frequency || 1) > 0) || num(it.unitPrice) < 0) throw fail(400, 'ITEM_INVALID', 'Quantité, fréquence ou prix invalide', { line });
@@ -280,26 +286,28 @@ class RequisitionRevisionService {
         const lineTotal = quantity * frequency * unitPrice;
         total += lineTotal;
         const code = (await tx.one('SELECT entity_code FROM budget_allocations WHERE id = $1', [it.budgetLineId]))?.entity_code || null;
-        const values = [text(it.description), quantity, frequency, unitPrice, lineTotal, text(it.specifications) || null, it.budgetLineId, code, it.stockItemId || null];
+        const values = [text(it.description), quantity, frequency, unitPrice, lineTotal, text(it.specifications) || null, it.budgetLineId, code, it.stockItemId || null, text(it.unit, 50) || null];
         if (it.id && kept.includes(String(it.id))) {
           await tx.exec(
             `UPDATE requisition_items SET item_description = $1, quantity = $2, frequency = $3, unit_price = $4, total_amount = $5,
-                    specifications = $6, budget_line_id = $7, budget_line_code = $8, stock_item_id = $9 WHERE id = $10`,
+                    specifications = $6, budget_line_id = $7, budget_line_code = $8, stock_item_id = $9, unit = $10 WHERE id = $11`,
             [...values, it.id]
           );
         } else {
           await tx.exec(
-            `INSERT INTO requisition_items (item_description, quantity, frequency, unit_price, total_amount, specifications, budget_line_id, budget_line_code, stock_item_id, requisition_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            `INSERT INTO requisition_items (item_description, quantity, frequency, unit_price, total_amount, specifications, budget_line_id, budget_line_code, stock_item_id, unit, requisition_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
             [...values, req.id]
           );
         }
       }
       await tx.exec(
         `UPDATE requisitions SET title = $2, description = $3, justification = $4, priority = $5, department_id = $6, project_id = $7,
-                estimated_amount = $8, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+                estimated_amount = $8, delivery_address = $9, needed_by = $10, delivery_recipient = $11, delivery_contact = $12,
+                updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
         [req.id, text(data.title, 255), text(data.description, 5000) || null, text(data.justification, 5000) || null,
-         data.priority || req.priority, data.departmentId || null, projectId, total]
+         data.priority || req.priority, data.departmentId || null, projectId, total,
+         delivery.address, delivery.neededBy, delivery.recipient, delivery.contact]
       );
       return { id: req.id, estimatedAmount: total };
     });

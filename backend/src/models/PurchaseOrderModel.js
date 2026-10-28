@@ -22,10 +22,12 @@ const PO_ITEMS_SQL = `
          d.quantity_received::float8 AS delivered_received, d.quantity_accepted::float8 AS delivered_accepted,
          d.quantity_rejected::float8 AS delivered_rejected, d.quantity_remaining::float8 AS quantity_remaining,
          d.receipt_count::int AS receipt_count, d.last_receipt_date,
-         si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable, si.track_lots, si.track_expiry, si.track_serials
+         si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable, si.track_lots, si.track_expiry, si.track_serials,
+         COALESCE(NULLIF(ri.unit, ''), si.unit) AS item_unit -- unité de mesure : celle de la réquisition, sinon du catalogue
   FROM purchase_order_items pi
   JOIN v_po_item_delivery d ON d.po_item_id = pi.id
   LEFT JOIN stock_items si ON si.id = pi.stock_item_id
+  LEFT JOIN requisition_items ri ON ri.id = pi.requisition_item_id
   WHERE pi.purchase_order_id = $1
   ORDER BY pi.id`;
 
@@ -52,6 +54,10 @@ class PurchaseOrderModel {
       order_date: poData.orderDate || new Date(),
       delivery_date: poData.deliveryDate,
       shipping_address: poData.shippingAddress,
+      // Bon de commande de l'entreprise (migration 44)
+      payment_terms: poData.paymentTerms || null,
+      delivery_terms: poData.deliveryTerms || null,
+      special_instructions: poData.specialInstructions || null,
       total_amount: poData.totalAmount,
       currency_id: currencyId,
       status: 'PO_PENDING',
@@ -200,6 +206,12 @@ class PurchaseOrderModel {
         s.email as supplier_email,
         s.phone as supplier_phone,
         s.address as supplier_address,
+        s.contact_name as supplier_contact_name,
+        s.payment_terms as supplier_payment_terms,
+        s.delivery_terms as supplier_delivery_terms,
+        r.delivery_address as requisition_delivery_address,
+        ru.first_name as requester_first_name, ru.last_name as requester_last_name, ru.position as requester_position,
+        u.last_name as created_by_last_name, u.position as created_by_position,
         su.language as supplier_language,
         s.user_id as supplier_user_id,
         u.first_name as created_by_name,
@@ -211,6 +223,7 @@ class PurchaseOrderModel {
       LEFT JOIN suppliers s ON po.supplier_id = s.id
       LEFT JOIN users su ON su.id = s.user_id -- compte portail du fournisseur : langue des emails
       LEFT JOIN users u ON po.created_by = u.id
+      LEFT JOIN users ru ON ru.id = r.requester_id
       LEFT JOIN currency c ON po.currency_id = c.id
       WHERE po.id = $1
     `, [id]);
@@ -232,7 +245,8 @@ class PurchaseOrderModel {
         SELECT
           a.*,
           u.first_name,
-          u.last_name
+          u.last_name,
+          u.position
         FROM approvals a
         LEFT JOIN users u ON a.approver_id = u.id
         WHERE a.entity_type = 'purchase_order' AND a.entity_id::text = $1::text

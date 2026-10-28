@@ -28,7 +28,11 @@ export default function POForm() {
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
   const [deliveryDate, setDeliveryDate] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(''); // instructions spéciales au fournisseur
+  // Conditions du bon de commande (modèle de l'entreprise) : celles de la fiche fournisseur tant qu'elles ne sont pas modifiées
+  const [paymentTerms, setPaymentTerms] = useState('');
+  const [deliveryTerms, setDeliveryTerms] = useState('');
+  const [termsEdited, setTermsEdited] = useState(false);
   const [items, setItems] = useState([]);
 
   useEffect(() => {
@@ -47,6 +51,11 @@ export default function POForm() {
   const prequalifiedSuppliers = suppliers.filter(s => s.is_prequalified);
   const otherSuppliers = suppliers.filter(s => !s.is_prequalified);
   const selectedSupplier = suppliers.find(s => String(s.id) === String(supplierId));
+  useEffect(() => {
+    if (termsEdited) return;
+    setPaymentTerms(selectedSupplier?.payment_terms || '');
+    setDeliveryTerms(selectedSupplier?.delivery_terms || '');
+  }, [selectedSupplier?.id]);
   const supplierOption = (s) => (
     <option key={s.id} value={s.id}>{s.name}{s.awarded ? ` — ${t('po.awardedSupplier')}` : s.direct_purchase ? ` — ${t('po.directPurchaseSupplier')}` : ''}</option>
   );
@@ -113,7 +122,9 @@ export default function POForm() {
         orderDate,
         deliveryDate: deliveryDate || null,
         shippingAddress,
-        notes,
+        specialInstructions: notes,
+        paymentTerms,
+        deliveryTerms,
         currency: currency.code,
         totalAmount,
         items: items.map(({ stockItem, ...it }) => ({ ...it, stockItemId: stockItem?.id || null }))
@@ -258,8 +269,24 @@ export default function POForm() {
               />
             </div>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="po-payment-terms" className="block text-sm font-medium text-gray-700 mb-1">{t('po.paymentTerms')}</label>
+              <input id="po-payment-terms" type="text" value={paymentTerms} maxLength={2000} data-testid="po-payment-terms"
+                onChange={e => { setPaymentTerms(e.target.value); setTermsEdited(true); }}
+                placeholder={t('po.paymentTermsPlaceholder')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label htmlFor="po-delivery-terms" className="block text-sm font-medium text-gray-700 mb-1">{t('po.deliveryTerms')}</label>
+              <input id="po-delivery-terms" type="text" value={deliveryTerms} maxLength={2000} data-testid="po-delivery-terms"
+                onChange={e => { setDeliveryTerms(e.target.value); setTermsEdited(true); }}
+                placeholder={t('po.deliveryTermsPlaceholder')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.notes')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('po.specialInstructions')}</label>
             <textarea
               rows={2}
               value={notes}

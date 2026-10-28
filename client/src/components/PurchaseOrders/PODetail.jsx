@@ -431,6 +431,16 @@ export default function PODetail() {
                 <span className="text-sm text-gray-500">{t('po.shippingAddressLabel')}</span>
                 <span className="text-sm font-medium">{po.shipping_address || t('po.notSpecified')}</span>
               </div>
+              {[
+                ['paymentTerms', po.payment_terms],
+                ['deliveryTerms', po.delivery_terms],
+                ['specialInstructions', po.special_instructions],
+              ].filter(([, v]) => v).map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-4">
+                  <span className="text-sm text-gray-500 shrink-0">{t(`po.${k}`)}</span>
+                  <span className="text-sm font-medium text-right whitespace-pre-wrap">{v}</span>
+                </div>
+              ))}
             </div>
           </div>
 

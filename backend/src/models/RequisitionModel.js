@@ -50,7 +50,7 @@ class RequisitionModel {
     const { 
       title, description, departmentId, projectId, projectCode,
       estimatedAmount, currencyId, requesterId, priority, justification,
-      items
+      items, delivery = {}
     } = requisitionData;
 
     const year = new Date().getFullYear();
@@ -78,6 +78,11 @@ class RequisitionModel {
         status: 'DRAFT',
         priority,
         justification,
+        // Informations de livraison (formulaire de demande d'achat — migration 44)
+        delivery_address: delivery.address || null,
+        needed_by: delivery.neededBy || null,
+        delivery_recipient: delivery.recipient || null,
+        delivery_contact: delivery.contact || null,
         created_at: new Date(),
         updated_at: new Date()
       });
@@ -100,6 +105,7 @@ class RequisitionModel {
           item_description: item.description,
           quantity: item.quantity,
           frequency: item.frequency || 1,
+          unit: item.unit || null,
           unit_price: item.unitPrice,
           total_amount: itemTotal,
           specifications: item.specifications || null,
@@ -322,7 +328,8 @@ class RequisitionModel {
       `SELECT ri.*, 
               b.entity_code as budget_line_code, 
               b.description as budget_line_description,
-              si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable
+              si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable,
+              ri.unit AS item_unit -- unité de mesure saisie (ri.unit est masquée par si.unit, unité du catalogue)
        FROM requisition_items ri
        LEFT JOIN budget_allocations b ON ri.budget_line_id = b.id
        LEFT JOIN stock_items si ON si.id = ri.stock_item_id

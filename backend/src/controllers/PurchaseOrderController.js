@@ -34,6 +34,9 @@ async function lotForNewOrder(requisition, { taskId, supplierId }) {
 }
 
 /** Erreur métier { status, code } (séparation des tâches…) sinon 500 */
+/** Texte libre facultatif (conditions, instructions) : vide → null */
+const clip = (v) => String(v ?? '').trim().slice(0, 2000) || null;
+
 function sendError(res, error, fallback) {
   if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message });
   console.error(fallback, error);
@@ -46,7 +49,8 @@ class PurchaseOrderController {
     try {
       const {
         requisitionId, taskId, supplierId, orderDate, deliveryDate,
-        shippingAddress, totalAmount, currency, items, notes
+        shippingAddress, totalAmount, currency, items, notes,
+        paymentTerms, deliveryTerms, specialInstructions
       } = req.body;
 
       if (!requisitionId || !supplierId || !totalAmount) {
@@ -80,6 +84,8 @@ class PurchaseOrderController {
       const result = await purchaseOrderModel.create({
         requisitionId, taskId: taskId || null, supplierId, orderDate, deliveryDate,
         shippingAddress, totalAmount, currency, notes,
+        // Instructions au fournisseur : ancien champ « notes » accepté (il n'était pas enregistré)
+        paymentTerms: clip(paymentTerms), deliveryTerms: clip(deliveryTerms), specialInstructions: clip(specialInstructions ?? notes),
         items: items || [],
         supplierLotId: lot?.id || null,
         createdBy: req.user.id // jamais une valeur du client (séparation des tâches)

@@ -1270,7 +1270,33 @@
     "noItems": "Aucun article. Cliquez sur « Ajouter un article »",
     "attachments": "Pièces jointes",
     "creating": "Création...",
-    "create": "Créer la réquisition"
+    "create": "Créer la réquisition",
+    "unit": "Unité",
+    "unitPlaceholder": "jour, pièce…",
+    "unitSuggestions": [
+      "pièce",
+      "jour",
+      "mois",
+      "heure",
+      "forfait",
+      "boîte",
+      "paquet",
+      "rame",
+      "litre",
+      "kg",
+      "mètre",
+      "lot"
+    ],
+    "delivery": {
+      "title": "Livraison",
+      "hint": "Informations reprises dans la section 2 du formulaire de demande d'achat (facultatives).",
+      "address": "Adresse de livraison",
+      "addressPlaceholder": "Ex : Bureau de Bunia",
+      "neededBy": "Date nécessaire",
+      "recipient": "Destinataire (le cas échéant)",
+      "contact": "Coordonnées (téléphone, e-mail…)",
+      "contactPlaceholder": "Ex : +243 … / nom@exemple.org"
+    }
   },
   "reqDetail": {
     "cancelled": "Réquisition annulée avec succès",
@@ -1624,7 +1650,12 @@
     "suppliersNotPrequalified": "Non préqualifiés",
     "notPrequalifiedWarning": "Ce fournisseur n'est pas encore préqualifié par votre entreprise (inscrit sur le portail, dossier à vérifier).",
     "openPrequalification": "Voir sa préqualification",
-    "directPurchaseSupplier": "désigné à l'étape « Achat direct »"
+    "directPurchaseSupplier": "désigné à l'étape « Achat direct »",
+    "paymentTerms": "Conditions de paiement",
+    "paymentTermsPlaceholder": "Ex : 100 % après livraison",
+    "deliveryTerms": "Conditions de livraison",
+    "deliveryTermsPlaceholder": "Ex : livraison au bureau, frais inclus",
+    "specialInstructions": "Instructions spéciales au fournisseur"
   },
   "grnStatus": {
     "DRAFT": "Brouillon",
@@ -2959,7 +2990,10 @@
     ],
     "create": "Créer l'entreprise",
     "settingsUpdated": "Informations de l'entreprise mises à jour",
-    "settingsHint": "Nom, coordonnées et logo utilisés dans l'application et sur vos documents (bons de commande, réquisitions, paiements…)."
+    "settingsHint": "Nom, coordonnées et logo utilisés dans l'application et sur vos documents (bons de commande, réquisitions, paiements…).",
+    "poTerms": "Conditions générales du bon de commande",
+    "poTermsPlaceholder": "1. Acceptation du bon de commande\n…",
+    "poTermsHint": "Imprimées en dernière page de chaque bon de commande (PDF). Laissez vide pour ne pas ajouter de page. Les retours à la ligne sont conservés."
   },
   "app": {
     "title": "procureApp — Gestion des achats"
@@ -4000,6 +4034,14 @@
             ]
           },
           {
+            "type": "h",
+            "text": "Livraison et formulaire de demande d'achat"
+          },
+          {
+            "type": "p",
+            "text": "La rubrique « Livraison » du formulaire (adresse, date nécessaire, destinataire, coordonnées) et la colonne « Unité » des articles (jour, pièce, boîte…) sont reprises dans le PDF de la réquisition, présenté comme le formulaire de demande d'achat de l'entreprise : demandeur et approbateur avec leur signature, articles, codage budgétaire par ligne budgétaire (code entité, objet de dépense, source de financement, projet, sous-projet, fonction, activité, montant et n° des articles), déclaration (justification) et informations supplémentaires (description)."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -4384,6 +4426,14 @@
           {
             "type": "tip",
             "text": "Le bon de commande est approuvé par une autre personne que celle qui l'a créé (et que le demandeur de la réquisition)."
+          },
+          {
+            "type": "h",
+            "text": "Conditions du bon de commande"
+          },
+          {
+            "type": "p",
+            "text": "À la création, renseignez les conditions de paiement, les conditions de livraison (reprises d'office de la fiche fournisseur) et les instructions spéciales au fournisseur. Elles figurent sur le PDF du bon de commande, avec les signatures « Demandé par », « Approuvé par » et le cadre de signature du fournisseur. Les conditions générales de l'entreprise (Mon entreprise) sont imprimées en dernière page."
           },
           {
             "type": "links",
@@ -5310,6 +5360,10 @@
             ]
           },
           {
+            "type": "tip",
+            "text": "Mon entreprise → « Conditions générales du bon de commande » : texte imprimé en dernière page de chaque bon de commande. Vide = pas de page."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -5891,7 +5945,11 @@
       "priority": "Priorité",
       "amount": "Montant",
       "department": "Département",
-      "project": "Projet"
+      "project": "Projet",
+      "deliveryAddress": "Adresse de livraison",
+      "neededBy": "Date nécessaire",
+      "deliveryRecipient": "Destinataire",
+      "deliveryContact": "Coordonnées"
     },
     "itemFields": {
       "description": "Désignation",
@@ -5900,7 +5958,8 @@
       "unitPrice": "Prix unitaire",
       "total": "Total",
       "budgetLineCode": "Ligne budgétaire",
-      "specifications": "Spécifications"
+      "specifications": "Spécifications",
+      "unit": "Unité"
     },
     "toCorrectTitle": "Votre réquisition est à corriger",
     "inCorrectionTitle": "Réquisition en cours de correction par le demandeur",

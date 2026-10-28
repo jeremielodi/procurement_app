@@ -14,7 +14,7 @@ const dailyReportService = require('../services/DailyRequisitionReportService');
 const approvalPolicy = require('../utils/approvalPolicy');
 
 // Journal d'audit : champs suivis d'une entreprise
-const ENTERPRISE_FIELDS = ['name', 'code', 'address', 'phone', 'email', 'website', 'tax_id', 'registration_number', 'currency_id', 'is_active'];
+const ENTERPRISE_FIELDS = ['name', 'code', 'address', 'phone', 'email', 'website', 'tax_id', 'registration_number', 'po_terms', 'currency_id', 'is_active'];
 const pickEnterprise = (e) => Object.fromEntries(ENTERPRISE_FIELDS.map(f => [f, e?.[f] ?? null]));
 
 const LOGO_DIR = 'enterprise-logos';
@@ -27,6 +27,7 @@ function validate(b, { creating }) {
   }
   if (creating && !b.currencyId) errors.push('Devise requise');
   if (b.email && !/^\S+@\S+\.\S+$/.test(b.email)) errors.push('Email invalide');
+  if (b.poTerms && String(b.poTerms).length > 20000) errors.push('Conditions générales du bon de commande : 20 000 caractères maximum');
   return errors;
 }
 

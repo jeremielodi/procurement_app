@@ -61,6 +61,8 @@ class PurchaseOrderExportService {
     safe('po_index1',   (i)    => i + 1);
   }
 
+  // Modèle de bon de commande de l'entreprise : champs soulignés, tableau des articles, signatures (demandeur,
+  // approbateurs, fournisseur), conditions générales de l'entreprise en dernière page (enterprise.po_terms)
   getTemplate() {
     return `<!DOCTYPE html>
 <html lang="{{lang}}">
@@ -69,349 +71,172 @@ class PurchaseOrderExportService {
   <title>{{T.title}}</title>
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-    @page { size: A4; margin: 15mm 15mm 20mm 15mm; }
+    body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 10px; color: #000; line-height: 1.35; }
 
-    body {
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      font-size: 12px;
-      color: #1F2937;
-      line-height: 1.5;
-    }
+    .top { position: relative; height: 54px; margin-bottom: 14px; }
+    .top img { position: absolute; left: 0; top: 0; max-height: 50px; max-width: 130px; object-fit: contain; }
+    .top .org { position: absolute; left: 0; top: 0; font-weight: 700; font-size: 11px; }
+    .top h1 { text-align: center; font-size: 20px; font-weight: 700; padding-top: 12px; }
 
-    /* ── HEADER ── */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      border-bottom: 3px solid #1E3A5F;
-      padding-bottom: 16px;
-      margin-bottom: 20px;
-    }
-    .header-logo { display: flex; align-items: center; gap: 12px; }
-    .header-logo img { height: 44px; }
-    .header-org { font-size: 10px; color: #6B7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-    .header-doc { font-size: 24px; font-weight: 800; color: #1E3A5F; letter-spacing: -0.01em; margin-top: 2px; }
-    .header-ref { font-size: 11px; color: #6B7280; margin-top: 3px; }
+    .rows { width: 100%; border-collapse: collapse; }
+    .rows td { padding: 4px 4px 1px; vertical-align: bottom; }
+    .rows .k { font-weight: 700; text-align: right; white-space: nowrap; width: 1%; padding-right: 6px; }
+    .rows .v { border-bottom: 1px solid #000; text-align: center; font-weight: 700; }
+    .rows .v.l { text-align: left; }
+    .rows .v a { color: #0563C1; }
+    .multi { white-space: pre-wrap; }
 
-    .header-right { text-align: right; }
-    .status-badge {
-      display: inline-block;
-      padding: 5px 16px;
-      border-radius: 99px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      color: {{po_statusColor po.status}};
-      background: {{po_statusBg po.status}};
-      border: 1.5px solid {{po_statusColor po.status}};
-    }
-    .header-dates { font-size: 11px; color: #6B7280; margin-top: 8px; line-height: 1.8; }
+    .items { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    .items th { border: 1px solid #000; font-weight: 700; padding: 3px 5px; text-align: center; }
+    .items td { border: 1px solid #000; padding: 6px 5px; vertical-align: middle; }
+    .items td.c { text-align: center; }
+    .items td.r { text-align: right; white-space: nowrap; }
+    .items td.money { white-space: nowrap; }
+    .items td.money span { float: left; }
+    .items td.money b { float: right; }
+    .items .spec { color: #333; font-size: 9px; margin-top: 2px; }
+    .items tr.total td { border: none; }
+    .items tr.total td.box { border: 1.5px solid #000; font-weight: 700; }
 
-    /* ── TWO-COLUMN INFO ── */
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 22px;
-    }
-    .card {
-      background: #F9FAFB;
-      border: 1px solid #E5E7EB;
-      border-radius: 8px;
-      padding: 14px 16px;
-    }
-    .card-title {
-      font-size: 9px;
-      font-weight: 700;
-      color: #9CA3AF;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      border-bottom: 1px solid #E5E7EB;
-      padding-bottom: 6px;
-      margin-bottom: 10px;
-    }
-    .card-row { margin-bottom: 5px; }
-    .card-label { font-size: 9px; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-    .card-value { font-size: 12px; font-weight: 500; color: #111827; margin-top: 1px; }
-    .card-value.large { font-size: 15px; font-weight: 700; }
+    .terms { margin-top: 18px; width: 62%; }
 
-    /* ── SECTION TITLE ── */
-    .section-title {
-      font-size: 11px;
-      font-weight: 700;
-      color: #374151;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      border-left: 3px solid #1E3A5F;
-      padding-left: 8px;
-      margin: 20px 0 10px;
-    }
+    .sig { width: 100%; border-collapse: collapse; margin-top: 26px; }
+    .sig td { padding: 0 8px; vertical-align: bottom; text-align: center; }
+    .sig .line { border-bottom: 1px solid #000; font-weight: 700; height: 34px; vertical-align: bottom; }
+    .sig .line img { max-height: 32px; max-width: 150px; object-fit: contain; display: block; margin: 0 auto; }
+    .sig .cap { font-weight: 700; padding-top: 1px; padding-bottom: 10px; }
+    .sig .cap.i { font-style: italic; }
 
-    /* ── ITEMS TABLE ── */
-    table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    thead tr { background: #1E3A5F; }
-    thead th {
-      padding: 9px 11px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: white;
-    }
-    thead th.r { text-align: right; }
-    tbody tr:nth-child(even) { background: #F9FAFB; }
-    tbody tr:hover { background: #EFF6FF; }
-    tbody td { padding: 9px 11px; border-bottom: 1px solid #E5E7EB; vertical-align: top; }
-    tbody td.r { text-align: right; font-variant-numeric: tabular-nums; }
-    tbody td.muted { color: #6B7280; }
+    .vendor { margin-top: 28px; }
+    .vendor .rows .v { height: 22px; }
 
-    tfoot tr { background: #EFF6FF; }
-    tfoot td {
-      padding: 11px;
-      font-weight: 700;
-      border-top: 2px solid #1E3A5F;
-    }
-    tfoot td.r { text-align: right; font-size: 15px; color: #1E3A5F; }
-
-    /* ── NOTES ── */
-    .notes-box {
-      background: #FFFBEB;
-      border: 1px solid #FDE68A;
-      border-left: 4px solid #F59E0B;
-      border-radius: 6px;
-      padding: 12px 14px;
-      margin-top: 16px;
-      font-size: 11px;
-      color: #78350F;
-    }
-    .notes-title { font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-
-    /* ── APPROVALS ── */
-    .approval-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    .approval-table th { background: #F3F4F6; padding: 7px 10px; text-align: left; font-size: 10px; color: #6B7280; font-weight: 600; text-transform: uppercase; }
-    .approval-table td { padding: 8px 10px; border-bottom: 1px solid #F3F4F6; }
-    .pill-approved { display: inline-block; padding: 2px 10px; border-radius: 99px; background: #ECFDF5; color: #059669; font-size: 10px; font-weight: 700; }
-    .pill-rejected { display: inline-block; padding: 2px 10px; border-radius: 99px; background: #FEF2F2; color: #DC2626; font-size: 10px; font-weight: 700; }
-
-    /* ── SIGNATURES ── */
-    .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; }
-    .sig-box {
-      border-top: 1.5px solid #D1D5DB;
-      padding-top: 8px;
-      text-align: center;
-      font-size: 10px;
-      color: #6B7280;
-    }
-    .sig-box .sig-line { height: 44px; display: flex; align-items: flex-end; justify-content: center; }
-    .sig-box .sig-line img { max-height: 44px; max-width: 180px; object-fit: contain; }
-    .sig-box .sig-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; }
-
-    /* ── FOOTER ── */
-    .doc-footer {
-      margin-top: 32px;
-      padding-top: 12px;
-      border-top: 1px solid #E5E7EB;
-      display: flex;
-      justify-content: space-between;
-      font-size: 9px;
-      color: #9CA3AF;
-    }
+    .page-break { page-break-before: always; }
+    .tc h2 { text-align: center; font-size: 12px; font-weight: 700; margin-bottom: 10px; }
+    .tc .body { font-size: 8.5px; white-space: pre-wrap; line-height: 1.45; }
   </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<div class="header">
-  <div class="header-logo">
-    {{#if brand.logo}}<img src="{{brand.logo}}" alt="{{brand.name}}" />{{/if}}
-    <div>
-      <div class="header-org">{{brand.name}}</div>
-      <div class="header-doc">{{L.heading}}</div>
-      <div class="header-doc" style="font-size:18px;color:#374151">{{po.po_number}}</div>
-      {{#if po.requisition_number}}
-      <div class="header-ref">{{T.requisitionRef}}</div>
-      {{/if}}
-    </div>
-  </div>
-  <div class="header-right">
-    <span class="status-badge">{{po_statusLabel po.status}}</span>
-    <div class="header-dates">
-      <div>📅 {{T.issuedOn}}</div>
-      {{#if po.delivery_date}}
-      <div>🚚 {{T.delivery}}</div>
-      {{/if}}
-      {{#if po.created_by_name}}
-      <div>👤 {{T.createdBy}}</div>
-      {{/if}}
-    </div>
-  </div>
+<div class="top">
+  {{#if brand.logo}}<img src="{{brand.logo}}" alt="{{brand.name}}">{{else}}<div class="org">{{brand.name}}</div>{{/if}}
+  <h1>{{L.heading}}</h1>
 </div>
 
-<!-- INFO CARDS -->
-<div class="info-grid">
-  <div class="card">
-    <div class="card-title">🏢 {{L.supplier}}</div>
-    <div class="card-row">
-      <div class="card-value large">{{po.supplier_name}}</div>
-    </div>
-    {{#if po.supplier_code}}
-    <div class="card-row">
-      <div class="card-label">{{L.supplierCode}}</div>
-      <div class="card-value">{{po.supplier_code}}</div>
-    </div>
-    {{/if}}
-    {{#if po.supplier_email}}
-    <div class="card-row">
-      <div class="card-label">{{L.email}}</div>
-      <div class="card-value">{{po.supplier_email}}</div>
-    </div>
-    {{/if}}
-    {{#if po.supplier_phone}}
-    <div class="card-row">
-      <div class="card-label">{{L.phone}}</div>
-      <div class="card-value">{{po.supplier_phone}}</div>
-    </div>
-    {{/if}}
-    {{#if po.supplier_address}}
-    <div class="card-row">
-      <div class="card-label">{{L.address}}</div>
-      <div class="card-value">{{po.supplier_address}}</div>
-    </div>
-    {{/if}}
-  </div>
+<table class="rows">
+  <tr>
+    <td class="k">{{L.poNo}}</td><td class="v" style="width:26%">{{po.po_number}}</td>
+    <td class="k">{{L.referenceNo}}</td><td class="v" style="width:26%">{{po.requisition_number}}</td>
+    <td class="k">{{L.date}}:</td><td class="v">{{orderDate}}</td>
+  </tr>
+</table>
+<table class="rows">
+  <tr><td class="k" style="width:150px">{{L.vendor}}</td><td class="v">{{po.supplier_name}}</td></tr>
+  <tr><td class="k">{{L.address}}</td><td class="v multi">{{po.supplier_address}}</td></tr>
+</table>
+<table class="rows">
+  <tr>
+    <td class="k" style="width:150px">{{L.phone}}</td><td class="v" style="width:36%">{{po.supplier_phone}}</td>
+    <td class="k">{{L.email}}</td><td class="v">{{#if po.supplier_email}}<a>{{po.supplier_email}}</a>{{/if}}</td>
+  </tr>
+  <tr>
+    <td class="k">{{L.contactPerson}}</td><td class="v">{{po.supplier_contact_name}}</td>
+    <td class="k">{{L.supplierCode}}</td><td class="v">{{po.supplier_code}}</td>
+  </tr>
+  <tr>
+    <td class="k">{{L.deliveryLocation}}</td><td class="v multi">{{deliveryLocation}}</td>
+    <td class="k">{{L.deliveryDate}}</td><td class="v">{{deliveryDate}}</td>
+  </tr>
+</table>
+<table class="rows">
+  <tr><td class="k" style="width:150px">{{L.deliveryTerms}}</td><td class="v multi">{{deliveryTerms}}</td></tr>
+  <tr><td class="k">{{L.specialInstructions}}</td><td class="v multi">{{po.special_instructions}}</td></tr>
+</table>
 
-  <div class="card">
-    <div class="card-title">📋 {{L.orderInfo}}</div>
-    {{#if po.requisition_title}}
-    <div class="card-row">
-      <div class="card-label">{{L.requisitionObject}}</div>
-      <div class="card-value">{{po.requisition_title}}</div>
-    </div>
-    {{/if}}
-    {{#if po.shipping_address}}
-    <div class="card-row">
-      <div class="card-label">{{L.shippingAddress}}</div>
-      <div class="card-value">{{po.shipping_address}}</div>
-    </div>
-    {{/if}}
-    <div class="card-row">
-      <div class="card-label">{{L.currency}}</div>
-      <div class="card-value">{{po.currency}}</div>
-    </div>
-    <div class="card-row">
-      <div class="card-label">{{L.totalAmount}}</div>
-      <div class="card-value large" style="color:#1E3A5F">{{po_formatCurrency po.total_amount po.currency}}</div>
-    </div>
-  </div>
-</div>
-
-<!-- ITEMS TABLE -->
-{{#if items.length}}
-<div class="section-title">{{L.orderedItems}}</div>
-<table>
+<table class="items">
   <thead>
     <tr>
-      <th style="width:30px">#</th>
+      <th style="width:5%">{{L.no}}</th>
+      <th style="width:7%">{{L.qty}}</th>
+      <th style="width:9%">{{L.unit}}</th>
       <th>{{L.description}}</th>
-      <th class="r" style="width:60px">{{L.qty}}</th>
-      <th class="r" style="width:100px">{{L.unitPrice}}</th>
-      <th class="r" style="width:110px">{{L.amount}}</th>
+      <th style="width:7%">{{L.currency}}</th>
+      <th style="width:12%">{{L.unitPrice}}</th>
+      <th style="width:14%">{{L.total}}</th>
     </tr>
   </thead>
   <tbody>
     {{#each items}}
     <tr>
-      <td class="muted">{{po_index1 @index}}</td>
-      <td>
-        <div style="font-weight:600">{{this.item_description}}</div>
-        {{#if this.specifications}}
-        <div style="font-size:10px;color:#6B7280;margin-top:2px">{{this.specifications}}</div>
-        {{/if}}
-      </td>
-      <td class="r">{{this.quantity}}</td>
-      <td class="r">{{po_formatCurrency this.unit_price ../po.currency}}</td>
-      <td class="r" style="font-weight:600">{{po_formatCurrency this.total_amount ../po.currency}}</td>
+      <td class="c">{{this.no}}</td>
+      <td class="c">{{this.qty}}</td>
+      <td class="c">{{this.unitLabel}}</td>
+      <td>{{this.item_description}}{{#if this.specifications}}<div class="spec">{{this.specifications}}</div>{{/if}}</td>
+      <td class="c">{{@root.po.currency}}</td>
+      <td class="r">{{this.unitPrice}}</td>
+      <td class="money"><span>{{@root.symbol}}</span><b>{{this.total}}</b></td>
     </tr>
     {{/each}}
-  </tbody>
-  <tfoot>
-    <tr>
-      <td colspan="4" style="text-align:right;padding-right:11px;font-size:11px;color:#374151">
-        {{L.totalTtc}}
-      </td>
-      <td class="r">{{po_formatCurrency po.total_amount po.currency}}</td>
+    <tr class="total">
+      <td colspan="5"></td>
+      <td class="box" style="text-align:center">{{L.grandTotal}}</td>
+      <td class="box money"><span>{{symbol}}</span><b>{{total}}</b></td>
     </tr>
-  </tfoot>
-</table>
-
-{{else}}
-<!-- No items — show total only -->
-<div class="section-title">{{L.amountSection}}</div>
-<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px">
-  <span style="font-size:13px;color:#6B7280;font-weight:600">{{L.orderTotal}}</span>
-  <span style="font-size:22px;font-weight:800;color:#1E3A5F">{{po_formatCurrency po.total_amount po.currency}}</span>
-</div>
-{{/if}}
-
-<!-- NOTES -->
-{{#if po.notes}}
-<div class="notes-box">
-  <div class="notes-title">{{L.notes}}</div>
-  {{po.notes}}
-</div>
-{{/if}}
-
-<!-- APPROVALS -->
-{{#if approvals.length}}
-<div class="section-title">{{L.approvals}}</div>
-<table class="approval-table">
-  <thead>
-    <tr>
-      <th>{{L.approver}}</th>
-      <th>{{L.decision}}</th>
-      <th>{{L.date}}</th>
-      <th>{{L.comment}}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each approvals}}
-    <tr>
-      <td style="font-weight:600">{{this.first_name}} {{this.last_name}}</td>
-      <td>
-        {{#if (po_eq this.status 'APPROVED')}}
-          <span class="pill-approved">{{@root.L.approved}}</span>
-        {{else}}
-          <span class="pill-rejected">{{@root.L.rejected}}</span>
-        {{/if}}
-      </td>
-      <td style="color:#6B7280">{{po_formatDate this.approved_at}}</td>
-      <td style="color:#6B7280;font-style:italic">{{this.comments}}</td>
-    </tr>
-    {{/each}}
   </tbody>
 </table>
+
+<table class="rows terms">
+  <tr><td class="k">{{L.paymentTerms}}</td><td class="v multi">{{paymentTerms}}</td></tr>
+</table>
+
+<table class="sig">
+  <tr>
+    <td class="line" style="width:22%">{{requestedBy.name}}</td>
+    <td class="line" style="width:26%">{{#if requestedBy.signature}}<img src="{{requestedBy.signature}}" alt="">{{/if}}</td>
+    <td style="width:26%"></td><td></td>
+  </tr>
+  <tr><td class="cap">{{L.requestedBy}}</td><td class="cap">{{L.signature}}</td><td></td><td></td></tr>
+  <tr>
+    <td class="line">{{requestedBy.title}}</td>
+    <td class="line" style="font-style:italic;text-decoration:underline">{{requestedBy.date}}</td>
+    <td></td><td></td>
+  </tr>
+  <tr><td class="cap">{{L.titleCap}}</td><td class="cap i">{{L.date}}</td><td></td><td></td></tr>
+
+  <tr>
+    <td class="line">{{approvedBy.name}}</td>
+    <td class="line">{{#if approvedBy.signature}}<img src="{{approvedBy.signature}}" alt="">{{/if}}</td>
+    <td class="line">{{secondApproval.name}}</td>
+    <td class="line">{{#if secondApproval.signature}}<img src="{{secondApproval.signature}}" alt="">{{/if}}</td>
+  </tr>
+  <tr><td class="cap">{{L.approvedBy}}</td><td class="cap">{{L.signature}}</td><td class="cap">{{L.secondApproval}}</td><td class="cap">{{L.signature}}</td></tr>
+  <tr>
+    <td class="line">{{approvedBy.title}}</td><td class="line">{{approvedBy.date}}</td>
+    <td class="line">{{secondApproval.title}}</td><td class="line">{{secondApproval.date}}</td>
+  </tr>
+  <tr><td class="cap">{{L.titleCap}}</td><td class="cap i">{{L.date}}</td><td class="cap">{{L.titleCap}}</td><td class="cap i">{{L.date}}</td></tr>
+</table>
+
+<div class="vendor">
+  <div style="font-weight:700">{{L.vendorMustSign}}</div>
+  <table class="rows" style="margin-top:10px">
+    <tr>
+      <td class="k">{{L.signature}}:</td><td class="v" style="width:30%"></td>
+      <td class="k">{{L.name}}</td><td class="v" style="width:24%"></td>
+      <td class="k">{{L.titleCap}}:</td><td class="v"></td>
+    </tr>
+    <tr>
+      <td></td><td style="text-align:center;font-weight:700;padding-top:2px">{{L.vendorRepresentative}}</td>
+      <td class="k">{{L.date}}:</td><td class="v"></td><td></td><td></td>
+    </tr>
+  </table>
+</div>
+
+{{#if brand.poTerms}}
+<div class="page-break tc">
+  <h2>{{L.termsTitle}}</h2>
+  <div class="body">{{brand.poTerms}}</div>
+</div>
 {{/if}}
-
-<!-- SIGNATURES -->
-<div class="sig-grid">
-  <div class="sig-box">
-    <div class="sig-line">{{#if signer.signature}}<img src="{{signer.signature}}" alt="">{{/if}}</div>
-    <div class="sig-label">{{T.buyerSignature}}</div>
-    <div style="margin-top:4px;color:#9CA3AF">{{#if signer.name}}{{signer.name}}{{else}}{{L.nameSignature}}{{/if}}</div>
-  </div>
-  <div class="sig-box">
-    <div class="sig-line"></div>
-    <div class="sig-label">{{L.supplierSignature}}</div>
-    <div style="margin-top:4px;color:#9CA3AF">{{po.supplier_name}}</div>
-  </div>
-</div>
-
-<!-- FOOTER -->
-<div class="doc-footer">
-  <span>{{T.generatedWith}}</span>
-  <span>{{T.generatedOn}}</span>
-</div>
 
 </body>
 </html>`;
@@ -424,32 +249,57 @@ class PurchaseOrderExportService {
     const currency = po.currency || await getEnterpriseCurrencyCode();
     const ctx = pdfContext(lang, 'po');
     const brand = await getBranding(po.enterprise_id);
-    const fmtDay = (d) => (d ? new Date(d).toLocaleDateString(ctx.locale, { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
-    // Signataire côté acheteur : la personne qui a approuvé le bon de commande (sa signature image, si elle en a une)
-    const approval = (po.approvals || []).find(a => a.status === 'APPROVED');
-    const signer = approval
-      ? { name: [approval.first_name, approval.last_name].filter(Boolean).join(' '), signature: await signatureDataUri(approval.approver_id) }
-      : {};
+    const fmtDay = (d) => (d ? new Date(d).toLocaleDateString(ctx.locale, { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
+    const amount = (n) => new Intl.NumberFormat(ctx.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(n) || 0);
+    const qty = (n) => new Intl.NumberFormat(ctx.locale, { maximumFractionDigits: 4 }).format(parseFloat(n) || 0);
+    let symbol = currency;
+    try {
+      symbol = new Intl.NumberFormat(ctx.locale, { style: 'currency', currency, currencyDisplay: 'narrowSymbol' }).formatToParts(0).find(p => p.type === 'currency')?.value || currency;
+    } catch { /* code devise inconnu d'Intl : code affiché */ }
+
+    // Signataires : la personne qui a créé le bon (« Demandé par ») et celles qui l'ont approuvé (dernières décisions
+    // APPROVED, de la plus ancienne à la plus récente) — signature image seulement pour qui a réellement agi
+    const fullName = (...parts) => parts.filter(Boolean).join(' ');
+    const approved = (po.approvals || []).filter(a => a.status === 'APPROVED')
+      .sort((a, b) => new Date(a.approved_at) - new Date(b.approved_at));
+    const approver = async (a) => (a ? {
+      name: fullName(a.first_name, a.last_name),
+      title: a.position || '',
+      date: fmtDay(a.approved_at),
+      signature: await signatureDataUri(a.approver_id),
+    } : {});
+    const items = (po.items || []).map((it, index) => ({
+      ...it,
+      no: index + 1,
+      qty: qty(it.quantity),
+      unitLabel: it.item_unit || it.unit || '',
+      unitPrice: amount(it.unit_price),
+      total: amount(it.total_amount ?? (parseFloat(it.quantity) || 0) * (parseFloat(it.unit_price) || 0)),
+    }));
+
     const template = Handlebars.compile(this.getTemplate());
     const html = template({
-      signer,
       po:          { ...po, currency },
-      items:       po.items       || [],
-      approvals:   po.approvals   || [],
-      generatedAt: new Date(),
+      items,
       brand,
-      ...ctx,
-      // Phrases avec valeurs (déjà formatées dans la langue du document)
-      T: {
-        title: ctx.t('pdf.po.title', { number: po.po_number }),
-        requisitionRef: ctx.t('pdf.po.requisitionRef', { number: po.requisition_number }),
-        issuedOn: ctx.t('pdf.po.issuedOn', { date: fmtDay(po.order_date) }),
-        delivery: ctx.t('pdf.po.delivery', { date: fmtDay(po.delivery_date) }),
-        createdBy: ctx.t('pdf.po.createdBy', { name: po.created_by_name }),
-        buyerSignature: ctx.t('pdf.po.buyerSignature', { enterprise: brand.name }),
-        generatedWith: ctx.t('pdf.common.generatedWith', { enterprise: brand.name, app: brand.appName }),
-        generatedOn: ctx.t('pdf.common.generatedOn', { date: fmtDay(new Date()) }),
+      symbol,
+      total: amount(po.total_amount),
+      orderDate: fmtDay(po.order_date),
+      deliveryDate: po.delivery_date ? fmtDay(po.delivery_date) : ctx.L.afterReceipt,
+      deliveryLocation: po.shipping_address || po.requisition_delivery_address || '',
+      // Conditions du bon, sinon celles de la fiche fournisseur
+      paymentTerms: po.payment_terms || po.supplier_payment_terms || '',
+      deliveryTerms: po.delivery_terms || po.supplier_delivery_terms || '',
+      requestedBy: {
+        name: fullName(po.created_by_name, po.created_by_last_name),
+        title: po.created_by_position || '',
+        date: fmtDay(po.created_at || po.order_date),
+        signature: po.created_by ? await signatureDataUri(po.created_by) : null,
       },
+      approvedBy: await approver(approved[0]),
+      secondApproval: await approver(approved[1]),
+      ...ctx,
+      T: { title: ctx.t('pdf.po.title', { number: po.po_number }) },
     });
 
     return await renderPdf(html, {
@@ -458,10 +308,11 @@ class PurchaseOrderExportService {
       displayHeaderFooter: true,
       headerTemplate: '<span></span>',
       footerTemplate: `
-        <div style="width:100%;font-size:9px;color:#9CA3AF;padding:0 15mm;display:flex;justify-content:flex-end">
-          ${ctx.L.page} <span class="pageNumber" style="margin:0 3px"></span> / <span class="totalPages"></span>
+        <div style="width:100%;font-size:8px;color:#555;padding:0 12mm;display:flex;justify-content:space-between">
+          <span>${Handlebars.escapeExpression(po.po_number || '')}</span>
+          <span>${ctx.L.page} <span class="pageNumber"></span> / <span class="totalPages"></span></span>
         </div>`,
-      margin: { top: '15mm', bottom: '18mm', left: '15mm', right: '15mm' },
+      margin: { top: '12mm', bottom: '14mm', left: '12mm', right: '12mm' },
     });
   }
 }

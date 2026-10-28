@@ -58,6 +58,7 @@ export default function RequisitionForm() {
       items: prefill?.items?.length
         ? prefill.items.map(it => ({
           description: it.stockItem?.name || it.description || '', quantity: it.quantity || 1, frequency: 1, unitPrice: it.unitPrice || 0,
+          unit: it.stockItem?.unit || '',
           budgetLineId: '', budgetLineInfo: null, stockItem: it.stockItem || null,
         }))
         : [{
@@ -73,7 +74,12 @@ export default function RequisitionForm() {
       projectId: '',
       departmentId: '',
       priority: 'MEDIUM',
-      justification: prefill?.justification || ''
+      justification: prefill?.justification || '',
+      // Informations de livraison (formulaire de demande d'achat)
+      deliveryAddress: '',
+      neededBy: '',
+      deliveryRecipient: '',
+      deliveryContact: '',
     },
   })
 
@@ -136,11 +142,16 @@ export default function RequisitionForm() {
       priority: editing.priority || 'MEDIUM',
       departmentId: editing.department_id || '',
       projectId: editing.project_id || '',
+      deliveryAddress: editing.delivery_address || '',
+      neededBy: editing.needed_by || '',
+      deliveryRecipient: editing.delivery_recipient || '',
+      deliveryContact: editing.delivery_contact || '',
       items: (editing.items || []).map(it => ({
         itemId: it.id,
         description: it.item_description || '',
         quantity: parseFloat(it.quantity) || 0,
         frequency: parseFloat(it.frequency) || 1,
+        unit: it.item_unit || '',
         unitPrice: parseFloat(it.unit_price) || 0,
         specifications: it.specifications || null,
         budgetLineId: it.budget_line_id || '',
@@ -218,6 +229,14 @@ export default function RequisitionForm() {
     return hasProject && hasTitle && itemsComplete
   }
 
+  // Informations de livraison (section 2 du formulaire de demande d'achat) : facultatives
+  const deliveryPayload = (data) => ({
+    deliveryAddress: data.deliveryAddress?.trim() || null,
+    neededBy: data.neededBy || null,
+    deliveryRecipient: data.deliveryRecipient?.trim() || null,
+    deliveryContact: data.deliveryContact?.trim() || null,
+  })
+
   // Calculer le total d'un article: quantity * frequency * unitPrice
   const calculateItemTotal = (quantity, frequency, unitPrice) => {
     return (quantity || 0) * (frequency || 1) * (unitPrice || 0)
@@ -246,11 +265,13 @@ export default function RequisitionForm() {
         priority: data.priority,
         departmentId: data.departmentId || null,
         projectId: data.projectId,
+        ...deliveryPayload(data),
         items: data.items.map(item => ({
           id: item.itemId || undefined,
           description: item.description,
           quantity: item.quantity,
           frequency: item.frequency,
+          unit: item.unit || null,
           unitPrice: item.unitPrice,
           budgetLineId: item.budgetLineId,
           specifications: item.specifications || null,
@@ -288,6 +309,7 @@ export default function RequisitionForm() {
         description: item.description,
         quantity: item.quantity,
         frequency: item.frequency,
+        unit: item.unit || null,
         unitPrice: item.unitPrice,
         budgetLineId: item.budgetLineId,
         specifications: item.specifications || null,
@@ -305,6 +327,7 @@ export default function RequisitionForm() {
         currencyCode: currency.code,
         priority: data.priority,
         justification: data.justification || '',
+        ...deliveryPayload(data),
         items: itemsWithBudget
       })
     } catch (error) {
@@ -595,6 +618,36 @@ export default function RequisitionForm() {
           </div>
         </div>
 
+        {/* Livraison (formulaire de demande d'achat — section 2) */}
+        <div className="bg-white rounded-lg shadow p-6" data-testid="requisition-delivery">
+          <h2 className="text-lg font-semibold mb-1">{t('reqForm.delivery.title')}</h2>
+          <p className="text-sm text-gray-500 mb-4">{t('reqForm.delivery.hint')}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label htmlFor="req-delivery-address" className="block text-sm font-medium text-gray-700 mb-1">{t('reqForm.delivery.address')}</label>
+              <input id="req-delivery-address" {...register('deliveryAddress')} maxLength={2000}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder={t('reqForm.delivery.addressPlaceholder')} />
+            </div>
+            <div>
+              <label htmlFor="req-needed-by" className="block text-sm font-medium text-gray-700 mb-1">{t('reqForm.delivery.neededBy')}</label>
+              <input id="req-needed-by" type="date" {...register('neededBy')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label htmlFor="req-delivery-recipient" className="block text-sm font-medium text-gray-700 mb-1">{t('reqForm.delivery.recipient')}</label>
+              <input id="req-delivery-recipient" {...register('deliveryRecipient')} maxLength={200}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="req-delivery-contact" className="block text-sm font-medium text-gray-700 mb-1">{t('reqForm.delivery.contact')}</label>
+              <input id="req-delivery-contact" {...register('deliveryContact')} maxLength={255}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder={t('reqForm.delivery.contactPlaceholder')} />
+            </div>
+          </div>
+        </div>
+
         {/* Articles */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex justify-between items-center mb-4">
@@ -654,6 +707,7 @@ export default function RequisitionForm() {
                   <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 w-10">{t('reqForm.statusCol')}</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">{t('common.description')}</th>
                   <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 w-20">{t('common.quantity')}</th>
+                  <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 w-24">{t('reqForm.unit')}</th>
                   <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 w-20">{t('reqForm.frequency')}</th>
                   <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 w-28">{t('common.unitPrice')}</th>
                   <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 w-28">{t('common.total')}</th>
@@ -689,6 +743,7 @@ export default function RequisitionForm() {
                           linked={item?.stockItem || null}
                           onLink={(stockItem) => {
                             setValue(`items.${index}.stockItem`, stockItem)
+                            if (stockItem?.unit && !getValues(`items.${index}.unit`)) setValue(`items.${index}.unit`, stockItem.unit)
                             if (stockItem) setValue(`items.${index}.description`, stockItem.name, { shouldValidate: true })
                           }}
                           placeholder={t('reqForm.itemDescription')}
@@ -707,6 +762,17 @@ export default function RequisitionForm() {
                           })}
                           className={`w-full px-2 py-1 border rounded text-center focus:ring-2 focus:ring-blue-500 ${!item?.quantity || item.quantity <= 0 ? 'border-red-400 bg-red-50' : 'border-gray-300'
                             }`}
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <input
+                          {...register(`items.${index}.unit`)}
+                          maxLength={50}
+                          list="requisition-units"
+                          placeholder={t('reqForm.unitPlaceholder')}
+                          aria-label={t('reqForm.unit')}
+                          data-testid="item-unit"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500"
                         />
                       </td>
                       <td className="px-2 py-2">
@@ -778,7 +844,7 @@ export default function RequisitionForm() {
               </tbody>
               <tfoot className="bg-gray-50">
                 <tr>
-                  <td colSpan="6" className="px-3 py-3 text-right font-semibold">
+                  <td colSpan="7" className="px-3 py-3 text-right font-semibold">
                     {t('reqForm.grandTotal')}
                   </td>
                   <td className="px-2 py-3 text-right font-bold text-blue-600">
@@ -789,6 +855,10 @@ export default function RequisitionForm() {
               </tfoot>
             </table>
           </div>
+
+          <datalist id="requisition-units">
+            {t('reqForm.unitSuggestions', { returnObjects: true }).map(u => <option key={u} value={u} />)}
+          </datalist>
 
           {fields.length === 0 && (
             <p className="text-center text-gray-500 py-4">

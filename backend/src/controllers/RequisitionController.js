@@ -12,6 +12,7 @@ const i18n = require('../i18n');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { audit, AUDIT } = require('../utils/auditLog');
 const revisionService = require('../services/RequisitionRevisionService');
+const { requisitionDelivery } = require('../utils/requisitionDelivery');
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -118,6 +119,8 @@ async create(req, res) {
       title, description, departmentId, projectId,
       estimatedAmount, currencyId, currencyCode, priority, justification, items
     } = req.body;
+    const delivery = requisitionDelivery(req.body);
+    if (delivery.error) return res.status(400).json({ success: false, code: delivery.error, message: 'Date nécessaire invalide' });
 
     // Département facultatif
     if (!title || !currencyId || !Array.isArray(items) || items.length === 0) {
@@ -161,6 +164,7 @@ async create(req, res) {
         description: item.description,
         quantity: item.quantity,
         frequency: item.frequency || 1,
+        unit: String(item.unit || '').trim().slice(0, 50) || null,
         unitPrice: item.unitPrice,
         total: itemTotal,
         budgetLineId: item.budgetLineId,        // ← AJOUTÉ : ID de la ligne budgétaire
@@ -184,6 +188,7 @@ async create(req, res) {
       currencyId,
       priority, 
       justification, 
+      delivery,
       items: itemsWithDetails,
       requesterId: userId
     });

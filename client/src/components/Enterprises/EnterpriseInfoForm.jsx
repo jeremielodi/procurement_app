@@ -32,6 +32,7 @@ export default function EnterpriseInfoForm({ enterprise, onSubmit, submitting, c
   useEffect(() => {
     const init = { code: enterprise?.code || '', currencyId: enterprise?.currency_id || '' };
     FIELDS.forEach(([k, col]) => { init[k] = enterprise?.[col] || ''; });
+    if (enterprise?.id) init.poTerms = enterprise.po_terms || '';
     setForm(init);
     setLogo(null);
     setPreview(null);
@@ -99,6 +100,15 @@ export default function EnterpriseInfoForm({ enterprise, onSubmit, submitting, c
           </div>
         ))}
       </div>
+
+      {enterprise?.id && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="ent-poTerms">{t('enterprises.poTerms')}</label>
+          <textarea id="ent-poTerms" rows={8} maxLength={20000} className={`${inputCls} font-mono text-xs`} data-testid="enterprise-po-terms"
+            value={form.poTerms || ''} onChange={e => set('poTerms', e.target.value)} placeholder={t('enterprises.poTermsPlaceholder')} />
+          <p className="text-xs text-gray-500 mt-1">{t('enterprises.poTermsHint')}</p>
+        </div>
+      )}
 
       {withAdmin && (
         <div className="p-4 rounded-lg border border-blue-200 bg-blue-50 space-y-3">

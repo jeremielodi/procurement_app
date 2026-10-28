@@ -2,6 +2,7 @@
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
+const { localizedSql } = require('../utils/requestLang');
 
 // Statut de livraison d'un PO (suivi des réceptions, vue v_po_item_delivery) :
 // DELIVERED = tout accepté, CLOSED_SHORT = reliquat soldé avant la livraison complète,
@@ -16,18 +17,20 @@ const DELIVERY_STATUS_SQL = (alias) => `(
   FROM v_po_item_delivery d WHERE d.purchase_order_id = ${alias}.id)`;
 
 // Lignes du PO avec article et suivi des livraisons (quantités en nombres : DECIMAL → float8)
-const PO_ITEMS_SQL = `
+// Fonction : le libellé de l'unité est traduit dans la langue de la requête (localizedSql)
+const PO_ITEMS_SQL = () => `
   SELECT pi.id, pi.purchase_order_id, pi.item_description, pi.quantity::float8 AS quantity, pi.unit_price,
          pi.total_amount, pi.specifications, pi.created_at, pi.stock_item_id, pi.requisition_item_id,
          d.quantity_received::float8 AS delivered_received, d.quantity_accepted::float8 AS delivered_accepted,
          d.quantity_rejected::float8 AS delivered_rejected, d.quantity_remaining::float8 AS quantity_remaining,
          d.receipt_count::int AS receipt_count, d.last_receipt_date,
          si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable, si.track_lots, si.track_expiry, si.track_serials,
-         COALESCE(NULLIF(ri.unit, ''), si.unit) AS item_unit -- unité de mesure : celle de la réquisition, sinon du catalogue
+         COALESCE(${localizedSql('un')}, si.unit) AS item_unit -- unité de mesure : celle de la réquisition, sinon du catalogue
   FROM purchase_order_items pi
   JOIN v_po_item_delivery d ON d.po_item_id = pi.id
   LEFT JOIN stock_items si ON si.id = pi.stock_item_id
   LEFT JOIN requisition_items ri ON ri.id = pi.requisition_item_id
+  LEFT JOIN units un ON un.id = ri.unit_id
   WHERE pi.purchase_order_id = $1
   ORDER BY pi.id`;
 
@@ -113,7 +116,7 @@ class PurchaseOrderModel {
       [id]
     );
     if (!po) return null;
-    const items = await db.select(PO_ITEMS_SQL, [id]);
+    const items = await db.select(PO_ITEMS_SQL(), [id]);
     const receipts = await db.select(
       `SELECT g.id, g.grn_number, g.receipt_date, g.status, w.name AS warehouse_name,
               TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS received_by_name,
@@ -207,6 +210,7 @@ class PurchaseOrderModel {
         s.phone as supplier_phone,
         s.address as supplier_address,
         s.contact_name as supplier_contact_name,
+        s.contact_title as supplier_contact_title,
         s.payment_terms as supplier_payment_terms,
         s.delivery_terms as supplier_delivery_terms,
         r.delivery_address as requisition_delivery_address,
@@ -230,7 +234,7 @@ class PurchaseOrderModel {
     
     if (!po) return null;
     
-    const items = await db.select(PO_ITEMS_SQL, [id]);
+    const items = await db.select(PO_ITEMS_SQL(), [id]);
     
     const deliveries = await db.select(`
       SELECT * FROM deliveries 

@@ -156,6 +156,7 @@ class SupplierPortalController {
         supplier_type: type,
         name: b.name.trim(),
         contact_name: contactName,
+        contact_title: type === 'COMPANY' ? (String(b.contactTitle || '').trim().slice(0, 100) || null) : null,
         registration_number: type === 'COMPANY' ? b.registrationNumber.trim() : null,
         tax_id: type === 'COMPANY' ? b.taxId.trim() : null,
         id_nat: type === 'COMPANY' ? b.idNat.trim() : null,
@@ -235,7 +236,7 @@ class SupplierPortalController {
         return res.status(400).json({ success: false, message: 'Nom requis' });
       }
       const fields = { updated_at: new Date() };
-      for (const [key, col] of [['name', 'name'], ['contactName', 'contact_name'], ['phone', 'phone'],
+      for (const [key, col] of [['name', 'name'], ['contactName', 'contact_name'], ['contactTitle', 'contact_title'], ['phone', 'phone'],
         ['address', 'address'], ['website', 'website'], ['taxId', 'tax_id'], ['registrationNumber', 'registration_number'],
         ['idNat', 'id_nat'], ['idDocumentNumber', 'id_document_number'],
         ['bankName', 'bank_name'], ['bankAccount', 'bank_account'], ['bankIban', 'bank_iban'], ['bankSwift', 'bank_swift']]) {

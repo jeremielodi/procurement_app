@@ -25,10 +25,11 @@ const FIELDS = {
   id_nat: 'id_nat', idNat: 'id_nat',
   id_document_number: 'id_document_number', idDocumentNumber: 'id_document_number',
   contact_name: 'contact_name', contactName: 'contact_name',
+  contact_title: 'contact_title', contactTitle: 'contact_title', // fonction du contact (bon de commande)
 };
 // Identité d'un fournisseur inscrit sur le portail : gérée par le fournisseur lui-même
 const SELF_MANAGED = ['name', 'registration_number', 'tax_id', 'email', 'phone', 'address', 'website',
-  'bank_name', 'bank_account', 'bank_iban', 'bank_swift', 'supplier_type', 'id_nat', 'id_document_number', 'contact_name'];
+  'bank_name', 'bank_account', 'bank_iban', 'bank_swift', 'supplier_type', 'id_nat', 'id_document_number', 'contact_name', 'contact_title'];
 
 function pickFields(data, { exclude = [] } = {}) {
   const out = {};

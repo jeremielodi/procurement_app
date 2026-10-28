@@ -1,8 +1,8 @@
-// src/components/Admin/ReferenceData.jsx — super admin : localisations (bureaux) et catégories de marché
+// src/components/Admin/ReferenceData.jsx — super admin : localisations (bureaux), catégories de marché, unités de mesure
 import React, { useEffect, useState } from 'react';
-import { MapPin, Tags, Plus, Pencil, Trash2, Check, X, RefreshCw } from 'lucide-react';
+import { MapPin, Tags, Ruler, Plus, Pencil, Trash2, Check, X, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { locationService, categoryService } from '../../services/referenceService';
+import { locationService, categoryService, unitService } from '../../services/referenceService';
 import { t, LANGUAGES } from '../../i18n';
 
 // Langues traduites des référentiels (colonne translations) : toutes sauf le français (colonnes de base)
@@ -22,6 +22,14 @@ const TABS = {
     extra: { key: 'description', label: 'common.description' },
     translated: true,
     stockable: true,
+  },
+  // Unités de mesure des lignes de réquisition : abréviation obligatoire et unique ; compteur = lignes qui l'utilisent
+  units: {
+    label: 'refs.units', icon: Ruler, service: unitService,
+    intro: 'refs.unitsIntro',
+    extra: { key: 'abbr', label: 'refs.abbr', required: true, maxLength: 20 },
+    translated: true,
+    countLabel: 'refs.usages',
   },
 };
 
@@ -119,9 +127,10 @@ export default function ReferenceData() {
           <input key={l} className={`${inputCls} flex-1 min-w-[200px]`} placeholder={t('refs.nameIn', { lang: l.toUpperCase() })}
             value={draft.tr[l] || ''} onChange={e => setDraft(d => ({ ...d, tr: { ...d.tr, [l]: e.target.value } }))} data-testid={`ref-name-${l}`} />
         ))}
-        <input className={`${inputCls} flex-1 min-w-[160px]`} placeholder={t(cfg.extra.label)} value={draft.extra}
+        <input className={`${inputCls} flex-1 min-w-[160px]`} placeholder={t(cfg.extra.label)} value={draft.extra} maxLength={cfg.extra.maxLength}
+          data-testid="ref-extra"
           onChange={e => setDraft(d => ({ ...d, extra: e.target.value }))} />
-        <button type="submit" disabled={!draft.name.trim()}
+        <button type="submit" disabled={!draft.name.trim() || (cfg.extra.required && !draft.extra.trim())}
           className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm disabled:opacity-50">
           <Plus size={16} /> {t('common.add')}
         </button>
@@ -139,7 +148,7 @@ export default function ReferenceData() {
                 {cfg.translated && OTHER_LANGS.map(l => <th key={l} className="px-4 py-2">{t('refs.nameIn', { lang: l.toUpperCase() })}</th>)}
                 <th className="px-4 py-2">{t(cfg.extra.label)}</th>
                 {cfg.stockable && <th className="px-4 py-2">{t('refs.stockable')}</th>}
-                <th className="px-4 py-2 text-right">{t('refs.suppliers')}</th>
+                <th className="px-4 py-2 text-right">{t(cfg.countLabel || 'refs.suppliers')}</th>
                 <th className="px-4 py-2">{t('common.status')}</th>
                 <th className="px-4 py-2 text-right">{t('common.actions')}</th>
               </tr>

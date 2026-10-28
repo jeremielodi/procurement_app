@@ -489,7 +489,8 @@
       "name": "Nom :",
       "vendorRepresentative": "Représentant autorisé du fournisseur",
       "termsTitle": "CONDITIONS GÉNÉRALES DU BON DE COMMANDE",
-      "afterReceipt": "Après réception du bon de commande"
+      "afterReceipt": "Après réception du bon de commande",
+      "contactTitle": "Fonction :"
     },
     "grn": {
       "heading": "BON DE RÉCEPTION",

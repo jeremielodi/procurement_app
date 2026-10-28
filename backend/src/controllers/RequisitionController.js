@@ -13,6 +13,7 @@ const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { audit, AUDIT } = require('../utils/auditLog');
 const revisionService = require('../services/RequisitionRevisionService');
 const { requisitionDelivery } = require('../utils/requisitionDelivery');
+const { resolveUnitId } = require('../utils/units');
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -121,6 +122,14 @@ async create(req, res) {
     } = req.body;
     const delivery = requisitionDelivery(req.body);
     if (delivery.error) return res.status(400).json({ success: false, code: delivery.error, message: 'Date nécessaire invalide' });
+    // Unité de mesure de chaque ligne : unité active du référentiel (facultative)
+    const unitIds = [];
+    try {
+      const cache = new Map();
+      for (const [line, item] of (Array.isArray(items) ? items : []).entries()) unitIds.push(await resolveUnitId(item?.unitId, { line, cache }));
+    } catch (error) {
+      return res.status(error.status || 500).json({ success: false, code: error.code, line: error.line, message: error.message });
+    }
 
     // Département facultatif
     if (!title || !currencyId || !Array.isArray(items) || items.length === 0) {
@@ -146,7 +155,7 @@ async create(req, res) {
     const departement = departmentId ? await departmentModel.findById(departmentId) : null;
 
     // Préparer les items avec toutes les informations
-    const itemsWithDetails = await Promise.all(items.map(async (item) => {
+    const itemsWithDetails = await Promise.all(items.map(async (item, index) => {
       let budgetLineCode = null;
       let budgetLineDescription = null;
       
@@ -164,7 +173,7 @@ async create(req, res) {
         description: item.description,
         quantity: item.quantity,
         frequency: item.frequency || 1,
-        unit: String(item.unit || '').trim().slice(0, 50) || null,
+        unitId: unitIds[index],
         unitPrice: item.unitPrice,
         total: itemTotal,
         budgetLineId: item.budgetLineId,        // ← AJOUTÉ : ID de la ligne budgétaire

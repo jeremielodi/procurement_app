@@ -36,7 +36,10 @@ test('Réquisition créée depuis le formulaire : fiche ouverte avec le PDF affi
   await project.selectOption(await project.locator('option:not([value=""])').first().getAttribute('value'));
 
   await page.locator('input[name="items.0.description"]').fill('Location véhicule');
-  await page.getByTestId('item-unit').first().fill('jour');
+  // Unité obligatoire, « Pièce » par défaut ; choix dans le référentiel
+  const unit = page.getByTestId('item-unit').first();
+  await expect(unit.locator('option:checked')).toHaveText('Pièce (pce)');
+  await unit.selectOption({ label: 'Kilogramme (kilo)' });
   await page.locator('input[name="items.0.unitPrice"]').fill('110');
   await page.getByPlaceholder('Sélectionner ligne budgétaire').first().click();
   await page.locator('tr.cursor-pointer').first().click();

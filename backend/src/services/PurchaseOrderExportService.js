@@ -114,6 +114,8 @@ class PurchaseOrderExportService {
     .sig .line img { max-height: 32px; max-width: 150px; object-fit: contain; display: block; margin: 0 auto; }
     .sig .cap { font-weight: 700; padding-top: 1px; padding-bottom: 10px; }
     .sig .cap.i { font-style: italic; }
+    .sig .gap { width: 6%; }
+    .sig .line.date { font-style: italic; text-decoration: underline; }
 
     .vendor { margin-top: 28px; }
     .vendor .rows .v { height: 22px; }
@@ -142,27 +144,27 @@ class PurchaseOrderExportService {
     <td class="k">{{L.date}}:</td><td class="v">{{orderDate}}</td>
   </tr>
 </table>
-<table class="rows">
-  <tr><td class="k" style="width:150px">{{L.vendor}}</td><td class="v">{{po.supplier_name}}</td></tr>
-  <tr><td class="k">{{L.address}}</td><td class="v multi">{{po.supplier_address}}</td></tr>
-</table>
+<!-- Fournisseur et livraison : une seule table → libellés alignés -->
 <table class="rows">
   <tr>
-    <td class="k" style="width:150px">{{L.phone}}</td><td class="v" style="width:36%">{{po.supplier_phone}}</td>
+    <td class="k">{{L.vendor}}</td><td class="v" style="width:40%">{{po.supplier_name}}</td>
+    <td class="k">{{L.supplierCode}}</td><td class="v">{{po.supplier_code}}</td>
+  </tr>
+  <tr><td class="k">{{L.address}}</td><td class="v multi" colspan="3">{{po.supplier_address}}</td></tr>
+  <tr>
+    <td class="k">{{L.phone}}</td><td class="v">{{po.supplier_phone}}</td>
     <td class="k">{{L.email}}</td><td class="v">{{#if po.supplier_email}}<a>{{po.supplier_email}}</a>{{/if}}</td>
   </tr>
   <tr>
     <td class="k">{{L.contactPerson}}</td><td class="v">{{po.supplier_contact_name}}</td>
-    <td class="k">{{L.supplierCode}}</td><td class="v">{{po.supplier_code}}</td>
+    <td class="k">{{L.contactTitle}}</td><td class="v">{{po.supplier_contact_title}}</td>
   </tr>
   <tr>
     <td class="k">{{L.deliveryLocation}}</td><td class="v multi">{{deliveryLocation}}</td>
     <td class="k">{{L.deliveryDate}}</td><td class="v">{{deliveryDate}}</td>
   </tr>
-</table>
-<table class="rows">
-  <tr><td class="k" style="width:150px">{{L.deliveryTerms}}</td><td class="v multi">{{deliveryTerms}}</td></tr>
-  <tr><td class="k">{{L.specialInstructions}}</td><td class="v multi">{{po.special_instructions}}</td></tr>
+  <tr><td class="k">{{L.deliveryTerms}}</td><td class="v multi" colspan="3">{{deliveryTerms}}</td></tr>
+  <tr><td class="k">{{L.specialInstructions}}</td><td class="v multi" colspan="3">{{po.special_instructions}}</td></tr>
 </table>
 
 <table class="items">
@@ -201,33 +203,27 @@ class PurchaseOrderExportService {
   <tr><td class="k">{{L.paymentTerms}}</td><td class="v multi">{{paymentTerms}}</td></tr>
 </table>
 
+<!-- Signatures : initiateur (« Demandé par ») à gauche, approbateur (une seule approbation) à droite -->
 <table class="sig">
   <tr>
-    <td class="line" style="width:22%">{{requestedBy.name}}</td>
-    <td class="line" style="width:26%">{{#if requestedBy.signature}}<img src="{{requestedBy.signature}}" alt="">{{/if}}</td>
-    <td style="width:26%"></td><td></td>
+    <td class="line" style="width:25%">{{requestedBy.name}}</td>
+    <td class="line" style="width:22%">{{#if requestedBy.signature}}<img src="{{requestedBy.signature}}" alt="">{{/if}}</td>
+    <td class="gap"></td>
+    <td class="line" style="width:25%">{{approvedBy.name}}</td>
+    <td class="line" style="width:22%">{{#if approvedBy.signature}}<img src="{{approvedBy.signature}}" alt="">{{/if}}</td>
   </tr>
-  <tr><td class="cap">{{L.requestedBy}}</td><td class="cap">{{L.signature}}</td><td></td><td></td></tr>
   <tr>
-    <td class="line">{{requestedBy.title}}</td>
-    <td class="line" style="font-style:italic;text-decoration:underline">{{requestedBy.date}}</td>
-    <td></td><td></td>
+    <td class="cap">{{L.requestedBy}}</td><td class="cap">{{L.signature}}</td><td></td>
+    <td class="cap">{{L.approvedBy}}</td><td class="cap">{{L.signature}}</td>
   </tr>
-  <tr><td class="cap">{{L.titleCap}}</td><td class="cap i">{{L.date}}</td><td></td><td></td></tr>
-
-  <!-- Une seule approbation du bon de commande (Activity_POApproval) -->
   <tr>
-    <td class="line">{{approvedBy.name}}</td>
-    <td class="line">{{#if approvedBy.signature}}<img src="{{approvedBy.signature}}" alt="">{{/if}}</td>
-    <td></td><td></td>
+    <td class="line">{{requestedBy.title}}</td><td class="line date">{{requestedBy.date}}</td><td></td>
+    <td class="line">{{approvedBy.title}}</td><td class="line date">{{approvedBy.date}}</td>
   </tr>
-  <tr><td class="cap">{{L.approvedBy}}</td><td class="cap">{{L.signature}}</td><td></td><td></td></tr>
   <tr>
-    <td class="line">{{approvedBy.title}}</td>
-    <td class="line" style="font-style:italic;text-decoration:underline">{{approvedBy.date}}</td>
-    <td></td><td></td>
+    <td class="cap">{{L.titleCap}}</td><td class="cap i">{{L.date}}</td><td></td>
+    <td class="cap">{{L.titleCap}}</td><td class="cap i">{{L.date}}</td>
   </tr>
-  <tr><td class="cap">{{L.titleCap}}</td><td class="cap i">{{L.date}}</td><td></td><td></td></tr>
 </table>
 
 <div class="vendor">

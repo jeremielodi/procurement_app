@@ -3,6 +3,7 @@ const db = require('../config/database');
 const { requisitionVisibilitySql } = require('../utils/projectAccess');
 const tenant = require('../utils/tenant');
 const util = require('../config/util');
+const { localizedSql } = require('../utils/requestLang');
 const { v4: uuidv4 } = require('uuid');
 
 // Avancement global du cycle procure-to-pay (colonne « Avancement » de la liste)
@@ -105,7 +106,7 @@ class RequisitionModel {
           item_description: item.description,
           quantity: item.quantity,
           frequency: item.frequency || 1,
-          unit: item.unit || null,
+          unit_id: item.unitId || null,
           unit_price: item.unitPrice,
           total_amount: itemTotal,
           specifications: item.specifications || null,
@@ -329,8 +330,9 @@ class RequisitionModel {
               b.entity_code as budget_line_code, 
               b.description as budget_line_description,
               si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable,
-              ri.unit AS item_unit -- unité de mesure saisie (ri.unit est masquée par si.unit, unité du catalogue)
+              un.abbr AS unit_abbr, ${localizedSql('un')} AS item_unit -- unité de mesure (référentiel, langue de la requête)
        FROM requisition_items ri
+       LEFT JOIN units un ON un.id = ri.unit_id
        LEFT JOIN budget_allocations b ON ri.budget_line_id = b.id
        LEFT JOIN stock_items si ON si.id = ri.stock_item_id
        WHERE ri.requisition_id = $1

@@ -52,6 +52,8 @@ export default function SupplierForm() {
     phone: '',
     address: '',
     website: '',
+    contact_name: '',
+    contact_title: '',
     status: 'ACTIVE',
     prequalified: false,
     payment_terms: '',
@@ -145,6 +147,8 @@ export default function SupplierForm() {
         phone: supplier.phone || '',
         address: supplier.address || '',
         website: supplier.website || '',
+        contact_name: supplier.contact_name || '',
+        contact_title: supplier.contact_title || '',
         status: supplier.status || 'ACTIVE',
         prequalified: supplier.prequalified || false,
         payment_terms: supplier.payment_terms || '',
@@ -408,6 +412,25 @@ export default function SupplierForm() {
                   <p className="mt-1 text-sm text-red-500">{errors.website}</p>
                 )}
               </div>
+
+              {/* Personne de contact et sa fonction (« Contact Person » / « Title » du bon de commande) */}
+              {formData.supplier_type !== 'INDIVIDUAL' && (
+                <>
+                  <div>
+                    <label htmlFor="supplier-contact-name" className="block text-sm font-medium text-gray-700 mb-1">{t('supplierFields.contactName')}</label>
+                    <input id="supplier-contact-name" type="text" name="contact_name" value={formData.contact_name} onChange={handleChange}
+                      maxLength={255} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder={t('supplierFields.firstLastName')} />
+                  </div>
+                  <div>
+                    <label htmlFor="supplier-contact-title" className="block text-sm font-medium text-gray-700 mb-1">{t('supplierFields.contactTitle')}</label>
+                    <input id="supplier-contact-title" type="text" name="contact_title" value={formData.contact_title} onChange={handleChange}
+                      maxLength={100} data-testid="supplier-contact-title"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder={t('supplierFields.contactTitlePlaceholder')} />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

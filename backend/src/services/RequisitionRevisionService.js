@@ -12,6 +12,7 @@ const camundaService = require('./CamundaService');
 const notificationService = require('./NotificationService');
 const i18n = require('../i18n');
 const { requisitionDelivery } = require('../utils/requisitionDelivery');
+const { resolveUnitId } = require('../utils/units');
 
 const APPROVAL_TASKS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
 const REVISE_TASK = 'Activity_ReviseRequisition';
@@ -87,10 +88,11 @@ async function snapshot(requisitionId, tx = db) {
     [requisitionId]
   );
   const items = await tx.select(
-    `SELECT ri.id, ri.item_description AS description, ri.quantity::float8 AS quantity, COALESCE(ri.frequency, 1)::float8 AS frequency, ri.unit,
+    `SELECT ri.id, ri.item_description AS description, ri.quantity::float8 AS quantity, COALESCE(ri.frequency, 1)::float8 AS frequency, ri.unit_id AS "unitId", un.abbr AS unit,
             ri.unit_price::float8 AS "unitPrice", COALESCE(ri.total_amount, ri.quantity * COALESCE(ri.frequency, 1) * ri.unit_price)::float8 AS total,
             ri.budget_line_id AS "budgetLineId", COALESCE(ba.entity_code, ri.budget_line_code) AS "budgetLineCode", ri.specifications
      FROM requisition_items ri LEFT JOIN budget_allocations ba ON ba.id = ri.budget_line_id
+     LEFT JOIN units un ON un.id = ri.unit_id
      WHERE ri.requisition_id = $1 ORDER BY ri.id`,
     [requisitionId]
   );
@@ -279,23 +281,25 @@ class RequisitionRevisionService {
       const kept = items.filter(it => it.id && existing.includes(String(it.id))).map(it => String(it.id));
       await tx.exec('DELETE FROM requisition_items WHERE requisition_id = $1 AND NOT (id::text = ANY($2))', [req.id, kept]);
       let total = 0;
-      for (const it of items) {
+      const unitCache = new Map();
+      for (const [line, it] of items.entries()) {
+        const unitId = await resolveUnitId(it.unitId, { line, tx, cache: unitCache });
         const quantity = num(it.quantity);
         const frequency = num(it.frequency || 1);
         const unitPrice = num(it.unitPrice);
         const lineTotal = quantity * frequency * unitPrice;
         total += lineTotal;
         const code = (await tx.one('SELECT entity_code FROM budget_allocations WHERE id = $1', [it.budgetLineId]))?.entity_code || null;
-        const values = [text(it.description), quantity, frequency, unitPrice, lineTotal, text(it.specifications) || null, it.budgetLineId, code, it.stockItemId || null, text(it.unit, 50) || null];
+        const values = [text(it.description), quantity, frequency, unitPrice, lineTotal, text(it.specifications) || null, it.budgetLineId, code, it.stockItemId || null, unitId];
         if (it.id && kept.includes(String(it.id))) {
           await tx.exec(
             `UPDATE requisition_items SET item_description = $1, quantity = $2, frequency = $3, unit_price = $4, total_amount = $5,
-                    specifications = $6, budget_line_id = $7, budget_line_code = $8, stock_item_id = $9, unit = $10 WHERE id = $11`,
+                    specifications = $6, budget_line_id = $7, budget_line_code = $8, stock_item_id = $9, unit_id = $10 WHERE id = $11`,
             [...values, it.id]
           );
         } else {
           await tx.exec(
-            `INSERT INTO requisition_items (item_description, quantity, frequency, unit_price, total_amount, specifications, budget_line_id, budget_line_code, stock_item_id, unit, requisition_id)
+            `INSERT INTO requisition_items (item_description, quantity, frequency, unit_price, total_amount, specifications, budget_line_id, budget_line_code, stock_item_id, unit_id, requisition_id)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
             [...values, req.id]
           );

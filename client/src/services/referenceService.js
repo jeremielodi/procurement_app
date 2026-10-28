@@ -1,4 +1,4 @@
-// src/services/referenceService.js — localisations et catégories de marché (référentiels de la plateforme)
+// src/services/referenceService.js — localisations, catégories de marché et unités de mesure (référentiels de la plateforme)
 import api from './api';
 
 const crud = (path) => ({
@@ -13,3 +13,5 @@ const crud = (path) => ({
 
 export const locationService = crud('locations');
 export const categoryService = crud('market-categories');
+// Unités de mesure des articles : list() = unités actives, nom traduit dans la langue de l'interface
+export const unitService = crud('units');

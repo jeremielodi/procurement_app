@@ -1,6 +1,6 @@
 // backend/src/models/ReferenceModel.js
 // Référentiels de la PLATEFORME (gérés par le super admin, partagés par toutes les entreprises) :
-// localisations (bureaux / zones de livraison) et catégories de marché.
+// localisations (bureaux / zones de livraison), catégories de marché et unités de mesure.
 const db = require('../config/database');
 const i18n = require('../i18n');
 const { localizedSql } = require('../utils/requestLang');
@@ -9,6 +9,8 @@ const { localizedSql } = require('../utils/requestLang');
 const TABLES = {
   locations: { columns: ['code', 'name', 'province'], link: 'supplier_locations', linkColumn: 'location_id', tenderColumn: 'location_id' },
   market_categories: { columns: ['code', 'name', 'description', 'is_stockable'], translatable: ['name', 'description'], link: 'supplier_categories', linkColumn: 'category_id', tenderColumn: 'category_id' },
+  // Unités de mesure (migration 46) : utilisées par les lignes de réquisition (supplier_count = nombre de lignes)
+  units: { columns: ['code', 'abbr', 'name'], translatable: ['name'], link: 'requisition_items', linkColumn: 'unit_id', unique: ['abbr'] },
 };
 
 const MAX_TRANSLATION = { name: 150, description: 1000 };
@@ -52,6 +54,15 @@ class ReferenceModel {
     );
   }
 
+  /** Autre ligne ayant déjà cette valeur (sans casse) pour une colonne unique (ex. abréviation d'une unité) */
+  async findByColumn(table, column, value, exceptId = null) {
+    if (!(TABLES[table].unique || []).includes(column)) return null;
+    return db.one(
+      `SELECT id FROM ${table} WHERE LOWER(${column}) = LOWER($1) AND ($2::int IS NULL OR id <> $2)`,
+      [value, exceptId]
+    );
+  }
+
   async findByName(table, name, exceptId = null) {
     return db.one(
       `SELECT id FROM ${table} WHERE LOWER(name) = LOWER($1) AND ($2::int IS NULL OR id <> $2)`,
@@ -91,7 +102,7 @@ class ReferenceModel {
     const { link, linkColumn, tenderColumn } = TABLES[table];
     const used = await db.one(
       `SELECT EXISTS (SELECT 1 FROM ${link} WHERE ${linkColumn} = $1)
-           OR EXISTS (SELECT 1 FROM tenders WHERE ${tenderColumn} = $1)
+           ${tenderColumn ? `OR EXISTS (SELECT 1 FROM tenders WHERE ${tenderColumn} = $1)` : ''}
            ${table === 'market_categories' ? 'OR EXISTS (SELECT 1 FROM supplier_prequalifications WHERE category_id = $1)' : ''}
            AS used`,
       [id]

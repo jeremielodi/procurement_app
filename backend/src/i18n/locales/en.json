@@ -489,7 +489,8 @@
       "name": "Name:",
       "vendorRepresentative": "Vendor's authorized representative",
       "termsTitle": "PURCHASE ORDER TERMS AND CONDITIONS",
-      "afterReceipt": "Upon receipt of the purchase order"
+      "afterReceipt": "Upon receipt of the purchase order",
+      "contactTitle": "Title:"
     },
     "grn": {
       "heading": "GOODS RECEIPT NOTE",

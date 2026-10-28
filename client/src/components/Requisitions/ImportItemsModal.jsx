@@ -10,6 +10,16 @@ import { t } from '../../i18n';
 
 // Modèle généré dans le navigateur : CSV « ; » + BOM UTF-8 → s'ouvre directement dans Excel (accents corrects)
 // En-têtes dans la langue de l'interface (le backend accepte les noms FR et EN)
+// Colonnes du modèle (même ordre que importItems.templateHeaders) : obligatoire ? + aide
+const TEMPLATE_COLUMNS = [
+  { required: true, hint: 'importItems.descHint' },
+  { required: true, hint: 'importItems.qtyHint' },
+  { required: false, hint: 'importItems.unitHint' },
+  { required: false, hint: 'importItems.freqHint' },
+  { required: true, hint: 'importItems.priceHint' },
+  { required: false, hint: 'importItems.codeHint' },
+];
+
 const templateRows = () => [
   t('importItems.templateHeaders', { returnObjects: true }),
   ...t('importItems.templateRows', { returnObjects: true }),
@@ -60,6 +70,8 @@ export default function ImportItemsModal({ isOpen, onClose, onImport, formatCurr
       quantity: i.quantity,
       frequency: i.frequency,
       unitPrice: i.unitPrice,
+      // Unité reconnue (colonne « Unité » ou article du catalogue) ; sinon Pièce, appliquée par le formulaire
+      unitId: i.unitId || '',
       budgetLineId: '',
       budgetLineInfo: null,
       // Colonne « Code article » reconnue : ligne liée à l'article du catalogue
@@ -109,8 +121,8 @@ export default function ImportItemsModal({ isOpen, onClose, onImport, formatCurr
               {t('importItems.templateHeaders', { returnObjects: true }).map((h, i) => (
                 <tr key={h}>
                   <td className="pr-3 font-semibold">{h}</td>
-                  <td className="pr-3">{t(i === 2 ? 'importItems.optional' : 'importItems.required')}</td>
-                  <td>{t(['importItems.descHint', 'importItems.qtyHint', 'importItems.freqHint', 'importItems.priceHint'][i])}</td>
+                  <td className="pr-3">{t(TEMPLATE_COLUMNS[i]?.required ? 'importItems.required' : 'importItems.optional')}</td>
+                  <td>{TEMPLATE_COLUMNS[i] ? t(TEMPLATE_COLUMNS[i].hint) : ''}</td>
                 </tr>
               ))}
             </tbody>
@@ -143,6 +155,7 @@ export default function ImportItemsModal({ isOpen, onClose, onImport, formatCurr
                         <th className="px-2 py-2 text-left text-xs text-gray-500">{t('importItems.line')}</th>
                         <th className="px-2 py-2 text-left text-xs text-gray-500">{t('common.description')}</th>
                         <th className="px-2 py-2 text-right text-xs text-gray-500">{t('importItems.qty')}</th>
+                        <th className="px-2 py-2 text-left text-xs text-gray-500">{t('importItems.unit')}</th>
                         <th className="px-2 py-2 text-right text-xs text-gray-500">{t('importItems.freq')}</th>
                         <th className="px-2 py-2 text-right text-xs text-gray-500">{t('importItems.unitPrice')}</th>
                         <th className="px-2 py-2 text-right text-xs text-gray-500">{t('common.total')}</th>
@@ -154,6 +167,7 @@ export default function ImportItemsModal({ isOpen, onClose, onImport, formatCurr
                           <td className="px-2 py-1 text-gray-400">{i.line}</td>
                           <td className="px-2 py-1">{i.itemCode && <span className="mr-1 rounded bg-indigo-50 px-1 text-xs font-semibold text-indigo-700">{i.itemCode}</span>}{i.description}</td>
                           <td className="px-2 py-1 text-right">{i.quantity}</td>
+                          <td className="px-2 py-1 text-gray-600" data-testid="import-unit">{i.unitAbbr || <span className="text-gray-400">{t('importItems.unitDefault')}</span>}</td>
                           <td className="px-2 py-1 text-right">{i.frequency}</td>
                           <td className="px-2 py-1 text-right">{formatCurrency(i.unitPrice)}</td>
                           <td className="px-2 py-1 text-right">{formatCurrency(i.quantity * i.frequency * i.unitPrice)}</td>

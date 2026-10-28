@@ -8,14 +8,16 @@ ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS needed_by          DATE;
 ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS delivery_recipient VARCHAR(200);
 ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS delivery_contact   VARCHAR(255);
 
--- Article de réquisition — unité de mesure (jour, pièce, boîte…) ; défaut : unité de l'article du catalogue
-ALTER TABLE requisition_items ADD COLUMN IF NOT EXISTS unit VARCHAR(50);
+-- Unité de mesure des articles de réquisition : référentiel `units` (migration 46)
 
 -- Bon de commande — conditions de paiement / de livraison, instructions au fournisseur
 -- (le champ « notes » du formulaire était envoyé mais jamais enregistré)
 ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS payment_terms        TEXT;
 ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS delivery_terms       TEXT;
 ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS special_instructions TEXT;
+
+-- Fournisseur — fonction de la personne de contact (« Title » du bon de commande)
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS contact_title VARCHAR(100);
 
 -- Entreprise — conditions générales imprimées en dernière page du bon de commande (vide = pas de page)
 ALTER TABLE enterprise ADD COLUMN IF NOT EXISTS po_terms TEXT;

@@ -18,6 +18,7 @@ const IDENTITY = {
   COMPANY: [
     { name: 'name', label: 'supplierFields.companyName', req: true, full: true, rawPlaceholder: 'ACME SARL' },
     { name: 'contactName', label: 'supplierFields.contactName', req: true, placeholder: 'supplierFields.firstLastName' },
+    { name: 'contactTitle', label: 'supplierFields.contactTitle', placeholder: 'supplierFields.contactTitlePlaceholder', maxLength: 100 },
     { name: 'phone', label: 'supplierFields.phone', req: true, rawPlaceholder: '+243 …' },
     { name: 'registrationNumber', label: 'supplierFields.registrationNumber', req: true },
     { name: 'taxId', label: 'supplierFields.taxId', req: true },

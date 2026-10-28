@@ -15,7 +15,9 @@ import BudgetLineSearchModal from './BudgetLineSearchModal'
 import ImportItemsModal from './ImportItemsModal'
 import FileUpload from '../Common/FileUpload'
 import CatalogAutocomplete from '../Stock/CatalogAutocomplete'
-import { t, getLocale } from '../../i18n'
+import { t, getLocale, useTranslation } from '../../i18n'
+import { unitService } from '../../services/referenceService'
+import { findUnit, unitLabel } from '../../utils/units'
 import SearchSelect from '../Common/SearchSelect'
 import { revisionError } from './RevisionPanel'
 import { levelFor, levelLabel } from '../../utils/approvalPolicy'
@@ -58,7 +60,7 @@ export default function RequisitionForm() {
       items: prefill?.items?.length
         ? prefill.items.map(it => ({
           description: it.stockItem?.name || it.description || '', quantity: it.quantity || 1, frequency: 1, unitPrice: it.unitPrice || 0,
-          unit: it.stockItem?.unit || '',
+          unitId: '', // unité du catalogue (ou Pièce) appliquée au chargement des unités
           budgetLineId: '', budgetLineInfo: null, stockItem: it.stockItem || null,
         }))
         : [{
@@ -87,6 +89,20 @@ export default function RequisitionForm() {
     control,
     name: 'items',
   })
+
+  // Unités de mesure (référentiel, noms traduits) : obligatoires sur chaque ligne, « Pièce » par défaut
+  const { lang } = useTranslation()
+  const { data: unitsData } = useQuery({ queryKey: ['units', lang], queryFn: () => unitService.list(), staleTime: 300_000 })
+  const units = unitsData?.data || []
+  const defaultUnitId = units.find(u => u.code === 'PIECE')?.id || units[0]?.id || ''
+  // Unité proposée pour une ligne : celle de l'article du catalogue si elle existe dans le référentiel, sinon Pièce
+  const unitFor = (stockItem) => findUnit(units, stockItem?.unit)?.id || defaultUnitId
+  useEffect(() => {
+    if (!defaultUnitId) return
+    ;(getValues('items') || []).forEach((it, i) => {
+      if (!it.unitId) setValue(`items.${i}.unitId`, String(unitFor(it.stockItem)))
+    })
+  }, [defaultUnitId])
 
   const projectId = watch('projectId')
   const items = watch('items')
@@ -151,7 +167,7 @@ export default function RequisitionForm() {
         description: it.item_description || '',
         quantity: parseFloat(it.quantity) || 0,
         frequency: parseFloat(it.frequency) || 1,
-        unit: it.item_unit || '',
+        unitId: it.unit_id ? String(it.unit_id) : '',
         unitPrice: parseFloat(it.unit_price) || 0,
         specifications: it.specifications || null,
         budgetLineId: it.budget_line_id || '',
@@ -212,6 +228,7 @@ export default function RequisitionForm() {
       item.quantity > 0 &&
       item.unitPrice > 0 &&
       item.budgetLineId &&
+      item.unitId &&
       item.frequency > 0
   }
 
@@ -272,7 +289,7 @@ export default function RequisitionForm() {
           description: item.description,
           quantity: item.quantity,
           frequency: item.frequency,
-          unit: item.unit || null,
+          unitId: item.unitId ? Number(item.unitId) : null,
           unitPrice: item.unitPrice,
           budgetLineId: item.budgetLineId,
           specifications: item.specifications || null,
@@ -310,7 +327,7 @@ export default function RequisitionForm() {
         description: item.description,
         quantity: item.quantity,
         frequency: item.frequency,
-        unit: item.unit || null,
+        unitId: item.unitId ? Number(item.unitId) : null,
         unitPrice: item.unitPrice,
         budgetLineId: item.budgetLineId,
         specifications: item.specifications || null,
@@ -393,8 +410,10 @@ export default function RequisitionForm() {
   const handleImport = (imported, { replace }) => {
     const current = getValues('items') || []
     const onlyEmptyRow = current.length === 1 && !current[0].description?.trim()
-    if (replace || current.length === 0 || onlyEmptyRow) replaceItems(imported)
-    else append(imported)
+    // Unité du fichier, sinon celle de l'article du catalogue, sinon Pièce
+    const withUnits = imported.map(it => ({ ...it, unitId: String(it.unitId || unitFor(it.stockItem)) }))
+    if (replace || current.length === 0 || onlyEmptyRow) replaceItems(withUnits)
+    else append(withUnits)
     setSelectedIds([])
   }
 
@@ -669,6 +688,7 @@ export default function RequisitionForm() {
                 description: '',
                 quantity: 1,
                 frequency: 1,
+                unitId: String(defaultUnitId),
                 unitPrice: 0,
                 budgetLineId: '',
                 budgetLineInfo: null
@@ -745,7 +765,9 @@ export default function RequisitionForm() {
                           linked={item?.stockItem || null}
                           onLink={(stockItem) => {
                             setValue(`items.${index}.stockItem`, stockItem)
-                            if (stockItem?.unit && !getValues(`items.${index}.unit`)) setValue(`items.${index}.unit`, stockItem.unit)
+                            // Unité de l'article du catalogue, si le référentiel la connaît
+                            const catalogUnit = findUnit(units, stockItem?.unit)
+                            if (catalogUnit) setValue(`items.${index}.unitId`, String(catalogUnit.id))
                             if (stockItem) setValue(`items.${index}.description`, stockItem.name, { shouldValidate: true })
                           }}
                           placeholder={t('reqForm.itemDescription')}
@@ -767,15 +789,16 @@ export default function RequisitionForm() {
                         />
                       </td>
                       <td className="px-2 py-2">
-                        <input
-                          {...register(`items.${index}.unit`)}
-                          maxLength={50}
-                          list="requisition-units"
-                          placeholder={t('reqForm.unitPlaceholder')}
+                        <SearchSelect
+                          {...register(`items.${index}.unitId`, { required: t('reqForm.unitRequired') })}
+                          required
                           aria-label={t('reqForm.unit')}
                           data-testid="item-unit"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500"
-                        />
+                          className={`w-full px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-blue-500 ${!item?.unitId ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
+                        >
+                          {!item?.unitId && <option value="">{t('reqForm.unitChoose')}</option>}
+                          {units.map(u => <option key={u.id} value={String(u.id)}>{unitLabel(u)}</option>)}
+                        </SearchSelect>
                       </td>
                       <td className="px-2 py-2">
                         <input
@@ -857,10 +880,6 @@ export default function RequisitionForm() {
               </tfoot>
             </table>
           </div>
-
-          <datalist id="requisition-units">
-            {t('reqForm.unitSuggestions', { returnObjects: true }).map(u => <option key={u} value={u} />)}
-          </datalist>
 
           {fields.length === 0 && (
             <p className="text-center text-gray-500 py-4">

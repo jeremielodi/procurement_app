@@ -241,7 +241,7 @@ docker compose up -d --build
 Les scripts SQL de `database/` ne sont exécutés automatiquement **qu'à la création de la base**. Sur une base existante, appliquer les nouvelles migrations à la main (elles sont idempotentes, on peut les relancer) :
 
 ```bash
-for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations 12_audit_logs 13_stock_management 14_stock_issues 15_stock_equipment 16_stock_issue_destinations 17_supplier_order_confirmation 18_stock_counts 19_stock_transfers_in_transit 20_audit_log_access 21_internal_control 22_daily_requisition_report 23_po_delivery_closure 24_project_profiles 25_requisition_revisions 26_approval_policies 27_manager_approval_levels 28_stock_funding_project 29_stock_balances_by_project 30_requisition_visibility 31_user_avatars 32_activate_orphan_project_profiles 33_direct_purchase_selection 34_receipt_permissions 35_asset_tag_auto 36_stock_movement_groups 37_finance_permissions; do
+for f in 05_supplier_portal 06_budget_access 07_multi_enterprise 08_supplier_prequalification 09_tender_invitations 10_user_language 11_reference_translations 12_audit_logs 13_stock_management 14_stock_issues 15_stock_equipment 16_stock_issue_destinations 17_supplier_order_confirmation 18_stock_counts 19_stock_transfers_in_transit 20_audit_log_access 21_internal_control 22_daily_requisition_report 23_po_delivery_closure 24_project_profiles 25_requisition_revisions 26_approval_policies 27_manager_approval_levels 28_stock_funding_project 29_stock_balances_by_project 30_requisition_visibility 31_user_avatars 32_activate_orphan_project_profiles 33_direct_purchase_selection 34_receipt_permissions 35_asset_tag_auto 36_stock_movement_groups 37_finance_permissions 38_supplier_split 39_tender_per_item_award 40_budget_activity_code 41_user_signatures 42_budget_duplicate_codes 43_budget_utilization 44_document_templates 45_document_positions 46_units; do
   docker exec -i wwf_postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < database/$f.sql
 done
 ```
@@ -251,6 +251,9 @@ done
 > `35_asset_tag_auto.sql` : n° d'inventaire attribué automatiquement (`INV-AAAA-NNNNN`, par entreprise) à chaque équipement entré en stock sans n° saisi ; les équipements existants sans n° en reçoivent un.
 > `36_stock_movement_groups.sql` : opérations de stock (`MVG-AAAA-NNNNNN`, clé UUID) — les mouvements écrits d'un seul coup sont regroupés ; les mouvements existants sont regroupés par transaction d'origine.
 > `37_finance_permissions.sql` : réattribue `MANAGE_INVOICES` et `MANAGE_PAYMENTS` au profil Finance si elles avaient été retirées.
+> `44_document_templates.sql` (modèles de documents de l'entreprise) : livraison de la réquisition, conditions du bon de commande, conditions générales (« Mon entreprise »), fonction du contact fournisseur ; corrige aussi l'historique des approbations des bons de commande (`approvals.entity_id` en texte).
+> `45_document_positions.sql` : fonction des signataires figée sur les documents. **À exécuter avec le superutilisateur PostgreSQL** (`POSTGRES_USER` du conteneur) : la reprise des documents existants désactive les triggers le temps de la mise à jour.
+> `46_units.sql` : unités de mesure (24 unités préchargées, FR / EN) ; unité obligatoire sur chaque ligne de réquisition, « Pièce » pour les lignes existantes. À appliquer après `44`.
 >
 > `08_supplier_prequalification.sql` et `09_tender_invitations.sql` ajoutent la préqualification des fournisseurs, la vérification des documents et les appels d'offres sur invitation : à appliquer **avant** de démarrer la nouvelle version de l'application.
 >

@@ -2,6 +2,7 @@
 // Import des articles d'une réquisition depuis un fichier Excel (.xlsx) ou CSV.
 // Le fichier n'est pas stocké : on renvoie un aperçu que le formulaire ajoute aux articles.
 const stockItemModel = require('../../models/StockItemModel');
+const { activeUnits, unitMatcher } = require('../../utils/units');
 const { uploadHandler, cellText, parseNumber, parseCsv, readRows, isBlankRow, dropLeadingBlankRows, mapHeader } = require('../../utils/tabularImport');
 
 const MAX_ROWS = 500;
@@ -11,6 +12,8 @@ const COLUMNS = {
   description: ['description', 'article', 'designation', 'libelle', 'item'],
   quantity: ['quantite', 'qte', 'quantity', 'qty'],
   frequency: ['frequence', 'frequency', 'freq', 'frequence (x/mois)'],
+  // Facultative : unité de mesure (abréviation, code ou nom — « pce », « Pièce », « Piece »)
+  unit: ['unite', 'unit', 'unite de mesure', 'unit of measure', 'uom'],
   unitPrice: ['prix unitaire', 'pu', 'prix', 'unit price', 'unit_price', 'prix unitaire (usd)'],
   // Facultative : article du catalogue (gestion de stock) ; vide = texte libre
   itemCode: ['code article', 'code', 'item code', 'article code', 'code produit', 'sku'],
@@ -50,6 +53,8 @@ async function importItems(req, res) {
       for (const it of await stockItemModel.findByCodes(codes)) catalog.set(it.code.toUpperCase(), it);
     }
 
+    const findUnit = unitMatcher(await activeUnits());
+
     const items = [];
     const errors = [];
     rows.slice(1).forEach((r, i) => {
@@ -64,7 +69,12 @@ async function importItems(req, res) {
       const itemCode = col.itemCode !== undefined ? cellText(r[col.itemCode]).trim() : '';
       const article = itemCode ? catalog.get(itemCode.toUpperCase()) : null;
 
+      const unitText = col.unit !== undefined ? cellText(r[col.unit]).trim() : '';
+      // Unité : colonne du fichier, sinon celle de l'article du catalogue si elle correspond au référentiel
+      const unit = unitText ? findUnit(unitText) : (article?.unit ? findUnit(article.unit) : null);
+
       const problems = [];
+      if (unitText && !unit) problems.push(`unité ${unitText} inconnue`);
       if (itemCode && !article) problems.push(`code article ${itemCode} inconnu`);
       else if (article && !article.is_active) problems.push(`article ${itemCode} désactivé`);
       if (!description && !article) problems.push('description vide');
@@ -74,6 +84,7 @@ async function importItems(req, res) {
       if (problems.length) errors.push({ line, message: problems.join(', ') });
       else items.push({
         line, description: description || article?.name, quantity, frequency, unitPrice,
+        ...(unit ? { unitId: unit.id, unitAbbr: unit.abbr } : {}),
         ...(article ? { stockItemId: article.id, itemCode: article.code, itemName: article.name, unit: article.unit } : {}),
       });
     });

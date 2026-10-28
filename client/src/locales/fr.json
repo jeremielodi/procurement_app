@@ -733,7 +733,9 @@
     "firstLastName": "Prénom Nom",
     "emailPlaceholder": "contact@entreprise.com",
     "nameOrFull": "Raison sociale / nom complet",
-    "swift": "SWIFT"
+    "swift": "SWIFT",
+    "contactTitle": "Fonction du contact",
+    "contactTitlePlaceholder": "Ex : Directeur gérant"
   },
   "profile": {
     "currentRequired": "Mot de passe actuel requis",
@@ -1272,21 +1274,6 @@
     "creating": "Création...",
     "create": "Créer la réquisition",
     "unit": "Unité",
-    "unitPlaceholder": "jour, pièce…",
-    "unitSuggestions": [
-      "pièce",
-      "jour",
-      "mois",
-      "heure",
-      "forfait",
-      "boîte",
-      "paquet",
-      "rame",
-      "litre",
-      "kg",
-      "mètre",
-      "lot"
-    ],
     "delivery": {
       "title": "Livraison",
       "hint": "Informations reprises dans la section 2 du formulaire de demande d'achat (facultatives).",
@@ -1296,7 +1283,9 @@
       "recipient": "Destinataire (le cas échéant)",
       "contact": "Coordonnées (téléphone, e-mail…)",
       "contactPlaceholder": "Ex : +243 … / nom@exemple.org"
-    }
+    },
+    "unitRequired": "Unité obligatoire",
+    "unitChoose": "Choisir…"
   },
   "reqDetail": {
     "cancelled": "Réquisition annulée avec succès",
@@ -1364,6 +1353,7 @@
     "templateHeaders": [
       "Description",
       "Quantité",
+      "Unité",
       "Fréquence",
       "Prix unitaire",
       "Code article"
@@ -1372,6 +1362,7 @@
       [
         "Ordinateur portable 15\"",
         "2",
+        "pce",
         "1",
         "950",
         ""
@@ -1379,6 +1370,7 @@
       [
         "Ramette papier A4",
         "10",
+        "pack",
         "1",
         "6,5",
         ""
@@ -1410,7 +1402,11 @@
     "freq": "Fréq.",
     "unitPrice": "Prix unit.",
     "replace": "Remplacer les articles déjà saisis (sinon ils sont conservés)",
-    "noValid": "Aucun article valide dans ce fichier."
+    "noValid": "Aucun article valide dans ce fichier.",
+    "unit": "Unité",
+    "unitDefault": "pce (par défaut)",
+    "unitHint": "Abréviation ou nom (pce, Pièce, kilo, ltr…) ; vide = unité de l'article du catalogue, sinon Pièce",
+    "codeHint": "Code d'un article du catalogue (gestion de stock) ; vide = texte libre"
   },
   "workflowModal": {
     "title": "Suivi du workflow — {{number}}"
@@ -2669,7 +2665,11 @@
     "codeAuto": "Code (auto)",
     "codeHint": "Code stable, identique dans toutes les bases ; vide = généré depuis le nom",
     "stockable": "Stockable",
-    "stockableHint": "Les articles de cette catégorie sont stockables par défaut"
+    "stockableHint": "Les articles de cette catégorie sont stockables par défaut",
+    "units": "Unités de mesure",
+    "unitsIntro": "Unités proposées sur chaque ligne de réquisition (obligatoire, « Pièce » par défaut) et reprises sur le bon de commande et les PDF.",
+    "abbr": "Abréviation",
+    "usages": "Lignes"
   },
   "budget": {
     "deleted": "Budget supprimé",
@@ -4042,7 +4042,7 @@
           },
           {
             "type": "p",
-            "text": "La rubrique « Livraison » du formulaire (adresse, date nécessaire, destinataire, coordonnées) et la colonne « Unité » des articles (jour, pièce, boîte…) sont reprises dans le PDF de la réquisition, présenté comme le formulaire de demande d'achat de l'entreprise : demandeur et approbateur avec leur signature, articles, codage budgétaire par ligne budgétaire (code entité, objet de dépense, source de financement, projet, sous-projet, fonction, activité, montant et n° des articles), déclaration (justification) et informations supplémentaires (description)."
+            "text": "La rubrique « Livraison » du formulaire (adresse, date nécessaire, destinataire, coordonnées) et la colonne « Unité » des articles (obligatoire, « Pièce » par défaut, à choisir dans la liste des unités : kilo, litre, boîte, mètre…) sont reprises dans le PDF de la réquisition, présenté comme le formulaire de demande d'achat de l'entreprise : demandeur et approbateur avec leur signature, articles, codage budgétaire par ligne budgétaire (code entité, objet de dépense, source de financement, projet, sous-projet, fonction, activité, montant et n° des articles), déclaration (justification) et informations supplémentaires (description)."
           },
           {
             "type": "links",
@@ -5365,6 +5365,10 @@
           {
             "type": "tip",
             "text": "Mon entreprise → « Conditions générales du bon de commande » : texte imprimé en dernière page de chaque bon de commande. Vide = pas de page."
+          },
+          {
+            "type": "tip",
+            "text": "Super administrateur → Référentiels → « Unités de mesure » : ajouter une unité (nom, abréviation unique, traduction anglaise), la désactiver si elle n'est plus proposée. « Pièce », unité par défaut des réquisitions, ne peut être ni supprimée ni désactivée."
           },
           {
             "type": "links",

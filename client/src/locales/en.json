@@ -733,7 +733,9 @@
     "firstLastName": "First Last",
     "emailPlaceholder": "contact@company.com",
     "nameOrFull": "Company name / full name",
-    "swift": "SWIFT"
+    "swift": "SWIFT",
+    "contactTitle": "Contact's title",
+    "contactTitlePlaceholder": "E.g. Managing Director"
   },
   "profile": {
     "currentRequired": "Current password is required",
@@ -1272,21 +1274,6 @@
     "creating": "Creating...",
     "create": "Create requisition",
     "unit": "Unit",
-    "unitPlaceholder": "day, piece…",
-    "unitSuggestions": [
-      "piece",
-      "day",
-      "month",
-      "hour",
-      "lump sum",
-      "box",
-      "pack",
-      "ream",
-      "litre",
-      "kg",
-      "metre",
-      "lot"
-    ],
     "delivery": {
       "title": "Delivery",
       "hint": "Shown in section 2 of the purchase request form (optional).",
@@ -1296,7 +1283,9 @@
       "recipient": "Recipient (if applicable)",
       "contact": "Contact details (phone, e-mail…)",
       "contactPlaceholder": "E.g. +243 … / name@example.org"
-    }
+    },
+    "unitRequired": "Unit is required",
+    "unitChoose": "Choose…"
   },
   "reqDetail": {
     "cancelled": "Requisition cancelled successfully",
@@ -1364,6 +1353,7 @@
     "templateHeaders": [
       "Description",
       "Quantity",
+      "Unit",
       "Frequency",
       "Unit price",
       "Item code"
@@ -1372,6 +1362,7 @@
       [
         "15\" laptop",
         "2",
+        "pce",
         "1",
         "950",
         ""
@@ -1379,6 +1370,7 @@
       [
         "A4 paper ream",
         "10",
+        "pack",
         "1",
         "6.5",
         ""
@@ -1410,7 +1402,11 @@
     "freq": "Freq.",
     "unitPrice": "Unit price",
     "replace": "Replace items already entered (otherwise they are kept)",
-    "noValid": "No valid item in this file."
+    "noValid": "No valid item in this file.",
+    "unit": "Unit",
+    "unitDefault": "pce (default)",
+    "unitHint": "Abbreviation or name (pce, Piece, kilo, ltr…); empty = catalogue item's unit, otherwise Piece",
+    "codeHint": "Catalogue item code (stock management); empty = free text"
   },
   "workflowModal": {
     "title": "Workflow tracking — {{number}}"
@@ -2669,7 +2665,11 @@
     "codeAuto": "Code (auto)",
     "codeHint": "Stable code, identical in every database; empty = generated from the name",
     "stockable": "Stockable",
-    "stockableHint": "Items of this category are stockable by default"
+    "stockableHint": "Items of this category are stockable by default",
+    "units": "Units of measure",
+    "unitsIntro": "Units offered on each requisition line (required, “Piece” by default) and carried over to the purchase order and PDFs.",
+    "abbr": "Abbreviation",
+    "usages": "Lines"
   },
   "budget": {
     "deleted": "Budget deleted",
@@ -4042,7 +4042,7 @@
           },
           {
             "type": "p",
-            "text": "The form's “Delivery” section (address, date needed, recipient, contact details) and the items' “Unit” column (day, piece, box…) appear on the requisition PDF, laid out like the company's purchase request form: requester and approver with their signatures, items, budget coding per budget line (entity code, expense object, funding source, project, sub-project, function, activity, amount and item numbers), statement (justification) and additional information (description)."
+            "text": "The form's “Delivery” section (address, date needed, recipient, contact details) and the items' “Unit” column (required, “Piece” by default, chosen from the list of units: kilo, litre, box, metre…) appear on the requisition PDF, laid out like the company's purchase request form: requester and approver with their signatures, items, budget coding per budget line (entity code, expense object, funding source, project, sub-project, function, activity, amount and item numbers), statement (justification) and additional information (description)."
           },
           {
             "type": "links",
@@ -5365,6 +5365,10 @@
           {
             "type": "tip",
             "text": "My company → “Purchase order terms and conditions”: text printed on the last page of every purchase order. Empty = no page."
+          },
+          {
+            "type": "tip",
+            "text": "Super administrator → Reference data → “Units of measure”: add a unit (name, unique abbreviation, English translation), deactivate it when it is no longer offered. “Piece”, the default unit of requisitions, cannot be deleted or deactivated."
           },
           {
             "type": "links",

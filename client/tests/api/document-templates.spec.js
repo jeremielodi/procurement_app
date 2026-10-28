@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { getToken, auth } from './helpers.js';
 
-// Modèles de documents de l'entreprise (migration 44) : livraison + unité de mesure de la réquisition (formulaire de
+// Modèles de documents de l'entreprise (migrations 44 / 46) : livraison + unité de mesure de la réquisition (formulaire de
 // demande d'achat), conditions du bon de commande, conditions générales de l'entreprise (dernière page du PDF).
 test.describe.serial('API › Modèles de documents (réquisition, bon de commande)', () => {
   const stamp = Date.now().toString(36);
@@ -15,7 +15,13 @@ test.describe.serial('API › Modèles de documents (réquisition, bon de comman
       description: 'Modèles de documents', allocatedAmount: 100000, projectId: project.id,
     } });
     line = (await res.json()).data;
-    [supplier] = (await (await request.get('/api/suppliers?forPurchaseOrder=1', { headers: auth(admin) })).json()).data;
+    // Fournisseur saisi par l'acheteur, avec sa personne de contact et sa fonction (« Contact Person » / « Title » du PDF)
+    const created = await request.post('/api/suppliers', { headers: auth(admin), data: {
+      name: `[TEST DOC] Fournisseur ${stamp}`, email: `doc.${stamp}@nowhere.test`, status: 'ACTIVE', supplier_type: 'COMPANY',
+      contact_name: 'BYENDA MUEDERHWA Benjamin', contact_title: 'Directeur Gérant',
+    } });
+    expect(created.status(), await created.text()).toBe(201);
+    supplier = (await created.json()).data;
     previousTerms = (await (await request.get('/api/enterprises/current', { headers: auth(admin) })).json()).data?.po_terms ?? null;
   });
 
@@ -23,8 +29,19 @@ test.describe.serial('API › Modèles de documents (réquisition, bon de comman
     if (poId) await request.delete(`/api/purchase-orders/${poId}`, { headers: auth(admin) });
     if (requisitionId) await request.delete(`/api/requisitions/${requisitionId}`, { headers: auth(admin) });
     if (line?.id) await request.delete(`/api/budget/${line.id}`, { headers: auth(admin) });
+    if (supplier?.id && !poId) await request.delete(`/api/suppliers/${supplier.id}`, { headers: auth(admin) });
     // JSON : un champ multipart vide n'est pas envoyé par Playwright
     await request.put('/api/enterprises/current', { headers: auth(admin), data: { poTerms: previousTerms || '' } });
+  });
+
+  test('Fournisseur : fonction de la personne de contact enregistrée', async ({ request }) => {
+    const detail = (await (await request.get(`/api/suppliers/${supplier.id}`, { headers: auth(admin) })).json()).data;
+    expect(detail.contact_name).toBe('BYENDA MUEDERHWA Benjamin');
+    expect(detail.contact_title).toBe('Directeur Gérant');
+    const res = await request.put(`/api/suppliers/${supplier.id}`, { headers: auth(admin), data: { ...detail, contact_title: 'Gérant' } });
+    expect(res.status(), await res.text()).toBe(200);
+    expect((await (await request.get(`/api/suppliers/${supplier.id}`, { headers: auth(admin) })).json()).data.contact_title).toBe('Gérant');
+    await request.put(`/api/suppliers/${supplier.id}`, { headers: auth(admin), data: { ...detail, contact_title: 'Directeur Gérant' } });
   });
 
   test('Date nécessaire invalide refusée', async ({ request }) => {
@@ -38,12 +55,13 @@ test.describe.serial('API › Modèles de documents (réquisition, bon de comman
   });
 
   test('Réquisition : livraison et unité de mesure enregistrées, PDF du formulaire', async ({ request }) => {
+    const liter = (await (await request.get('/api/units', { headers: auth(admin) })).json()).data.find(u => u.code === 'LITER');
     const res = await request.post('/api/requisitions', { headers: auth(admin), data: {
       title: `[TEST DOC] location ${stamp}`, description: 'Informations supplémentaires', justification: 'Appui programmatique',
       projectId: project.id, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM',
       deliveryAddress: 'BUREAU IMA BUNIA', neededBy: '2026-11-15', deliveryRecipient: 'Logistique', deliveryContact: '+243 900 000 000',
       items: [
-        { description: 'Location Land Cruiser', quantity: 20, frequency: 1, unit: 'jour', unitPrice: 110, budgetLineId: line.id },
+        { description: 'Location Land Cruiser', quantity: 20, frequency: 1, unitId: liter.id, unitPrice: 110, budgetLineId: line.id },
         { description: 'Location Noah', quantity: 5, frequency: 1, unitPrice: 75, budgetLineId: line.id },
       ],
     } });
@@ -55,7 +73,8 @@ test.describe.serial('API › Modèles de documents (réquisition, bon de comman
     expect(req.needed_by).toBe('2026-11-15');
     expect(req.delivery_recipient).toBe('Logistique');
     expect(req.delivery_contact).toBe('+243 900 000 000');
-    expect(req.items.map(i => i.item_unit)).toEqual(['jour', null]);
+    // Unité choisie ; sans unité → « Pièce » (par défaut)
+    expect(req.items.map(i => i.item_unit)).toEqual(['Litre', 'Pièce']);
 
     for (const lang of ['fr', 'en']) {
       const pdf = await request.get(`/api/requisitions/${requisitionId}/export/pdf?lang=${lang}`, { headers: auth(admin) });
@@ -98,8 +117,10 @@ test.describe.serial('API › Modèles de documents (réquisition, bon de comman
     expect(po.payment_terms).toBe('100% PAYEMENT APRES LIVRAISON');
     expect(po.delivery_terms).toBe('ACHAT STARLINK - BUREAU TSHOPO');
     expect(po.special_instructions).toBe('Veuillez respecter les quantités');
+    expect(po.supplier_contact_name).toBe('BYENDA MUEDERHWA Benjamin');
+    expect(po.supplier_contact_title).toBe('Directeur Gérant');
     // Unité de mesure reprise de la ligne de réquisition
-    expect(po.items.map(i => i.item_unit)).toEqual(['jour', null]);
+    expect(po.items.map(i => i.item_unit)).toEqual(['Litre', 'Pièce']);
 
     for (const lang of ['fr', 'en']) {
       const pdf = await request.get(`/api/purchase-orders/${poId}/pdf?lang=${lang}`, { headers: auth(admin) });

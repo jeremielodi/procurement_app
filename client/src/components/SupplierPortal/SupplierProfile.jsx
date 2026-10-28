@@ -14,6 +14,7 @@ import { t, useTranslation } from '../../i18n';
 const FIELDS = [
   ['name', 'supplierFields.nameOrFull', 'name', ['COMPANY', 'INDIVIDUAL']],
   ['contactName', 'supplierFields.contactName', 'contact_name', ['COMPANY']],
+  ['contactTitle', 'supplierFields.contactTitle', 'contact_title', ['COMPANY']],
   ['phone', 'supplierFields.phone', 'phone', ['COMPANY', 'INDIVIDUAL']],
   ['website', 'supplierFields.website', 'website', ['COMPANY']],
   ['registrationNumber', 'supplierFields.registrationNumber', 'registration_number', ['COMPANY']],

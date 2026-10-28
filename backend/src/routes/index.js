@@ -167,6 +167,12 @@ router.get('/market-categories', cat.list);
 router.post('/market-categories', requireSuperAdmin, cat.create);
 router.put('/market-categories/:id', requireSuperAdmin, cat.update);
 router.delete('/market-categories/:id', requireSuperAdmin, cat.delete);
+// Unités de mesure (lignes de réquisition) : lecture pour tout compte connecté, écriture super admin
+const units = referenceController.units;
+router.get('/units', units.list);
+router.post('/units', requireSuperAdmin, units.create);
+router.put('/units/:id', requireSuperAdmin, units.update);
+router.delete('/units/:id', requireSuperAdmin, units.delete);
 
 
 router.get('/currencies', authenticate, currencyController.list);

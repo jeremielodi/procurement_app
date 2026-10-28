@@ -121,7 +121,7 @@ test.describe.serial('API › Signatures dans les PDF de réquisition et de bon 
     const created = await request.post('/api/requisitions', { headers: H, data: {
       title: `[TEST SIGNATURES] ${Date.now()}`, description: 'Signatures', projectId: project.id,
       currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'Test',
-      items: [{ description: 'Pièce', quantity: 1, frequency: 1, unit: 'pièce', unitPrice: 1000, budgetLineId: line.id }],
+      items: [{ description: 'Pièce', quantity: 1, frequency: 1, unitPrice: 1000, budgetLineId: line.id }],
     } });
     expect(created.status(), await created.text()).toBe(201);
     req = (await created.json()).data;

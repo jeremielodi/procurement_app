@@ -132,7 +132,8 @@ export default function POForm() {
 
       if (res.success) {
         toast.success(t('po.created', { number: res.data.poNumber }));
-        navigate(`/purchase-orders/${res.data.id}`);
+        // Fiche du bon de commande avec son PDF ouvert
+        navigate(`/purchase-orders/${res.data.id}?pdf=1`);
       } else {
         toast.error(res.message || t('po.createError'));
       }

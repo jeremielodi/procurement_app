@@ -65,12 +65,21 @@ export default function RequisitionDetail() {
   const [showWorkflowModal, setShowWorkflowModal] = useState(false)
   const [cancellationReason, setCancellationReason] = useState('')
   // Onglet initial : ?tab=versions (lien « Voir les modifications » du suivi du workflow)
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'details')
   const [pendingTasksCount, setPendingTasksCount] = useState(0)
   const [viewerAttachmentId, setViewerAttachmentId] = useState(null)
   const [viewerFileName, setViewerFileName] = useState(null)
-  const [showViewer, setShowViewer] = useState(false);
+  // ?pdf=1 (juste après la création) : PDF ouvert d'office
+  const [showViewer, setShowViewer] = useState(searchParams.get('pdf') === '1');
+  const closeViewer = () => {
+    setShowViewer(false)
+    if (searchParams.has('pdf')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('pdf')
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   // Récupérer les détails de la réquisition
   const { data: requisitionData, isLoading, error, refetch } = useQuery({
@@ -853,7 +862,7 @@ const handleGeneratePDF = async () => {
       {showViewer && (
         <RequisitionViewer
           requisitionId={id}
-          onClose={() => setShowViewer(false)}
+          onClose={closeViewer}
         />
       )}
     

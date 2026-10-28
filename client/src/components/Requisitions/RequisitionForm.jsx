@@ -196,7 +196,8 @@ export default function RequisitionForm() {
 
       queryClient.invalidateQueries(['requisitions'])
       toast.success(t('reqForm.created'))
-      navigate('/requisitions')
+      // Fiche de la réquisition avec son PDF (formulaire de demande d'achat) ouvert : le demandeur voit le document
+      navigate(requisitionId ? `/requisitions/${requisitionId}?pdf=1` : '/requisitions')
     },
     onError: (error) => {
       toast.error(error.message || t('reqForm.createError'))
@@ -553,6 +554,7 @@ export default function RequisitionForm() {
               <SearchSelect
                 value={projectId}
                 onChange={handleProjectChange}
+                data-testid="requisition-project"
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${!projectId ? 'border-red-500' : 'border-gray-300'
                   }`}
                 disabled={projectsLoading}

@@ -108,7 +108,7 @@ const PurchaseOrderViewer = ({ poId, po, onClose }) => {
         {/* Toolbar */}
         <div className="bg-gray-100 rounded-t-lg px-4 py-3 flex items-center justify-between border-b flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <button onClick={onClose} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors">
+            <button onClick={onClose} data-testid="pdf-viewer-close" aria-label={t('common.close')} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors">
               <X size={20} />
             </button>
             <div className="h-6 w-px bg-gray-300" />

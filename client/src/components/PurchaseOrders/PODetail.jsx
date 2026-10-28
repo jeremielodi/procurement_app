@@ -46,14 +46,23 @@ import { t } from '../../i18n'
 
 export default function PODetail() {
   const { id } = useParams()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const taskId = searchParams.get('taskId') || null
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
-  const [showPdfViewer, setShowPdfViewer] = useState(false)
+  // ?pdf=1 (juste après la création) : PDF ouvert d'office
+  const [showPdfViewer, setShowPdfViewer] = useState(searchParams.get('pdf') === '1')
+  const closePdfViewer = () => {
+    setShowPdfViewer(false)
+    if (searchParams.has('pdf')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('pdf')
+      setSearchParams(next, { replace: true })
+    }
+  }
   const [poApprovalComment, setPoApprovalComment] = useState('')
   const [rejectionReason, setRejectionReason] = useState('')
   const canReject = rejectionReason.trim().length > 0
@@ -586,7 +595,7 @@ export default function PODetail() {
         <PurchaseOrderViewer
           poId={id}
           po={po}
-          onClose={() => setShowPdfViewer(false)}
+          onClose={closePdfViewer}
         />
       )}
 

@@ -2,6 +2,7 @@
 const Handlebars = require('handlebars');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { renderPdf } = require('../utils/pdfRenderer');
+const db = require('../config/database');
 const { getBranding, brandContact } = require('../utils/enterpriseBranding');
 const { signatureDataUri } = require('../utils/userSignature');
 const { pdfContext, rootLocale, rootLabels } = require('../utils/pdfI18n');
@@ -268,6 +269,11 @@ class PurchaseOrderExportService {
     const fullName = (...parts) => parts.filter(Boolean).join(' ');
     const approved = (po.approvals || []).filter(a => a.status === 'APPROVED')
       .sort((a, b) => new Date(a.approved_at) - new Date(b.approved_at));
+    // Pas d'historique (approbation antérieure à la migration 44) : approbateur enregistré sur le bon
+    if (!approved.length && po.approved_by) {
+      const u = await db.one('SELECT first_name, last_name, position FROM users WHERE id = $1', [po.approved_by]);
+      if (u) approved.push({ ...u, approver_id: po.approved_by, approved_at: po.approved_at });
+    }
     const approver = async (a) => (a ? {
       name: fullName(a.first_name, a.last_name),
       title: a.position || '',

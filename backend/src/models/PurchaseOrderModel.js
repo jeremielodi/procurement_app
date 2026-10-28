@@ -238,7 +238,7 @@ class PurchaseOrderModel {
       ORDER BY delivery_date DESC
     `, [id]);
     
-    // approvals.entity_id is UUID; PO ids are INTEGER — cast to text for comparison
+    // Historique des décisions (approvals.entity_id : TEXT)
     let approvals = [];
     try {
       approvals = await db.select(`
@@ -379,7 +379,8 @@ class PurchaseOrderModel {
       updated_at: new Date()
     };
     
-    if (status === 'APPROVED' && userId) {
+    // Approbateur du bon de commande (« Approuvé par » du PDF) — le statut est PO_APPROVED (APPROVED : ancien nom)
+    if (['PO_APPROVED', 'APPROVED'].includes(status) && userId) {
       updateData.approved_by = userId;
       updateData.approved_at = new Date();
     }
@@ -392,7 +393,7 @@ class PurchaseOrderModel {
    */
   async approve(id, approverId, comments = null) {
     await this.updateStatus(id, 'PO_APPROVED', approverId);
-    // approvals.entity_id is UUID; PO ids are INTEGER — insert is best-effort
+    // Historique des décisions (entity_id TEXT depuis la migration 44)
     try {
       await db.insert('approvals', {
         entity_type: 'purchase_order',
@@ -402,7 +403,7 @@ class PurchaseOrderModel {
         comments: comments,
         approved_at: new Date()
       });
-    } catch (_) { /* non-fatal */ }
+    } catch (error) { console.error('[PurchaseOrderModel] approbation non historisée :', error.message); }
     return { success: true };
   }
 
@@ -411,7 +412,6 @@ class PurchaseOrderModel {
    */
   async reject(id, approverId, reason) {
     await this.updateStatus(id, 'PO_REJECTED', approverId);
-    // approvals.entity_id is UUID; PO ids are INTEGER — insert is best-effort
     try {
       await db.insert('approvals', {
         entity_type: 'purchase_order',

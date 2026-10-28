@@ -641,26 +641,35 @@ class RequisitionExportService {
   }
 
   /**
-   * Personnes ayant approuvé la réquisition (étapes N1 / N2 / N3 terminées avec approved = true), de la première à la
-   * dernière — seule la dernière soumission compte (une version renvoyée pour correction est ré-approuvée).
+   * Personnes ayant approuvé la réquisition (étapes N1 / N2 / N3), de la première à la dernière — seule la dernière
+   * soumission compte (une version renvoyée pour correction est ré-approuvée).
+   * Source : ligne APPROVED écrite par TaskController (auteur toujours connu) ; à défaut (données antérieures) la ligne
+   * TASK_COMPLETED de GoFlow avec approved = true, dont l'auteur n'est connu que si la tâche avait été prise en charge.
    */
   async requisitionApprovers(requisitionId) {
     const rows = await db.select(
-      `SELECT h.performed_by, h.performed_at, h.comments, h.action, u.first_name, u.last_name, u.position
+      `SELECT h.task_id, h.performed_by, h.performed_at, h.comments, h.action, u.first_name, u.last_name, u.position
        FROM workflow_history h LEFT JOIN users u ON u.id = h.performed_by
        WHERE h.entity_type = 'requisition' AND h.entity_id = $1
-         AND (h.action = 'RESUBMITTED' OR (h.action = 'TASK_COMPLETED' AND h.task_definition_id = ANY($2)))
+         AND (h.action = 'RESUBMITTED'
+              OR (h.action = 'APPROVED' AND h.task_name = ANY($2))
+              OR (h.action = 'TASK_COMPLETED' AND h.task_definition_id = ANY($2)))
        ORDER BY h.performed_at`,
       [requisitionId, APPROVAL_TASKS]
     );
-    let approvers = [];
+    let approvals = new Map(); // tâche GoFlow → approbation (une seule par étape)
     for (const row of rows) {
-      if (row.action === 'RESUBMITTED') { approvers = []; continue; }
-      let vars = {};
-      try { vars = JSON.parse(row.comments || '{}').user_vars || {}; } catch { /* commentaire libre */ }
-      if ((vars.approved === true || vars.approved === 'true') && row.performed_by) approvers.push(row);
+      if (row.action === 'RESUBMITTED') { approvals = new Map(); continue; }
+      if (!row.performed_by) continue;
+      if (row.action === 'TASK_COMPLETED') {
+        let vars = {};
+        try { vars = JSON.parse(row.comments || '{}').user_vars || {}; } catch { /* commentaire libre */ }
+        if (vars.approved !== true && vars.approved !== 'true') continue;
+      }
+      const key = row.task_id || `${row.performed_by}-${row.performed_at}`;
+      if (!approvals.has(key) || approvals.get(key).action === 'TASK_COMPLETED') approvals.set(key, row);
     }
-    return approvers;
+    return [...approvals.values()];
   }
 
 

@@ -19,3 +19,9 @@ ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS special_instructions TEXT;
 
 -- Entreprise — conditions générales imprimées en dernière page du bon de commande (vide = pas de page)
 ALTER TABLE enterprise ADD COLUMN IF NOT EXISTS po_terms TEXT;
+
+-- Approbations des bons de commande : approvals.entity_id était un UUID alors que l'id d'un bon de commande est un
+-- entier → toute insertion échouait (silencieusement) : aucun historique d'approbation, aucun « Approuvé par » sur le PDF.
+-- Table utilisée uniquement pour les bons de commande ; TEXT accepte aussi les UUID.
+ALTER TABLE approvals ALTER COLUMN entity_id TYPE TEXT USING entity_id::text;
+CREATE INDEX IF NOT EXISTS idx_approvals_entity ON approvals (entity_type, entity_id);

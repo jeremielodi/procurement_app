@@ -111,6 +111,7 @@ router.delete('/auth/signature', authenticate, signatureRoute('REMOVED'));
 
 // Inscription fournisseur + logo (publics)
 router.post('/auth/register-supplier',
+  require('../middleware/rateLimit').supplierRegisterLimiter,
   supplierPortalController.handleLogoUpload,
   supplierPortalController.register.bind(supplierPortalController)
 );
@@ -770,6 +771,16 @@ router.post('/stock-issues', authenticate, hasPermission('ISSUE_STOCK'), stockIs
 router.post('/stock-issues/:id/acknowledge', authenticate, stockIssueController.acknowledge);
 router.post('/stock-issues/:id/receive', authenticate, stockIssueController.receive);
 router.post('/stock-issues/:id/cancel', authenticate, hasPermission('ISSUE_STOCK'), stockIssueController.cancel);
+
+// Bons d'entrée hors bon de commande (don, achat hors système, retour, autre) — validés par une autre personne (migration 47)
+const stockEntryController = require('../controllers/StockEntryController');
+router.get('/stock-entries', authenticate, hasPermission('VIEW_STOCK'), stockEntryController.list);
+router.get('/stock-entries/:id/pdf', authenticate, hasPermission('VIEW_STOCK'), stockEntryController.pdf);
+router.get('/stock-entries/:id', authenticate, hasPermission('VIEW_STOCK'), stockEntryController.get);
+router.post('/stock-entries', authenticate, hasPermission('RECORD_STOCK_ENTRIES'), stockEntryController.create);
+router.post('/stock-entries/:id/validate', authenticate, hasPermission('VALIDATE_STOCK_ENTRIES'), stockEntryController.validate);
+router.post('/stock-entries/:id/reject', authenticate, hasPermission('VALIDATE_STOCK_ENTRIES'), stockEntryController.reject);
+router.post('/stock-entries/:id/cancel', authenticate, hasAnyPermission('RECORD_STOCK_ENTRIES', 'VALIDATE_STOCK_ENTRIES'), stockEntryController.cancel);
 
 // Équipements (n° de série), détentions et retours en stock
 router.get('/stock-holdings/mine', authenticate, equipmentController.myHoldings);

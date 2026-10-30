@@ -101,6 +101,7 @@ const PATH_RESOURCES = [
   { re: new RegExp(`^/stock-items/(${UUID})(/|$)`), table: 'stock_items' },
   { re: new RegExp(`^/stock-issues/(${UUID})(/|$)`), table: 'stock_issues' },
   { re: new RegExp(`^/stock-returns/(${UUID})(/|$)`), table: 'stock_returns' },
+  { re: new RegExp(`^/stock-entries/(${UUID})(/|$)`), table: 'stock_entries' },
   { re: new RegExp(`^/stock-units/(${UUID})(/|$)`), table: 'stock_units' },
   { re: new RegExp(`^/stock-counts/(${UUID})(/|$)`), table: 'stock_counts' },
   { re: new RegExp(`^/stock-adjustments/(${UUID})(/|$)`), table: 'stock_adjustments' },

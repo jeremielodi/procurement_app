@@ -3,7 +3,7 @@
 // recalculée à partir du journal des mouvements (immuable) dans l'ordre chronologique :
 //  - entrée avec coût (réception au prix du PO, OPENING / RETURN… s'ils portent un coût) :
 //      CMUP = (quantité × CMUP + quantité entrée × coût) / (quantité + quantité entrée)
-//  - annulation de réception (RECEIPT_REVERSAL, au coût de la réception) : retire sa valeur
+//  - annulation de réception (RECEIPT_REVERSAL) ou de bon d'entrée (ENTRY_REVERSAL), à son coût : retire sa valeur
 //  - transferts entre dépôts : sans effet sur la quantité totale ni sur le coût (le stock en transit reste compté dans le
 //    total de l'entreprise, pas dans celui d'un dépôt) ; la perte en transit (expédié − reçu) sort au CMUP à la réception
 //  - autres sorties (ISSUE, ADJUSTMENT_OUT…) : au CMUP courant ; autres entrées sans coût (retour, ajustement) : au CMUP courant
@@ -78,8 +78,8 @@ class StockValuationService {
         }
         s.qty += q;
       } else {
-        // Annulation de réception : retire la valeur à son propre coût ; les autres sorties au CMUP
-        if (m.movement_type === 'RECEIPT_REVERSAL' && hasCost && s.qty + q > EPS) {
+        // Annulation de réception / de bon d'entrée : retire la valeur à son propre coût ; les autres sorties au CMUP
+        if (['RECEIPT_REVERSAL', 'ENTRY_REVERSAL'].includes(m.movement_type) && hasCost && s.qty + q > EPS) {
           s.avg = (s.qty * s.avg + q * num(m.unit_cost)) / (s.qty + q);
         }
         s.qty += q;

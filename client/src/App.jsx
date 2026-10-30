@@ -38,6 +38,9 @@ import WarehouseList from './components/Stock/WarehouseList';
 import StockIssueList from './components/Stock/StockIssueList';
 import StockIssueForm from './components/Stock/StockIssueForm';
 import StockIssueDetail from './components/Stock/StockIssueDetail';
+import StockEntryList from './components/Stock/StockEntryList';
+import StockEntryForm from './components/Stock/StockEntryForm';
+import StockEntryDetail from './components/Stock/StockEntryDetail';
 import StockReturnForm from './components/Stock/StockReturnForm';
 import { StockReturnList, StockReturnDetail } from './components/Stock/StockReturns';
 import EquipmentList from './components/Stock/EquipmentList';
@@ -320,6 +323,9 @@ function App() {
         <Route path="/stock/movements" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockMovements /></Layout></ProtectedRoute>} />
         <Route path="/stock/movement-groups/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><MovementGroupDetail /></Layout></ProtectedRoute>} />
         <Route path="/stock/warehouses" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><WarehouseList /></Layout></ProtectedRoute>} />
+        <Route path="/stock/entries" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockEntryList /></Layout></ProtectedRoute>} />
+        <Route path="/stock/entries/new" element={<ProtectedRoute requiredPermission="RECORD_STOCK_ENTRIES"><Layout><StockEntryForm /></Layout></ProtectedRoute>} />
+        <Route path="/stock/entries/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockEntryDetail /></Layout></ProtectedRoute>} />
         <Route path="/stock/issues" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockIssueList /></Layout></ProtectedRoute>} />
         <Route path="/stock/issues/new" element={<ProtectedRoute requiredPermission="ISSUE_STOCK"><Layout><StockIssueForm /></Layout></ProtectedRoute>} />
         <Route path="/stock/issues/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockIssueDetail /></Layout></ProtectedRoute>} />

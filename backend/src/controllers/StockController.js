@@ -348,7 +348,7 @@ const stock = {
       const locale = i18n.locale(lang);
       const group = await stockModel.movementGroup(req.params.id);
       if (!group) return res.status(404).json({ success: false, code: 'NOT_FOUND', message: 'Opération introuvable' });
-      const documentNumber = group.grn_number || group.issue_number || group.return_number || group.count_number || group.adjustment_number || '';
+      const documentNumber = group.grn_number || group.issue_number || group.return_number || group.count_number || group.adjustment_number || group.entry_number || '';
       const wb = new ExcelJS.Workbook();
       wb.creator = 'procureApp';
       const ws = wb.addWorksheet(T('movementGroup.sheet'));

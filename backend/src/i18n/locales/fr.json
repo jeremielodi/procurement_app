@@ -408,6 +408,16 @@
     "revision": {
       "returnedTitle": "Réquisition {number} à corriger",
       "returnedMessage": "Votre réquisition {number} vous est renvoyée pour correction : « {reason} ». Corrigez-la puis soumettez-la à nouveau."
+    },
+    "stockEntry": {
+      "toValidateTitle": "Bon d'entrée à valider : {number}",
+      "toValidateMessage": "{name} a saisi le bon d'entrée {number} (dépôt {warehouse}). Vérifiez-le et validez-le pour faire entrer les articles en stock.",
+      "validatedTitle": "Bon d'entrée validé : {number}",
+      "validatedMessage": "{name} a validé le bon d'entrée {number} : les articles sont en stock.",
+      "rejectedTitle": "Bon d'entrée refusé : {number}",
+      "rejectedMessage": "{name} a refusé le bon d'entrée {number}. Consultez le motif.",
+      "cancelledTitle": "Bon d'entrée annulé : {number}",
+      "cancelledMessage": "{name} a annulé le bon d'entrée {number}."
     }
   },
   "pdf": {
@@ -792,6 +802,49 @@
       "note1Title": "(1) Coûts des articles répartis entre les projets :",
       "note1": "si les coûts pour un ou plusieurs articles, y compris les frais d'expédition et de manutention, sont répartis entre les numéros de projet, indiquez-le en le saisissant sur une ligne distincte ou dans la section des notes.",
       "note2": "(2) Veuillez joindre des pages pour les articles supplémentaires."
+    },
+    "stockEntry": {
+      "title": "BON D'ENTRÉE EN STOCK",
+      "date": "Date",
+      "origin": "Provenance",
+      "entryType": "Type d'entrée",
+      "typeDONATION": "Don / dotation",
+      "typeOFF_SYSTEM_PURCHASE": "Achat hors système",
+      "typeRETURN": "Retour de matériel",
+      "typeOTHER": "Autre entrée",
+      "originLabelDONATION": "Donateur",
+      "originLabelOFF_SYSTEM_PURCHASE": "Vendeur",
+      "originLabelRETURN": "Rendu par",
+      "originLabelOTHER": "Provenance",
+      "reference": "Référence",
+      "deliveredBy": "Remis par",
+      "project": "Projet (financement)",
+      "warehouse": "Dépôt",
+      "location": "Localisation",
+      "recordedBy": "Saisi par",
+      "validatedBy": "Validé par",
+      "reason": "Motif / observations",
+      "no": "N°",
+      "code": "Code",
+      "item": "Article",
+      "lot": "Lot",
+      "quantity": "Quantité",
+      "unit": "Unité",
+      "unitCost": "Coût unitaire",
+      "total": "Total",
+      "totalValue": "Valeur totale",
+      "expiry": "péremption",
+      "deliveredSignature": "Remis par",
+      "storekeeper": "Magasinier (reçu et saisi)",
+      "validator": "Validé par",
+      "signature": "Date et signature :",
+      "statusPENDING": "EN ATTENTE DE VALIDATION",
+      "statusREJECTED": "REFUSÉ",
+      "statusCANCELLED": "ANNULÉ",
+      "pendingNote": "Bon en attente de validation : les articles ne sont pas encore entrés en stock.",
+      "rejectedOn": "Bon refusé par {name} le {date} — motif : {reason}. Aucun article n'est entré en stock.",
+      "cancelledOn": "Bon retiré par {name} le {date} — motif : {reason}. Aucun article n'est entré en stock.",
+      "cancelledAfterValidationOn": "Bon annulé par {name} le {date} — motif : {reason}. Les articles ont été retirés du stock."
     }
   },
   "stockExport": {
@@ -832,7 +885,9 @@
       "TRANSFER_IN": "Transfert (entrée)",
       "TRANSFER_OUT": "Transfert (sortie)",
       "ADJUSTMENT_IN": "Ajustement (+)",
-      "ADJUSTMENT_OUT": "Ajustement (−)"
+      "ADJUSTMENT_OUT": "Ajustement (−)",
+      "ENTRY": "Bon d'entrée",
+      "ENTRY_REVERSAL": "Annulation de bon d'entrée"
     }
   },
   "auditActions": {
@@ -897,7 +952,10 @@
     "BUDGET_LINES_IMPORTED": "Import du registre budgétaire",
     "SUPPLIER_ALLOCATION_RECORDED": "Réquisition répartie entre plusieurs fournisseurs",
     "SUPPLIER_PORTAL_ACCESS_GRANTED": "Accès au portail fournisseur donné",
-    "PROJECT_CODE_CHANGED": "Code de projet modifié"
+    "PROJECT_CODE_CHANGED": "Code de projet modifié",
+    "STOCK_ENTRY_VALIDATED": "Bon d'entrée validé",
+    "STOCK_ENTRY_REJECTED": "Bon d'entrée refusé",
+    "STOCK_ENTRY_CANCELLED": "Bon d'entrée annulé"
   },
   "auditExport": {
     "sheet": "Journal d'audit",
@@ -1142,7 +1200,8 @@
       "IMPORT": "Import du stock initial",
       "OPENING": "Parc existant",
       "RETIRE": "Réforme d'équipement",
-      "OTHER": "Opération de stock"
+      "OTHER": "Opération de stock",
+      "ENTRY": "Bon d'entrée"
     }
   }
 }

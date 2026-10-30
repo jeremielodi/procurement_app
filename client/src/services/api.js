@@ -53,6 +53,13 @@ api.interceptors.response.use(
     // L'appelant affiche lui-même un message adapté (ex. erreurs métier traduites du bon de réception)
     if (error.config?.skipErrorToast) return Promise.reject(error)
 
+    // Limitation du débit (aussi pour les PDF : réponse attendue en blob) — un seul message à la fois
+    const data = error.response?.data
+    if (error.response?.status === 429 && (data?.code === 'RATE_LIMITED' || data instanceof Blob)) {
+      toast.error(t('services.rateLimited'), { id: 'rate-limited' })
+      return Promise.reject(error)
+    }
+
     const message = error.response?.data?.message || t('common.errorOccurred')
     toast.error(message)
     return Promise.reject(error)

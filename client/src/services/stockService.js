@@ -75,6 +75,18 @@ export const stockIssueService = {
   pdf: (id) => api.get(`/stock-issues/${id}/pdf`, { params: { lang: getLang() }, responseType: 'blob' }).then(data),
 };
 
+// Bons d'entrée hors bon de commande (don, achat hors système, retour, autre) : saisis, puis validés par une autre personne
+export const stockEntryService = {
+  list: (params = {}) => api.get('/stock-entries', { params }).then(data),
+  get: (id) => api.get(`/stock-entries/${id}`).then(data),
+  // Erreurs métier (lot, n° de série, dépôt…) affichées par le formulaire / la fiche
+  create: (payload) => api.post('/stock-entries', payload, { skipErrorToast: true }).then(data),
+  validate: (id, comment) => api.post(`/stock-entries/${id}/validate`, { comment }, { skipErrorToast: true }).then(data),
+  reject: (id, reason) => api.post(`/stock-entries/${id}/reject`, { reason }).then(data),
+  cancel: (id, reason) => api.post(`/stock-entries/${id}/cancel`, { reason }, { skipErrorToast: true }).then(data),
+  pdf: (id) => api.get(`/stock-entries/${id}/pdf`, { params: { lang: getLang() }, responseType: 'blob' }).then(data),
+};
+
 // Équipements suivis par n° de série (ordinateurs…), détentions et retours en stock
 export const equipmentService = {
   units: (params = {}) => api.get('/stock-units', { params }).then(data),

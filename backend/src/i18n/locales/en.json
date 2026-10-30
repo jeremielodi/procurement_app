@@ -408,6 +408,16 @@
     "revision": {
       "returnedTitle": "Requisition {number} to be corrected",
       "returnedMessage": "Your requisition {number} has been returned for correction: \"{reason}\". Correct it, then resubmit it."
+    },
+    "stockEntry": {
+      "toValidateTitle": "Stock entry to validate: {number}",
+      "toValidateMessage": "{name} recorded stock entry {number} (warehouse {warehouse}). Check it and validate it to put the items in stock.",
+      "validatedTitle": "Stock entry validated: {number}",
+      "validatedMessage": "{name} validated stock entry {number}: the items are in stock.",
+      "rejectedTitle": "Stock entry rejected: {number}",
+      "rejectedMessage": "{name} rejected stock entry {number}. See the reason.",
+      "cancelledTitle": "Stock entry cancelled: {number}",
+      "cancelledMessage": "{name} cancelled stock entry {number}."
     }
   },
   "pdf": {
@@ -792,6 +802,49 @@
       "note1Title": "(1) Item costs split between projects:",
       "note1": "if the costs of one or more items, including shipping and handling, are split between project numbers, indicate it on a separate line or in the notes section.",
       "note2": "(2) Please attach pages for additional items."
+    },
+    "stockEntry": {
+      "title": "GOODS IN NOTE",
+      "date": "Date",
+      "origin": "Origin",
+      "entryType": "Entry type",
+      "typeDONATION": "Donation / allocation",
+      "typeOFF_SYSTEM_PURCHASE": "Off-system purchase",
+      "typeRETURN": "Equipment return",
+      "typeOTHER": "Other entry",
+      "originLabelDONATION": "Donor",
+      "originLabelOFF_SYSTEM_PURCHASE": "Seller",
+      "originLabelRETURN": "Returned by",
+      "originLabelOTHER": "Origin",
+      "reference": "Reference",
+      "deliveredBy": "Delivered by",
+      "project": "Project (funding)",
+      "warehouse": "Warehouse",
+      "location": "Location",
+      "recordedBy": "Recorded by",
+      "validatedBy": "Validated by",
+      "reason": "Reason / remarks",
+      "no": "No.",
+      "code": "Code",
+      "item": "Item",
+      "lot": "Lot",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "unitCost": "Unit cost",
+      "total": "Total",
+      "totalValue": "Total value",
+      "expiry": "expiry",
+      "deliveredSignature": "Delivered by",
+      "storekeeper": "Storekeeper (received and recorded)",
+      "validator": "Validated by",
+      "signature": "Date and signature:",
+      "statusPENDING": "PENDING VALIDATION",
+      "statusREJECTED": "REJECTED",
+      "statusCANCELLED": "CANCELLED",
+      "pendingNote": "Pending validation: the items have not entered stock yet.",
+      "rejectedOn": "Rejected by {name} on {date} — reason: {reason}. No item entered stock.",
+      "cancelledOn": "Withdrawn by {name} on {date} — reason: {reason}. No item entered stock.",
+      "cancelledAfterValidationOn": "Cancelled by {name} on {date} — reason: {reason}. The items were removed from stock."
     }
   },
   "stockExport": {
@@ -832,7 +885,9 @@
       "TRANSFER_IN": "Transfer (in)",
       "TRANSFER_OUT": "Transfer (out)",
       "ADJUSTMENT_IN": "Adjustment (+)",
-      "ADJUSTMENT_OUT": "Adjustment (−)"
+      "ADJUSTMENT_OUT": "Adjustment (−)",
+      "ENTRY": "Stock entry",
+      "ENTRY_REVERSAL": "Stock entry reversal"
     }
   },
   "auditActions": {
@@ -897,7 +952,10 @@
     "BUDGET_LINES_IMPORTED": "Budget register import",
     "SUPPLIER_ALLOCATION_RECORDED": "Requisition split between several suppliers",
     "SUPPLIER_PORTAL_ACCESS_GRANTED": "Supplier portal access granted",
-    "PROJECT_CODE_CHANGED": "Project code changed"
+    "PROJECT_CODE_CHANGED": "Project code changed",
+    "STOCK_ENTRY_VALIDATED": "Stock entry validated",
+    "STOCK_ENTRY_REJECTED": "Stock entry rejected",
+    "STOCK_ENTRY_CANCELLED": "Stock entry cancelled"
   },
   "auditExport": {
     "sheet": "Audit log",
@@ -1142,7 +1200,8 @@
       "IMPORT": "Opening stock import",
       "OPENING": "Existing equipment",
       "RETIRE": "Equipment retirement",
-      "OTHER": "Stock operation"
+      "OTHER": "Stock operation",
+      "ENTRY": "Goods in note"
     }
   }
 }

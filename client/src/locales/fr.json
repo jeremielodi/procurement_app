@@ -132,6 +132,7 @@
     "stockItems": "Articles",
     "stockMovements": "Mouvements",
     "warehouses": "Dépôts",
+    "stockEntries": "Bons d'entrée",
     "stockIssues": "Sorties",
     "myItems": "Mes articles reçus",
     "stockReturns": "Retours",
@@ -486,8 +487,8 @@
           "desc": "Plusieurs dépôts par ville, avec des accès par utilisateur ; le catalogue d'articles et le stock existant s'importent depuis Excel en quelques minutes (modèle fourni)."
         },
         {
-          "title": "Réception → entrée en stock",
-          "desc": "La quantité acceptée au bon de réception entre en stock dans le dépôt choisi, rattachée au projet qui l'a financée : l'état du stock se consulte projet par projet. Les sur-livraisons sont refusées."
+          "title": "Réception et bons d'entrée",
+          "desc": "La quantité acceptée au bon de réception entre en stock dans le dépôt choisi, rattachée au projet qui l'a financée : l'état du stock se consulte projet par projet. Les sur-livraisons sont refusées. Dons, achats hors système et retours : bon d'entrée validé par une autre personne."
         },
         {
           "title": "Suivi des livraisons",
@@ -1167,6 +1168,7 @@
     "pdfError": "Erreur lors de la génération du PDF",
     "unexpectedFormat": "Format de réponse inattendu",
     "sessionExpired": "Session expirée, veuillez vous reconnecter",
+    "rateLimited": "Trop de requêtes — patientez quelques instants puis réessayez",
     "unavailable": "{{what}} : fonctionnalité pas encore disponible",
     "suppliersNotDeleted": "{{count}} fournisseur(s) non supprimé(s) (historique ou compte portail)",
     "supplierDocs": "Documents du fournisseur",
@@ -3147,7 +3149,9 @@
       "ADJUSTMENT_IN": "Ajustement (+)",
       "ADJUSTMENT_OUT": "Ajustement (−)",
       "ISSUE_REVERSAL": "Annulation de sortie",
-      "RETURN": "Retour"
+      "RETURN": "Retour",
+      "ENTRY": "Bon d'entrée",
+      "ENTRY_REVERSAL": "Annulation de bon d'entrée"
     },
     "wh": {
       "title": "Dépôts",
@@ -3175,6 +3179,132 @@
       "required": "Code, nom et localisation sont obligatoires",
       "created": "Dépôt créé",
       "updated": "Dépôt mis à jour"
+    },
+    "entry": {
+      "title": "Bons d'entrée",
+      "subtitle": "Entrées en stock hors bon de commande : dons, achats hors système, retours de matériel… Validées par une autre personne.",
+      "new": "Nouveau bon d'entrée",
+      "newTitle": "Nouveau bon d'entrée en stock",
+      "newSubtitle": "Pour des articles reçus sans bon de commande. Les achats avec bon de commande passent par la réception (GRN).",
+      "typeLabel": "Type d'entrée",
+      "types": {
+        "DONATION": "Don / dotation",
+        "OFF_SYSTEM_PURCHASE": "Achat hors système",
+        "RETURN": "Retour de matériel",
+        "OTHER": "Autre entrée"
+      },
+      "typeHelp": {
+        "DONATION": "Reçu d'un bailleur, d'un partenaire ou du siège, sans achat",
+        "OFF_SYSTEM_PURCHASE": "Payé hors procureApp (caisse, petite dépense), sans bon de commande",
+        "RETURN": "Matériel rendu qui n'avait pas été sorti par un bon de sortie",
+        "OTHER": "Toute autre entrée — motif obligatoire"
+      },
+      "originLabel": {
+        "DONATION": "Donateur",
+        "OFF_SYSTEM_PURCHASE": "Vendeur / fournisseur",
+        "RETURN": "Rendu par",
+        "OTHER": "Provenance"
+      },
+      "originPlaceholder": {
+        "DONATION": "Ex. : bailleur, partenaire, siège",
+        "OFF_SYSTEM_PURCHASE": "Ex. : quincaillerie du marché",
+        "RETURN": "Ex. : nom de la personne ou du bureau",
+        "OTHER": "D'où viennent les articles ?"
+      },
+      "originColumn": "Provenance",
+      "deliveredBy": "Remis par",
+      "deliveredByPlaceholder": "Personne qui apporte les articles (signe le bon)",
+      "reference": "Référence",
+      "referencePlaceholder": "N° de lettre de don, de reçu…",
+      "project": "Projet (financement)",
+      "projectHint": "Facultatif : le stock entré est rattaché à ce projet (comme les réceptions d'un bon de commande).",
+      "reason": "Motif / observations",
+      "reasonPlaceholder": "Contexte, état du matériel…",
+      "costHint": "Coût unitaire facultatif ({{currency}}) : il sert à la valorisation du stock (CMUP).",
+      "unitCost": "Coût unitaire ({{currency}})",
+      "optional": "Facultatif",
+      "tracking": "Lot / péremption / n° de série",
+      "lineTotal": "Total",
+      "totalValue": "Valeur totale",
+      "noValue": "Non valorisé (coût non saisi sur toutes les lignes)",
+      "validationNotice": "Le bon part en validation : le stock n'augmente qu'une fois validé par une autre personne (logistique ou administrateur).",
+      "submit": "Envoyer en validation",
+      "created": "Bon {{number}} enregistré — en attente de validation",
+      "err": {
+        "INVALID_ENTRY_TYPE": "Type d'entrée invalide",
+        "REASON_REQUIRED": "Motif obligatoire",
+        "NO_LINES": "Ajoutez au moins un article",
+        "WAREHOUSE_REQUIRED": "Choisissez le dépôt",
+        "WAREHOUSE_FORBIDDEN": "Vous n'avez pas accès à ce dépôt",
+        "ITEM_NOT_FOUND": "Article introuvable",
+        "ITEM_NOT_STOCKABLE": "Article non stocké",
+        "INVALID_QUANTITY": "Quantité invalide",
+        "INVALID_COST": "Coût unitaire invalide",
+        "EXPIRY_INVALID": "Date de péremption invalide",
+        "LOT_REQUIRED": "N° de lot obligatoire",
+        "EXPIRY_REQUIRED": "Date de péremption obligatoire",
+        "LOT_EXPIRED": "Lot déjà périmé",
+        "LOT_EXPIRY_MISMATCH": "Ce lot existe déjà avec une autre date de péremption",
+        "SERIAL_INTEGER": "Quantité entière obligatoire pour un équipement",
+        "SERIALS_REQUIRED": "Un n° de série par unité",
+        "SERIAL_DUPLICATE": "N° de série en double",
+        "SERIAL_EXISTS": "N° de série déjà enregistré",
+        "PROJECT_NOT_FOUND": "Projet introuvable",
+        "CURRENCY_INVALID": "Devise inconnue",
+        "NOT_PENDING": "Ce bon n'est plus en attente de validation",
+        "SELF_VALIDATION": "Séparation des tâches : une autre personne doit valider ce bon",
+        "NOT_AUTHOR": "Seul l'auteur peut retirer ce bon",
+        "NOT_CANCELLABLE": "Ce bon est déjà refusé ou annulé",
+        "ENTRY_USED": "Annulation impossible : le stock entré a déjà été utilisé",
+        "quantity": "Quantité requise",
+        "cost": "Coût unitaire invalide",
+        "lot": "N° de lot obligatoire",
+        "expiry": "Date de péremption obligatoire",
+        "expired": "Date de péremption dépassée",
+        "integer": "Quantité entière obligatoire pour un équipement",
+        "serials": "{{expected}} n° de série attendu(s), {{count}} saisi(s)"
+      },
+      "status": {
+        "PENDING": "En attente de validation",
+        "VALIDATED": "Validé — en stock",
+        "REJECTED": "Refusé",
+        "CANCELLED": "Annulé"
+      },
+      "number": "N° du bon",
+      "search": "N°, provenance, référence, article, lot, n° de série…",
+      "none": "Aucun bon d'entrée",
+      "pendingCount_one": "{{count}} bon en attente de validation — afficher",
+      "pendingCount_other": "{{count}} bons en attente de validation — afficher",
+      "notFound": "Bon d'entrée introuvable",
+      "recordedBy": "saisi par {{name}}",
+      "pdf": "Bon d'entrée (PDF)",
+      "pendingNotice": "En attente de validation : les articles ne sont pas encore en stock. Une autre personne (logistique ou administrateur) doit vérifier et valider le bon.",
+      "pendingForYou": "Vérifiez les articles reçus puis validez le bon : ils entreront alors en stock. Sinon, refusez-le en indiquant le motif.",
+      "selfValidation": "Vous avez saisi ce bon : par séparation des tâches, il doit être validé par une autre personne.",
+      "noMovementYet": "à la validation",
+      "validate": "Valider",
+      "validateTitle": "Valider le bon {{number}}",
+      "validateText": "Les articles entrent en stock dans le dépôt du bon. Confirmez que vous les avez vérifiés.",
+      "validateComment": "Commentaire (facultatif)",
+      "validated": "Bon validé : les articles sont en stock",
+      "reject": "Refuser",
+      "rejectTitle": "Refuser le bon {{number}}",
+      "rejectText": "Aucun article n'entre en stock. L'auteur est prévenu.",
+      "rejected": "Bon refusé",
+      "withdraw": "Retirer",
+      "withdrawTitle": "Retirer le bon {{number}}",
+      "withdrawText": "Le bon n'a pas encore été validé : aucun article n'entre en stock.",
+      "withdrawn": "Bon retiré",
+      "cancel": "Annuler le bon",
+      "cancelTitle": "Annuler le bon {{number}}",
+      "cancelText": "Les articles sont retirés du stock (écritures inverses). Impossible si une partie a déjà été sortie.",
+      "cancelled": "Bon annulé : les articles ont été retirés du stock",
+      "reasonLabel": "Motif (obligatoire)",
+      "reasonRequired": "Motif obligatoire",
+      "validatedOn": "Validé par {{name}} le {{date}}",
+      "rejectedOn": "Refusé par {{name}} le {{date}} — motif : {{reason}}",
+      "withdrawnOn": "Retiré par {{name}} le {{date}} — motif : {{reason}}",
+      "cancelledAfterValidationOn": "Annulé par {{name}} le {{date}} — motif : {{reason}}. Les articles ont été retirés du stock."
     },
     "issue": {
       "title": "Sorties de stock",
@@ -3697,7 +3827,8 @@
         "IMPORT": "Import du stock initial",
         "OPENING": "Parc existant",
         "RETIRE": "Réforme d'équipement",
-        "OTHER": "Opération de stock"
+        "OTHER": "Opération de stock",
+        "ENTRY": "Bon d'entrée"
       }
     }
   },
@@ -4753,6 +4884,53 @@
           },
           {
             "type": "h",
+            "text": "Bons d'entrée (sans bon de commande)"
+          },
+          {
+            "type": "p",
+            "text": "Pour faire entrer en stock des articles reçus sans bon de commande : Stock → Bons d'entrée → « Nouveau bon d'entrée ». Les achats avec bon de commande passent toujours par la réception (GRN)."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Type d'entrée",
+                "Quand l'utiliser"
+              ],
+              [
+                "Don / dotation",
+                "Articles reçus d'un bailleur, d'un partenaire ou du siège, sans achat"
+              ],
+              [
+                "Achat hors système",
+                "Achat payé hors procureApp (caisse, petite dépense), sans bon de commande"
+              ],
+              [
+                "Retour de matériel",
+                "Matériel rendu qui n'avait pas été sorti par un bon de sortie (sinon : Stock → Retours)"
+              ],
+              [
+                "Autre entrée",
+                "Toute autre entrée — le motif est obligatoire"
+              ]
+            ]
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Le magasinier (profils Logistique, Magasinier, administrateur) choisit le type, le dépôt, la provenance (donateur, vendeur…), la personne qui a remis les articles, la référence (lettre de don, reçu) et, au besoin, le projet de financement.",
+              "Il ajoute les articles du catalogue : quantité, coût unitaire (facultatif, sert à la valorisation), n° de lot et date de péremption ou n° de série selon l'article.",
+              "« Envoyer en validation » : le bon est « En attente de validation », le stock ne bouge pas encore. Les valideurs du dépôt sont prévenus.",
+              "Une AUTRE personne (Logistique ou administrateur ayant accès au dépôt) vérifie les articles et clique sur « Valider » : ils entrent en stock (lots créés, équipements enregistrés avec un n° d'inventaire). Elle peut aussi « Refuser » avec un motif.",
+              "Imprimez le « Bon d'entrée (PDF) » : il porte les cadres de signature de la personne qui a remis les articles, du magasinier et du valideur."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "Séparation des tâches : la personne qui a saisi un bon ne peut ni le valider ni le refuser, même administrateur (tentative tracée dans le journal d'audit). Avant validation, l'auteur peut « Retirer » son bon ; après validation, « Annuler le bon » retire les articles du stock — refusé si une partie a déjà été sortie."
+          },
+          {
+            "type": "h",
             "text": "État du stock et mouvements"
           },
           {
@@ -5685,7 +5863,10 @@
       "BUDGET_LINES_IMPORTED": "Import du registre budgétaire",
       "SUPPLIER_ALLOCATION_RECORDED": "Réquisition répartie entre plusieurs fournisseurs",
       "SUPPLIER_PORTAL_ACCESS_GRANTED": "Accès au portail fournisseur donné",
-      "PROJECT_CODE_CHANGED": "Code de projet modifié"
+      "PROJECT_CODE_CHANGED": "Code de projet modifié",
+      "STOCK_ENTRY_VALIDATED": "Bon d'entrée validé",
+      "STOCK_ENTRY_REJECTED": "Bon d'entrée refusé",
+      "STOCK_ENTRY_CANCELLED": "Bon d'entrée annulé"
     },
     "groups": {
       "all": "Tous les événements",

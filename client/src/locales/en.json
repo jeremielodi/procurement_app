@@ -132,6 +132,7 @@
     "stockItems": "Items",
     "stockMovements": "Movements",
     "warehouses": "Warehouses",
+    "stockEntries": "Goods in notes",
     "stockIssues": "Issues",
     "myItems": "My received items",
     "stockReturns": "Returns",
@@ -486,8 +487,8 @@
           "desc": "Several warehouses per city, with per-user access; the item catalogue and existing stock are imported from Excel in minutes (template provided)."
         },
         {
-          "title": "Receipt → stock entry",
-          "desc": "The quantity accepted on the goods receipt enters stock in the chosen warehouse, linked to the project that paid for it: stock levels can be viewed project by project. Over-deliveries are refused."
+          "title": "Receipts and goods in notes",
+          "desc": "The quantity accepted on the goods receipt enters stock in the chosen warehouse, linked to the project that paid for it: stock levels can be viewed project by project. Over-deliveries are refused. Donations, off-system purchases and returns: goods in note validated by someone else."
         },
         {
           "title": "Delivery tracking",
@@ -1167,6 +1168,7 @@
     "pdfError": "Error while generating the PDF",
     "unexpectedFormat": "Unexpected response format",
     "sessionExpired": "Session expired, please sign in again",
+    "rateLimited": "Too many requests — please wait a moment and try again",
     "unavailable": "{{what}}: feature not available yet",
     "suppliersNotDeleted": "{{count}} supplier(s) not deleted (history or portal account)",
     "supplierDocs": "Supplier documents",
@@ -3147,7 +3149,9 @@
       "ADJUSTMENT_IN": "Adjustment (+)",
       "ADJUSTMENT_OUT": "Adjustment (−)",
       "ISSUE_REVERSAL": "Issue reversal",
-      "RETURN": "Return"
+      "RETURN": "Return",
+      "ENTRY": "Stock entry",
+      "ENTRY_REVERSAL": "Stock entry reversal"
     },
     "wh": {
       "title": "Warehouses",
@@ -3175,6 +3179,132 @@
       "required": "Code, name and location are required",
       "created": "Warehouse created",
       "updated": "Warehouse updated"
+    },
+    "entry": {
+      "title": "Goods in notes",
+      "subtitle": "Stock entries without a purchase order: donations, off-system purchases, equipment returns… Validated by someone else.",
+      "new": "New goods in note",
+      "newTitle": "New goods in note",
+      "newSubtitle": "For items received without a purchase order. Purchases with a purchase order go through the goods receipt (GRN).",
+      "typeLabel": "Entry type",
+      "types": {
+        "DONATION": "Donation / allocation",
+        "OFF_SYSTEM_PURCHASE": "Off-system purchase",
+        "RETURN": "Equipment return",
+        "OTHER": "Other entry"
+      },
+      "typeHelp": {
+        "DONATION": "Received from a donor, a partner or head office, without a purchase",
+        "OFF_SYSTEM_PURCHASE": "Paid outside procureApp (petty cash, small expense), without a purchase order",
+        "RETURN": "Equipment returned that had not been issued with an issue note",
+        "OTHER": "Any other entry — reason required"
+      },
+      "originLabel": {
+        "DONATION": "Donor",
+        "OFF_SYSTEM_PURCHASE": "Seller / supplier",
+        "RETURN": "Returned by",
+        "OTHER": "Origin"
+      },
+      "originPlaceholder": {
+        "DONATION": "E.g. donor, partner, head office",
+        "OFF_SYSTEM_PURCHASE": "E.g. local hardware store",
+        "RETURN": "E.g. name of the person or office",
+        "OTHER": "Where do the items come from?"
+      },
+      "originColumn": "Origin",
+      "deliveredBy": "Delivered by",
+      "deliveredByPlaceholder": "Person bringing the items (signs the note)",
+      "reference": "Reference",
+      "referencePlaceholder": "Donation letter no., receipt no.…",
+      "project": "Project (funding)",
+      "projectHint": "Optional: the incoming stock belongs to this project (like goods received on a purchase order).",
+      "reason": "Reason / remarks",
+      "reasonPlaceholder": "Context, condition of the equipment…",
+      "costHint": "Optional unit cost ({{currency}}): used for stock valuation (weighted average cost).",
+      "unitCost": "Unit cost ({{currency}})",
+      "optional": "Optional",
+      "tracking": "Lot / expiry / serial numbers",
+      "lineTotal": "Total",
+      "totalValue": "Total value",
+      "noValue": "Not valued (cost not entered on every line)",
+      "validationNotice": "The note goes for validation: stock only increases once someone else (logistics or administrator) validates it.",
+      "submit": "Send for validation",
+      "created": "Note {{number}} recorded — pending validation",
+      "err": {
+        "INVALID_ENTRY_TYPE": "Invalid entry type",
+        "REASON_REQUIRED": "Reason required",
+        "NO_LINES": "Add at least one item",
+        "WAREHOUSE_REQUIRED": "Choose the warehouse",
+        "WAREHOUSE_FORBIDDEN": "You have no access to this warehouse",
+        "ITEM_NOT_FOUND": "Item not found",
+        "ITEM_NOT_STOCKABLE": "Item not stocked",
+        "INVALID_QUANTITY": "Invalid quantity",
+        "INVALID_COST": "Invalid unit cost",
+        "EXPIRY_INVALID": "Invalid expiry date",
+        "LOT_REQUIRED": "Lot number required",
+        "EXPIRY_REQUIRED": "Expiry date required",
+        "LOT_EXPIRED": "Lot already expired",
+        "LOT_EXPIRY_MISMATCH": "This lot already exists with another expiry date",
+        "SERIAL_INTEGER": "Equipment needs a whole quantity",
+        "SERIALS_REQUIRED": "One serial number per unit",
+        "SERIAL_DUPLICATE": "Duplicate serial number",
+        "SERIAL_EXISTS": "Serial number already registered",
+        "PROJECT_NOT_FOUND": "Project not found",
+        "CURRENCY_INVALID": "Unknown currency",
+        "NOT_PENDING": "This note is no longer pending validation",
+        "SELF_VALIDATION": "Segregation of duties: someone else must validate this note",
+        "NOT_AUTHOR": "Only the author can withdraw this note",
+        "NOT_CANCELLABLE": "This note is already rejected or cancelled",
+        "ENTRY_USED": "Cannot cancel: the stock that came in has already been used",
+        "quantity": "Quantity required",
+        "cost": "Invalid unit cost",
+        "lot": "Lot number required",
+        "expiry": "Expiry date required",
+        "expired": "Expiry date has passed",
+        "integer": "Equipment needs a whole quantity",
+        "serials": "{{expected}} serial number(s) expected, {{count}} entered"
+      },
+      "status": {
+        "PENDING": "Pending validation",
+        "VALIDATED": "Validated — in stock",
+        "REJECTED": "Rejected",
+        "CANCELLED": "Cancelled"
+      },
+      "number": "Note no.",
+      "search": "No., origin, reference, item, lot, serial number…",
+      "none": "No goods in notes",
+      "pendingCount_one": "{{count}} note pending validation — show",
+      "pendingCount_other": "{{count}} notes pending validation — show",
+      "notFound": "Goods in note not found",
+      "recordedBy": "recorded by {{name}}",
+      "pdf": "Goods in note (PDF)",
+      "pendingNotice": "Pending validation: the items are not in stock yet. Someone else (logistics or administrator) must check and validate the note.",
+      "pendingForYou": "Check the items received, then validate the note: they will then enter stock. Otherwise reject it with a reason.",
+      "selfValidation": "You recorded this note: under segregation of duties, someone else must validate it.",
+      "noMovementYet": "on validation",
+      "validate": "Validate",
+      "validateTitle": "Validate note {{number}}",
+      "validateText": "The items enter stock in the note's warehouse. Confirm that you have checked them.",
+      "validateComment": "Comment (optional)",
+      "validated": "Note validated: the items are in stock",
+      "reject": "Reject",
+      "rejectTitle": "Reject note {{number}}",
+      "rejectText": "No item enters stock. The author is notified.",
+      "rejected": "Note rejected",
+      "withdraw": "Withdraw",
+      "withdrawTitle": "Withdraw note {{number}}",
+      "withdrawText": "The note has not been validated yet: no item enters stock.",
+      "withdrawn": "Note withdrawn",
+      "cancel": "Cancel note",
+      "cancelTitle": "Cancel note {{number}}",
+      "cancelText": "The items are removed from stock (reversing entries). Not possible if some have already been issued.",
+      "cancelled": "Note cancelled: the items were removed from stock",
+      "reasonLabel": "Reason (required)",
+      "reasonRequired": "Reason required",
+      "validatedOn": "Validated by {{name}} on {{date}}",
+      "rejectedOn": "Rejected by {{name}} on {{date}} — reason: {{reason}}",
+      "withdrawnOn": "Withdrawn by {{name}} on {{date}} — reason: {{reason}}",
+      "cancelledAfterValidationOn": "Cancelled by {{name}} on {{date}} — reason: {{reason}}. The items were removed from stock."
     },
     "issue": {
       "title": "Stock issues",
@@ -3697,7 +3827,8 @@
         "IMPORT": "Opening stock import",
         "OPENING": "Existing equipment",
         "RETIRE": "Equipment retirement",
-        "OTHER": "Stock operation"
+        "OTHER": "Stock operation",
+        "ENTRY": "Goods in note"
       }
     }
   },
@@ -4753,6 +4884,53 @@
           },
           {
             "type": "h",
+            "text": "Goods in notes (without a purchase order)"
+          },
+          {
+            "type": "p",
+            "text": "To put items received without a purchase order into stock: Stock → Goods in notes → “New goods in note”. Purchases with a purchase order still go through the goods receipt (GRN)."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Entry type",
+                "When to use it"
+              ],
+              [
+                "Donation / allocation",
+                "Items received from a donor, a partner or head office, without a purchase"
+              ],
+              [
+                "Off-system purchase",
+                "Purchase paid outside procureApp (petty cash, small expense), without a purchase order"
+              ],
+              [
+                "Equipment return",
+                "Equipment returned that had not been issued with an issue note (otherwise: Stock → Returns)"
+              ],
+              [
+                "Other entry",
+                "Any other entry — a reason is required"
+              ]
+            ]
+          },
+          {
+            "type": "steps",
+            "items": [
+              "The storekeeper (Logistics, Storekeeper or administrator profiles) picks the type, the warehouse, the origin (donor, seller…), the person who delivered the items, the reference (donation letter, receipt) and, if needed, the funding project.",
+              "They add catalogue items: quantity, unit cost (optional, used for valuation), lot number and expiry date or serial numbers depending on the item.",
+              "“Send for validation”: the note is “Pending validation” and stock does not move yet. The warehouse validators are notified.",
+              "SOMEONE ELSE (Logistics or administrator with access to the warehouse) checks the items and clicks “Validate”: they enter stock (lots created, equipment registered with an asset tag). They can also “Reject” it with a reason.",
+              "Print the “Goods in note (PDF)”: it has signature boxes for the person who delivered the items, the storekeeper and the validator."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "Segregation of duties: whoever recorded a note can neither validate nor reject it, even an administrator (the attempt is logged in the audit trail). Before validation the author can “Withdraw” the note; after validation, “Cancel note” removes the items from stock — refused if some have already been issued."
+          },
+          {
+            "type": "h",
             "text": "Stock levels and movements"
           },
           {
@@ -5685,7 +5863,10 @@
       "BUDGET_LINES_IMPORTED": "Budget register import",
       "SUPPLIER_ALLOCATION_RECORDED": "Requisition split between several suppliers",
       "SUPPLIER_PORTAL_ACCESS_GRANTED": "Supplier portal access granted",
-      "PROJECT_CODE_CHANGED": "Project code changed"
+      "PROJECT_CODE_CHANGED": "Project code changed",
+      "STOCK_ENTRY_VALIDATED": "Stock entry validated",
+      "STOCK_ENTRY_REJECTED": "Stock entry rejected",
+      "STOCK_ENTRY_CANCELLED": "Stock entry cancelled"
     },
     "groups": {
       "all": "All events",

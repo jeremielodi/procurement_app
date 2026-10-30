@@ -75,8 +75,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// Limitation du débit (par utilisateur connecté, sinon par IP ; PDF / exports / imports plus bas)
+const { apiLimiter, heavyLimiter } = require('./src/middleware/rateLimit');
+if (process.env.RATE_LIMIT_DISABLED === '1') console.warn('⚠️ Limitation du débit de l\'API DÉSACTIVÉE (RATE_LIMIT_DISABLED=1)');
+
 // Routes
-app.use('/api', routes);
+app.use('/api', apiLimiter, heavyLimiter, routes);
 
 // Les fichiers uploadés ne sont PAS servis en statique : uniquement via l'API (authentifiée,
 // cloisonnée par entreprise) depuis le stockage (MinIO ou disque) — voir services/StorageService.js

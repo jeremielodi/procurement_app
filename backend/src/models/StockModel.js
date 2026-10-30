@@ -92,7 +92,7 @@ class StockModel {
                  OR lt.lot_number ILIKE $${params.length} OR g.grn_number ILIKE $${params.length} OR sis.issue_number ILIKE $${params.length}
                  OR su.serial_number ILIKE $${params.length} OR su.asset_tag ILIKE $${params.length} OR sr.return_number ILIKE $${params.length}
                  OR sct.count_number ILIKE $${params.length} OR sad.adjustment_number ILIKE $${params.length}
-                 OR mg.group_number ILIKE $${params.length})`;
+                 OR sen.entry_number ILIKE $${params.length} OR mg.group_number ILIKE $${params.length})`;
     }
     const from = `
       FROM stock_movements m
@@ -113,6 +113,7 @@ class StockModel {
       LEFT JOIN stock_returns sr ON m.source_type = 'RETURN' AND sr.id::text = m.source_id
       LEFT JOIN stock_counts sct ON m.source_type = 'COUNT' AND sct.id::text = m.source_id
       LEFT JOIN stock_adjustments sad ON m.source_type = 'ADJUSTMENT' AND sad.id::text = m.source_id
+      LEFT JOIN stock_entries sen ON m.source_type = 'ENTRY' AND sen.id::text = m.source_id
       LEFT JOIN projects fp ON fp.id = m.project_id
       ${where}`;
     const total = (await db.one(`SELECT COUNT(*)::int AS n ${from}`, params)).n;
@@ -134,6 +135,7 @@ class StockModel {
                 ELSE TRIM(COALESCE(ru.first_name, '') || ' ' || COALESCE(ru.last_name, ''))
               END AS recipient_name,
               su.serial_number, su.asset_tag, mg.id AS group_id, mg.group_number, sr.return_number, sct.count_number, sad.adjustment_number, sad.reason AS adjustment_reason,
+              sen.entry_number, sen.entry_type, sen.origin AS entry_origin,
               TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS performed_by_name
        ${from}
        ORDER BY m.performed_at DESC, m.movement_number DESC
@@ -169,7 +171,7 @@ class StockModel {
       params.push(`%${String(search).trim()}%`);
       const p = `$${params.length}`;
       where += ` AND (g.group_number ILIKE ${p} OR gr.grn_number ILIKE ${p} OR sis.issue_number ILIKE ${p} OR sr.return_number ILIKE ${p}
-                 OR sct.count_number ILIKE ${p} OR sad.adjustment_number ILIKE ${p}
+                 OR sct.count_number ILIKE ${p} OR sad.adjustment_number ILIKE ${p} OR sen.entry_number ILIKE ${p}
                  ${anyMovement(`(xi.code ILIKE ${p} OR xi.name ILIKE ${p} OR x.movement_number ILIKE ${p} OR xl.lot_number ILIKE ${p}
                    OR xu.serial_number ILIKE ${p} OR xu.asset_tag ILIKE ${p})`).replace(/^ AND /, 'OR ')})`;
     }
@@ -181,14 +183,15 @@ class StockModel {
       LEFT JOIN stock_issues sis ON g.source_type = 'ISSUE' AND sis.id::text = g.source_id
       LEFT JOIN stock_returns sr ON g.source_type = 'RETURN' AND sr.id::text = g.source_id
       LEFT JOIN stock_counts sct ON g.source_type = 'COUNT' AND sct.id::text = g.source_id
-      LEFT JOIN stock_adjustments sad ON g.source_type = 'ADJUSTMENT' AND sad.id::text = g.source_id`;
+      LEFT JOIN stock_adjustments sad ON g.source_type = 'ADJUSTMENT' AND sad.id::text = g.source_id
+      LEFT JOIN stock_entries sen ON g.source_type = 'ENTRY' AND sen.id::text = g.source_id`;
     const total = (await db.one(`SELECT COUNT(*)::int AS n ${from} ${where}`, params)).n;
     params.push(Math.min(parseInt(limit) || 50, 500), parseInt(offset) || 0);
     const rows = await db.select(
       `SELECT g.id, g.group_number, g.created_at, g.source_type, g.source_id,
               TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS performed_by_name,
               gr.grn_number, po.id AS po_id, po.po_number, sis.issue_number, sis.destination_type, sr.return_number,
-              sct.count_number, sad.adjustment_number, sad.reason AS adjustment_reason,
+              sct.count_number, sad.adjustment_number, sad.reason AS adjustment_reason, sen.entry_number, sen.entry_type,
               a.movement_count, a.item_count, a.unit_count, a.lot_count, a.types, a.warehouses, a.quantity_in, a.quantity_out,
               a.item_names, a.comment
        ${from}

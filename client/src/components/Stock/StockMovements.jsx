@@ -13,7 +13,7 @@ import { downloadBlob } from '../../utils/supplierDocs';
 const inputCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4, signDisplay: 'exceptZero' }).format(Number(n) || 0);
 const fmtDate = (d) => new Date(d).toLocaleString(getLocale(), { dateStyle: 'short', timeStyle: 'short' });
-const TYPES = ['OPENING', 'RECEIPT', 'RECEIPT_REVERSAL', 'ISSUE', 'ISSUE_REVERSAL', 'RETURN', 'TRANSFER_IN', 'TRANSFER_OUT', 'ADJUSTMENT_IN', 'ADJUSTMENT_OUT'];
+const TYPES = ['OPENING', 'RECEIPT', 'RECEIPT_REVERSAL', 'ISSUE', 'ISSUE_REVERSAL', 'RETURN', 'TRANSFER_IN', 'TRANSFER_OUT', 'ADJUSTMENT_IN', 'ADJUSTMENT_OUT', 'ENTRY', 'ENTRY_REVERSAL'];
 const VIEW_KEY = 'app_stock_movements_view';
 
 /** Document à l'origine d'un mouvement ou d'une opération (lien), sinon null */
@@ -23,6 +23,9 @@ export function SourceDocument({ m }) {
   }
   if (m.source_type === 'ISSUE' && m.issue_number) return <Link to={`/stock/issues/${m.source_id}`} className="text-blue-600 hover:underline">{m.issue_number}</Link>;
   if (m.source_type === 'RETURN' && m.return_number) return <Link to={`/stock/returns/${m.source_id}`} className="text-blue-600 hover:underline">{m.return_number}</Link>;
+  if (m.source_type === 'ENTRY' && m.entry_number) {
+    return <><Link to={`/stock/entries/${m.source_id}`} className="text-blue-600 hover:underline">{m.entry_number}</Link>{m.entry_origin && <span className="text-gray-400"> ← {m.entry_origin}</span>}</>;
+  }
   if (m.source_type === 'COUNT' && m.count_number) return <Link to={`/stock/counts/${m.source_id}`} className="text-blue-600 hover:underline">{m.count_number}</Link>;
   if (m.source_type === 'ADJUSTMENT' && m.adjustment_number) {
     return <><Link to="/stock/adjustments" className="text-blue-600 hover:underline">{m.adjustment_number}</Link>{m.adjustment_reason && <span className="text-gray-400"> · {t(`stock.adjust.reasons.${m.adjustment_reason}`)}</span>}</>;
@@ -83,7 +86,7 @@ export function MovementTable({ rows, showItem = true, showGroup = true }) {
             <td className="px-4 py-2 text-xs">
               {m.source_type === 'ISSUE' && m.issue_number
                 ? <><SourceDocument m={m} />{m.recipient_name && <span className="text-gray-400"> {Number(m.quantity) > 0 && m.movement_type === 'TRANSFER_IN' ? '←' : '→'} {m.recipient_name}</span>}</>
-                : (m.grn_number || m.return_number || m.count_number || m.adjustment_number)
+                : (m.grn_number || m.return_number || m.count_number || m.adjustment_number || m.entry_number)
                   ? <SourceDocument m={m} />
                   : (m.comment || '—')}
             </td>

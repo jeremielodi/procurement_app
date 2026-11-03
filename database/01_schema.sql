@@ -259,7 +259,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     id SERIAL PRIMARY KEY,
     po_number VARCHAR(20) UNIQUE NOT NULL,
     requisition_id UUID REFERENCES requisitions(id),
-    task_id UUID,
+    task_id VARCHAR(64),
     supplier_id INTEGER REFERENCES suppliers(id),
     order_date DATE,
     delivery_date DATE,

@@ -36,6 +36,7 @@ Le fichier `backend/src/services/CamundaService.js` montre comment appeler BpmnG
 - Auth : Bearer token ou Basic auth
 - Start process : `POST /engine-rest/v2/process-definitions/{processKey}/start`
 - External tasks : `POST /external-task/fetchAndLock` → workers en polling toutes les 5s
+- **Identifiants de tâche** (BpmnGo 2026-11) : chaînes numériques (`110901629003235328`, > 2^53 : ne jamais les convertir en nombre), plus des UUID ; instances de processus toujours en UUID. Toute colonne qui stocke un id de tâche = texte (migration `48_task_id_text.sql` pour `purchase_orders.task_id`)
 - User tasks : complétées via `POST /tasks/{taskId}/complete`, prises via `POST /tasks/{taskId}/claim { assignee }`, libérées via `POST /tasks/{taskId}/unclaim` (sans corps ; événement `TASK_UNCLAIMED`)
 - Prise en charge / libération côté app : `POST /api/tasks/:taskId/claim|unclaim` (`TaskController`). Permissions calculées (`getTaskPermissions`) : `canClaim` (groupe, non assignée), `canUnclaim` (**la personne qui l'a prise ou un admin**), `canComplete`. Les deux actions passent par une **confirmation** (`Task/ClaimTaskConfirm`, `mode="claim"|"unclaim"`) dans « Mes tâches » et l'onglet tâches de la réquisition. « Qui bloque ? » et le suivi du workflow prennent la **dernière** action TASK_CLAIMED / TASK_UNCLAIMED (tâche libérée = sans responsable, événement « libérée »)
 

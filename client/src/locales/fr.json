@@ -1561,6 +1561,11 @@
     "items": "Articles",
     "qty": "Qté",
     "itemDescription": "Description de l'article",
+    "qtyOrigin": "Réquisition : {{quantity}} × {{frequency}} (fréquence)",
+    "err": {
+      "ITEM_QUANTITY_EXCEEDS_REQUISITION": "« {{description}} » : {{quantity}} commandé(s), {{remaining}} au plus (quantité × fréquence de la réquisition, déjà commandé déduit).",
+      "ITEM_NOT_IN_REQUISITION": "Un article ne fait pas partie de cette réquisition."
+    },
     "saving": "Enregistrement…",
     "create": "Créer le bon de commande",
     "sendOk": "Commande envoyée au fournisseur",
@@ -4532,6 +4537,10 @@
               "Le bon de commande est créé directement « En attente d'approbation » : la direction reçoit la tâche d'approbation.",
               "Une fois approuvé, il est envoyé automatiquement par email au fournisseur (dans la langue de son compte), avec le PDF."
             ]
+          },
+          {
+            "type": "tip",
+            "text": "Fréquence : une ligne de réquisition « 2 × 12 (fréquence) » devient 24 sur le bon de commande, au même prix unitaire (même total). La quantité commandée ne peut pas dépasser quantité × fréquence de la réquisition (déjà commandé déduit). La réception et la facture portent ensuite sur ces 24 : un service mensuel peut être réceptionné et facturé mois par mois (livraisons partielles)."
           },
           {
             "type": "h",

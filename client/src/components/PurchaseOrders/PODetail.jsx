@@ -317,6 +317,11 @@ export default function PODetail() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-800 text-center">
                         {item.quantity}
+                        {item.requisition_frequency && item.requisition_frequency !== 1 && (
+                          <p className="text-xs text-gray-500" data-testid="po-item-qty-origin">
+                            {t('po.qtyOrigin', { quantity: item.requisition_quantity, frequency: item.requisition_frequency })}
+                          </p>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-800 text-right">
                         {formatCurrency(item.unit_price, po.currency)}

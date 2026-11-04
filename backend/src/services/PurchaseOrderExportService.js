@@ -183,7 +183,7 @@ class PurchaseOrderExportService {
     {{#each items}}
     <tr class="data">
       <td class="c no">{{this.no}}</td>
-      <td class="c">{{this.qty}}</td>
+      <td class="c">{{this.qty}}{{#if this.qtyOrigin}}<div class="spec">({{this.qtyOrigin}})</div>{{/if}}</td>
       <td class="c">{{this.unitLabel}}</td>
       <td>{{this.item_description}}{{#if this.specifications}}<div class="spec">{{this.specifications}}</div>{{/if}}</td>
       <td class="c">{{@root.po.currency}}</td>
@@ -287,6 +287,9 @@ class PurchaseOrderExportService {
       ...it,
       no: index + 1,
       qty: qty(it.quantity),
+      // Origine (information) : quantité × fréquence de la réquisition
+      qtyOrigin: it.requisition_frequency && it.requisition_frequency !== 1
+        ? `${qty(it.requisition_quantity)} × ${qty(it.requisition_frequency)}` : '',
       unitLabel: it.item_unit || it.unit || '',
       unitPrice: amount(it.unit_price),
       total: amount(it.total_amount ?? (parseFloat(it.quantity) || 0) * (parseFloat(it.unit_price) || 0)),

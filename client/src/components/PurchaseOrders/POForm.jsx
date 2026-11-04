@@ -76,7 +76,9 @@ export default function POForm() {
         setShippingAddress(req.delivery_address || '');
         const reqItems = (req.items || []).filter(it => !lotItemIds || lotItemIds.has(String(it.id))).map(it => ({
           description: it.item_description || it.description || '',
-          quantity: Number(it.quantity) || 1,
+          // Quantité commandée = quantité × fréquence de la réquisition (même total, au même prix unitaire)
+          quantity: (Number(it.quantity) || 1) * (Number(it.frequency) || 1),
+          origin: Number(it.frequency) > 0 && Number(it.frequency) !== 1 ? { quantity: Number(it.quantity), frequency: Number(it.frequency) } : null,
           // Part issue d'un appel d'offres attribué par article : prix de l'offre retenue
           unitPrice: Number(ownLot?.items.find(li => String(li.id) === String(it.id))?.awarded_unit_price ?? it.unit_price) || 0,
           specifications: it.specifications || '',
@@ -127,7 +129,7 @@ export default function POForm() {
         deliveryTerms,
         currency: currency.code,
         totalAmount,
-        items: items.map(({ stockItem, ...it }) => ({ ...it, stockItemId: stockItem?.id || null }))
+        items: items.map(({ stockItem, origin, ...it }) => ({ ...it, stockItemId: stockItem?.id || null }))
       });
 
       if (res.success) {
@@ -138,10 +140,12 @@ export default function POForm() {
         toast.error(res.message || t('po.createError'));
       }
     } catch (err) {
-      const code = err.response?.data?.code;
+      const { code, details } = err.response?.data || {};
       toast.error(['LOT_SUPPLIER_MISMATCH', 'LOT_ITEMS_MISMATCH', 'LOT_ALREADY_ORDERED'].includes(code)
         ? t(`split.err.${code}`)
-        : err.response?.data?.message || t('po.createError'));
+        : ['ITEM_QUANTITY_EXCEEDS_REQUISITION', 'ITEM_NOT_IN_REQUISITION'].includes(code)
+          ? t(`po.err.${code}`, details || {})
+          : err.response?.data?.message || t('po.createError'));
     } finally {
       setLoading(false);
     }
@@ -344,6 +348,11 @@ export default function POForm() {
                         value={item.quantity}
                         onChange={e => updateItem(i, 'quantity', e.target.value)}
                       />
+                      {item.origin && (
+                        <p className="text-xs text-gray-500 mt-1 whitespace-nowrap" data-testid="po-item-qty-origin">
+                          {t('po.qtyOrigin', { quantity: item.origin.quantity, frequency: item.origin.frequency })}
+                        </p>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       <input

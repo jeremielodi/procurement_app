@@ -25,6 +25,8 @@ const PO_ITEMS_SQL = () => `
          d.quantity_rejected::float8 AS delivered_rejected, d.quantity_remaining::float8 AS quantity_remaining,
          d.receipt_count::int AS receipt_count, d.last_receipt_date,
          si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable, si.track_lots, si.track_expiry, si.track_serials,
+         -- origine de la quantité (information) : quantité × fréquence de la ligne de réquisition
+         ri.quantity::float8 AS requisition_quantity, COALESCE(ri.frequency, 1)::float8 AS requisition_frequency,
          COALESCE(${localizedSql('un')}, si.unit) AS item_unit -- unité de mesure : celle de la réquisition, sinon du catalogue
   FROM purchase_order_items pi
   JOIN v_po_item_delivery d ON d.po_item_id = pi.id

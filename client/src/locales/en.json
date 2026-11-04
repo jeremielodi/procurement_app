@@ -1561,6 +1561,11 @@
     "items": "Items",
     "qty": "Qty",
     "itemDescription": "Item description",
+    "qtyOrigin": "Requisition: {{quantity}} × {{frequency}} (frequency)",
+    "err": {
+      "ITEM_QUANTITY_EXCEEDS_REQUISITION": "\"{{description}}\": {{quantity}} ordered, {{remaining}} at most (requisition quantity × frequency, less what is already ordered).",
+      "ITEM_NOT_IN_REQUISITION": "An item does not belong to this requisition."
+    },
     "saving": "Saving…",
     "create": "Create purchase order",
     "sendOk": "Order sent to the supplier",
@@ -4532,6 +4537,10 @@
               "The purchase order is created directly as \"Pending approval\": management receives the approval task.",
               "Once approved, it is sent automatically by email to the supplier (in the language of their account), with the PDF."
             ]
+          },
+          {
+            "type": "tip",
+            "text": "Frequency: a requisition line \"2 × 12 (frequency)\" becomes 24 on the purchase order, at the same unit price (same total). The ordered quantity cannot exceed the requisition quantity × frequency (less what is already ordered). Receipts and invoices then cover these 24: a monthly service can be received and invoiced month by month (partial deliveries)."
           },
           {
             "type": "h",

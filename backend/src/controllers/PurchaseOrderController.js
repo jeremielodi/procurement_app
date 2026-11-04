@@ -33,6 +33,42 @@ async function lotForNewOrder(requisition, { taskId, supplierId }) {
   return lot;
 }
 
+/**
+ * Lignes reprises d'une réquisition : la ligne doit appartenir à CETTE réquisition et la quantité commandée
+ * (cumul des bons actifs) ne dépasse pas quantité × fréquence de la réquisition. null si tout va bien, sinon { error }
+ */
+async function checkRequisitionQuantities(requisitionId, items) {
+  const wanted = new Map();
+  for (const it of items || []) {
+    if (!it.requisitionItemId) continue;
+    const key = String(it.requisitionItemId);
+    wanted.set(key, (wanted.get(key) || 0) + (Number(it.quantity) || 0));
+  }
+  if (!wanted.size) return null;
+  const rows = await db.select(
+    `SELECT ri.id, ri.item_description, (ri.quantity * COALESCE(ri.frequency, 1))::float8 AS allowed,
+            COALESCE((SELECT SUM(poi.quantity) FROM purchase_order_items poi
+                        JOIN purchase_orders po ON po.id = poi.purchase_order_id
+                       WHERE poi.requisition_item_id = ri.id
+                         AND po.status NOT IN ('PO_REJECTED', 'PO_CANCELLED', 'CANCELLED', 'REJECTED')), 0)::float8 AS ordered
+       FROM requisition_items ri
+      WHERE ri.requisition_id = $1 AND ri.id = ANY($2::int[])`,
+    [requisitionId, [...wanted.keys()].map(Number)]
+  );
+  const err = (code, message, details) => ({ error: { status: 400, code, message, details } });
+  for (const [id, quantity] of wanted) {
+    const row = rows.find(r => String(r.id) === id);
+    if (!row) return err('ITEM_NOT_IN_REQUISITION', 'Article absent de cette réquisition', { requisitionItemId: id });
+    const remaining = row.allowed - row.ordered;
+    if (quantity > remaining + 0.0001) {
+      return err('ITEM_QUANTITY_EXCEEDS_REQUISITION',
+        `« ${row.item_description} » : ${quantity} commandé(s), ${remaining} au plus (quantité × fréquence de la réquisition)`,
+        { requisitionItemId: id, description: row.item_description, quantity, allowed: row.allowed, ordered: row.ordered, remaining });
+    }
+  }
+  return null;
+}
+
 /** Erreur métier { status, code } (séparation des tâches…) sinon 500 */
 /** Texte libre facultatif (conditions, instructions) : vide → null */
 const clip = (v) => String(v ?? '').trim().slice(0, 2000) || null;
@@ -79,6 +115,13 @@ class PurchaseOrderController {
         if (given.length !== expected.length || given.some((id, i) => id !== expected[i])) {
           return res.status(400).json({ success: false, code: 'LOT_ITEMS_MISMATCH', message: `Le bon de commande de ${lot.supplier_name} reprend exactement les articles de sa part` });
         }
+      }
+
+      // Quantité commandée ≤ quantité × fréquence de la ligne de réquisition (cumul des bons actifs)
+      const qtyCheck = await checkRequisitionQuantities(requisition.id, items);
+      if (qtyCheck?.error) {
+        const { status, code, message, details } = qtyCheck.error;
+        return res.status(status).json({ success: false, code, message, details });
       }
 
       const result = await purchaseOrderModel.create({

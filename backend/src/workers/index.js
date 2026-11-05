@@ -264,7 +264,7 @@ async function processCheckBudget(task) {
         budgetLineCode: group.budgetLineCode,
         budgetLineDescription: group.budgetLineDescription,
         requestedAmount: group.totalAmount,
-        availableAmount: budgetCheck.availableAmount
+        availableAmount: Number(budgetCheck.availableAmount)
       });
     }
 
@@ -348,7 +348,19 @@ async function processCheckBudget(task) {
   return {
     budgetAvailable: true,
     allBudgetsAvailable: true,
-    budgetResults,
+    // Remis à vide : après un ajustement, la valeur de la vérification échouée restait dans le processus
+    insufficientBudgets: '[]',
+    // Chaîne JSON (comme items, offers, insufficientBudgets) : un tableau d'objets imbriqués envoyé tel quel
+    // s'affiche « [object Object] » côté BpmnGo ; une ligne par ligne budgétaire, sans le détail des articles
+    budgetResults: JSON.stringify(budgetResults.map(b => ({
+      budgetLineId: b.budgetLineId,
+      budgetLineCode: b.budgetLineCode,
+      budgetLineDescription: b.budgetLineDescription,
+      requestedAmount: b.totalAmount,
+      availableAmount: Number(b.availableAmount),
+      available: b.available,
+      itemCount: b.items.length
+    }))),
     approvalLevel: approval.level,
     estimatedAmount: approval.amount,
     approvalN1Max: approval.policy.n1Max,

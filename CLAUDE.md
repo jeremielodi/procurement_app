@@ -529,6 +529,9 @@ Tous préfixés `po_` pour éviter les conflits avec les helpers de `Requisition
 - Seule exception : le sélecteur de langue (`LanguageSwitcher`, variante `select`). Nouveau code : utiliser `SearchSelect` plutôt que `<select>`
 - Tests e2e : Vite de test **sans proxy WebSocket** (`/socket.io`), sinon des `ECONNABORTED` arrêtent le serveur Vite en cours de campagne
 
+## Base neuve (docker-entrypoint-initdb.d)
+- `database/` est monté dans `/docker-entrypoint-initdb.d` : une base **neuve** exécute `01_…` → `NN_…`, puis `clean.sql`, `data.sql` (crée les profils) et en dernier **`zz_reapply_grants.sh`**. Les migrations s'exécutant avant `data.sql`, leurs attributions de droits (`WHERE EXISTS (SELECT 1 FROM profiles …)`) étaient ignorées (2026-11-06 : logistique sans stock ni réception, finance sans factures…). `zz_reapply_grants.sh` rejoue, après `data.sql` et dans l'ordre, les seules instructions `INSERT INTO permissions|profiles|profile_permissions` / `DELETE FROM profile_permissions` (début de ligne, jusqu'au `;` de fin de ligne) → même état qu'une base mise à jour migration par migration. **Nouvelle migration qui attribue des droits** : instruction idempotente en début de ligne (pas dans un bloc `DO`), sinon elle ne sera pas rejouée sur une base neuve. Les bases existantes ne sont pas concernées
+
 ## Conventions de code
 - Backend : CommonJS (require/module.exports), classes pour les models
 - Modèles : singleton exporté (`module.exports = new XxxModel()`)

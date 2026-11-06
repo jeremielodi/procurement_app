@@ -25,6 +25,22 @@ async function saveApprovalPolicy(req, projectId) {
   });
 }
 
+/**
+ * Code initial des n° d'inventaire (inventoryPrefix, vide = INVT) : enregistré et tracé s'il change ; absent = inchangé.
+ * Seuls les équipements créés ensuite sont concernés (les n° déjà attribués ne changent pas).
+ */
+async function saveInventoryPrefix(req, projectId) {
+  if (!('inventoryPrefix' in (req.body || {}))) return;
+  const prefix = projectModel.checkInventoryPrefix(req.body.inventoryPrefix);
+  const before = await db.one('SELECT code, name, inventory_prefix FROM projects WHERE id = $1', [projectId]);
+  if (!before || (before.inventory_prefix || null) === prefix) return;
+  await db.exec('UPDATE projects SET inventory_prefix = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [projectId, prefix]);
+  await audit(req, AUDIT.PROJECT_INVENTORY_PREFIX_CHANGED, {
+    entity: { type: 'project', id: projectId, label: `${before.code} — ${before.name}` },
+    oldValue: { inventoryPrefix: before.inventory_prefix || null }, details: { inventoryPrefix: prefix },
+  });
+}
+
 /** Libellés pour le journal d'audit : « CODE — Nom » du projet, email du membre */
 async function auditLabels(projectId, userId) {
   const [project, user] = await Promise.all([
@@ -64,10 +80,12 @@ class ProjectController {
       
       // Seuils contrôlés avant la création (400 APPROVAL_POLICY_INVALID)
       if ('approvalN1Max' in req.body || 'approvalN2Max' in req.body) approvalPolicy.parsePolicy(req.body.approvalN1Max, req.body.approvalN2Max);
+      if ('inventoryPrefix' in req.body) projectModel.checkInventoryPrefix(req.body.inventoryPrefix); // 400 avant la création
       const result = await projectModel.create({
         code, name, description, projectManagerId, startDate, endDate, createdBy
       });
       await saveApprovalPolicy(req, result.id);
+      await saveInventoryPrefix(req, result.id);
 
       res.status(201).json({ success: true, data: result });
     } catch (error) {
@@ -81,6 +99,7 @@ class ProjectController {
       const { code, name, description, projectManagerId, status, startDate, endDate, isActive } = req.body;
       
       if ('approvalN1Max' in req.body || 'approvalN2Max' in req.body) approvalPolicy.parsePolicy(req.body.approvalN1Max, req.body.approvalN2Max);
+      if ('inventoryPrefix' in req.body) projectModel.checkInventoryPrefix(req.body.inventoryPrefix);
       const before = await projectModel.findById(id);
       await projectModel.update(id, { code, name, description, projectManagerId, status, startDate, endDate, isActive });
       // Changement de code : tracé (les documents restent liés au projet par son identifiant)
@@ -92,6 +111,7 @@ class ProjectController {
         });
       }
       await saveApprovalPolicy(req, id);
+      await saveInventoryPrefix(req, id);
       res.json({ success: true, message: 'Projet mis à jour' });
     } catch (error) {
       sendError(res, error);

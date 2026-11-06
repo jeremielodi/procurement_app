@@ -165,7 +165,7 @@ test.describe.serial('API › GRN : entrée en stock après la réception', () =
     expect(units.map(u => u.status)).toEqual(['IN_STOCK', 'IN_STOCK']);
     // N° d'inventaire envoyé ignoré : attribué automatiquement à chaque unité
     expect(units.map(u => u.asset_tag)).not.toContain(`INV-${stamp}`);
-    for (const u of units) expect(u.asset_tag).toMatch(/^INV-\d{4}-\d{5}$/);
+    for (const u of units) expect(u.asset_tag).toMatch(/^(?!INV-)[A-Z0-9]+(-[A-Z0-9]+)*-\d{4}-\d{5}$/);
   });
 
   test('Annulation du GRN : les entrées faites après coup sont reprises ; plus d\'entrée possible', async ({ request }) => {

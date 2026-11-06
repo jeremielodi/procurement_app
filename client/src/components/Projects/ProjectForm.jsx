@@ -8,6 +8,7 @@ import SearchSelect from '../Common/SearchSelect';
 import ApprovalPolicyFields from '../Common/ApprovalPolicyFields';
 import { enterpriseService } from '../../services/enterpriseService';
 import { policyError } from '../../utils/approvalPolicy';
+import { assetTagExample } from './ProjectDetail';
 
 export default function ProjectForm({ project, onClose }) {
   const [formData, setFormData] = useState({
@@ -17,7 +18,8 @@ export default function ProjectForm({ project, onClose }) {
     projectManagerId: '',
     startDate: null,
     endDate: null,
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    inventoryPrefix: '' // code initial des n° d'inventaire (vide = INVT)
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Seuils d'approbation : politique de l'entreprise (héritée) ou propre au projet
@@ -46,7 +48,8 @@ export default function ProjectForm({ project, onClose }) {
         startDate: project.start_date,
         endDate: project.end_date,
         isActive: project.is_active,
-        status: project.status || 'ACTIVE'
+        status: project.status || 'ACTIVE',
+        inventoryPrefix: project.inventory_prefix || ''
       });
       setPolicy(project.approval_n1_max != null
         ? { custom: true, n1Max: Number(project.approval_n1_max), n2Max: Number(project.approval_n2_max) }
@@ -64,6 +67,7 @@ export default function ProjectForm({ project, onClose }) {
       ...formData,
       approvalN1Max: policy.custom ? Number(policy.n1Max) : null,
       approvalN2Max: policy.custom ? Number(policy.n2Max) : null,
+      inventoryPrefix: formData.inventoryPrefix.trim() || null,
     };
     setIsSubmitting(true);
     try {
@@ -112,6 +116,20 @@ export default function ProjectForm({ project, onClose }) {
             required
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">{t('projects.inventoryPrefix')}</label>
+        <input
+          type="text"
+          value={formData.inventoryPrefix}
+          onChange={(e) => setFormData({ ...formData, inventoryPrefix: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') })}
+          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+          maxLength={20}
+          data-testid="project-inventory-prefix"
+          placeholder={t('projects.inventoryPrefixPlaceholder')}
+        />
+        <p className="mt-1 text-xs text-gray-500">{t('projects.inventoryPrefixHint', { example: assetTagExample(formData.inventoryPrefix) })}</p>
       </div>
 
       <div>

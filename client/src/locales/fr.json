@@ -2923,9 +2923,15 @@
       "NOT_MEMBER": "Cet utilisateur n'est pas membre du projet",
       "PROJECT_CODE_REQUIRED": "Le code du projet est obligatoire.",
       "PROJECT_CODE_TOO_LONG": "Code du projet : 20 caractères maximum.",
-      "PROJECT_CODE_EXISTS": "Ce code est déjà utilisé par un autre projet de votre entreprise."
+      "PROJECT_CODE_EXISTS": "Ce code est déjà utilisé par un autre projet de votre entreprise.",
+      "INVENTORY_PREFIX_INVALID": "Code initial inventaire : lettres et chiffres séparés par des tirets, 20 caractères maximum (ex. INVT-MSH).",
+      "INVENTORY_PREFIX_RESERVED": "Code initial inventaire : ce début est réservé à un type de document (INV = factures, PO, GRN…)."
     },
-    "codeChangeHint": "Les réquisitions, budgets, stocks et membres restent rattachés au projet. Utilisez le nouveau code dans vos prochains fichiers d'import."
+    "codeChangeHint": "Les réquisitions, budgets, stocks et membres restent rattachés au projet. Utilisez le nouveau code dans vos prochains fichiers d'import.",
+    "inventoryPrefix": "Code initial inventaire",
+    "inventoryPrefixPlaceholder": "INVT",
+    "inventoryPrefixHint": "Début des n° d'inventaire des équipements financés par ce projet : {{example}}. Vide = INVT. Les n° déjà attribués ne changent pas.",
+    "inventoryPrefixLine": "Code initial inventaire : {{prefix}} (ex. {{example}})"
   },
   "enterprises": {
     "notFound": "Entreprise introuvable",
@@ -3126,7 +3132,7 @@
       "restockJustification": "Articles sous le stock minimum (stock / minimum) : {{list}}",
       "reorderQuantity": "Quantité de réapprovisionnement",
       "reorderHint": "Facultatif : quantité proposée sous le minimum",
-      "trackSerialsHint": "À chaque réception (bon de réception), un n° de série sera demandé pour chaque unité acceptée (un par ligne) ; le n° d'inventaire est attribué automatiquement (INV-AAAA-NNNNN). Équipements déjà en stock : Équipements › « Enregistrer le parc existant »."
+      "trackSerialsHint": "À chaque réception (bon de réception), un n° de série sera demandé pour chaque unité acceptée (un par ligne) ; le n° d'inventaire est attribué automatiquement (INVT-AAAA-NNNNN, ou le code initial inventaire du projet). Équipements déjà en stock : Équipements › « Enregistrer le parc existant »."
     },
     "mv": {
       "title": "Mouvements de stock",
@@ -4599,7 +4605,7 @@
               "Avant chaque réception, le demandeur a validé la livraison (acceptation de service, SAN). Ouvrez ensuite la tâche « Bon de réception (GRN) » : le formulaire reprend la commande. Pour chaque ligne, la quantité proposée est le reste à livrer.",
               "Indiquez la quantité reçue et la quantité rejetée (avec son motif) : l'acceptée est calculée (reçu − rejeté).",
               "Choisissez le dépôt de destination si au moins un article est stockable. Si vous n'avez accès qu'à un dépôt, il est choisi d'office ; si vous en avez plusieurs, le choix est obligatoire.",
-              "Complétez les informations demandées selon l'article : n° de lot et date de péremption, ou un n° de série par unité pour un équipement (une ligne par appareil). Le n° d'inventaire n'est jamais saisi : il est attribué automatiquement (INV-AAAA-NNNNN).",
+              "Complétez les informations demandées selon l'article : n° de lot et date de péremption, ou un n° de série par unité pour un équipement (une ligne par appareil). Le n° d'inventaire n'est jamais saisi : il est attribué automatiquement (INVT-AAAA-NNNNN, ou le code initial inventaire du projet).",
               "Enregistrez : le bon de réception est créé, la quantité acceptée entre en stock (un mouvement par ligne ou par appareil) et le circuit avance."
             ]
           },
@@ -5177,7 +5183,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "Un équipement (ordinateur, téléphone, GPS, appareil photo…) reste la propriété de l'entreprise : il est affecté à un employé puis récupéré. Chaque appareil est suivi par son n° de série et par un n° d'inventaire attribué automatiquement à l'entrée en stock (INV-AAAA-NNNNN). Seul « Enregistrer le parc existant » permet de reprendre une étiquette déjà collée (« n° de série ; n° d'inventaire »)."
+            "text": "Un équipement (ordinateur, téléphone, GPS, appareil photo…) reste la propriété de l'entreprise : il est affecté à un employé puis récupéré. Chaque appareil est suivi par son n° de série et par un n° d'inventaire attribué automatiquement à l'entrée en stock (INVT-AAAA-NNNNN, ou le code initial inventaire du projet). Seul « Enregistrer le parc existant » permet de reprendre une étiquette déjà collée (« n° de série ; n° d'inventaire »)."
           },
           {
             "type": "h",
@@ -5877,6 +5883,7 @@
       "SUPPLIER_ALLOCATION_RECORDED": "Réquisition répartie entre plusieurs fournisseurs",
       "SUPPLIER_PORTAL_ACCESS_GRANTED": "Accès au portail fournisseur donné",
       "PROJECT_CODE_CHANGED": "Code de projet modifié",
+      "PROJECT_INVENTORY_PREFIX_CHANGED": "Code initial inventaire du projet modifié",
       "STOCK_ENTRY_VALIDATED": "Bon d'entrée validé",
       "STOCK_ENTRY_REJECTED": "Bon d'entrée refusé",
       "STOCK_ENTRY_CANCELLED": "Bon d'entrée annulé"
@@ -6124,12 +6131,12 @@
   "serialsHelp": {
     "title": "Comment saisir les n° de série",
     "onePerLine": "Un équipement par ligne (touche Entrée entre deux numéros), autant de lignes que d'unités.",
-    "format": "Format : n° de série ; n° d'inventaire — le n° d'inventaire (étiquette interne) est facultatif : sans saisie, il est attribué automatiquement (INV-AAAA-NNNNN).",
+    "format": "Format : n° de série ; n° d'inventaire — le n° d'inventaire (étiquette interne) est facultatif : sans saisie, il est attribué automatiquement (INVT-AAAA-NNNNN, ou le code initial inventaire du projet).",
     "unique": "Un n° de série ne peut pas être enregistré deux fois pour le même article ; un n° d'inventaire est unique dans l'entreprise.",
-    "example": "5CD1234XYZ ; INV-0042\n5CD1234XZA ; INV-0043\n5CD1234XZB",
+    "example": "5CD1234XYZ ; INVT-0042\n5CD1234XZA ; INVT-0043\n5CD1234XZB",
     "counter": "{{count}} / {{expected}} saisi(s)",
     "entered": "{{count}} saisi(s)",
-    "autoTag": "Saisissez uniquement le n° de série : le n° d'inventaire est attribué automatiquement (INV-AAAA-NNNNN).",
+    "autoTag": "Saisissez uniquement le n° de série : le n° d'inventaire est attribué automatiquement (INVT-AAAA-NNNNN, ou le code initial inventaire du projet).",
     "exampleSerials": "5CD1234XYZ\n5CD1234XZA\n5CD1234XZB",
     "uniqueSerial": "Un n° de série ne peut pas être enregistré deux fois pour le même article."
   },

@@ -206,7 +206,7 @@ class GoodsReceiptModel {
   /**
    * Contrôles d'une ligne qui entre en stock : lot / péremption obligatoires selon l'article, lot périmé refusé ;
    * équipements : un n° de série par unité, sans doublon ni n° déjà connu. Le n° d'inventaire n'est jamais saisi à la
-   * réception : attribué par le trigger trg_stock_unit_asset_tag (INV-AAAA-NNNNN).
+   * réception : attribué par le trigger trg_stock_unit_asset_tag (code initial inventaire du projet, INVT par défaut : INVT-AAAA-NNNNN).
    * → n° de série normalisés [{ serialNumber, assetTag: null }] ([] si l'article n'est pas suivi par n° de série)
    */
   async stockLineChecks(tx, { stockItem, accepted, lotNumber, expiryDate, serials: rawSerials, enterpriseId, index }) {

@@ -5,6 +5,9 @@ const { v4: uuidv4 } = require('uuid');
 
 const fail = (status, code, message) => Object.assign(new Error(message), { status, code });
 
+// Préfixes des numéros de documents : interdits comme code initial d'inventaire
+const RESERVED_PREFIXES = ['INV', 'REQ', 'PO', 'GRN', 'SAN', 'PAY', 'SOR', 'RET', 'CNT', 'AJU', 'ENT', 'MVT', 'MVG'];
+
 class ProjectModel {
   /**
    * Code de projet normalisé (majuscules, sans espaces autour), unique par entreprise sans tenir compte de la casse.
@@ -19,6 +22,24 @@ class ProjectModel {
     if (enterpriseId) { params.push(enterpriseId); sql += ` AND p.enterprise_id = $${params.length}`; } else sql += tenant.filter('p.enterprise_id', params);
     if (await db.one(sql, params)) throw fail(409, 'PROJECT_CODE_EXISTS', `Le code ${value} est déjà utilisé par un autre projet`);
     return value;
+  }
+
+  /**
+   * Code initial des n° d'inventaire des équipements financés par le projet (migration 50) : majuscules, lettres /
+   * chiffres séparés par des tirets, 20 car. max (ex. INVT-MSH) ; vide → null (INVT par défaut). Les préfixes des
+   * documents (INV = factures, PO, GRN…) sont refusés : un n° d'inventaire ne doit pas ressembler à un document.
+   * 400 INVENTORY_PREFIX_INVALID / INVENTORY_PREFIX_RESERVED.
+   */
+  checkInventoryPrefix(value) {
+    const prefix = String(value ?? '').trim().toUpperCase();
+    if (!prefix) return null;
+    if (prefix.length > 20 || !/^[A-Z0-9]+(-[A-Z0-9]+)*$/.test(prefix)) {
+      throw fail(400, 'INVENTORY_PREFIX_INVALID', 'Code initial inventaire : lettres et chiffres séparés par des tirets, 20 caractères maximum (ex. INVT-MSH)');
+    }
+    if (RESERVED_PREFIXES.includes(prefix.split('-')[0])) {
+      throw fail(400, 'INVENTORY_PREFIX_RESERVED', `Code initial inventaire : ${prefix.split('-')[0]} est réservé à un type de document`);
+    }
+    return prefix;
   }
 
   async create(data) {

@@ -953,6 +953,7 @@
     "SUPPLIER_ALLOCATION_RECORDED": "Réquisition répartie entre plusieurs fournisseurs",
     "SUPPLIER_PORTAL_ACCESS_GRANTED": "Accès au portail fournisseur donné",
     "PROJECT_CODE_CHANGED": "Code de projet modifié",
+    "PROJECT_INVENTORY_PREFIX_CHANGED": "Code initial inventaire du projet modifié",
     "STOCK_ENTRY_VALIDATED": "Bon d'entrée validé",
     "STOCK_ENTRY_REJECTED": "Bon d'entrée refusé",
     "STOCK_ENTRY_CANCELLED": "Bon d'entrée annulé"

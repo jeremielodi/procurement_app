@@ -118,7 +118,7 @@ test.describe.serial('API › Bons d\'entrée en stock', () => {
     expect(e.lines.every(l => l.movement_number)).toBe(true);
     const lap = e.lines.find(l => l.stock_item_id === laptop.id);
     expect(lap.units).toHaveLength(2);
-    expect(lap.units.every(u => /^INV-\d{4}-\d{5}$/.test(u.asset_tag) && u.status === 'IN_STOCK')).toBe(true);
+    expect(lap.units.every(u => /^(?!INV-)[A-Z0-9]+(-[A-Z0-9]+)*-\d{4}-\d{5}$/.test(u.asset_tag) && u.status === 'IN_STOCK')).toBe(true);
 
     expect(await balance(request, fuel.id)).toBe(200);
     expect(await balance(request, med.id)).toBe(40);

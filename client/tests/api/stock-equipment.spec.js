@@ -80,7 +80,7 @@ test.describe.serial('API › Équipements affectés et retours', () => {
     const laptopLine = detail.items.find(i => i.po_item_id === poLines.laptop.id);
     expect(laptopLine.serials).toEqual([S(1), S(2), S(3)]);
     // N° d'inventaire : jamais saisi à la réception — celui envoyé est ignoré, chaque unité en reçoit un automatiquement
-    for (const k of [0, 1, 2]) expect(laptopLine.asset_tags[k]).toMatch(/^INV-\d{4}-\d{5}$/);
+    for (const k of [0, 1, 2]) expect(laptopLine.asset_tags[k]).toMatch(/^(?!INV-)[A-Z0-9]+(-[A-Z0-9]+)*-\d{4}-\d{5}$/);
     expect(new Set(laptopLine.asset_tags).size).toBe(3);
     receiptTag = laptopLine.asset_tags[1];
     units = await unitsOf(request);

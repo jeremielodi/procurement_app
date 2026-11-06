@@ -953,6 +953,7 @@
     "SUPPLIER_ALLOCATION_RECORDED": "Requisition split between several suppliers",
     "SUPPLIER_PORTAL_ACCESS_GRANTED": "Supplier portal access granted",
     "PROJECT_CODE_CHANGED": "Project code changed",
+    "PROJECT_INVENTORY_PREFIX_CHANGED": "Project initial inventory code changed",
     "STOCK_ENTRY_VALIDATED": "Stock entry validated",
     "STOCK_ENTRY_REJECTED": "Stock entry rejected",
     "STOCK_ENTRY_CANCELLED": "Stock entry cancelled"

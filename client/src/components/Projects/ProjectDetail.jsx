@@ -1,13 +1,16 @@
 // src/components/Projects/ProjectDetail.jsx
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, UserMinus, Users, Calendar, Building2, User, Check, Globe, Info, ShieldCheck } from 'lucide-react';
+import { UserPlus, UserMinus, Users, Calendar, Building2, User, Check, Globe, Info, ShieldCheck, Tag } from 'lucide-react';
 import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
 import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 import { policySummary } from '../../utils/approvalPolicy';
 import UserAvatar from '../Common/UserAvatar';
+
+/** Exemple de n° d'inventaire d'un équipement financé par le projet (code initial, INVT par défaut) */
+export const assetTagExample = (prefix) => `${(prefix || '').trim().toUpperCase() || 'INVT'}-${new Date().getFullYear()}-00001`;
 
 const apiError = (error) => {
   const code = error?.response?.data?.code;
@@ -129,6 +132,10 @@ export default function ProjectDetail({ project, onClose }) {
               <span>{t('approvalPolicy.projectLine', { summary: policySummary(approvalPolicy), source: t(`approvalPolicy.source.${approvalPolicy.source}`) })}</span>
             </div>
           )}
+          <div className="flex items-center gap-2 text-gray-500 col-span-2" data-testid="project-inventory-prefix">
+            <Tag size={14} />
+            <span>{t('projects.inventoryPrefixLine', { prefix: project?.inventory_prefix || 'INVT', example: assetTagExample(project?.inventory_prefix) })}</span>
+          </div>
           {(project?.start_date || project?.end_date) && (
             <div className="flex items-center gap-2 text-gray-500 col-span-2">
               <Calendar size={14} />

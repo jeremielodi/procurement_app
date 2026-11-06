@@ -2971,7 +2971,8 @@
     "inventoryPrefixPlaceholder": "INVT",
     "inventoryPrefixHint": "Début des n° d'inventaire des équipements financés par ce projet : {{example}}. Vide = INVT. Les n° déjà attribués ne changent pas.",
     "inventoryPrefixLine": "Code initial inventaire : {{prefix}} (ex. {{example}})",
-    "projectManagerHelp": "Budget holder : il valide seul les réquisitions du projet"
+    "projectManagerHelp": "Budget holder : il valide seul les réquisitions du projet",
+    "managerUnknown": "Utilisateur sans nom"
   },
   "enterprises": {
     "notFound": "Entreprise introuvable",

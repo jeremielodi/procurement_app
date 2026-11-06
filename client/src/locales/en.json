@@ -2971,7 +2971,8 @@
     "inventoryPrefixPlaceholder": "INVT",
     "inventoryPrefixHint": "Start of the asset tags of equipment funded by this project: {{example}}. Empty = INVT. Tags already assigned do not change.",
     "inventoryPrefixLine": "Initial inventory code: {{prefix}} (e.g. {{example}})",
-    "projectManagerHelp": "Budget holder: approves the project's requisitions alone"
+    "projectManagerHelp": "Budget holder: approves the project's requisitions alone",
+    "managerUnknown": "User without a name"
   },
   "enterprises": {
     "notFound": "Company not found",

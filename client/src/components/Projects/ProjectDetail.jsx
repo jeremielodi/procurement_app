@@ -124,7 +124,7 @@ export default function ProjectDetail({ project, onClose }) {
           </div>
           <div className="flex items-center gap-2 text-gray-500">
             <User size={14} />
-            <span>{t('projects.manager', { name: `${project?.manager_first_name || ''} ${project?.manager_last_name || ''}`.trim() })}</span>
+            <span>{t('projects.manager', { name: [project?.manager_first_name, project?.manager_last_name].filter(Boolean).join(' ').trim() || project?.manager_email || (project?.project_manager_id ? t('projects.managerUnknown') : t('departments.unassigned')) })}</span>
           </div>
           {approvalPolicy && (
             <div className="flex items-start gap-2 text-gray-500 col-span-2" data-testid="project-approval-policy-summary">

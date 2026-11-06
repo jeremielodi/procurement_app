@@ -43,6 +43,11 @@ export default function ProjectList() {
   if(projects.data) {
     projects = projects.data;
   }
+  // Chef de projet : défini dès que project_manager_id l'est (prénom ou nom parfois vides → email)
+  const managerName = (p) => (p.project_manager_id
+    ? [p.manager_first_name, p.manager_last_name].filter(Boolean).join(' ').trim() || p.manager_email || t('projects.managerUnknown')
+    : t('departments.unassigned'));
+
   const getDepartmentName = (deptId) => {
     const dept = departments.find(d => d.id === deptId);
     return dept?.name || '-';
@@ -161,7 +166,7 @@ export default function ProjectList() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <User size={14} />
-                    <span>{t('projects.managerShort', { name: project.manager_first_name ? `${project.manager_first_name} ${project.manager_last_name}` : t('departments.unassigned') })}</span>
+                    <span>{t('projects.managerShort', { name: managerName(project) })}</span>
                   </div>
                   {(project.start_date || project.end_date) && (
                     <div className="flex items-center gap-2 text-sm text-gray-500">

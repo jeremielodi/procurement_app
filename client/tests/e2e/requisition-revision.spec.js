@@ -26,7 +26,7 @@ async function setup(request) {
     const r = (await (await request.get(`/api/requisitions/${req.id}`, { headers: H })).json()).data;
     if (r?.process_instance_id) {
       const tasks = (await (await request.get(`/api/tasks/process/${r.process_instance_id}`, { headers: H })).json()).data || [];
-      task = tasks.find(tk => tk.status !== 'COMPLETED' && tk.taskDefinitionKey === 'Activity_ValidationN1_Manager') || null;
+      task = tasks.find(tk => tk.status !== 'COMPLETED' && tk.taskDefinitionKey === 'Activity_ProjectManagerApproval') || null;
     }
     if (!task) await sleep(1500);
   }

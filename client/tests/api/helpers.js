@@ -12,8 +12,14 @@ export async function getToken(request) {
   const body = await res.json();
   const token = body.data?.token || body.token;
   if (!token) throw new Error(`Login failed: ${JSON.stringify(body)}`);
+  // Chaque projet a un chef de projet (l'approbateur des tests) : sans lui, aucune réquisition ne peut être soumise
+  if (!ensuringProjectManagers) {
+    ensuringProjectManagers = true;
+    await ensureProjectManagers(request);
+  }
   return token;
 }
+let ensuringProjectManagers = false;
 
 /**
  * Second administrateur de l'entreprise de test, pour les approbations : la séparation des tâches interdit
@@ -40,6 +46,40 @@ export async function getApproverToken(request) {
   token = await login();
   if (!token) throw new Error('Connexion de l\'approbateur impossible');
   return token;
+}
+
+/** Identifiant de l'approbateur des tests (créé au besoin) */
+export async function getApproverId(request) {
+  await getApproverToken(request);
+  const body = await (await request.post('/api/auth/login', { data: APPROVER_CREDS })).json();
+  return body.data?.user?.id;
+}
+
+/**
+ * Validation des réquisitions par le chef du projet (BPMN du 2026-11-06) : projet et chef de projet obligatoires,
+ * chef de projet ≠ demandeur. Les tests créent leurs réquisitions avec l'admin principal : l'approbateur des tests
+ * devient chef de projet de tout projet qui n'en a pas (ou dont le chef est l'admin principal). Une fois par processus.
+ * → id de l'approbateur
+ */
+let projectManagersReady = null;
+export function ensureProjectManagers(request) {
+  if (!projectManagersReady) {
+    projectManagersReady = (async () => {
+      const admin = await getToken(request);
+      const adminId = (await (await request.post('/api/auth/login', { data: TEST_CREDS })).json()).data?.user?.id;
+      const approverId = await getApproverId(request);
+      const projects = (await (await request.get('/api/projects', { headers: auth(admin) })).json()).data || [];
+      for (const p of projects.filter(x => !x.project_manager_id || String(x.project_manager_id) === String(adminId))) {
+        const res = await request.put(`/api/projects/${p.id}`, { headers: auth(admin), data: {
+          name: p.name, description: p.description, status: p.status, startDate: p.start_date, endDate: p.end_date,
+          isActive: p.is_active, projectManagerId: approverId,
+        } });
+        if (!res.ok()) throw new Error(`Chef de projet de ${p.code} : ${res.status()} ${await res.text()}`);
+      }
+      return approverId;
+    })();
+  }
+  return projectManagersReady;
 }
 
 /** Returns the Authorization header object for a given token. */
@@ -88,4 +128,92 @@ export async function firstReferenceIds(request) {
   const locations = (await (await request.get('/api/public/locations')).json()).data;
   const categories = (await (await request.get('/api/public/market-categories')).json()).data;
   return { locationId: locations[0].id, categoryId: categories[0].id, locations, categories };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Circuit du 2026-11-06 : validation de la réquisition par le chef de projet, N1 / N2 / N3 sur le bon de commande
+// ---------------------------------------------------------------------------------------------------------------
+export const PM_APPROVAL = 'Activity_ProjectManagerApproval';
+export const PO_REVIEW = 'Activity_POReview';
+export const PO_LEVEL_TASKS = { N1: 'Activity_POApprovalN1', N2: 'Activity_POApprovalN2', N3: 'Activity_POApprovalN3' };
+export const PO_APPROVAL_KEYS = Object.values(PO_LEVEL_TASKS);
+
+/** Étapes ouvertes du processus (vues par token) */
+export async function openProcessTasks(request, token, processInstanceId) {
+  const res = await request.get(`/api/tasks/process/${processInstanceId}`, { headers: auth(token) });
+  if (!res.ok()) return [];
+  return ((await res.json()).data || []).filter(t => t.status !== 'COMPLETED');
+}
+
+/** Attend une étape ouverte dont la clé est dans keys (relit la réquisition jusqu'à son process_instance_id) */
+export async function waitForProcessTask(request, token, requisitionId, keys, timeout = 60_000) {
+  const list = Array.isArray(keys) ? keys : [keys];
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const r = (await (await request.get(`/api/requisitions/${requisitionId}`, { headers: auth(token) })).json()).data;
+    if (r?.process_instance_id) {
+      const task = (await openProcessTasks(request, token, r.process_instance_id)).find(t => list.includes(t.taskDefinitionKey));
+      if (task) return { task, requisition: r };
+    }
+    await new Promise(res => setTimeout(res, 1500));
+  }
+  return null;
+}
+
+/**
+ * Révision du bon de commande (migration 52) : attend l'étape Activity_POReview de ce bon puis l'approuve (ou la rejette)
+ * par POST /purchase-orders/:id/review avec token (l'approbateur des tests : ni créateur ni demandeur).
+ * → réponse { status, body } ; null si l'étape n'apparaît pas (BpmnGo absent)
+ */
+export async function reviewPurchaseOrder(request, token, requisitionId, poId, { decision = 'APPROVE', comment = 'Révisé' } = {}) {
+  const step = await waitForProcessTask(request, token, requisitionId, PO_REVIEW);
+  if (!step) return null;
+  const res = await request.post(`/api/purchase-orders/${poId}/review`, { headers: auth(token), data: { decision, comment } });
+  return { status: res.status(), body: await res.json().catch(() => ({})), task: step.task };
+}
+
+/**
+ * Réquisition validée par son chef de projet (l'approbateur des tests), méthode « source unique » justifiée, bon de
+ * commande de amount, puis sa révision approuvée (review: false = s'arrêter à la révision)
+ * → { po, task (étape ouverte : approbation N1 / N2 / N3 du bon, ou révision), requisition } ou null (BpmnGo absent)
+ */
+export async function requisitionToPurchaseOrder(request, { admin, approver, requisitionId, amount, review = true }) {
+  const pm = await waitForProcessTask(request, admin, requisitionId, PM_APPROVAL);
+  if (!pm) return null;
+  const ok = await request.post(`/api/tasks/${pm.task.id}/complete`, { headers: auth(approver), data: { variables: { approved: true, comment: 'OK' } } });
+  if (!ok.ok()) throw new Error(`Validation du chef de projet : ${ok.status()} ${await ok.text()}`);
+  const method = await waitForProcessTask(request, admin, requisitionId, 'Activity_DetermineType');
+  await request.post(`/api/tasks/${method.task.id}/complete`, { headers: auth(admin), data: { variables: { procurementMethod: 'SOLE_SOURCE', justification: 'Fournisseur unique (test)' } } });
+  const sole = await waitForProcessTask(request, admin, requisitionId, 'Activity_SoleSource');
+  await request.post(`/api/tasks/${sole.task.id}/complete`, { headers: auth(admin), data: { variables: { comment: 'Justifiée' } } });
+  await waitForProcessTask(request, admin, requisitionId, 'Activity_CreatePO');
+  const supplier = (await (await request.get('/api/suppliers', { headers: auth(admin), params: { forPurchaseOrder: 1 } })).json()).data[0];
+  const created = await request.post('/api/purchase-orders', { headers: auth(admin), data: {
+    requisitionId, supplierId: supplier.id, currency: 'USD', totalAmount: amount,
+    deliveryDate: new Date(Date.now() + 20 * 86400000).toISOString().slice(0, 10),
+    items: [{ description: 'Article', quantity: 1, unitPrice: amount }],
+  } });
+  if (!created.ok()) throw new Error(`Bon de commande : ${created.status()} ${await created.text()}`);
+  const po = (await created.json()).data;
+  if (!review) {
+    const reviewStep = await waitForProcessTask(request, admin, requisitionId, PO_REVIEW);
+    return { po, task: reviewStep?.task || null, requisition: reviewStep?.requisition || pm.requisition };
+  }
+  const reviewed = await reviewPurchaseOrder(request, approver, requisitionId, po.id);
+  if (reviewed && reviewed.status !== 200) throw new Error(`Révision du bon : ${reviewed.status} ${JSON.stringify(reviewed.body)}`);
+  const step = await waitForProcessTask(request, admin, requisitionId, [...PO_APPROVAL_KEYS, 'Activity_POApproval']);
+  return { po, task: step?.task || null, requisition: step?.requisition || pm.requisition };
+}
+
+/**
+ * Bon de commande créé par un test : si sa révision est ouverte (processus d'après la migration 52), l'approuve avec
+ * token (l'approbateur des tests) puis attend son étape d'approbation N1 / N2 / N3. Sans révision : ne fait rien.
+ */
+export async function passReview(request, token, poId) {
+  const po = (await (await request.get(`/api/purchase-orders/${poId}`, { headers: auth(token) })).json()).data;
+  if (!po?.review_pending) return false;
+  const res = await request.post(`/api/purchase-orders/${poId}/review`, { headers: auth(token), data: { decision: 'APPROVE', comment: 'Révisé' } });
+  if (!res.ok()) throw new Error(`Révision du bon : ${res.status()} ${await res.text()}`);
+  if (po.requisition_id) await waitForProcessTask(request, token, po.requisition_id, [...PO_APPROVAL_KEYS, 'Activity_POApproval'], 30_000);
+  return true;
 }

@@ -82,7 +82,12 @@
       "Activity_EnterInvoice": "Saisie de la facture fournisseur",
       "Activity_ProcessPayment": "Traitement du paiement",
       "Activity_ReviseRequisition": "Corriger la réquisition",
-      "Activity_AllocateSuppliers": "Répartition par fournisseur"
+      "Activity_AllocateSuppliers": "Répartition par fournisseur",
+      "Activity_ProjectManagerApproval": "Validation du chef de projet",
+      "Activity_POApprovalN1": "Approbation du bon de commande — Manager niveau 1 (N1)",
+      "Activity_POApprovalN2": "Approbation du bon de commande — Manager niveau 2 (N2)",
+      "Activity_POApprovalN3": "Approbation du bon de commande — Manager niveau 3 (N3)",
+      "Activity_POReview": "Révision du bon de commande"
     },
     "approvalPrefix": "Approbation ",
     "roles": {
@@ -95,7 +100,9 @@
       "requester": "Demandeur",
       "other": "Autre",
       "manager_n2": "Manager niveau 2",
-      "manager_n3": "Manager niveau 3"
+      "manager_n3": "Manager niveau 3",
+      "project_manager": "Chef de projet",
+      "po_reviewer": "Réviseur des bons de commande"
     },
     "methods": {
       "DIRECT_PURCHASE": "Achat direct",
@@ -179,7 +186,8 @@
       "san": "Acceptation de service (SAN)",
       "invoice": "Facture & rapprochement",
       "payment": "Paiement",
-      "allocation": "Répartition par fournisseur"
+      "allocation": "Répartition par fournisseur",
+      "po_review": "Révision du bon de commande"
     },
     "approvedBy": "Approuvé par {name}",
     "matchingInfo": "Rapprochement : {status}",
@@ -238,7 +246,9 @@
       "progress": "{done} / {total} commandes",
       "lotInfo": "{supplier} ({count} art.)",
       "taskOfLot": "{task} — {supplier}"
-    }
+    },
+    "poApprovalLevel": "{po} : niveau {level} ({role})",
+    "reviewedBy": "Révisé par {name}"
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -956,7 +966,9 @@
     "PROJECT_INVENTORY_PREFIX_CHANGED": "Code initial inventaire du projet modifié",
     "STOCK_ENTRY_VALIDATED": "Bon d'entrée validé",
     "STOCK_ENTRY_REJECTED": "Bon d'entrée refusé",
-    "STOCK_ENTRY_CANCELLED": "Bon d'entrée annulé"
+    "STOCK_ENTRY_CANCELLED": "Bon d'entrée annulé",
+    "PROJECT_MANAGER_CHANGED": "Chef de projet modifié",
+    "PURCHASE_ORDER_REVIEWED": "Bon de commande révisé"
   },
   "auditExport": {
     "sheet": "Journal d'audit",

@@ -11,11 +11,13 @@ const camundaService = require('./CamundaService');
 const i18n = require('../i18n');
 const {
   TASK_CANDIDATE_GROUPS, taskKey, taskLabel: rawTaskLabel, groupLabel, methodLabel, reasonLabel, matchLabel,
+  REQUISITION_APPROVAL_TASKS, PO_APPROVAL_TASKS, PO_LEVEL_TASKS,
 } = require('../utils/workflowLabels');
 
 const approvalPolicy = require('../utils/approvalPolicy');
 const DECISION_WORDS = { REJECTED: 'timeline.rejectedWord', RETURNED: 'timeline.returnedWord', WITHDRAWN: 'timeline.withdrawnWord' };
-const APPROVAL_KEYS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
+// Validation de la réquisition : chef de projet (anciens processus : N1 / N2 / N3)
+const APPROVAL_KEYS = REQUISITION_APPROVAL_TASKS;
 const SOURCING_KEYS = ['Activity_DirectPurchase', 'Activity_RequestQuotations', 'Activity_RFPProcess', 'Activity_SoleSource'];
 const PO_APPROVED = ['PO_APPROVED', 'PO_SENT', 'PO_CONFIRMED', 'PO_RECEIVED', 'PO_COMPLETE', 'APPROVED', 'SENT', 'COMPLETED'];
 const PO_REJECTED = ['PO_REJECTED', 'REJECTED', 'CANCELLED'];
@@ -27,12 +29,15 @@ const REVISION_ACTIONS = { RETURNED_FOR_CORRECTION: 'warning', WITHDRAWN: 'info'
 
 // Tâche en attente → étape du workflow
 const TASK_STEP = {
+  Activity_ProjectManagerApproval: 'approval',
   Activity_ValidationN1_Manager: 'approval', Activity_ValidationN2_Finance: 'approval', Activity_ValidationN3_DG: 'approval',
   Activity_ReviseRequisition: 'approval', // correction demandée pendant l'approbation
   Activity_DetermineType: 'method',
   Activity_DirectPurchase: 'sourcing', Activity_RequestQuotations: 'sourcing', Activity_RFPProcess: 'sourcing', Activity_SoleSource: 'sourcing',
   Activity_AllocateSuppliers: 'allocation',
   Activity_CreatePO: 'po', Activity_POApproval: 'po_approval', Activity_SupplierConfirmation: 'supplier_confirmation',
+  Activity_POReview: 'po_review',
+  Activity_POApprovalN1: 'po_approval', Activity_POApprovalN2: 'po_approval', Activity_POApprovalN3: 'po_approval',
   Activity_GoodsReceipt: 'grn', Activity_ServiceAcceptance: 'san', Activity_EnterInvoice: 'invoice', Activity_ProcessPayment: 'payment',
 };
 
@@ -59,7 +64,7 @@ function duration(from, to, T) {
 function describeVars(vars = {}, links, T, lang) {
   const details = [];
   let decision = null;
-  const approved = vars.approved ?? vars.poApproved;
+  const approved = vars.approved ?? vars.poApproved ?? vars.poReviewed;
   if (approved === true || approved === 'true') decision = 'APPROVED';
   if (approved === false || approved === 'false') decision = 'REJECTED';
   if (vars.returnedForCorrection === true || vars.returnedForCorrection === 'true') decision = vars.withdrawnByRequester ? 'WITHDRAWN' : 'RETURNED';
@@ -76,7 +81,7 @@ function describeVars(vars = {}, links, T, lang) {
   if (vars.paymentNumber) details.push(T('timeline.payment', { value: vars.paymentNumber }));
   if (vars.paymentAmount) details.push(T('timeline.paymentAmount', { value: fmtNum(vars.paymentAmount, lang) }));
   if (vars.tenderNumber) details.push(T('timeline.tender', { value: vars.tenderNumber }));
-  const comment = vars.comment || vars.comments || vars.rejectionReason;
+  const comment = vars.comment || vars.comments || vars.rejectionReason || vars.poReviewComment;
   if (comment) details.push(T('timeline.comment', { value: comment }));
   return { details, decision };
 }
@@ -109,7 +114,7 @@ class RequisitionTimelineService {
       db.select(`SELECT id, email, first_name, last_name, avatar_updated_at, first_name || ' ' || last_name AS name FROM users`, []),
       db.select(
         `SELECT id, po_number, status, approved_at, approved_by, created_at, supplier_response, supplier_responded_at,
-                delivery_closed_at, delivery_close_reason
+                delivery_closed_at, delivery_close_reason, approval_level, reviewed_by, reviewed_at, review_decision
          FROM purchase_orders WHERE requisition_id = $1 ORDER BY id`,
         [req.id]
       ),
@@ -202,7 +207,8 @@ class RequisitionTimelineService {
           classification = { method: json.user_vars.procurementMethod, date: row.performed_at, byUser: true };
         }
         // Tâches complétées via leur formulaire : l'auteur est sur le document
-        const docActorId = key === 'Activity_POApproval' ? pos.find(p => p.approved_by)?.approved_by
+        const docActorId = key === 'Activity_POReview' ? pos.find(p => p.reviewed_by)?.reviewed_by
+          : PO_APPROVAL_TASKS.includes(key) ? pos.find(p => p.approved_by)?.approved_by
           : key === 'Activity_ProcessPayment' ? (payments[0]?.created_by || payments[0]?.approved_by)
           : null;
         const docActor = docActorId ? nameById.get(docActorId) : null;
@@ -449,12 +455,27 @@ class RequisitionTimelineService {
         status: allDone(activePos.length, activePos.length > 0) ? 'done' : pos.length && !activePos.length ? 'failed' : 'pending',
         date: activePos[0]?.created_at, info: splitInfo(activePos.length), links: links(pos, 'po_number', '/purchase-orders'),
       },
+      // Révision du bon avant son approbation (migration 52) : seulement si elle a lieu (processus d'après)
+      ...(pos.some(p => p.review_decision) || pending.some(t => t.key === 'Activity_POReview') ? [{
+        key: 'po_review', label: T('timeline.steps.po_review'),
+        status: allDone(poDone(p => p.review_decision === 'APPROVED'), activePos.some(p => p.review_decision === 'APPROVED')) ? 'done'
+          : pos.some(p => p.review_decision === 'REJECTED') && !activePos.length ? 'failed' : 'pending',
+        date: pos.find(p => p.reviewed_at)?.reviewed_at,
+        info: splitInfo(poDone(p => p.review_decision === 'APPROVED'))
+          || (nameById.get(pos.find(p => p.reviewed_by)?.reviewed_by) ? T('timeline.reviewedBy', { name: nameById.get(pos.find(p => p.reviewed_by).reviewed_by) }) : null),
+      }] : []),
       {
         key: 'po_approval', label: T('timeline.steps.po_approval'),
         status: allDone(poDone(p => PO_APPROVED.includes(p.status)), activePos.some(p => PO_APPROVED.includes(p.status))) ? 'done' : pos.some(p => PO_REJECTED.includes(p.status)) && !activePos.length ? 'failed' : 'pending',
         date: activePos.find(p => p.approved_at)?.approved_at,
-        info: splitInfo(poDone(p => PO_APPROVED.includes(p.status)))
-          || (nameById.get(activePos.find(p => p.approved_by)?.approved_by) ? T('timeline.approvedBy', { name: nameById.get(activePos.find(p => p.approved_by).approved_by) }) : null),
+        info: [
+          splitInfo(poDone(p => PO_APPROVED.includes(p.status)))
+            || (nameById.get(activePos.find(p => p.approved_by)?.approved_by) ? T('timeline.approvedBy', { name: nameById.get(activePos.find(p => p.approved_by).approved_by) }) : null),
+          // Niveau de chaque bon (montant + seuils du projet) : N1 / N2 / N3
+          activePos.filter(p => p.approval_level).map(p => T('timeline.poApprovalLevel', {
+            po: p.po_number, level: p.approval_level, role: role(PO_LEVEL_TASKS[p.approval_level]) || '',
+          })).join(' · ') || null,
+        ].filter(Boolean).join(' · ') || null,
       },
       { key: 'supplier_confirmation', label: T('timeline.steps.supplier_confirmation'),
         status: allDone(poDone(p => p.supplier_response === 'CONFIRMED' || hasDoc(grns)(p) || hasDoc(sans)(p)),

@@ -82,7 +82,12 @@
       "Activity_EnterInvoice": "Enter supplier invoice",
       "Activity_ProcessPayment": "Process payment",
       "Activity_ReviseRequisition": "Revise the requisition",
-      "Activity_AllocateSuppliers": "Allocate items to suppliers"
+      "Activity_AllocateSuppliers": "Allocate items to suppliers",
+      "Activity_ProjectManagerApproval": "Project manager approval",
+      "Activity_POApprovalN1": "Purchase order approval — Manager level 1 (N1)",
+      "Activity_POApprovalN2": "Purchase order approval — Manager level 2 (N2)",
+      "Activity_POApprovalN3": "Purchase order approval — Manager level 3 (N3)",
+      "Activity_POReview": "Purchase order review"
     },
     "approvalPrefix": "",
     "roles": {
@@ -95,7 +100,9 @@
       "requester": "Requester",
       "other": "Other",
       "manager_n2": "Manager level 2",
-      "manager_n3": "Manager level 3"
+      "manager_n3": "Manager level 3",
+      "project_manager": "Project manager",
+      "po_reviewer": "Purchase order reviewer"
     },
     "methods": {
       "DIRECT_PURCHASE": "Direct purchase",
@@ -179,7 +186,8 @@
       "san": "Service acceptance (SAN)",
       "invoice": "Invoice & matching",
       "payment": "Payment",
-      "allocation": "Split between suppliers"
+      "allocation": "Split between suppliers",
+      "po_review": "Purchase order review"
     },
     "approvedBy": "Approved by {name}",
     "matchingInfo": "Matching: {status}",
@@ -238,7 +246,9 @@
       "progress": "{done} / {total} orders",
       "lotInfo": "{supplier} ({count} items)",
       "taskOfLot": "{task} — {supplier}"
-    }
+    },
+    "poApprovalLevel": "{po}: level {level} ({role})",
+    "reviewedBy": "Reviewed by {name}"
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -956,7 +966,9 @@
     "PROJECT_INVENTORY_PREFIX_CHANGED": "Project initial inventory code changed",
     "STOCK_ENTRY_VALIDATED": "Stock entry validated",
     "STOCK_ENTRY_REJECTED": "Stock entry rejected",
-    "STOCK_ENTRY_CANCELLED": "Stock entry cancelled"
+    "STOCK_ENTRY_CANCELLED": "Stock entry cancelled",
+    "PROJECT_MANAGER_CHANGED": "Project manager changed",
+    "PURCHASE_ORDER_REVIEWED": "Purchase order reviewed"
   },
   "auditExport": {
     "sheet": "Audit log",

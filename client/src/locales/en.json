@@ -238,7 +238,12 @@
       "Activity_EnterInvoice": "Enter supplier invoice",
       "Activity_ProcessPayment": "Process payment",
       "Activity_ReviseRequisition": "Revise the requisition",
-      "Activity_AllocateSuppliers": "Allocate items to suppliers"
+      "Activity_AllocateSuppliers": "Allocate items to suppliers",
+      "Activity_ProjectManagerApproval": "Project manager approval",
+      "Activity_POApprovalN1": "Purchase order approval — Manager level 1 (N1)",
+      "Activity_POApprovalN2": "Purchase order approval — Manager level 2 (N2)",
+      "Activity_POApprovalN3": "Purchase order approval — Manager level 3 (N3)",
+      "Activity_POReview": "Purchase order review"
     }
   },
   "tenderStatus": {
@@ -436,7 +441,7 @@
         },
         {
           "title": "Budget and approvals",
-          "desc": "Budget checked automatically; if it falls short, adjust and re-check without re-entering anything. Multi-level approval based on the amount, with thresholds specific to each project, return for correction and version history."
+          "desc": "Budget checked automatically; if it falls short, adjust and re-check without re-entering anything. Requisitions approved by the project manager (budget holder), with return for correction and version history; purchase orders approved at three levels based on their amount, with thresholds specific to each project."
         },
         {
           "title": "Tenders",
@@ -831,7 +836,8 @@
     "noRequisition": "Requisition not found",
     "claimedByMe": "Claimed by you",
     "toClaim": "To be claimed",
-    "notOnProject": "You have this profile, but not on this requisition's project: ask your administrator to assign it to you"
+    "notOnProject": "You have this profile, but not on this requisition's project: ask your administrator to assign it to you",
+    "notProjectManager": "Approval reserved for the project manager of this requisition"
   },
   "notifications": {
     "unknownDate": "Unknown date",
@@ -1286,7 +1292,9 @@
       "contactPlaceholder": "E.g. +243 … / name@example.org"
     },
     "unitRequired": "Unit is required",
-    "unitChoose": "Choose…"
+    "unitChoose": "Choose…",
+    "validatedBy": "Approval: {{name}} (project manager)",
+    "projectNoManager": "This project has no project manager: the requisition cannot be submitted until the administrator assigns one"
   },
   "reqDetail": {
     "cancelled": "Requisition cancelled successfully",
@@ -1660,7 +1668,33 @@
     "paymentTermsPlaceholder": "E.g. 100% after delivery",
     "deliveryTerms": "Delivery terms",
     "deliveryTermsPlaceholder": "E.g. delivered to the office, costs included",
-    "specialInstructions": "Special instructions to vendor"
+    "specialInstructions": "Special instructions to vendor",
+    "approvalLevel": "Approval: level {{level}} ({{role}})",
+    "notApprovalLevel": "This purchase order must be approved by a project {{role}}",
+    "levelRole": {
+      "N1": "Manager level 1",
+      "N2": "Manager level 2",
+      "N3": "Manager level 3"
+    },
+    "review": {
+      "approve": "Approve review",
+      "reject": "Reject",
+      "waiting": "Under review: the project's purchase order reviewer must approve it before the level approval",
+      "approveTitle": "Approve the review",
+      "rejectTitle": "Reject the purchase order",
+      "approveText": "Purchase order {{number}} will then go to approval by level (N1 / N2 / N3).",
+      "rejectText": "Purchase order {{number}} will be rejected and the order with this supplier stopped.",
+      "comment": "Comment (optional)",
+      "approved": "Review approved: the purchase order goes to approval",
+      "rejected": "Purchase order rejected at review",
+      "err": {
+        "REVIEW_REASON_REQUIRED": "Enter the reason for rejection",
+        "NOT_IN_REVIEW": "This purchase order is no longer awaiting review",
+        "NOT_PO_REVIEWER": "The review belongs to the project's purchase order reviewer",
+        "SELF_APPROVAL": "You created this purchase order (or requested the purchase): another reviewer must handle it",
+        "BPMNGO_ERROR": "The workflow engine did not accept the review: try again"
+      }
+    }
   },
   "grnStatus": {
     "DRAFT": "Draft",
@@ -2928,13 +2962,16 @@
       "PROJECT_CODE_TOO_LONG": "Project code: 20 characters maximum.",
       "PROJECT_CODE_EXISTS": "This code is already used by another project of your organisation.",
       "INVENTORY_PREFIX_INVALID": "Initial inventory code: letters and digits separated by hyphens, 20 characters max (e.g. INVT-MSH).",
-      "INVENTORY_PREFIX_RESERVED": "Initial inventory code: this start is reserved for a document type (INV = invoices, PO, GRN…)."
+      "INVENTORY_PREFIX_RESERVED": "Initial inventory code: this start is reserved for a document type (INV = invoices, PO, GRN…).",
+      "PROJECT_MANAGER_REQUIRED": "The project manager is required: they approve the project's requisitions.",
+      "PROJECT_MANAGER_INVALID": "Project manager not found or inactive in your organisation."
     },
     "codeChangeHint": "Requisitions, budgets, stock and members stay linked to the project. Use the new code in your next import files.",
     "inventoryPrefix": "Initial inventory code",
     "inventoryPrefixPlaceholder": "INVT",
     "inventoryPrefixHint": "Start of the asset tags of equipment funded by this project: {{example}}. Empty = INVT. Tags already assigned do not change.",
-    "inventoryPrefixLine": "Initial inventory code: {{prefix}} (e.g. {{example}})"
+    "inventoryPrefixLine": "Initial inventory code: {{prefix}} (e.g. {{example}})",
+    "projectManagerHelp": "Budget holder: approves the project's requisitions alone"
   },
   "enterprises": {
     "notFound": "Company not found",
@@ -3965,16 +4002,24 @@
                 "Creates requisitions, follows their progress, accepts services (SAN), receives items from stock and confirms receipt."
               ],
               [
+                "Project manager",
+                "Assigned on the project page (not a profile): alone approves the project's requisitions — approve, reject or return for correction."
+              ],
+              [
                 "Manager level 1",
-                "Approves or rejects level N1 requisitions of their projects (by default below 25,000; each project can set its own thresholds)."
+                "Approves or rejects level N1 purchase orders of their projects (by default below 25,000; each project can set its own thresholds)."
               ],
               [
                 "Manager level 2",
-                "Approves or rejects level N2 requisitions (by default 25,000 to 99,999)."
+                "Approves or rejects level N2 purchase orders (by default 25,000 to 99,999)."
               ],
               [
                 "Manager level 3",
-                "Approves or rejects level N3 requisitions (by default 100,000 and above)."
+                "Approves or rejects level N3 purchase orders (by default 100,000 and above)."
+              ],
+              [
+                "Purchase order reviewer",
+                "Reviews every purchase order of their projects before its N1 / N2 / N3 approval: approve or reject (reason required). Never one they created or that comes from their own requisition."
               ],
               [
                 "Finance",
@@ -3990,7 +4035,7 @@
               ],
               [
                 "Management",
-                "Approves or rejects purchase orders."
+                "Oversight (dashboard). No longer approves purchase orders (now Manager N1 / N2 / N3 by amount), except for requisitions started before this process."
               ],
               [
                 "Logistics",
@@ -4030,7 +4075,8 @@
               "The profile must first be on the user's record: removing it from the record removes it from every project.",
               "Enforced by the server: task list, claiming, processing, forms (purchase order, receipt, service acceptance, invoice, payment, call for tenders) and requisition creation (only the projects where you can create one are offered).",
               "Task emails and notifications only go to people holding the profile on the requisition's project.",
-              "The other profiles (Administrator, Storekeeper, Auditor) remain valid across the whole company."
+              "The other profiles (Administrator, Storekeeper, Auditor) remain valid across the whole company.",
+              "The project manager is not a profile: they are assigned on the project page and alone approve that project's requisitions."
             ]
           },
           {
@@ -4206,7 +4252,7 @@
       },
       "approval": {
         "title": "Budget and approval",
-        "summary": "Automatic budget check and approval level according to the amount.",
+        "summary": "Automatic budget check, approval by the project manager, then purchase order approval by amount.",
         "blocks": [
           {
             "type": "h",
@@ -4230,13 +4276,34 @@
           },
           {
             "type": "h",
-            "text": "Who approves?"
+            "text": "Who approves the requisition?"
+          },
+          {
+            "type": "p",
+            "text": "After the budget check, the requisition is approved by the project manager (budget holder), whatever its amount. Only they can approve it: neither the administrator nor a manager. They can approve, reject or return it for correction, with a comment shown in the workflow tracking. A rejection stops the process (status \"Rejected\") and the requester is notified."
+          },
+          {
+            "type": "list",
+            "items": [
+              "A project is required on every requisition, and every project must have a project manager (project page, \"Project manager\" field). Without an active project manager, the requisition cannot be submitted.",
+              "The requisition form shows \"Approval: <name> (project manager)\" as soon as the project is chosen.",
+              "The project manager cannot approve their own request: a requisition on their project must be raised by another member.",
+              "Changing the project manager (project page) immediately hands pending approvals over to the new one; the change is recorded in the audit log."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Who approves the purchase order?"
+          },
+          {
+            "type": "p",
+            "text": "Before its approval, every purchase order goes through a review: the project's purchase order reviewer (\"Purchase order reviewer\" profile) approves or rejects it from the purchase order page (\"Approve review\" / \"Reject\", reason required). Rejected, the order with this supplier stops; approved, it goes to approval based on its amount:"
           },
           {
             "type": "table",
             "rows": [
               [
-                "Estimated amount (default thresholds)",
+                "Purchase order amount (default thresholds)",
                 "Approval"
               ],
               [
@@ -4244,7 +4311,7 @@
                 "Manager level 1 (N1)"
               ],
               [
-                "from 25,000 to 99,999",
+                "25,000 to 99,999",
                 "Manager level 2 (N2)"
               ],
               [
@@ -4255,29 +4322,28 @@
           },
           {
             "type": "p",
-            "text": "Only one level is involved, the one matching the amount. The approver can approve, reject or return for correction, with a comment shown in the workflow tracking. A rejection stops the circuit (\"Rejected\" status) and the requester is notified."
+            "text": "A single level applies, the one matching the purchase order amount. Only a manager of that level who is a member of the project can approve or reject it: the purchase order page shows \"Approval: level N…\". A rejected purchase order stops the order for that supplier."
           },
           {
             "type": "h",
-            "text": "Thresholds specific to each project"
+            "text": "Thresholds per project"
           },
           {
             "type": "p",
-            "text": "Each project can have its own policy: project record → \"Approval thresholds\" → \"Own thresholds\" (N1 below…, N2 below…, N3 above). Without its own policy, the project uses the company's (\"My company\" → \"Approval thresholds\"), otherwise the default thresholds above."
+            "text": "Each project can have its own policy: project page → \"Purchase order approval thresholds\" → \"Own thresholds\" (N1 below…, N2 below…, N3 above). Without its own policy, the project uses the organisation's (\"My organisation\"), otherwise the default thresholds above."
           },
           {
             "type": "list",
             "items": [
-              "The requisition form shows the \"Expected approval\" based on the project and the amount entered.",
-              "The level is set at the budget check (and again after a correction); it appears on the record, in the workflow tracking and on the PDF, with the policy applied.",
-              "Changing a policy does not affect a requisition already awaiting approval.",
-              "Same value for N1 and N2: no N2 level (N1 goes straight to N3).",
-              "Only the company administrator changes the thresholds; every change is recorded in the audit log."
+              "The level is set when the purchase order is created, from its amount; it is shown on the purchase order and in the workflow tracking.",
+              "Changing a policy does not change a purchase order already awaiting approval.",
+              "Same value for N1 and N2: no N2 level (from N1 straight to N3).",
+              "Only the organisation administrator changes the thresholds; every change is recorded in the audit log."
             ]
           },
           {
             "type": "warn",
-            "text": "You cannot approve your own requisition, even with an approver profile: another member of the group must process it."
+            "text": "You cannot approve your own request: neither a requisition you raised, nor a purchase order you created or that comes from your requisition."
           },
           {
             "type": "h",
@@ -4285,22 +4351,22 @@
           },
           {
             "type": "p",
-            "text": "A requisition can only be corrected during approval, and always with a trail: every submission is kept (the requisition's \"Versions\" tab) and the approver sees what changed."
+            "text": "A requisition can only be corrected during its approval, and always with a trace: every submission is kept (\"Versions\" tab of the page) and the project manager sees what changed."
           },
           {
             "type": "list",
             "items": [
-              "Approver (N1 / N2 / N3): besides \"Approve\" and \"Reject\", the \"Return for correction\" decision (reason required: what needs to be corrected). The requisition becomes \"To be corrected\" and the requester is notified.",
-              "Requester: as long as nobody has claimed the approval, \"Withdraw to correct\" on the requisition record. If the approval is already claimed, ask the approver to return it.",
-              "\"To be corrected\": only the requester can edit (the record's \"Correct\" button, or the \"Revise the requisition\" task) — title, items, quantities, prices, budget lines, project. \"Save\" keeps the changes; \"Resubmit\" creates a new version.",
-              "After resubmission: the budget is checked again and the approval circuit starts over based on the NEW amount (going from 20,000 to 30,000 sends it to Manager level 2).",
+              "Project manager: besides \"Approve\" and \"Reject\", the decision \"Return for correction\" (reason required: what must be corrected). The requisition becomes \"To correct\" and the requester is notified.",
+              "Requester: as long as the project manager has not claimed the approval, \"Withdraw to correct\" on the requisition page. Otherwise, ask them to return it.",
+              "\"To correct\": only the requester can edit (\"Correct\" button on the page, or the \"Revise requisition\" task) — title, items, quantities, prices, budget lines, project. \"Save\" keeps the changes; \"Submit again\" creates a new version.",
+              "After a new submission: the budget is checked again, then the requisition goes back to the project manager.",
               "\"Abandon\" (reason required) cancels the requisition.",
-              "Once approved, the requisition can no longer be edited: a change goes through a new requisition, or through the purchase order (\"Close the remaining quantity\")."
+              "Once approved, the requisition can no longer be edited: a change goes through a new requisition, or through the purchase order (\"Close the remainder\")."
             ]
           },
           {
             "type": "tip",
-            "text": "Only approvers who are members of the requisition's project receive the task. If nobody receives it, check the project members (Organisation → Projects)."
+            "text": "Requisitions already in progress before this process keep the previous one: N1 / N2 / N3 approval of the requisition, then purchase order approval by Management."
           },
           {
             "type": "links",
@@ -5889,7 +5955,9 @@
       "PROJECT_INVENTORY_PREFIX_CHANGED": "Project initial inventory code changed",
       "STOCK_ENTRY_VALIDATED": "Stock entry validated",
       "STOCK_ENTRY_REJECTED": "Stock entry rejected",
-      "STOCK_ENTRY_CANCELLED": "Stock entry cancelled"
+      "STOCK_ENTRY_CANCELLED": "Stock entry cancelled",
+      "PROJECT_MANAGER_CHANGED": "Project manager changed",
+      "PURCHASE_ORDER_REVIEWED": "Purchase order reviewed"
     },
     "groups": {
       "all": "All events",
@@ -6237,12 +6305,15 @@
       "NOT_ON_PROJECT": "You do not hold the required profile on this project",
       "RETURN_REASON_REQUIRED": "Say what needs to be corrected",
       "DECISION_REQUIRED": "Choose a decision",
-      "RETURN_NOT_SUPPORTED": "Requisition started before the circuit was updated: it cannot be returned for correction (approve or reject it)"
+      "RETURN_NOT_SUPPORTED": "Requisition started before the circuit was updated: it cannot be returned for correction (approve or reject it)",
+      "PROJECT_REQUIRED": "Choose the project: the requisition is approved by its project manager",
+      "PROJECT_MANAGER_MISSING": "This project has no active project manager: ask the administrator to assign one",
+      "REQUESTER_IS_PROJECT_MANAGER": "You are this project's manager: you cannot approve your own requisition — another project member must raise it"
     },
     "returnNotSupported": "Return for correction unavailable: requisition started before the approval circuit was updated."
   },
   "approvalPolicy": {
-    "title": "Approval thresholds (N1 / N2 / N3)",
+    "title": "Purchase order approval thresholds (N1 / N2 / N3)",
     "custom": "Own thresholds",
     "n1Label": "N1 (Manager level 1) below",
     "n2Label": "N2 (Manager level 2) below",
@@ -6250,8 +6321,8 @@
     "applies": "Applies: {{summary}}",
     "inheritEnterprise": "Company policy",
     "inheritDefault": "Default thresholds",
-    "enterpriseTitle": "Approval thresholds",
-    "enterpriseHint": "Used by projects that have no policy of their own (project record). A requisition's level is set at the budget check: a requisition already awaiting approval keeps its own.",
+    "enterpriseTitle": "Purchase order approval thresholds",
+    "enterpriseHint": "Used by projects without their own policy (project page). A purchase order's level is set when it is created, from its amount; the requisition itself is approved by the project manager.",
     "saved": "Approval thresholds saved",
     "levels": {
       "N1": "N1 — Manager level 1",

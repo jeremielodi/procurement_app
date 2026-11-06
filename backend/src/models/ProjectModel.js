@@ -42,9 +42,26 @@ class ProjectModel {
     return prefix;
   }
 
+  /**
+   * Chef du projet (budget holder) : obligatoire — il valide seul les réquisitions du projet (BPMN du 2026-11-06,
+   * Activity_ProjectManagerApproval). Utilisateur actif de l'entreprise du projet (hors fournisseur / super admin).
+   * 400 PROJECT_MANAGER_REQUIRED / PROJECT_MANAGER_INVALID.
+   */
+  async checkProjectManager(userId, { enterpriseId = null } = {}) {
+    if (!userId) throw fail(400, 'PROJECT_MANAGER_REQUIRED', 'Le chef de projet est obligatoire : il valide les réquisitions du projet');
+    const params = [String(userId)];
+    let sql = `SELECT u.id FROM users u
+               WHERE u.id::text = $1 AND u.is_active = true AND u.enterprise_id IS NOT NULL
+                 AND NOT EXISTS (SELECT 1 FROM user_profiles up WHERE up.user_id = u.id AND up.profile_id IN ('prof_supplier', 'prof_superadmin'))`;
+    if (enterpriseId) { params.push(enterpriseId); sql += ` AND u.enterprise_id = $${params.length}`; } else sql += tenant.filter('u.enterprise_id', params);
+    if (!(await db.one(sql, params))) throw fail(400, 'PROJECT_MANAGER_INVALID', 'Chef de projet introuvable ou inactif dans cette entreprise');
+    return userId;
+  }
+
   async create(data) {
     const { name, description, projectManagerId, startDate, endDate, createdBy } = data;
     const code = await this.checkCode(data.code);
+    await this.checkProjectManager(projectManagerId);
     const id = uuidv4();
     
     await db.insert('projects', {
@@ -52,7 +69,7 @@ class ProjectModel {
       code,
       name,
       description,
-      project_manager_id: projectManagerId || null,
+      project_manager_id: projectManagerId,
       status: 'ACTIVE',
       start_date: startDate,
       end_date: endDate,
@@ -129,21 +146,25 @@ class ProjectModel {
     return { ...project, members };
   }
 
-  /** code : absent = inchangé ; sinon contrôlé comme à la création (unique dans l'entreprise du projet) */
+  /**
+   * code : absent = inchangé ; sinon contrôlé comme à la création (unique dans l'entreprise du projet).
+   * projectManagerId : absent = inchangé (avant : effacé) ; vide = refusé (le chef de projet est obligatoire)
+   */
   async update(id, data) {
     const { name, description, projectManagerId, status, startDate, endDate, isActive } = data;
     let code;
+    const current = await db.one('SELECT enterprise_id FROM projects WHERE id = $1', [id]);
+    if (!current) throw fail(404, 'NOT_FOUND', 'Projet introuvable');
     if (data.code !== undefined) {
-      const current = await db.one('SELECT enterprise_id FROM projects WHERE id = $1', [id]);
-      if (!current) throw fail(404, 'NOT_FOUND', 'Projet introuvable');
       code = await this.checkCode(data.code, { excludeId: id, enterpriseId: current.enterprise_id });
     }
+    if (projectManagerId !== undefined) await this.checkProjectManager(projectManagerId, { enterpriseId: current.enterprise_id });
     
     await db.update('projects', {
       ...(code !== undefined && { code }),
       name,
       description,
-      project_manager_id: projectManagerId,
+      ...(projectManagerId !== undefined && { project_manager_id: projectManagerId }),
       status,
       start_date: startDate,
       end_date: endDate,

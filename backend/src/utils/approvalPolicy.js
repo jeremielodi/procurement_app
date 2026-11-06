@@ -1,12 +1,15 @@
 // backend/src/utils/approvalPolicy.js
 // Seuils d'approbation N1 / N2 / N3 (migration 26_approval_policies.sql) : politique du projet, sinon de l'entreprise,
-// sinon valeurs par défaut. Le niveau est calculé ici (jamais dans le BPMN) : check_budget le transmet à BpmnGo
-// (variable approvalLevel) et l'enregistre sur la réquisition avec la politique appliquée.
+// sinon valeurs par défaut. Le niveau est calculé ici (jamais dans le BPMN).
+// Depuis le 2026-11-06 (migration 51) les niveaux portent sur le BON DE COMMANDE : assignPurchaseOrderLevel, transmis
+// à BpmnGo à la création du bon (variable locale à la part poApprovalLevel, Gateway_POApprovalLevel). La réquisition
+// est validée par le chef de projet ; son niveau (assignRequisitionLevel, variable approvalLevel lue par check_budget)
+// ne sert plus qu'aux processus démarrés avant.
 const db = require('../config/database');
 
 const DEFAULT_POLICY = { n1Max: 25000, n2Max: 100000 };
 const LEVELS = ['N1', 'N2', 'N3'];
-// Étape BpmnGo de chaque niveau (approbation directe : une seule étape selon le montant)
+// Étape BpmnGo de chaque niveau sur la réquisition (processus démarrés avant le 2026-11-06)
 const LEVEL_TASKS = { N1: 'Activity_ValidationN1_Manager', N2: 'Activity_ValidationN2_Finance', N3: 'Activity_ValidationN3_DG' };
 
 const num = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
@@ -70,4 +73,26 @@ async function assignRequisitionLevel(requisitionId) {
   return { level, amount: r.amount, policy };
 }
 
-module.exports = { DEFAULT_POLICY, LEVELS, LEVEL_TASKS, parsePolicy, enterprisePolicy, projectPolicy, levelFor, assignRequisitionLevel };
+/**
+ * Niveau d'approbation d'un bon de commande (montant total du bon, politique du projet de sa réquisition), enregistré
+ * avec la politique appliquée → { level, amount, policy }. client : connexion de transaction (facultatif).
+ */
+async function assignPurchaseOrderLevel(poId, client = db) {
+  const po = await client.one(
+    `SELECT po.id, po.total_amount::float8 AS amount, r.project_id, COALESCE(po.enterprise_id, r.enterprise_id) AS enterprise_id
+     FROM purchase_orders po LEFT JOIN requisitions r ON r.id = po.requisition_id WHERE po.id = $1`,
+    [poId]
+  );
+  if (!po) return null;
+  const policy = await projectPolicy(po.project_id, po.enterprise_id);
+  const level = levelFor(po.amount, policy);
+  await client.exec(
+    'UPDATE purchase_orders SET approval_level = $2, approval_policy = $3 WHERE id = $1',
+    [po.id, level, JSON.stringify(policy)]
+  );
+  return { level, amount: po.amount, policy };
+}
+
+module.exports = {
+  DEFAULT_POLICY, LEVELS, LEVEL_TASKS, parsePolicy, enterprisePolicy, projectPolicy, levelFor, assignRequisitionLevel, assignPurchaseOrderLevel,
+};

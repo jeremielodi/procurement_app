@@ -448,6 +448,14 @@ router.post('/purchase-orders/:id/approve',
   purchaseOrderController.approve
 );
 
+// Révision du bon avant son approbation N1 / N2 / N3 (migration 52)
+router.post('/purchase-orders/:id/review',
+  authenticate,
+  hasPermission('REVIEW_PURCHASE_ORDERS'),
+  onProject('REVIEW_PURCHASE_ORDERS', 'purchaseOrder', from.param('id')),
+  purchaseOrderController.review
+);
+
 router.post('/purchase-orders/:id/reject',
   authenticate,
   hasPermission('APPROVE_PURCHASE_ORDERS'),

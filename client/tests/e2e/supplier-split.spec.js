@@ -55,7 +55,7 @@ test('Répartition de 5 articles entre 3 fournisseurs depuis l\'onglet tâches',
   test.skip(!req.process_instance_id, 'BpmnGo indisponible');
 
   const approver = auth(await getApproverToken(page.request));
-  const [n1] = await waitForTask(page, H, req.process_instance_id, 'Activity_ValidationN1_Manager');
+  const [n1] = await waitForTask(page, H, req.process_instance_id, 'Activity_ProjectManagerApproval');
   expect((await page.request.post(`/api/tasks/${n1.id}/complete`, { headers: approver, data: { variables: { approved: true } } })).status()).toBe(200);
   await waitForTask(page, H, req.process_instance_id, 'Activity_DetermineType');
 

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getToken, auth } from './helpers.js';
+import { getToken, getApproverToken, getApproverId, auth, requisitionToPurchaseOrder } from './helpers.js';
 
 // Profils BPMN liés au projet (migration 24_project_profiles.sql) :
 //  - un profil de workflow (manager, finance, requester…) ne s'exerce que sur les projets où il est attribué au
@@ -17,7 +17,7 @@ test.describe.serial('API › Profils liés au projet', () => {
     requester: { email: `pp.requester.${stamp}@nowhere.test`, password: 'Secret123', profileIds: ['prof_requester'] },
     manager: { email: `pp.manager.${stamp}@nowhere.test`, password: 'Secret123', profileIds: ['prof_manager'] },
   };
-  let admin, dept, projectA, projectB, lineA, lineB, reqB, poB;
+  let admin, approver, approverId, dept, projectA, projectB, lineA, lineB, reqB, poB;
   const H = () => auth(admin);
   const json = async (res) => ({ status: res.status(), body: await res.json().catch(() => ({})) });
   const tokenOf = async (request, u) => (await (await request.post('/api/auth/login', { data: u })).json()).data.token;
@@ -30,6 +30,8 @@ test.describe.serial('API › Profils liés au projet', () => {
 
   test.beforeAll(async ({ request }) => {
     admin = await getToken(request);
+    approver = await getApproverToken(request);
+    approverId = await getApproverId(request); // chef des projets du test (il valide les réquisitions)
     for (const [key, u] of Object.entries(users)) {
       const res = await request.post('/api/users', { headers: H(), data: {
         username: `pp${key}${stamp}`, email: u.email, password: u.password, firstName: key, lastName: stamp, profileIds: u.profileIds,
@@ -39,7 +41,7 @@ test.describe.serial('API › Profils liés au projet', () => {
     }
     [dept] = (await (await request.get('/api/departments', { headers: H() })).json()).data;
     const mkProject = async (code) => {
-      const res = await request.post('/api/projects/', { headers: H(), data: { code, name: `Projet ${code}` } });
+      const res = await request.post('/api/projects/', { headers: H(), data: { code, name: `Projet ${code}`, projectManagerId: approverId } });
       expect(res.status(), await res.text()).toBe(201);
       return (await res.json()).data;
     };
@@ -187,24 +189,20 @@ test.describe.serial('API › Profils liés au projet', () => {
   });
 
   test('Tâche BpmnGo : un manager d\'un autre projet ne peut pas la prendre ; une fois le profil attribué sur le projet, oui', async ({ request }) => {
+    test.setTimeout(240_000);
     const req = (await (await request.post('/api/requisitions', { headers: H(), data: requisition(projectA.id, lineA.id, 'tâche N1') })).json()).data;
     expect(req?.id).toBeTruthy();
     // Manager membre du projet B uniquement
     expect((await request.post('/api/projects/members', { headers: H(), data: { projectId: projectB.id, userId: users.manager.id } })).status()).toBe(200);
     const token = await tokenOf(request, users.manager);
 
-    let task, processId;
-    const start = Date.now();
-    while (Date.now() - start < WAIT) {
-      processId = (await (await request.get(`/api/requisitions/${req.id}`, { headers: H() })).json()).data?.process_instance_id;
-      if (processId) {
-        const tasks = (await (await request.get(`/api/tasks/process/${processId}`, { headers: auth(token) })).json()).data || [];
-        task = tasks.find(tk => tk.status !== 'COMPLETED' && tk.taskDefinitionKey === 'Activity_ValidationN1_Manager');
-        if (task) break;
-      }
-      await sleep(1500);
-    }
-    test.skip(!task, 'BpmnGo indisponible');
+    // Approbation N1 du bon de commande (groupe manager) : réquisition validée par le chef de projet, bon de 40
+    const flow = await requisitionToPurchaseOrder(request, { admin, approver, requisitionId: req.id, amount: 40 });
+    test.skip(!flow, 'BpmnGo indisponible');
+    const processId = flow.requisition.process_instance_id;
+    const task = ((await (await request.get(`/api/tasks/process/${processId}`, { headers: auth(token) })).json()).data || [])
+      .find(tk => tk.status !== 'COMPLETED' && tk.taskDefinitionKey === 'Activity_POApprovalN1');
+    expect(task, 'approbation N1 du bon de commande').toBeTruthy();
     expect([task.canClaim, task.blockedReason]).toEqual([false, 'NOT_ON_PROJECT']);
     // Absente de « Mes tâches »
     const mine = (await (await request.get('/api/tasks/user', { headers: auth(token) })).json()).data || [];

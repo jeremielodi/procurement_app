@@ -1,11 +1,12 @@
 // backend/src/services/RequisitionRevisionService.js
 // Renvoi pour correction, retrait, modification et versions d'une réquisition (migration 25_requisition_revisions.sql).
-//  - Renvoi : un approbateur (N1 / N2 / N3) termine son étape avec returnedForCorrection = true (TaskController) ;
+//  - Renvoi : le chef de projet (anciens processus : approbateur N1 / N2 / N3) termine son étape avec
+//    returnedForCorrection = true (TaskController) ;
 //    le retrait par le demandeur termine de la même façon l'étape d'approbation que personne n'a prise en charge
 //  - La réquisition passe « À corriger » (RETURNED) ; BpmnGo ouvre Activity_ReviseRequisition pour le demandeur
 //  - update : seul le demandeur modifie, et seulement dans cet état ; resubmit : nouvelle version (photo complète),
-//    étape terminée avec resubmitted = true (nouvelle vérification du budget, circuit d'approbation selon le NOUVEAU
-//    montant) ; abandon : resubmitted = false, réquisition annulée
+//    étape terminée avec resubmitted = true (nouvelle vérification du budget, puis validation du chef de projet) ;
+//    abandon : resubmitted = false, réquisition annulée
 //  - versions : chaque soumission conservée, avec les changements par rapport à la précédente
 const db = require('../config/database');
 const camundaService = require('./CamundaService');
@@ -13,10 +14,26 @@ const notificationService = require('./NotificationService');
 const i18n = require('../i18n');
 const { requisitionDelivery } = require('../utils/requisitionDelivery');
 const { resolveUnitId } = require('../utils/units');
+const projectManagers = require('../utils/projectManager');
+const { REQUISITION_APPROVAL_TASKS } = require('../utils/workflowLabels');
 
-const APPROVAL_TASKS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
+// Validation de la réquisition : chef de projet (anciens processus : N1 / N2 / N3)
+const APPROVAL_TASKS = REQUISITION_APPROVAL_TASKS;
 const REVISE_TASK = 'Activity_ReviseRequisition';
 const fail = (status, code, message, extra = {}) => Object.assign(new Error(message), { status, code, ...extra });
+
+/**
+ * Le processus suit-il le circuit du 2026-11-06 (validation par le chef de projet) ? Variable approvalFlow posée au
+ * démarrage (RequisitionController). Les processus démarrés avant restent sur N1 / N2 / N3 : pas de chef de projet exigé.
+ */
+async function usesProjectManager(processInstanceId) {
+  if (!processInstanceId) return true;
+  try {
+    return (await camundaService.getProcessVariables(processInstanceId))?.approvalFlow === 'PROJECT_MANAGER';
+  } catch {
+    return true;
+  }
+}
 
 /**
  * Le processus BpmnGo connaît-il « Corriger la réquisition » ? Variable revisionSupported posée au démarrage
@@ -261,13 +278,17 @@ class RequisitionRevisionService {
       if (!(num(it.quantity) > 0) || !(num(it.frequency || 1) > 0) || num(it.unitPrice) < 0) throw fail(400, 'ITEM_INVALID', 'Quantité, fréquence ou prix invalide', { line });
     });
 
+    const current = await loadRequisition(requisitionId);
+    const pmFlow = current ? await usesProjectManager(current.process_instance_id) : true;
     return db.withTransaction(async (tx) => {
       const req = await tx.one('SELECT * FROM requisitions WHERE id = $1 FOR UPDATE', [requisitionId]);
       if (!req) throw fail(404, 'NOT_FOUND', 'Réquisition introuvable');
       if (!same(req.requester_id, userId)) throw fail(403, 'NOT_REQUESTER', 'Seul le demandeur peut modifier sa réquisition');
       if (req.status !== 'RETURNED') throw fail(409, 'NOT_EDITABLE', 'La réquisition ne peut être modifiée que lorsqu\'elle est « À corriger »');
 
+      // Projet obligatoire avec un chef de projet (qui validera la nouvelle version) autre que le demandeur
       const projectId = data.projectId || null;
+      if (pmFlow) await projectManagers.forRequisition(projectId, req.requester_id);
       for (const [line, it] of items.entries()) {
         if (!it.budgetLineId) throw fail(400, 'BUDGET_LINE_REQUIRED', 'Ligne budgétaire obligatoire', { line });
         const budget = await tx.one(
@@ -329,6 +350,10 @@ class RequisitionRevisionService {
     const task = (await openTasks(req.process_instance_id)).find(t => t.taskDefinitionKey === REVISE_TASK);
     if (!task) throw fail(409, 'TASK_NOT_FOUND', 'Étape « Corriger la réquisition » introuvable dans BpmnGo (moteur injoignable ou processus terminé)');
 
+    // Chef de projet actuel (il valide la nouvelle version) ; projet sans chef : correction impossible à soumettre
+    const projectManager = await usesProjectManager(req.process_instance_id)
+      ? await projectManagers.forRequisition(req.project_id, req.requester_id)
+      : null;
     const photo = await snapshot(req.id);
     const previous = await db.one('SELECT snapshot FROM requisition_versions WHERE requisition_id = $1 AND version = $2', [req.id, req.version || 1]);
     const changes = diff(previous?.snapshot, photo);
@@ -356,6 +381,7 @@ class RequisitionRevisionService {
         projectId: photo.project?.id || '',
         projectCode: photo.project?.label?.split(' - ')[0] || '',
         projectName: photo.project?.label?.split(' - ').slice(1).join(' - ') || '',
+        ...(projectManager && { projectManager: projectManager.email, projectManagerId: projectManager.id }),
         items: JSON.stringify(photo.items.map(i => ({
           description: i.description, quantity: i.quantity, frequency: i.frequency, unitPrice: i.unitPrice, total: i.total,
           budgetLineId: i.budgetLineId, budgetLineCode: i.budgetLineCode,
@@ -434,5 +460,6 @@ class RequisitionRevisionService {
 module.exports = new RequisitionRevisionService();
 module.exports.supportsRevision = supportsRevision;
 module.exports.notSupported = notSupported;
+module.exports.usesProjectManager = usesProjectManager;
 module.exports.APPROVAL_TASKS = APPROVAL_TASKS;
 module.exports.REVISE_TASK = REVISE_TASK;

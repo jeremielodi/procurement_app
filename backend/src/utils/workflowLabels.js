@@ -7,6 +7,10 @@ const i18n = require('../i18n');
 
 // candidateGroups du BPMN (= profil prof_<groupe>) — utilisé pour « tâches en cours par profil »
 const TASK_CANDIDATE_GROUPS = {
+  // Validation de la réquisition par le chef du projet (budget holder, projects.project_manager_id — 2026-11-06).
+  // « project_manager » n'est pas un profil : groupe accordé au seul chef du projet (utils/projectAccess)
+  Activity_ProjectManagerApproval: 'project_manager',
+  // Anciennes approbations de la réquisition (processus démarrés avant le 2026-11-06)
   Activity_ValidationN1_Manager: 'manager',
   Activity_ValidationN2_Finance: 'manager_n2', // Manager niveau 2 (migration 27 ; avant : Finance)
   Activity_ValidationN3_DG:      'manager_n3', // Manager niveau 3 (migration 27 ; avant : DG)
@@ -17,7 +21,13 @@ const TASK_CANDIDATE_GROUPS = {
   Activity_SoleSource:           'procurement',
   Activity_AllocateSuppliers:    'procurement', // répartition des articles entre plusieurs fournisseurs
   Activity_CreatePO:             'procurement',
-  Activity_POApproval:           'management',
+  // Révision du bon de commande avant son approbation (migration 52, profil prof_po_reviewer)
+  Activity_POReview:             'po_reviewer',
+  Activity_POApproval:           'management', // ancienne approbation du bon de commande (processus démarrés avant)
+  // Approbation du bon de commande au niveau donné par son montant (seuils du projet / de l'entreprise)
+  Activity_POApprovalN1:         'manager',
+  Activity_POApprovalN2:         'manager_n2',
+  Activity_POApprovalN3:         'manager_n3',
   Activity_SupplierConfirmation: 'procurement',
   Activity_GoodsReceipt:         'logistic',
   Activity_ServiceAcceptance:    'requester',
@@ -27,12 +37,28 @@ const TASK_CANDIDATE_GROUPS = {
 };
 
 const TASK_KEYS = [
+  'Activity_ProjectManagerApproval',
   'Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG', 'Activity_BudgetAdjustment',
-  ...Object.keys(TASK_CANDIDATE_GROUPS).filter(k => !k.startsWith('Activity_Validation')),
+  ...Object.keys(TASK_CANDIDATE_GROUPS).filter(k => !k.startsWith('Activity_Validation') && k !== 'Activity_ProjectManagerApproval'),
 ];
+
+// Validation de la réquisition : chef du projet (BPMN du 2026-11-06) ; N1 / N2 / N3 = processus démarrés avant
+const PM_APPROVAL_TASK = 'Activity_ProjectManagerApproval';
+const LEGACY_REQUISITION_APPROVAL_TASKS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
+const REQUISITION_APPROVAL_TASKS = [PM_APPROVAL_TASK, ...LEGACY_REQUISITION_APPROVAL_TASKS];
+// Révision du bon de commande (approuver / rejeter), avant son approbation N1 / N2 / N3 — migration 52
+const PO_REVIEW_TASK = 'Activity_POReview';
+// Approbation du bon de commande : une étape par niveau ; Activity_POApproval (Direction) = processus démarrés avant
+const PO_LEVEL_TASKS = { N1: 'Activity_POApprovalN1', N2: 'Activity_POApprovalN2', N3: 'Activity_POApprovalN3' };
+const PO_APPROVAL_TASKS = ['Activity_POApproval', ...Object.values(PO_LEVEL_TASKS)];
 
 // Anciens noms anglais du BPMN (colonne task_name de workflow_history)
 const TASK_NAME_EN = {
+  'Project Manager Approval (Budget Holder)': 'Activity_ProjectManagerApproval',
+  'Purchase Order Review': 'Activity_POReview',
+  'PO Approval — Manager Level 1 (N1)': 'Activity_POApprovalN1',
+  'PO Approval — Manager Level 2 (N2)': 'Activity_POApprovalN2',
+  'PO Approval — Manager Level 3 (N3)': 'Activity_POApprovalN3',
   'Manager Approval (N1)':        'Activity_ValidationN1_Manager',
   'Finance Approval (N2)':        'Activity_ValidationN2_Finance',
   'DG Approval (N3)':             'Activity_ValidationN3_DG',
@@ -90,7 +116,7 @@ const MATCH_LABELS = Object.fromEntries(['MATCHED', 'MISMATCH', 'PARTIAL', 'PEND
 const PERSONAL_TASKS = ['Activity_BudgetAdjustment', 'Activity_ReviseRequisition'];
 
 module.exports = {
-  PERSONAL_TASKS,
+  PERSONAL_TASKS, PM_APPROVAL_TASK, LEGACY_REQUISITION_APPROVAL_TASKS, REQUISITION_APPROVAL_TASKS, PO_REVIEW_TASK, PO_LEVEL_TASKS, PO_APPROVAL_TASKS,
   TASK_LABELS, TASK_NAME_EN, TASK_GROUPS, TASK_CANDIDATE_GROUPS, METHOD_LABELS, MATCH_LABELS,
   taskKey, taskLabel, groupLabel, methodLabel, reasonLabel, matchLabel,
 };

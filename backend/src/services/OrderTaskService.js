@@ -8,9 +8,11 @@
 // comportement d'origine (une seule tâche de chaque clé).
 const db = require('../config/database');
 const camundaService = require('./CamundaService');
+const { PO_REVIEW_TASK, PO_APPROVAL_TASKS } = require('../utils/workflowLabels');
 
 const MAIN_LOT = 'MAIN';
-const ORDER_TASKS = ['Activity_CreatePO', 'Activity_POApproval', 'Activity_SupplierConfirmation', 'Activity_ServiceAcceptance',
+// Révision puis approbation du bon de commande : N1 / N2 / N3 selon son montant (ancienne étape Activity_POApproval comprise)
+const ORDER_TASKS = ['Activity_CreatePO', PO_REVIEW_TASK, ...PO_APPROVAL_TASKS, 'Activity_SupplierConfirmation', 'Activity_ServiceAcceptance',
   'Activity_GoodsReceipt', 'Activity_EnterInvoice', 'Activity_ProcessPayment'];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

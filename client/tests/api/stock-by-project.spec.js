@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getToken, auth } from './helpers.js';
+import { getToken, getApproverId, auth } from './helpers.js';
 
 // État du stock par projet (migration 29_stock_balances_by_project.sql) : solde article × dépôt × lot × projet.
 //  - sortie avec un projet : stock de ce projet puis stock sans projet, jamais celui d'un autre projet
@@ -21,7 +21,7 @@ test.describe.serial('API › Stock — état par projet', () => {
     me = (await (await request.get('/api/auth/profile', { headers: H() })).json()).data;
     const locations = (await (await request.get('/api/public/locations')).json()).data;
     const cats = (await (await request.get('/api/public/market-categories')).json()).data;
-    const mkProject = async (code) => (await (await request.post('/api/projects/', { headers: H(), data: { code, name: `Projet ${code}` } })).json()).data;
+    const mkProject = async (code) => (await (await request.post('/api/projects/', { headers: H(), data: { code, name: `Projet ${code}`, projectManagerId: await getApproverId(request) } })).json()).data;
     projectA = await mkProject(`SPA-${stamp}`);
     projectB = await mkProject(`SPB-${stamp}`);
     const mkWarehouse = async (suffix) => (await (await request.post('/api/warehouses', { headers: H(), data: { code: `SP${suffix}-${stamp}`.slice(0, 30), name: `Dépôt projets ${suffix} ${stamp}`, locationId: locations[0].id } })).json()).data;

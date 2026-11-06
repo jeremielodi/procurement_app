@@ -13,8 +13,8 @@ const { scopedDb } = require('../utils/tenantSql');
 const tenant = require('../utils/tenant');
 const userModel = require('../models/UserModel');
 const dashboardModel = require('../models/DashboardModel');
-const { loadScope, groupsOnProject, canSeeRequisition, requisitionVisibilitySql } = require('../utils/projectAccess');
-const { TASK_CANDIDATE_GROUPS, PERSONAL_TASKS, taskKey, taskLabel, methodLabel } = require('../utils/workflowLabels');
+const { loadScope, groupsOnProject, canSeeRequisition, requisitionVisibilitySql, PROJECT_MANAGER_GROUP } = require('../utils/projectAccess');
+const { TASK_CANDIDATE_GROUPS, PERSONAL_TASKS, REQUISITION_APPROVAL_TASKS, PO_APPROVAL_TASKS, taskKey, taskLabel, methodLabel } = require('../utils/workflowLabels');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { PROGRESS_STATUS_SQL } = require('../models/RequisitionModel');
 
@@ -24,7 +24,8 @@ const PERIOD_DAYS = { week: 7, month: 30, quarter: 90, year: 365 }; // périodes
 const STEERING_PROFILES = ['prof_admin', 'prof_dg', 'prof_management', 'prof_auditor'];
 // Bons de commande qui n'engagent rien (pas encore approuvés, rejetés, annulés)
 const INACTIVE_PO = `('DRAFT', 'PO_PENDING', 'PENDING', 'PO_REJECTED', 'REJECTED', 'CANCELLED')`;
-const APPROVAL_TASKS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG', 'Activity_POApproval'];
+// Étapes d'approbation : chef de projet (réquisition), N1 / N2 / N3 (bon de commande) ; anciennes étapes conservées
+const APPROVAL_TASKS = [...REQUISITION_APPROVAL_TASKS, ...PO_APPROVAL_TASKS];
 const COMPETITIVE_METHODS = ['MULTIPLE_QUOTATIONS', 'RFP'];
 const CONTROL_AUDIT_ACTIONS = ['SOD_VIOLATION_BLOCKED', 'PAYMENT_BLOCKED', 'INVOICE_DUPLICATE_BLOCKED', 'TASK_COMPLETION_DENIED', 'PROJECT_ACCESS_DENIED'];
 // Date de paiement effective d'un paiement PAID
@@ -149,6 +150,8 @@ class DashboardOverviewService {
   isMine(task, scope) {
     if (PERSONAL_TASKS.includes(task.key)) return String(task.requesterId) === scope.userId;
     if (task.group === 'requester' && String(task.requesterId) !== scope.userId) return false;
+    // Validation du chef de projet : lui seul (pas l'administrateur)
+    if (task.group === PROJECT_MANAGER_GROUP) return groupsOnProject(scope, task.projectId).has(task.group);
     if (scope.isAdmin) return true;
     return !!task.group && groupsOnProject(scope, task.projectId).has(task.group);
   }

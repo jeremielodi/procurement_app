@@ -12,7 +12,7 @@
  * Requiert BpmnGo (sinon les tests s'ignorent).
  */
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth } from './helpers.js';
+import { getToken, getApproverToken, auth, passReview } from './helpers.js';
 
 const POLL_TIMEOUT = 60_000;
 const SOURCING_TASKS = ['Activity_DirectPurchase', 'Activity_RequestQuotations', 'Activity_RFPProcess', 'Activity_SoleSource'];
@@ -73,7 +73,7 @@ function scenario({ method, sourcingTask, amount, justification, refused }) {
         return req.process_instance_id || null;
       }, { timeout: 15_000 }).toBeTruthy();
 
-      const n1 = await waitForTask(request, req, 'Activity_ValidationN1_Manager');
+      const n1 = await waitForTask(request, req, 'Activity_ProjectManagerApproval');
       expect((await complete(request, n1, { approved: true, comment: 'OK' }, approverToken)).status()).toBe(200);
       await waitForTask(request, req, 'Activity_DetermineType');
     });
@@ -153,7 +153,9 @@ function scenario({ method, sourcingTask, amount, justification, refused }) {
       const body = await created.json();
       expect([200, 201], JSON.stringify(body)).toContain(created.status());
       po = body.data;
-      await waitForTask(request, req, 'Activity_POApproval');
+      await waitForTask(request, req, 'Activity_POReview');
+      await passReview(request, approverToken, po.id);
+      await waitForTask(request, req, 'Activity_POApprovalN1');
 
       expect((await request.post(`/api/purchase-orders/${po.id}/approve`, { headers: auth(approverToken), data: { comments: 'ok' } })).status()).toBe(200);
       await waitForTask(request, req, 'Activity_SupplierConfirmation');

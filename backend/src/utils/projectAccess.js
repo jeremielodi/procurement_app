@@ -55,11 +55,20 @@ async function loadScope(userId) {
   return scope;
 }
 
+// Groupe BpmnGo de la validation des réquisitions (Activity_ProjectManagerApproval) : pas un profil, il revient au
+// seul chef du projet (projects.project_manager_id) — jamais à l'administrateur
+const PROJECT_MANAGER_GROUP = 'project_manager';
+
 /** Groupes BpmnGo de l'utilisateur sur un projet (projet inconnu : tous ses groupes) */
 function groupsOnProject(scope, projectId) {
   if (!projectId) return new Set([...scope.global, ...scope.scoped]);
-  return new Set([...scope.global, ...scope.everywhere, ...(scope.byProject.get(String(projectId)) || [])]);
+  const groups = new Set([...scope.global, ...scope.everywhere, ...(scope.byProject.get(String(projectId)) || [])]);
+  if (scope.managedProjects?.has(String(projectId))) groups.add(PROJECT_MANAGER_GROUP);
+  return groups;
 }
+
+/** L'utilisateur est le chef du projet */
+const isProjectManager = (scope, projectId) => !!projectId && !!scope.managedProjects?.has(String(projectId));
 
 /** Voit toutes les réquisitions du projet (sinon seulement les siennes) — cf. user_sees_project_requisitions */
 function seesProjectRequisitions(scope, projectId) {
@@ -176,5 +185,5 @@ const from = {
 
 module.exports = {
   loadScope, groupsOnProject, hasGroupElsewhere, hasProjectPermission, projectOf, deny, requireProjectPermission, from, groupOf,
-  OWN_ONLY_GROUPS, seesProjectRequisitions, canSeeRequisition, requisitionVisibilitySql, requisitionVisible,
+  OWN_ONLY_GROUPS, PROJECT_MANAGER_GROUP, isProjectManager, seesProjectRequisitions, canSeeRequisition, requisitionVisibilitySql, requisitionVisible,
 };

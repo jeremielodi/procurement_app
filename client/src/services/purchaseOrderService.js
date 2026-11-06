@@ -33,6 +33,12 @@ export const purchaseOrderService = {
     return response.data
   },
 
+  // Révision du bon (avant son approbation N1 / N2 / N3) : decision APPROVE | REJECT, motif obligatoire au rejet
+  review: async (id, { decision, comment } = {}) => {
+    const response = await api.post(`/purchase-orders/${id}/review`, { decision, comment }, { skipErrorToast: true })
+    return response.data
+  },
+
   // Rejeter une commande
   reject: async (id, { reason, taskId } = {}) => {
     const response = await api.post(`/purchase-orders/${id}/reject`, { reason, taskId })

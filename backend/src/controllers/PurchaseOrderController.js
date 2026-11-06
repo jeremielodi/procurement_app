@@ -8,6 +8,64 @@ const segregation = require('../utils/segregation');
 const { audit, AUDIT } = require('../utils/auditLog');
 const orderTasks = require('../services/OrderTaskService');
 const allocationService = require('../services/SupplierAllocationService');
+const approvalPolicy = require('../utils/approvalPolicy');
+const projectAccess = require('../utils/projectAccess');
+const { PO_REVIEW_TASK, PO_APPROVAL_TASKS, TASK_CANDIDATE_GROUPS } = require('../utils/workflowLabels');
+
+// Groupe BpmnGo qui approuve un bon de commande selon son niveau (migration 51 : N1 / N2 / N3 sur la commande)
+const LEVEL_GROUPS = { N1: 'manager', N2: 'manager_n2', N3: 'manager_n3' };
+
+/** Étape BpmnGo ouverte de ce bon parmi keys (null si aucune ou BpmnGo injoignable) → { task, projectId } */
+async function openStepOf(po, keys) {
+  const r = po.requisition_id
+    ? await db.one('SELECT process_instance_id, project_id FROM requisitions WHERE id = $1', [po.requisition_id])
+    : null;
+  let task = null;
+  if (r?.process_instance_id) {
+    try {
+      task = await orderTasks.findForPurchaseOrder(r.process_instance_id, keys, po.id);
+    } catch (err) {
+      console.error('[PO] Étape BpmnGo (non bloquant) :', err.message);
+    }
+  }
+  return { task, projectId: r?.project_id || null };
+}
+
+/**
+ * Étape d'approbation ouverte de ce bon (N1 / N2 / N3, ou l'ancienne approbation Direction d'un processus démarré
+ * avant) et groupe attendu : celui de l'étape BpmnGo, à défaut celui du niveau enregistré sur le bon.
+ * → { task, group, projectId }
+ */
+async function approvalStepOf(po) {
+  const { task, projectId } = await openStepOf(po, PO_APPROVAL_TASKS);
+  const group = task ? TASK_CANDIDATE_GROUPS[task.taskDefinitionKey] : LEVEL_GROUPS[po.approval_level] || null;
+  return { task, group, projectId };
+}
+
+/** 409 PO_IN_REVIEW : le bon attend sa révision (migration 52) — pas encore d'approbation N1 / N2 / N3 */
+async function assertNotInReview(po) {
+  if ((await openStepOf(po, PO_REVIEW_TASK)).task) {
+    throw Object.assign(new Error('Ce bon de commande attend sa révision : il sera approuvé ensuite selon son niveau'), { status: 409, code: 'PO_IN_REVIEW' });
+  }
+}
+
+/** L'utilisateur a le groupe attendu sur le projet (administrateur : oui ; aucun groupe connu : contrôle de la route) */
+async function hasApprovalGroup(userId, { group, projectId }) {
+  if (!group) return true;
+  const scope = await projectAccess.loadScope(userId);
+  return scope.isAdmin || projectAccess.groupsOnProject(scope, projectId).has(group);
+}
+
+/** 403 NOT_APPROVAL_LEVEL : le bon revient à un autre niveau de manager */
+function levelError(po, group) {
+  const level = Object.keys(LEVEL_GROUPS).find(k => LEVEL_GROUPS[k] === group);
+  return Object.assign(
+    new Error(level
+      ? `Ce bon de commande (niveau ${level}) doit être approuvé par un Manager niveau ${level.slice(1)} du projet`
+      : "Vous n'avez pas le profil qui approuve ce bon de commande sur ce projet"),
+    { status: 403, code: 'NOT_APPROVAL_LEVEL', details: { level: level || null, poNumber: po.po_number } }
+  );
+}
 
 /**
  * Part d'une réquisition répartie entre plusieurs fournisseurs à laquelle appartient un nouveau bon de commande :
@@ -74,7 +132,7 @@ async function checkRequisitionQuantities(requisitionId, items) {
 const clip = (v) => String(v ?? '').trim().slice(0, 2000) || null;
 
 function sendError(res, error, fallback) {
-  if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+  if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
   console.error(fallback, error);
   return res.status(500).json({ success: false, message: fallback, error: error.message });
 }
@@ -140,11 +198,14 @@ class PurchaseOrderController {
         const camundaTaskId = requisition.process_instance_id
           ? (await orderTasks.findCreateTask(requisition.process_instance_id, lot?.id || null, taskId))?.id || null
           : null;
+        // Niveau d'approbation du bon (montant + seuils du projet) : Gateway_POApprovalLevel → N1 / N2 / N3
+        const approval = await approvalPolicy.assignPurchaseOrderLevel(result.id);
         if (camundaTaskId) {
           await camundaService.completeTask(camundaTaskId, {
             poId: result.id,
             poNumber: result.poNumber,
-            totalAmount
+            totalAmount,
+            poApprovalLevel: approval?.level || 'N3'
           });
         }
       } catch (camundaErr) {
@@ -197,6 +258,19 @@ class PurchaseOrderController {
       }
       // Séparation des tâches : l'interface remplace « Approuver » par une explication
       purchaseOrder.self_approval = await segregation.isPurchaseOrderSelfApproval(purchaseOrder, req.user.id);
+      // Révision (migration 52) : étape ouverte → review_pending ; le réviseur du projet (admin : oui) → can_review
+      if (purchaseOrder.status === 'PO_PENDING') {
+        const review = await openStepOf(purchaseOrder, PO_REVIEW_TASK);
+        purchaseOrder.review_pending = !!review.task;
+        if (review.task) purchaseOrder.can_review = await hasApprovalGroup(req.user.id, { group: 'po_reviewer', projectId: review.projectId });
+      }
+      // Niveau d'approbation (N1 / N2 / N3) : seul un manager de ce niveau sur le projet approuve ou rejette
+      if (['PO_PENDING', 'DRAFT'].includes(purchaseOrder.status) && purchaseOrder.approval_level) {
+        const projectId = purchaseOrder.requisition_id
+          ? (await db.one('SELECT project_id FROM requisitions WHERE id = $1', [purchaseOrder.requisition_id]))?.project_id
+          : null;
+        purchaseOrder.can_approve_level = await hasApprovalGroup(req.user.id, { group: LEVEL_GROUPS[purchaseOrder.approval_level], projectId });
+      }
       res.json({ success: true, data: purchaseOrder });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Erreur récupération commande', error: error.message });
@@ -295,20 +369,17 @@ class PurchaseOrderController {
       }
       // Séparation des tâches : ni le créateur du bon, ni le demandeur de la réquisition
       await segregation.assertCanApprovePurchaseOrder(req, existing);
+      await assertNotInReview(existing);
+      // Niveau du bon (N1 / N2 / N3) : manager de ce niveau sur le projet
+      const step = await approvalStepOf(existing);
+      if (!(await hasApprovalGroup(userId, step))) throw levelError(existing, step.group);
 
       let camundaTaskCompleted = false;
 
       try {
-        const reqRow = await db.one(
-          'SELECT process_instance_id FROM requisitions WHERE id = $1',
-          [existing.requisition_id]
-        );
-        if (reqRow?.process_instance_id) {
-          const poTask = await orderTasks.findForPurchaseOrder(reqRow.process_instance_id, 'Activity_POApproval', existing.id);
-          if (poTask) {
-            await camundaService.completeTask(poTask.id, { poApproved: true, poApprovalComment: comments || '' });
-            camundaTaskCompleted = true;
-          }
+        if (step.task) {
+          await camundaService.completeTask(step.task.id, { poApproved: true, poApprovalComment: comments || '' });
+          camundaTaskCompleted = true;
         }
       } catch (err) {
         console.error('[PO approve] Camunda lookup (non-fatal):', err.message);
@@ -357,19 +428,18 @@ class PurchaseOrderController {
         return res.status(400).json({ success: false, message: 'Seules les commandes en attente peuvent être rejetées' });
       }
 
+      // Bon en révision : le rejet passe par la révision (POST /purchase-orders/:id/review)
+      await assertNotInReview(existing);
+      // Niveau du bon (N1 / N2 / N3) : manager de ce niveau sur le projet
+      const step = await approvalStepOf(existing);
+      if (!(await hasApprovalGroup(userId, step))) throw levelError(existing, step.group);
+
       let camundaTaskCompleted = false;
 
       try {
-        const reqRow = await db.one(
-          'SELECT process_instance_id FROM requisitions WHERE id = $1',
-          [existing.requisition_id]
-        );
-        if (reqRow?.process_instance_id) {
-          const poTask = await orderTasks.findForPurchaseOrder(reqRow.process_instance_id, 'Activity_POApproval', existing.id);
-          if (poTask) {
-            await camundaService.completeTask(poTask.id, { poApproved: false, poApprovalComment: reason || '' });
-            camundaTaskCompleted = true;
-          }
+        if (step.task) {
+          await camundaService.completeTask(step.task.id, { poApproved: false, poApprovalComment: reason || '' });
+          camundaTaskCompleted = true;
         }
       } catch (err) {
         console.error('[PO reject] Camunda lookup (non-fatal):', err.message);
@@ -388,8 +458,69 @@ class PurchaseOrderController {
         camundaTaskCompleted
       });
     } catch (error) {
-      console.error('Error rejecting purchase order:', error);
-      res.status(500).json({ success: false, message: 'Erreur lors du rejet', error: error.message });
+      return sendError(res, error, 'Erreur lors du rejet');
+    }
+  }
+
+  /**
+   * POST /purchase-orders/:id/review { decision: APPROVE | REJECT, comment } — révision du bon (migration 52), avant
+   * son approbation N1 / N2 / N3. Réviseur du projet (prof_po_reviewer ; admin : oui), ni le créateur du bon ni le
+   * demandeur. APPROVE → étape de niveau ; REJECT (motif obligatoire) → bon rejeté, la part s'arrête.
+   */
+  async review(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      const decision = String(req.body?.decision || '').toUpperCase();
+      const comment = clip(req.body?.comment);
+      if (!['APPROVE', 'REJECT'].includes(decision)) {
+        return res.status(400).json({ success: false, code: 'REVIEW_DECISION_REQUIRED', message: 'Choisissez : approuver ou rejeter' });
+      }
+      if (decision === 'REJECT' && !comment) {
+        return res.status(400).json({ success: false, code: 'REVIEW_REASON_REQUIRED', message: 'Indiquez le motif du rejet' });
+      }
+      const existing = await purchaseOrderModel.findById(id);
+      if (!existing) return res.status(404).json({ success: false, message: 'Commande non trouvée' });
+      const step = await openStepOf(existing, PO_REVIEW_TASK);
+      if (existing.status !== 'PO_PENDING' || !step.task) {
+        return res.status(409).json({ success: false, code: 'NOT_IN_REVIEW', message: "Ce bon de commande n'attend pas de révision" });
+      }
+      // Séparation des tâches : ni le créateur du bon, ni le demandeur de la réquisition
+      await segregation.assertCanApprovePurchaseOrder(req, existing);
+      if (!(await hasApprovalGroup(userId, { group: 'po_reviewer', projectId: step.projectId }))) {
+        return res.status(403).json({ success: false, code: 'NOT_PO_REVIEWER', message: "La révision revient au réviseur des bons de commande du projet" });
+      }
+
+      const approved = decision === 'APPROVE';
+      // Bon mis à jour puis étape BpmnGo terminée, dans une transaction : refus de BpmnGo = rien d'enregistré
+      await db.withTransaction(async (tx) => {
+        await tx.exec(
+          `UPDATE purchase_orders SET reviewed_by = $2, reviewed_at = CURRENT_TIMESTAMP, review_decision = $3::varchar,
+                  review_comment = $4, status = CASE WHEN $3::varchar = 'REJECTED' THEN 'PO_REJECTED' ELSE status END,
+                  updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1`,
+          [existing.id, userId, approved ? 'APPROVED' : 'REJECTED', comment]
+        );
+        const done = await camundaService.completeTask(step.task.id, { poReviewed: approved, poReviewComment: comment || '' });
+        if (!done?.success) {
+          throw Object.assign(new Error(done?.error || "BpmnGo n'a pas accepté la révision"), { status: 502, code: 'BPMNGO_ERROR' });
+        }
+      });
+      // Suivi du workflow : fin de l'étape BpmnGo (poReviewed, poReviewComment) + réviseur lu sur le bon (reviewed_by)
+      await audit(req, approved ? AUDIT.PURCHASE_ORDER_REVIEWED : AUDIT.PURCHASE_ORDER_REJECTED, {
+        entity: { type: 'purchase_order', id: existing.id, label: existing.po_number },
+        details: { step: 'REVIEW', decision: approved ? 'APPROVED' : 'REJECTED', comment, amount: existing.total_amount },
+      });
+      if (req.io) {
+        req.io.to(`user-${existing.created_by}`).emit('notification', {
+          title: approved ? 'Bon de commande révisé' : 'Bon de commande rejeté à la révision',
+          message: `${existing.po_number} : ${approved ? 'révision approuvée, approbation selon son niveau' : comment}`,
+          type: approved ? 'SUCCESS' : 'WARNING',
+        });
+      }
+      res.json({ success: true, data: { id: existing.id, status: approved ? 'PO_PENDING' : 'PO_REJECTED', reviewDecision: approved ? 'APPROVED' : 'REJECTED' } });
+    } catch (error) {
+      return sendError(res, error, 'Erreur lors de la révision');
     }
   }
 

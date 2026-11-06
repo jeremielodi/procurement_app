@@ -12,10 +12,10 @@
  * Requiert BpmnGo.
  */
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth, supplierRegistration, firstReferenceIds } from './helpers.js';
+import { getToken, getApproverToken, auth, supplierRegistration, firstReferenceIds, passReview } from './helpers.js';
 
 const POLL_TIMEOUT = 60_000;
-const APPROVALS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
+const APPROVALS = ['Activity_ProjectManagerApproval']; // validation de la réquisition par le chef de projet
 const ITEMS = ['Groupe électrogène', 'Panneaux solaires', 'Batteries'];
 const stamp = Date.now();
 
@@ -178,7 +178,10 @@ test.describe.serial('Appel d\'offres attribué par article (BpmnGo)', () => {
       })),
     } });
     expect(po.status(), await po.text()).toBe(201);
-    await expect.poll(async () => (await openTasks(request)).filter(t => t.taskDefinitionKey === 'Activity_POApproval').length,
+    await expect.poll(async () => (await openTasks(request)).filter(t => t.taskDefinitionKey === 'Activity_POReview').length,
+      { timeout: POLL_TIMEOUT }).toBe(1);
+    await passReview(request, approverToken, (await po.json()).data.id);
+    await expect.poll(async () => (await openTasks(request)).filter(t => t.taskDefinitionKey === 'Activity_POApprovalN1').length,
       { timeout: POLL_TIMEOUT }).toBe(1);
   });
 });

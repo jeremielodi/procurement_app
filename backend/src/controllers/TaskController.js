@@ -5,7 +5,7 @@ const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const segregation = require('../utils/segregation');
-const { taskLabel, PERSONAL_TASKS } = require('../utils/workflowLabels');
+const { taskLabel, PERSONAL_TASKS, PM_APPROVAL_TASK, REQUISITION_APPROVAL_TASKS, PO_APPROVAL_TASKS } = require('../utils/workflowLabels');
 const revisionService = require('../services/RequisitionRevisionService');
 const approvalPolicy = require('../utils/approvalPolicy');
 const supplierBankService = require('../services/SupplierBankService');
@@ -38,19 +38,16 @@ const directPurchaseService = require('../services/DirectPurchaseService');
 const allocationService = require('../services/SupplierAllocationService');
 const orderTasks = require('../services/OrderTaskService');
 
-// Task definition keys for each approval level (must match BPMN Activity IDs)
-const REQUISITION_APPROVAL_TASKS = [
-  'Activity_ValidationN1_Manager',
-  'Activity_ValidationN2_Finance',
-  'Activity_ValidationN3_DG'
-];
+// Validation de la réquisition (REQUISITION_APPROVAL_TASKS) : chef de projet ; N1 / N2 / N3 = processus démarrés avant.
+// Approbation du bon de commande (PO_APPROVAL_TASKS) : N1 / N2 / N3 selon son montant ; Direction = processus d'avant.
 
 /**
- * Cette approbation est-elle la dernière (approved = true → réquisition approuvée) ? Niveau retenu pour la réquisition
- * (approval_level, calculé par check_budget selon la politique du projet) ; réquisition antérieure : seuils de la
- * politique effective appliqués au montant.
+ * Cette approbation est-elle la dernière (approved = true → réquisition approuvée) ? Chef de projet : toujours (une
+ * seule validation). Anciens processus : niveau retenu pour la réquisition (approval_level, calculé par check_budget),
+ * à défaut seuils de la politique effective appliqués au montant.
  */
 function isFinalApprovalLevel(taskDefinitionKey, { approvalLevel, amount, policy }) {
+  if (taskDefinitionKey === PM_APPROVAL_TASK) return true;
   const level = approvalLevel || approvalPolicy.levelFor(amount, policy || approvalPolicy.DEFAULT_POLICY);
   return approvalPolicy.LEVEL_TASKS[level] === taskDefinitionKey || taskDefinitionKey === 'Activity_ValidationN3_DG';
 }
@@ -91,7 +88,19 @@ function isMine(task, currentUser) {
 function getTaskPermissions(task, currentUser, conflict = null, projectId = null, requesterId = null) {
   const isCompleted = task.status === 'completed';
   const onProject = inGroupOnProject(task, currentUser, projectId, requesterId);
-  const inGroup = currentUser.isAdmin || onProject;
+  // Validation du chef de projet : lui seul, jamais l'administrateur (qui peut seulement libérer la tâche)
+  const pmTask = task.taskDefinitionKey === PM_APPROVAL_TASK;
+  const inGroup = (currentUser.isAdmin && !pmTask) || onProject;
+  if (pmTask) {
+    const mine = isMine(task, currentUser);
+    return {
+      isMine: mine,
+      canClaim: !isCompleted && !task.assignee && onProject && !conflict,
+      canUnclaim: !isCompleted && !!task.assignee && (mine || currentUser.isAdmin),
+      canComplete: !isCompleted && mine && onProject && !conflict,
+      blockedReason: conflict || (!isCompleted && !onProject ? 'NOT_PROJECT_MANAGER' : null),
+    };
+  }
   const groupHere = projectAccess.groupsOnProject(currentUser.scope, projectId).has(task.candidateGroup);
   // Profil détenu, mais pas sur le projet de cette réquisition (profils BPMN liés au projet)
   const notOnProject = !isCompleted && !currentUser.isAdmin && !onProject && !groupHere && currentUser.groups.includes(task.candidateGroup);
@@ -270,6 +279,9 @@ async function claimTask(req, res) {
     if (permissions.blockedReason === 'NOT_REQUESTER') {
       return res.status(403).json({ success: false, code: 'NOT_REQUESTER', message: 'Cette étape revient au demandeur de la réquisition' });
     }
+    if (permissions.blockedReason === 'NOT_PROJECT_MANAGER') {
+      return res.status(403).json({ success: false, code: 'NOT_PROJECT_MANAGER', message: 'Cette réquisition est validée par le chef de son projet uniquement' });
+    }
     if (!permissions.canClaim) {
       return res.status(403).json({
         success: false,
@@ -376,6 +388,15 @@ async function completeTask(req, res) {
     // (ajustement budgétaire du demandeur) : la personne désignée
     const onProject = inGroupOnProject(task, currentUser, task.projectId, task.requesterId);
     const personal = PERSONAL_TASKS.includes(taskDefinitionKey) && isMine(task, currentUser);
+    // Validation de la réquisition : le chef du projet ACTUEL, lui seul (ni l'administrateur, ni un ancien chef de
+    // projet qui aurait pris la tâche en charge)
+    if (taskDefinitionKey === PM_APPROVAL_TASK && !onProject) {
+      await audit(req, AUDIT.TASK_COMPLETION_DENIED, {
+        entity: { type: 'task', id: taskDefinitionKey, label: taskLabel(taskDefinitionKey) },
+        details: { taskId, reason: 'NOT_PROJECT_MANAGER' },
+      });
+      return res.status(403).json({ success: false, code: 'NOT_PROJECT_MANAGER', message: 'Cette réquisition est validée par le chef de son projet uniquement' });
+    }
     // Demandeur sur le projet, mais étape « demandeur » de la réquisition d'un autre
     if (!currentUser.isAdmin && !onProject && !personal && projectAccess.groupsOnProject(currentUser.scope, task.projectId).has(task.candidateGroup)) {
       await audit(req, AUDIT.TASK_COMPLETION_DENIED, {
@@ -460,7 +481,7 @@ async function completeTask(req, res) {
       ? await allocationService.validate(requisitionId, variables)
       : null;
     // Étape du cycle de commande : bon de commande de CETTE part (lu avant la complétion, tant que la tâche existe)
-    const taskPoId = ['Activity_SupplierConfirmation', 'Activity_POApproval'].includes(taskDefinitionKey)
+    const taskPoId = ['Activity_SupplierConfirmation', ...PO_APPROVAL_TASKS].includes(taskDefinitionKey)
       ? await orderTasks.purchaseOrderOfTask(taskId)
       : null;
 
@@ -469,7 +490,8 @@ async function completeTask(req, res) {
       await supplierBankService.assertPayable(req, { invoiceId: variables.invoiceId || null, poId: variables.poId || null });
     }
 
-    // Approbation N1 / N2 / N3 : approuver, rejeter ou renvoyer pour correction (motif obligatoire). Le BPMN attend
+    // Validation (chef de projet ; anciens processus : N1 / N2 / N3) : approuver, rejeter ou renvoyer pour correction
+    // (motif obligatoire). Le BPMN attend
     // toujours approved ET returnedForCorrection (Gateway_ApprovalDecision)
     const returnedForCorrection = REQUISITION_APPROVAL_TASKS.includes(taskDefinitionKey)
       && (variables.returnedForCorrection === true || variables.returnedForCorrection === 'true');
@@ -496,7 +518,7 @@ async function completeTask(req, res) {
         message: 'Corrigez la réquisition depuis sa fiche (« Corriger »), puis soumettez-la à nouveau'
       });
     }
-    if (['Activity_GoodsReceipt', 'Activity_ServiceAcceptance'].includes(taskDefinitionKey)) {
+    if (['Activity_GoodsReceipt', 'Activity_ServiceAcceptance', 'Activity_POReview'].includes(taskDefinitionKey)) {
       return res.status(400).json({
         success: false, code: 'FORM_REQUIRED',
         message: 'Cette étape se traite depuis son formulaire (onglet « Tâches » de la réquisition)'
@@ -566,7 +588,7 @@ async function completeTask(req, res) {
     // 2. Sync DB state based on task type
     if (taskDefinitionKey && requisitionId) {
       try {
-        // --- Requisition approval tasks (N1 / N2 / N3) ---
+        // --- Validation de la réquisition (chef de projet ; anciens processus : N1 / N2 / N3) ---
         if (REQUISITION_APPROVAL_TASKS.includes(taskDefinitionKey) && returnedForCorrection) {
           // Renvoyée pour correction : « À corriger », version close avec le motif, demandeur notifié
           await revisionService.markReturned(requisitionId, {
@@ -691,8 +713,8 @@ async function completeTask(req, res) {
           }
         }
 
-        // --- PO Approval task ---
-        if (taskDefinitionKey === 'Activity_POApproval') {
+        // --- Approbation du bon de commande (N1 / N2 / N3 ; anciens processus : Direction) ---
+        if (PO_APPROVAL_TASKS.includes(taskDefinitionKey)) {
           const poApproved = variables.poApproved;
 
           const rows = taskPoId

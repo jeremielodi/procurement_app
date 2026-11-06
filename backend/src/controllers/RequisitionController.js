@@ -14,6 +14,7 @@ const { audit, AUDIT } = require('../utils/auditLog');
 const revisionService = require('../services/RequisitionRevisionService');
 const { requisitionDelivery } = require('../utils/requisitionDelivery');
 const { resolveUnitId } = require('../utils/units');
+const projectManagers = require('../utils/projectManager');
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -142,6 +143,15 @@ async create(req, res) {
     const userId = req.user?.id || 1;
     const io = req.io;
 
+    // Projet obligatoire, avec un chef de projet actif qui n'est pas le demandeur : il valide seul la réquisition
+    let projectManager;
+    try {
+      projectManager = await projectManagers.forRequisition(projectId, userId);
+    } catch (error) {
+      if (!error.status) throw error;
+      return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
+    }
+
     // Récupérer l'email et le username de l'utilisateur
     const userEmail = await this.getUserEmailById(userId);
     const userUsername = await this.getUserUsernameById(userId);
@@ -254,6 +264,10 @@ async create(req, res) {
           projectId: projectId || '',
           projectCode: projectCode || '',
           projectName: projectName || '',
+          // Validation de la réquisition (Activity_ProjectManagerApproval) : le chef de projet — information ; le
+          // droit est contrôlé sur le chef de projet ACTUEL en base (il a pu changer depuis)
+          projectManager: projectManager.email,
+          projectManagerId: projectManager.id,
           
           // === ARTICLES (format JSON avec budgetLineId) ===
           items: JSON.stringify(itemsWithDetails.map(item => ({
@@ -274,6 +288,8 @@ async create(req, res) {
           // === CIRCUIT ===
           // BPMN avec « Corriger la réquisition » (migration 25) : les processus démarrés avant ne l'ont pas
           revisionSupported: true,
+          // Circuit du 2026-11-06 : chef de projet sur la réquisition, N1 / N2 / N3 sur le bon de commande
+          approvalFlow: 'PROJECT_MANAGER',
 
           // === TIMESTAMPS ===
           createdAt: new Date().toISOString(),

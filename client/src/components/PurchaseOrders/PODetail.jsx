@@ -53,6 +53,9 @@ export default function PODetail() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
+  // Révision du bon (migration 52) : décision en cours de saisie (APPROVE | REJECT) et commentaire / motif
+  const [reviewDecision, setReviewDecision] = useState(null)
+  const [reviewComment, setReviewComment] = useState('')
   // ?pdf=1 (juste après la création) : PDF ouvert d'office
   const [showPdfViewer, setShowPdfViewer] = useState(searchParams.get('pdf') === '1')
   const closePdfViewer = () => {
@@ -118,6 +121,21 @@ export default function PODetail() {
     },
     onError: (error) => {
       toast.error(error.message || t('po.approveError'))
+    }
+  })
+
+  // Révision du bon avant son approbation N1 / N2 / N3
+  const reviewMutation = useMutation({
+    mutationFn: ({ decision, comment }) => purchaseOrderService.review(po.id, { decision, comment }),
+    onSuccess: (_, { decision }) => {
+      queryClient.invalidateQueries(['purchase-order', id])
+      toast.success(t(decision === 'APPROVE' ? 'po.review.approved' : 'po.review.rejected'))
+      setReviewDecision(null)
+      setReviewComment('')
+    },
+    onError: (error) => {
+      const code = error?.response?.data?.code
+      toast.error(code ? t(`po.review.err.${code}`, { defaultValue: error?.response?.data?.message || t('common.errorOccurred') }) : error.message, { duration: 7000 })
     }
   })
 
@@ -256,7 +274,45 @@ export default function PODetail() {
             </>
           )}
          
-          {(po.status === 'PO_PENDING' || po.status === 'DRAFT') && (
+          {/* Niveau d'approbation du bon (montant + seuils du projet) : un Manager de ce niveau l'approuve */}
+          {(po.status === 'PO_PENDING' || po.status === 'DRAFT') && po.approval_level && (
+            <span className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800 ring-1 ring-blue-200" data-testid="po-approval-level">
+              {t('po.approvalLevel', { level: po.approval_level, role: t(`po.levelRole.${po.approval_level}`) })}
+            </span>
+          )}
+          {/* Révision du bon avant son approbation selon le niveau (réviseur du projet, jamais son créateur) */}
+          {po.review_pending && (
+            po.can_review && !po.self_approval ? (
+              <>
+                <button
+                  onClick={() => setReviewDecision('APPROVE')}
+                  data-testid="po-review-approve"
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <CheckCircle size={18} />
+                  {t('po.review.approve')}
+                </button>
+                <button
+                  onClick={() => setReviewDecision('REJECT')}
+                  data-testid="po-review-reject"
+                  className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                >
+                  <XCircle size={18} />
+                  {t('po.review.reject')}
+                </button>
+              </>
+            ) : (
+              <span className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200" data-testid="po-in-review">
+                <AlertTriangle size={16} /> {po.self_approval ? t('po.selfApproval') : t('po.review.waiting')}
+              </span>
+            )
+          )}
+          {(po.status === 'PO_PENDING' || po.status === 'DRAFT') && !po.review_pending && po.can_approve_level === false && (
+            <span className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200" data-testid="po-not-approval-level">
+              <AlertTriangle size={16} /> {t('po.notApprovalLevel', { role: t(`po.levelRole.${po.approval_level}`) })}
+            </span>
+          )}
+          {(po.status === 'PO_PENDING' || po.status === 'DRAFT') && !po.review_pending && po.can_approve_level !== false && (
             <>
               {po.self_approval ? (
                 // Séparation des tâches : le créateur du bon (ou le demandeur) ne peut pas l'approuver
@@ -640,6 +696,36 @@ export default function PODetail() {
               rows="2"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
               placeholder={t('po.notePlaceholder')}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Révision du bon : approuver (commentaire facultatif) ou rejeter (motif obligatoire) */}
+      <Modal
+        isOpen={!!reviewDecision}
+        onClose={() => setReviewDecision(null)}
+        title={t(reviewDecision === 'REJECT' ? 'po.review.rejectTitle' : 'po.review.approveTitle')}
+        type={reviewDecision === 'REJECT' ? 'danger' : 'success'}
+        confirmText={t(reviewDecision === 'REJECT' ? 'common.reject' : 'common.approve')}
+        cancelText={t('common.cancel')}
+        onConfirm={() => reviewMutation.mutate({ decision: reviewDecision, comment: reviewComment })}
+        isLoading={reviewMutation.isPending}
+        confirmDisabled={reviewDecision === 'REJECT' && !reviewComment.trim()}
+      >
+        <div className="space-y-4">
+          <p>{t(reviewDecision === 'REJECT' ? 'po.review.rejectText' : 'po.review.approveText', { number: po.po_number })}</p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t(reviewDecision === 'REJECT' ? 'po.rejectReason' : 'po.review.comment')}
+              {reviewDecision === 'REJECT' && <span className="text-red-500"> *</span>}
+            </label>
+            <textarea
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              rows="3"
+              data-testid="po-review-comment"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>

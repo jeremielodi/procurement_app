@@ -11,8 +11,9 @@ const { pdfContext, labels, rootLocale } = require('../utils/pdfI18n');
 const db = require('../config/database');
 const { signatureDataUri } = require('../utils/userSignature');
 
-// Étapes d'approbation de la réquisition (signataires du formulaire de demande d'achat)
-const APPROVAL_TASKS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
+// Étapes d'approbation de la réquisition (signataires du formulaire de demande d'achat) : chef de projet ;
+// N1 / N2 / N3 pour les processus démarrés avant le 2026-11-06
+const { REQUISITION_APPROVAL_TASKS: APPROVAL_TASKS } = require('../utils/workflowLabels');
 
 // Formulaire de demande d'achat (modèle de l'entreprise) — libellés : pdf.prf des locales (data.L), valeurs déjà formatées.
 // Sections : 1. demandeur / approbateurs, 2. livraison, 3. articles + codage budgétaire, déclaration, informations supplémentaires.

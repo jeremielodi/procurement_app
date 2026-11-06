@@ -1,7 +1,7 @@
 // backend/src/utils/segregation.js
 // Séparation des tâches (contrôle interne) : une même personne ne peut pas
-//  - approuver une réquisition dont elle est le demandeur (N1 / N2 / N3) ;
-//  - approuver un bon de commande qu'elle a créé, ou qui découle de sa propre réquisition ;
+//  - valider une réquisition dont elle est le demandeur (chef de projet ; anciennes étapes N1 / N2 / N3) ;
+//  - approuver un bon de commande (N1 / N2 / N3) qu'elle a créé, ou qui découle de sa propre réquisition ;
 //  - valider une facture qu'elle a saisie ;
 //  - approuver (ou passer « payé ») un paiement qu'elle a saisi.
 // Aucune exception, y compris pour un administrateur : c'est le principe du contrôle. Toute tentative refusée est
@@ -9,8 +9,10 @@
 const db = require('../config/database');
 const { audit, AUDIT } = require('./auditLog');
 
-const REQUISITION_APPROVAL_TASKS = ['Activity_ValidationN1_Manager', 'Activity_ValidationN2_Finance', 'Activity_ValidationN3_DG'];
-const PO_APPROVAL_TASK = 'Activity_POApproval';
+const { REQUISITION_APPROVAL_TASKS, PO_REVIEW_TASK, PO_APPROVAL_TASKS: APPROVAL_KEYS } = require('./workflowLabels');
+
+// Révision et approbation du bon de commande : mêmes règles (ni son créateur, ni le demandeur de la réquisition)
+const PO_APPROVAL_TASKS = [PO_REVIEW_TASK, ...APPROVAL_KEYS];
 
 const same = (a, b) => a != null && b != null && String(a) === String(b);
 
@@ -27,7 +29,7 @@ function sodError(code, message) {
 async function taskConflicts(tasks, userId) {
   const conflicts = new Map();
   const relevant = (tasks || []).filter(t => t.processInstanceId
-    && (REQUISITION_APPROVAL_TASKS.includes(t.taskDefinitionKey) || t.taskDefinitionKey === PO_APPROVAL_TASK));
+    && (REQUISITION_APPROVAL_TASKS.includes(t.taskDefinitionKey) || PO_APPROVAL_TASKS.includes(t.taskDefinitionKey)));
   if (!relevant.length || !userId) return conflicts;
   const processIds = [...new Set(relevant.map(t => t.processInstanceId))];
   const reqs = await db.select(
@@ -44,7 +46,7 @@ async function taskConflicts(tasks, userId) {
     const key = `${t.processInstanceId}|${t.taskDefinitionKey}`;
     if (REQUISITION_APPROVAL_TASKS.includes(t.taskDefinitionKey) && same(r.requester_id, userId)) {
       conflicts.set(key, 'SELF_APPROVAL');
-    } else if (t.taskDefinitionKey === PO_APPROVAL_TASK
+    } else if (PO_APPROVAL_TASKS.includes(t.taskDefinitionKey)
       && (same(r.requester_id, userId) || (r.pending_po_creators || []).some(c => same(c, userId)))) {
       conflicts.set(key, 'SELF_APPROVAL');
     }
@@ -117,7 +119,7 @@ async function assertCanApprovePayment(req, payment) {
 }
 
 module.exports = {
-  REQUISITION_APPROVAL_TASKS, PO_APPROVAL_TASK, same, isPurchaseOrderSelfApproval,
+  REQUISITION_APPROVAL_TASKS, PO_APPROVAL_TASKS, same, isPurchaseOrderSelfApproval,
   taskConflicts, taskConflict, block, sodError,
   assertCanApprovePurchaseOrder, assertCanApproveInvoice, assertCanApprovePayment,
 };

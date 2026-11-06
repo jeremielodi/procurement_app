@@ -933,8 +933,16 @@ class DashboardModel {
     // projet) — une tâche sans personne sur son projet est signalée même si le profil existe ailleurs
     const pairs = [...new Map(rows.map(r => {
       const g = TASK_CANDIDATE_GROUPS[taskKey(r)];
-      return g ? [`${r.project_id}|${g}`, { projectId: r.project_id || null, profileId: `prof_${g}` }] : null;
+      return g && g !== 'project_manager' ? [`${r.project_id}|${g}`, { projectId: r.project_id || null, profileId: `prof_${g}` }] : null;
     }).filter(Boolean)).values()];
+    // Validation du chef de projet : pas un profil — une personne si le projet a un chef de projet actif
+    const pmProjects = [...new Set(rows.filter(r => TASK_CANDIDATE_GROUPS[taskKey(r)] === 'project_manager' && r.project_id).map(r => r.project_id))];
+    const managed = pmProjects.length ? await db.select(
+      `SELECT p.id, p.project_manager_id FROM projects p JOIN users u ON u.id = p.project_manager_id AND u.is_active = true
+       WHERE p.id = ANY($1::uuid[])`,
+      [pmProjects]
+    ) : [];
+    const managerOf = new Map(managed.map(p => [String(p.id), p.project_manager_id]));
     const handlerParams = [pairs.map(x => x.projectId), pairs.map(x => x.profileId)];
     const handlers = pairs.length ? await db.select(
       `SELECT x.project_id, x.profile_id, COUNT(u.id)::int AS n
@@ -959,7 +967,7 @@ class DashboardModel {
           profileId,
           // Nom du profil (donnée, en français) ; autre langue : libellé traduit du rôle
           profileName: (lang !== i18n.DEFAULT_LANG && groupLabel(key, lang)) || profileName.get(profileId) || groupLabel(key, lang) || i18n.translator(lang)('workflow.roles.other'),
-          users: profileId ? memberCount.get(profileId) || 0 : null,
+          users: group === 'project_manager' ? new Set(managerOf.values()).size : profileId ? memberCount.get(profileId) || 0 : null,
           count: 0, claimed: 0, unhandled: 0,
           oldestSince: null,
           tasks: [],
@@ -969,7 +977,8 @@ class DashboardModel {
       const g = groups.get(group);
       const assignee = this.taskAssignee(row, names);
       g.count++;
-      const handlerCount = profileId ? handlersOn.get(`${row.project_id}|${profileId}`) ?? null : null;
+      const handlerCount = group === 'project_manager' ? (managerOf.has(String(row.project_id)) ? 1 : 0)
+        : profileId ? handlersOn.get(`${row.project_id}|${profileId}`) ?? null : null;
       if (handlerCount === 0) g.unhandled++;
       if (assignee) { g.claimed++; g.assignees[assignee] = (g.assignees[assignee] || 0) + 1; }
       if (!g.oldestSince || new Date(row.created_at) < new Date(g.oldestSince)) g.oldestSince = row.created_at;

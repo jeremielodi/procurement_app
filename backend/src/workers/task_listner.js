@@ -9,7 +9,7 @@ const notificationService = require('../services/NotificationService');
 const EmailNotificationService = require('../services/EmailNotificationService');
 
 // Libellés français et rôles (candidateGroups) des tâches : module partagé
-const { TASK_LABELS, TASK_CANDIDATE_GROUPS, PERSONAL_TASKS, taskLabel, groupLabel } = require('../utils/workflowLabels');
+const { TASK_LABELS, TASK_CANDIDATE_GROUPS, PERSONAL_TASKS, PM_APPROVAL_TASK, taskLabel, groupLabel } = require('../utils/workflowLabels');
 const i18n = require('../i18n');
 
 // URL de l'application (servie par le backend) utilisée dans les liens des emails
@@ -171,6 +171,15 @@ async function getTaskRecipients(candidateGroup, requisitionId, taskDefinitionKe
   if (PERSONAL_TASKS.includes(taskDefinitionKey)) {
     return db.select(
       `SELECT u.id, u.email, u.first_name, u.language FROM requisitions r JOIN users u ON u.id = r.requester_id
+       WHERE r.id = $1 AND u.is_active = true`,
+      [requisitionId]
+    );
+  }
+  // Validation de la réquisition : le seul chef du projet (pas un profil)
+  if (taskDefinitionKey === PM_APPROVAL_TASK) {
+    return db.select(
+      `SELECT u.id, u.email, u.first_name, u.language FROM requisitions r
+       JOIN projects p ON p.id = r.project_id JOIN users u ON u.id = p.project_manager_id
        WHERE r.id = $1 AND u.is_active = true`,
       [requisitionId]
     );

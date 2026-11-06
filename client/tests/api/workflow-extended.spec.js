@@ -3,10 +3,12 @@
  *
  * Tests d'intégration API — Scénarios étendus du workflow BPMN procure-to-pay.
  *
- * Couvre les 7 scénarios non couverts par flow.spec.js (qui ne teste que N1) :
- *   1. Approbation N2 Finance (50 000 XAF)
- *   2. Approbation N3 DG      (150 000 XAF)
- *   3. Rejet N1               (10 000 XAF, approved: false → REJECTED)
+ * Couvre les 7 scénarios non couverts par flow.spec.js. Depuis le 2026-11-06 la réquisition est validée par le chef
+ * de projet quel que soit son montant (les niveaux N1 / N2 / N3 portent sur le bon de commande :
+ * project-manager-approval.spec.js, approval-policy.spec.js) :
+ *   1. Validation par le chef de projet (50 000 XAF)
+ *   2. Validation par le chef de projet (150 000 XAF)
+ *   3. Rejet par le chef de projet (10 000 XAF, approved: false → REJECTED)
  *   4. Rejet PO               (créé en PO_PENDING → reject → PO_REJECTED)
  *   5. Budget insuffisant     (item sans budgetLineId → BUDGET_INSUFFICIENT)
  *   6. GRN partielle          (5/10 items → PARTIAL + grnCompliant: false)
@@ -22,7 +24,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth } from './helpers.js';
+import { getToken, getApproverToken, auth, passReview } from './helpers.js';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -187,7 +189,8 @@ async function submitAndApprovePO(request, token, poId) {
     throw new Error(`PO attendu en PO_PENDING, statut : ${current?.status}`);
   }
 
-  // PO_PENDING → PO_APPROVED
+  // Révision du bon d'abord (si le processus la prévoit), puis PO_PENDING → PO_APPROVED
+  await passReview(request, approverToken, poId);
   const appRes = await request.post(`/api/purchase-orders/${poId}/approve`, {
     headers: auth(approverToken),
     data: { notes: 'Approuvé par test Playwright étendu' },
@@ -285,12 +288,12 @@ test.beforeAll(async ({ request }) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SCÉNARIO 1 — Approbation N2 Finance (50 000 XAF)
-// Circuit : create → check_budget → classify_procurement → ValidationN2_Finance
+// SCÉNARIO 1 — Validation par le chef de projet (50 000 XAF)
+// Circuit : create → check_budget → ProjectManagerApproval
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () => {
-  const AMOUNT = 50_000;  // 25 000 ≤ 50 000 < 100 000 → Finance N2
+test.describe.serial('Scénario 1 — Validation par le chef de projet (50 000 XAF)', () => {
+  const AMOUNT = 50_000;
   test.setTimeout(120_000); // circuit BpmnGo réel (attente de tâche jusqu'à 30 s)
 
   let req          = null;
@@ -300,7 +303,7 @@ test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () =
     if (!sharedDept) test.skip('Pas de département disponible');
 
     req = await createRequisition(request, sharedToken, {
-      title:        'N2 Finance Approval Test',
+      title:        'Project Manager Approval Test 50k',
       amount:       AMOUNT,
       budgetLineId: sharedBudgetLine?.id,
       dept:         sharedDept,
@@ -326,7 +329,7 @@ test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () =
     console.log(`✅ S1: statut réquisition = ${req.status}`);
   });
 
-  test('S1-3 · [Camunda] Attendre la tâche Activity_ValidationN2_Finance', async ({ request }) => {
+  test('S1-3 · [Camunda] Attendre la tâche Activity_ProjectManagerApproval', async ({ request }) => {
     if (req && !req.process_instance_id) req = await refreshProcess(request, sharedToken, req);
     if (!req?.process_instance_id) {
       test.skip('Camunda non disponible (process_instance_id absent)');
@@ -337,28 +340,28 @@ test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () =
       return;
     }
 
-    // Aiguillage BPMN selon le montant : 25 000 ≤ montant < 100 000 → directement Finance N2
-    const r = await waitForTaskOrStop(request, sharedToken, req, 'Activity_ValidationN2_Finance');
+    // Quel que soit le montant : validation par le chef de projet
+    const r = await waitForTaskOrStop(request, sharedToken, req, 'Activity_ProjectManagerApproval');
     if (r.stopped) { test.skip(`Circuit arrêté : ${r.stopped}`); return; }
     approvalTask = r.task || null;
 
     if (!approvalTask) {
-      test.skip('Tâche Activity_ValidationN2_Finance non apparue dans le délai — BpmnGo peut être lent');
+      test.skip('Tâche Activity_ProjectManagerApproval non apparue dans le délai — BpmnGo peut être lent');
       return;
     }
 
-    console.log(`✅ S1: Tâche Finance N2 trouvée: ${approvalTask.id}`);
-    expect(approvalTask.taskDefinitionKey).toBe('Activity_ValidationN2_Finance');
+    console.log(`✅ S1: Tâche du chef de projet trouvée: ${approvalTask.id}`);
+    expect(approvalTask.taskDefinitionKey).toBe('Activity_ProjectManagerApproval');
   });
 
-  test('S1-4 · [Camunda] Approuver la réquisition (Finance N2)', async ({ request }) => {
+  test('S1-4 · [Camunda] Approuver la réquisition (chef de projet)', async ({ request }) => {
     if (!approvalTask) test.skip('Tâche N2 non trouvée (S1-3 skipped)');
 
     const res  = await request.post(`/api/tasks/${approvalTask.id}/complete`, {
       headers: auth(approverToken),
       data: {
         variables:         { approved: true },
-        taskDefinitionKey: 'Activity_ValidationN2_Finance',
+        taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     req.id,
         estimatedAmount:   AMOUNT,
       },
@@ -375,17 +378,17 @@ test.describe.serial('Scénario 1 — Approbation N2 Finance (50 000 XAF)', () =
     const reqBody = await reqRes.json();
 
     expect(reqBody.data.status).toBe('APPROVED');
-    console.log(`✅ S1: Réquisition APPROVED après approbation Finance N2`);
+    console.log(`✅ S1: Réquisition APPROVED après validation du chef de projet`);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SCÉNARIO 2 — Approbation N3 DG (150 000 XAF)
-// Circuit : create → check_budget → classify_procurement → ValidationN3_DG
+// SCÉNARIO 2 — Validation par le chef de projet (150 000 XAF)
+// Circuit : create → check_budget → ProjectManagerApproval
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.describe.serial('Scénario 2 — Approbation N3 DG (150 000 XAF)', () => {
-  const AMOUNT = 150_000;  // ≥ 100 000 → DG N3
+test.describe.serial('Scénario 2 — Validation par le chef de projet (150 000 XAF)', () => {
+  const AMOUNT = 150_000;
   test.setTimeout(120_000); // circuit BpmnGo réel (attente de tâche jusqu'à 30 s)
 
   let req          = null;
@@ -395,7 +398,7 @@ test.describe.serial('Scénario 2 — Approbation N3 DG (150 000 XAF)', () => {
     if (!sharedDept) test.skip('Pas de département disponible');
 
     req = await createRequisition(request, sharedToken, {
-      title:        'N3 DG Approval Test',
+      title:        'Project Manager Approval Test 150k',
       amount:       AMOUNT,
       budgetLineId: sharedBudgetLine?.id,
       dept:         sharedDept,
@@ -420,7 +423,7 @@ test.describe.serial('Scénario 2 — Approbation N3 DG (150 000 XAF)', () => {
     console.log(`✅ S2: statut réquisition = ${req.status}`);
   });
 
-  test('S2-3 · [Camunda] Attendre la tâche Activity_ValidationN3_DG', async ({ request }) => {
+  test('S2-3 · [Camunda] Attendre la tâche Activity_ProjectManagerApproval', async ({ request }) => {
     if (req && !req.process_instance_id) req = await refreshProcess(request, sharedToken, req);
     if (!req?.process_instance_id) {
       test.skip('Camunda non disponible (process_instance_id absent)');
@@ -431,28 +434,28 @@ test.describe.serial('Scénario 2 — Approbation N3 DG (150 000 XAF)', () => {
       return;
     }
 
-    // Aiguillage BPMN selon le montant : ≥ 100 000 → directement DG N3
-    const r = await waitForTaskOrStop(request, sharedToken, req, 'Activity_ValidationN3_DG');
+    // Quel que soit le montant : validation par le chef de projet
+    const r = await waitForTaskOrStop(request, sharedToken, req, 'Activity_ProjectManagerApproval');
     if (r.stopped) { test.skip(`Circuit arrêté : ${r.stopped}`); return; }
     approvalTask = r.task || null;
 
     if (!approvalTask) {
-      test.skip('Tâche Activity_ValidationN3_DG non apparue dans le délai — Camunda peut être lent');
+      test.skip('Tâche Activity_ProjectManagerApproval non apparue dans le délai — Camunda peut être lent');
       return;
     }
 
-    console.log(`✅ S2: Tâche DG N3 trouvée: ${approvalTask.id}`);
-    expect(approvalTask.taskDefinitionKey).toBe('Activity_ValidationN3_DG');
+    console.log(`✅ S2: Tâche du chef de projet trouvée: ${approvalTask.id}`);
+    expect(approvalTask.taskDefinitionKey).toBe('Activity_ProjectManagerApproval');
   });
 
-  test('S2-4 · [Camunda] Approuver la réquisition (DG N3)', async ({ request }) => {
+  test('S2-4 · [Camunda] Approuver la réquisition (chef de projet)', async ({ request }) => {
     if (!approvalTask) test.skip('Tâche N3 non trouvée (S2-3 skipped)');
 
     const res  = await request.post(`/api/tasks/${approvalTask.id}/complete`, {
       headers: auth(approverToken),
       data: {
         variables:         { approved: true },
-        taskDefinitionKey: 'Activity_ValidationN3_DG',
+        taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     req.id,
         estimatedAmount:   AMOUNT,
       },
@@ -468,18 +471,18 @@ test.describe.serial('Scénario 2 — Approbation N3 DG (150 000 XAF)', () => {
     const reqBody = await reqRes.json();
 
     expect(reqBody.data.status).toBe('APPROVED');
-    console.log(`✅ S2: Réquisition APPROVED après approbation DG N3`);
+    console.log(`✅ S2: Réquisition APPROVED après validation du chef de projet`);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SCÉNARIO 3 — Rejet N1 (10 000 XAF, approved: false → REJECTED)
-// Circuit : create → check_budget → classify_procurement → ValidationN1_Manager
+// Circuit : create → check_budget → ProjectManagerApproval
 //           → complete avec approved: false → status REJECTED
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.describe.serial('Scénario 3 — Rejet N1 Manager (10 000 XAF)', () => {
-  const AMOUNT = 10_000;  // < 25 000 → Manager N1
+test.describe.serial('Scénario 3 — Rejet par le chef de projet (10 000 XAF)', () => {
+  const AMOUNT = 10_000;
   test.setTimeout(120_000);
 
   let req         = null;
@@ -500,7 +503,7 @@ test.describe.serial('Scénario 3 — Rejet N1 Manager (10 000 XAF)', () => {
     expect(req.id).toBeTruthy();
   });
 
-  test('S3-2 · [Camunda] Attendre la tâche Activity_ValidationN1_Manager', async ({ request }) => {
+  test('S3-2 · [Camunda] Attendre la tâche Activity_ProjectManagerApproval', async ({ request }) => {
     if (req && !req.process_instance_id) req = await refreshProcess(request, sharedToken, req);
     if (!req?.process_instance_id) {
       test.skip('Camunda non disponible (process_instance_id absent)');
@@ -511,17 +514,17 @@ test.describe.serial('Scénario 3 — Rejet N1 Manager (10 000 XAF)', () => {
       return;
     }
 
-    const r = await waitForTaskOrStop(request, sharedToken, req, 'Activity_ValidationN1_Manager');
+    const r = await waitForTaskOrStop(request, sharedToken, req, 'Activity_ProjectManagerApproval');
     if (r.stopped) { test.skip(`Circuit arrêté : ${r.stopped}`); return; }
     rejectTask = r.task || null;
 
     if (!rejectTask) {
-      test.skip('Tâche Activity_ValidationN1_Manager non apparue dans le délai');
+      test.skip('Tâche Activity_ProjectManagerApproval non apparue dans le délai');
       return;
     }
 
-    console.log(`✅ S3: Tâche N1 Manager trouvée: ${rejectTask.id}`);
-    expect(rejectTask.taskDefinitionKey).toBe('Activity_ValidationN1_Manager');
+    console.log(`✅ S3: Tâche du chef de projet trouvée: ${rejectTask.id}`);
+    expect(rejectTask.taskDefinitionKey).toBe('Activity_ProjectManagerApproval');
   });
 
   test('S3-3 · [Camunda] Rejeter la réquisition (approved: false → REJECTED)', async ({ request }) => {
@@ -531,7 +534,7 @@ test.describe.serial('Scénario 3 — Rejet N1 Manager (10 000 XAF)', () => {
       headers: auth(approverToken),
       data: {
         variables:         { approved: false },
-        taskDefinitionKey: 'Activity_ValidationN1_Manager',
+        taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     req.id,
         estimatedAmount:   AMOUNT,
       },
@@ -579,7 +582,7 @@ test.describe.serial('Scénario 4 — Rejet PO (PO_PENDING → PO_REJECTED)', ()
     expect(req.id).toBeTruthy();
   });
 
-  test('S4-2 · [Camunda] Approbation N1 automatique ou skip si Camunda absent', async ({ request }) => {
+  test('S4-2 · [Camunda] Validation du chef de projet ou skip si Camunda absent', async ({ request }) => {
     if (!req?.process_instance_id) {
       // Pas de Camunda — on continue quand même : on peut créer un PO
       // même si la réquisition n'est pas APPROVED (selon la config backend)
@@ -595,7 +598,7 @@ test.describe.serial('Scénario 4 — Rejet PO (PO_PENDING → PO_REJECTED)', ()
       request,
       sharedToken,
       req.process_instance_id,
-      'Activity_ValidationN1_Manager'
+      'Activity_ProjectManagerApproval'
     );
 
     if (!task) {
@@ -607,7 +610,7 @@ test.describe.serial('Scénario 4 — Rejet PO (PO_PENDING → PO_REJECTED)', ()
       headers: auth(approverToken),
       data: {
         variables:         { approved: true },
-        taskDefinitionKey: 'Activity_ValidationN1_Manager',
+        taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     req.id,
         estimatedAmount:   AMOUNT,
       },
@@ -641,6 +644,8 @@ test.describe.serial('Scénario 4 — Rejet PO (PO_PENDING → PO_REJECTED)', ()
 
   test('S4-5 · Rejeter le PO (POST /reject → PO_REJECTED)', async ({ request }) => {
     if (!po) test.skip('PO S4 non créé');
+    // Révision approuvée : le rejet a lieu à l'approbation selon le niveau
+    await passReview(request, approverToken, po.id);
 
     const res  = await request.post(`/api/purchase-orders/${po.id}/reject`, {
       headers: auth(sharedToken),
@@ -774,7 +779,7 @@ test.describe.serial('Scénario 6 — GRN partielle (5 sur 10 articles reçus)',
     expect(req.id).toBeTruthy();
   });
 
-  test('S6-2 · [Camunda] Approuver N1 ou skip si Camunda absent', async ({ request }) => {
+  test('S6-2 · [Camunda] Validation du chef de projet ou skip si Camunda absent', async ({ request }) => {
     if (!req?.process_instance_id) {
       console.log('   Camunda absent — skip approbation N1');
       return;
@@ -788,7 +793,7 @@ test.describe.serial('Scénario 6 — GRN partielle (5 sur 10 articles reçus)',
       request,
       sharedToken,
       req.process_instance_id,
-      'Activity_ValidationN1_Manager'
+      'Activity_ProjectManagerApproval'
     );
 
     if (!task) {
@@ -800,7 +805,7 @@ test.describe.serial('Scénario 6 — GRN partielle (5 sur 10 articles reçus)',
       headers: auth(approverToken),
       data: {
         variables:         { approved: true },
-        taskDefinitionKey: 'Activity_ValidationN1_Manager',
+        taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     req.id,
         estimatedAmount:   AMOUNT,
       },
@@ -915,9 +920,9 @@ test.describe.serial('Scénario 7 — Invoice mismatch 3-way (montant +5% > PO �
     expect(req.id).toBeTruthy();
   });
 
-  test('S7-2 · [Camunda] Approuver N3 DG ou skip si Camunda absent', async ({ request }) => {
+  test('S7-2 · [Camunda] Validation du chef de projet ou skip si Camunda absent', async ({ request }) => {
     if (!req?.process_instance_id) {
-      console.log('   Camunda absent — skip approbation N3 DG');
+      console.log('   Camunda absent — skip validation du chef de projet');
       return;
     }
     if (req.status === 'BUDGET_INSUFFICIENT' || req.status === 'BUDGET_ADJUSTMENT') {
@@ -925,22 +930,22 @@ test.describe.serial('Scénario 7 — Invoice mismatch 3-way (montant +5% > PO �
       return;
     }
 
-    // Pour 100 000 XAF → DG N3
+    // Validation du chef de projet
     const task = await waitForTask(
       request,
       sharedToken,
       req.process_instance_id,
-      'Activity_ValidationN3_DG'
+      'Activity_ProjectManagerApproval'
     );
 
     if (!task) {
       // Peut-être que le montant tombe dans une autre tranche — essayer N2 ou N1
-      console.log('   Tâche N3 DG non trouvée — vérification N2 Finance...');
+      console.log('   Tâche du chef de projet non trouvée — nouvel essai...');
       const taskN2 = await waitForTask(
         request,
         sharedToken,
         req.process_instance_id,
-        'Activity_ValidationN2_Finance',
+        'Activity_ProjectManagerApproval',
         5000
       );
       if (taskN2) {
@@ -948,14 +953,14 @@ test.describe.serial('Scénario 7 — Invoice mismatch 3-way (montant +5% > PO �
           headers: auth(approverToken),
           data: {
             variables:         { approved: true },
-            taskDefinitionKey: 'Activity_ValidationN2_Finance',
+            taskDefinitionKey: 'Activity_ProjectManagerApproval',
             requisitionId:     req.id,
             estimatedAmount:   PO_AMOUNT,
           },
         });
         expect(completeRes.status()).toBe(200);
         await new Promise(r => setTimeout(r, 2000));
-        console.log(`✅ S7: Réquisition approuvée N2 Finance`);
+        console.log(`✅ S7: Réquisition validée par le chef de projet`);
         return;
       }
       console.log('   Aucune tâche d\'approbation trouvée — poursuite sans approbation Camunda');
@@ -966,14 +971,14 @@ test.describe.serial('Scénario 7 — Invoice mismatch 3-way (montant +5% > PO �
       headers: auth(approverToken),
       data: {
         variables:         { approved: true },
-        taskDefinitionKey: 'Activity_ValidationN3_DG',
+        taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     req.id,
         estimatedAmount:   PO_AMOUNT,
       },
     });
     expect(completeRes.status()).toBe(200);
     await new Promise(r => setTimeout(r, 2000));
-    console.log(`✅ S7: Réquisition approuvée N3 DG`);
+    console.log(`✅ S7: Réquisition validée par le chef de projet`);
   });
 
   test('S7-3 · Créer et approuver le PO (100 000 XAF)', async ({ request }) => {

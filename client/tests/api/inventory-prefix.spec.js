@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getToken, auth } from './helpers.js';
+import { getToken, getApproverId, auth } from './helpers.js';
 
 // Code initial des n° d'inventaire par projet (migration 50_inventory_prefix.sql) : projects.inventory_prefix
 // (ex. INVT-MSH ; vide → INVT) ; n° automatique <code initial>-AAAA-NNNNN, compteur par code initial et par année ;
@@ -31,7 +31,7 @@ test.describe.serial('API › Code initial des n° d\'inventaire par projet', ()
   });
 
   test('Projet : code initial contrôlé (format, préfixes de documents refusés)', async ({ request }) => {
-    const create = (inventoryPrefix) => request.post('/api/projects', { headers: H(), data: { code: `IP-${stamp}`, name: `Projet inventaire ${stamp}`, inventoryPrefix } });
+    const create = async (inventoryPrefix) => request.post('/api/projects', { headers: H(), data: { code: `IP-${stamp}`, name: `Projet inventaire ${stamp}`, inventoryPrefix, projectManagerId: await getApproverId(request) } });
     for (const [value, code] of [['INVT MSH', 'INVENTORY_PREFIX_INVALID'], ['INVT--X', 'INVENTORY_PREFIX_INVALID'], ['A'.repeat(21), 'INVENTORY_PREFIX_INVALID'], ['INV', 'INVENTORY_PREFIX_RESERVED'], ['inv-msh', 'INVENTORY_PREFIX_RESERVED']]) {
       const r = await json(await create(value));
       expect([r.status, r.body.code], value).toEqual([400, code]);

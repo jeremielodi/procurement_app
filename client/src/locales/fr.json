@@ -238,7 +238,12 @@
       "Activity_EnterInvoice": "Saisie de la facture fournisseur",
       "Activity_ProcessPayment": "Traitement du paiement",
       "Activity_ReviseRequisition": "Corriger la réquisition",
-      "Activity_AllocateSuppliers": "Répartition par fournisseur"
+      "Activity_AllocateSuppliers": "Répartition par fournisseur",
+      "Activity_ProjectManagerApproval": "Validation du chef de projet",
+      "Activity_POApprovalN1": "Approbation du bon de commande — Manager niveau 1 (N1)",
+      "Activity_POApprovalN2": "Approbation du bon de commande — Manager niveau 2 (N2)",
+      "Activity_POApprovalN3": "Approbation du bon de commande — Manager niveau 3 (N3)",
+      "Activity_POReview": "Révision du bon de commande"
     }
   },
   "tenderStatus": {
@@ -436,7 +441,7 @@
         },
         {
           "title": "Budget et approbations",
-          "desc": "Budget vérifié automatiquement ; en cas de manque, ajustement puis nouvelle vérification sans ressaisie. Validation multi-niveaux selon le montant, avec des seuils propres à chaque projet, le renvoi pour correction et l'historique des versions."
+          "desc": "Budget vérifié automatiquement ; en cas de manque, ajustement puis nouvelle vérification sans ressaisie. Réquisition validée par le chef de projet (budget holder), avec renvoi pour correction et historique des versions ; bon de commande approuvé à trois niveaux selon son montant, avec des seuils propres à chaque projet."
         },
         {
           "title": "Appels d'offres",
@@ -831,7 +836,8 @@
     "noRequisition": "Réquisition introuvable",
     "claimedByMe": "Prise en charge par vous",
     "toClaim": "À prendre en charge",
-    "notOnProject": "Vous avez ce profil, mais pas sur le projet de cette réquisition : demandez à l'administrateur de vous l'attribuer"
+    "notOnProject": "Vous avez ce profil, mais pas sur le projet de cette réquisition : demandez à l'administrateur de vous l'attribuer",
+    "notProjectManager": "Validation réservée au chef du projet de cette réquisition"
   },
   "notifications": {
     "unknownDate": "Date inconnue",
@@ -1286,7 +1292,9 @@
       "contactPlaceholder": "Ex : +243 … / nom@exemple.org"
     },
     "unitRequired": "Unité obligatoire",
-    "unitChoose": "Choisir…"
+    "unitChoose": "Choisir…",
+    "validatedBy": "Validation : {{name}} (chef de projet)",
+    "projectNoManager": "Ce projet n'a pas de chef de projet : la réquisition ne peut pas être soumise tant que l'administrateur ne l'a pas désigné"
   },
   "reqDetail": {
     "cancelled": "Réquisition annulée avec succès",
@@ -1660,7 +1668,33 @@
     "paymentTermsPlaceholder": "Ex : 100 % après livraison",
     "deliveryTerms": "Conditions de livraison",
     "deliveryTermsPlaceholder": "Ex : livraison au bureau, frais inclus",
-    "specialInstructions": "Instructions spéciales au fournisseur"
+    "specialInstructions": "Instructions spéciales au fournisseur",
+    "approvalLevel": "Approbation : niveau {{level}} ({{role}})",
+    "notApprovalLevel": "Ce bon de commande doit être approuvé par un {{role}} du projet",
+    "levelRole": {
+      "N1": "Manager niveau 1",
+      "N2": "Manager niveau 2",
+      "N3": "Manager niveau 3"
+    },
+    "review": {
+      "approve": "Approuver la révision",
+      "reject": "Rejeter",
+      "waiting": "En révision : le réviseur des bons de commande du projet doit l'approuver avant l'approbation selon son niveau",
+      "approveTitle": "Approuver la révision",
+      "rejectTitle": "Rejeter le bon de commande",
+      "approveText": "Le bon {{number}} passera ensuite à l'approbation selon son niveau (N1 / N2 / N3).",
+      "rejectText": "Le bon {{number}} sera rejeté et la commande de ce fournisseur arrêtée.",
+      "comment": "Commentaire (facultatif)",
+      "approved": "Révision approuvée : le bon passe à l'approbation",
+      "rejected": "Bon de commande rejeté à la révision",
+      "err": {
+        "REVIEW_REASON_REQUIRED": "Indiquez le motif du rejet",
+        "NOT_IN_REVIEW": "Ce bon de commande n'attend plus de révision",
+        "NOT_PO_REVIEWER": "La révision revient au réviseur des bons de commande du projet",
+        "SELF_APPROVAL": "Vous avez créé ce bon (ou demandé l'achat) : un autre réviseur doit le traiter",
+        "BPMNGO_ERROR": "Le moteur de workflow n'a pas accepté la révision : réessayez"
+      }
+    }
   },
   "grnStatus": {
     "DRAFT": "Brouillon",
@@ -2928,13 +2962,16 @@
       "PROJECT_CODE_TOO_LONG": "Code du projet : 20 caractères maximum.",
       "PROJECT_CODE_EXISTS": "Ce code est déjà utilisé par un autre projet de votre entreprise.",
       "INVENTORY_PREFIX_INVALID": "Code initial inventaire : lettres et chiffres séparés par des tirets, 20 caractères maximum (ex. INVT-MSH).",
-      "INVENTORY_PREFIX_RESERVED": "Code initial inventaire : ce début est réservé à un type de document (INV = factures, PO, GRN…)."
+      "INVENTORY_PREFIX_RESERVED": "Code initial inventaire : ce début est réservé à un type de document (INV = factures, PO, GRN…).",
+      "PROJECT_MANAGER_REQUIRED": "Le chef de projet est obligatoire : il valide les réquisitions du projet.",
+      "PROJECT_MANAGER_INVALID": "Chef de projet introuvable ou inactif dans votre entreprise."
     },
     "codeChangeHint": "Les réquisitions, budgets, stocks et membres restent rattachés au projet. Utilisez le nouveau code dans vos prochains fichiers d'import.",
     "inventoryPrefix": "Code initial inventaire",
     "inventoryPrefixPlaceholder": "INVT",
     "inventoryPrefixHint": "Début des n° d'inventaire des équipements financés par ce projet : {{example}}. Vide = INVT. Les n° déjà attribués ne changent pas.",
-    "inventoryPrefixLine": "Code initial inventaire : {{prefix}} (ex. {{example}})"
+    "inventoryPrefixLine": "Code initial inventaire : {{prefix}} (ex. {{example}})",
+    "projectManagerHelp": "Budget holder : il valide seul les réquisitions du projet"
   },
   "enterprises": {
     "notFound": "Entreprise introuvable",
@@ -3965,16 +4002,24 @@
                 "Crée les réquisitions, suit leur avancement, accepte les services (SAN), reçoit des articles du stock et confirme leur réception."
               ],
               [
+                "Chef de projet",
+                "Désigné sur la fiche du projet (pas un profil) : valide seul les réquisitions de son projet — approuver, rejeter ou renvoyer pour correction."
+              ],
+              [
                 "Manager niveau 1",
-                "Approuve ou rejette les réquisitions de niveau N1 de ses projets (par défaut moins de 25 000 ; seuils propres à chaque projet possibles)."
+                "Approuve ou rejette les bons de commande de niveau N1 de ses projets (par défaut moins de 25 000 ; seuils propres à chaque projet possibles)."
               ],
               [
                 "Manager niveau 2",
-                "Approuve ou rejette les réquisitions de niveau N2 (par défaut de 25 000 à 99 999)."
+                "Approuve ou rejette les bons de commande de niveau N2 (par défaut de 25 000 à 99 999)."
               ],
               [
                 "Manager niveau 3",
-                "Approuve ou rejette les réquisitions de niveau N3 (par défaut 100 000 et plus)."
+                "Approuve ou rejette les bons de commande de niveau N3 (par défaut 100 000 et plus)."
+              ],
+              [
+                "Réviseur des bons de commande",
+                "Révise chaque bon de commande de ses projets avant son approbation N1 / N2 / N3 : approuver ou rejeter (motif obligatoire). Jamais un bon qu'il a créé ou issu de sa réquisition."
               ],
               [
                 "Finance",
@@ -3990,7 +4035,7 @@
               ],
               [
                 "Direction (Management)",
-                "Approuve ou rejette les bons de commande."
+                "Pilotage (tableau de bord). N'approuve plus les bons de commande (désormais Manager N1 / N2 / N3 selon le montant), sauf pour les réquisitions démarrées avant ce circuit."
               ],
               [
                 "Logistique",
@@ -4030,7 +4075,8 @@
               "Le profil doit d'abord figurer sur la fiche de l'utilisateur : le retirer de sa fiche le retire de tous les projets.",
               "Contrôlé par le serveur : liste des tâches, prise en charge, traitement, formulaires (bon de commande, réception, acceptation de service, facture, paiement, appel d'offres) et création d'une réquisition (seuls les projets où vous pouvez en créer sont proposés).",
               "Les emails et notifications de tâche ne vont qu'aux personnes ayant le profil sur le projet de la réquisition.",
-              "Les autres profils (Administrateur, Magasinier, Auditeur) restent valables sur toute l'entreprise."
+              "Les autres profils (Administrateur, Magasinier, Auditeur) restent valables sur toute l'entreprise.",
+              "Le chef de projet n'est pas un profil : il est désigné sur la fiche du projet et valide seul les réquisitions de ce projet."
             ]
           },
           {
@@ -4206,7 +4252,7 @@
       },
       "approval": {
         "title": "Budget et approbation",
-        "summary": "Vérification automatique du budget et niveau d'approbation selon le montant.",
+        "summary": "Vérification automatique du budget, validation par le chef de projet, puis approbation du bon de commande selon son montant.",
         "blocks": [
           {
             "type": "h",
@@ -4230,13 +4276,34 @@
           },
           {
             "type": "h",
-            "text": "Qui approuve ?"
+            "text": "Qui valide la réquisition ?"
+          },
+          {
+            "type": "p",
+            "text": "Après la vérification du budget, la réquisition est validée par le chef du projet (budget holder), quel que soit son montant. Lui seul peut la valider : ni l'administrateur, ni un manager. Il peut approuver, rejeter ou renvoyer pour correction, avec un commentaire qui apparaît dans le suivi du workflow. Un rejet arrête le circuit (statut « Rejeté ») et le demandeur est notifié."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Le projet est obligatoire sur toute réquisition, et chaque projet doit avoir un chef de projet (fiche du projet, champ « Chef de projet »). Sans chef de projet actif, la réquisition ne peut pas être soumise.",
+              "Le formulaire de réquisition affiche « Validation : <nom> (chef de projet) » dès que le projet est choisi.",
+              "Le chef de projet ne peut pas valider sa propre demande : une réquisition sur son projet doit être faite par un autre membre.",
+              "Changer de chef de projet (fiche du projet) transfère aussitôt les validations en attente au nouveau ; le changement est tracé dans le journal d'audit."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Qui approuve le bon de commande ?"
+          },
+          {
+            "type": "p",
+            "text": "Avant son approbation, chaque bon de commande passe par une révision : le réviseur des bons de commande du projet (profil « Réviseur des bons de commande ») l'approuve ou le rejette depuis la fiche du bon (« Approuver la révision » / « Rejeter », motif obligatoire). Rejeté, la commande de ce fournisseur s'arrête ; approuvé, il passe à l'approbation selon son montant :"
           },
           {
             "type": "table",
             "rows": [
               [
-                "Montant estimé (seuils par défaut)",
+                "Montant du bon de commande (seuils par défaut)",
                 "Approbation"
               ],
               [
@@ -4255,7 +4322,7 @@
           },
           {
             "type": "p",
-            "text": "Un seul niveau intervient, celui correspondant au montant. L'approbateur peut approuver, rejeter ou renvoyer pour correction, avec un commentaire qui apparaît dans le suivi du workflow. Un rejet arrête le circuit (statut « Rejeté ») et le demandeur est notifié."
+            "text": "Un seul niveau intervient, celui correspondant au montant du bon de commande. Seul un manager de ce niveau, membre du projet, peut l'approuver ou le rejeter : la fiche du bon affiche « Approbation : niveau N… ». Un bon rejeté arrête la commande de ce fournisseur."
           },
           {
             "type": "h",
@@ -4263,21 +4330,20 @@
           },
           {
             "type": "p",
-            "text": "Chaque projet peut avoir sa politique : fiche du projet → « Seuils d'approbation » → « Seuils propres » (N1 en dessous de…, N2 en dessous de…, N3 au-delà). Sans politique propre, le projet reprend celle de l'entreprise (« Mon entreprise » → « Seuils d'approbation »), sinon les seuils par défaut ci-dessus."
+            "text": "Chaque projet peut avoir sa politique : fiche du projet → « Seuils d'approbation des bons de commande » → « Seuils propres » (N1 en dessous de…, N2 en dessous de…, N3 au-delà). Sans politique propre, le projet reprend celle de l'entreprise (« Mon entreprise »), sinon les seuils par défaut ci-dessus."
           },
           {
             "type": "list",
             "items": [
-              "Le formulaire de réquisition affiche « Approbation prévue » selon le projet et le montant saisi.",
-              "Le niveau est fixé à la vérification du budget (et de nouveau après une correction) ; il apparaît sur la fiche, dans le suivi du workflow et sur le PDF, avec la politique appliquée.",
-              "Changer une politique ne modifie pas une réquisition déjà en attente d'approbation.",
+              "Le niveau est fixé à la création du bon de commande, selon son montant ; il apparaît sur la fiche du bon et dans le suivi du workflow.",
+              "Changer une politique ne modifie pas un bon déjà en attente d'approbation.",
               "Même valeur pour N1 et N2 : pas de niveau N2 (de N1 on passe directement à N3).",
               "Seul l'administrateur d'entreprise modifie les seuils ; chaque changement est tracé dans le journal d'audit."
             ]
           },
           {
             "type": "warn",
-            "text": "Vous ne pouvez pas approuver votre propre réquisition, même si vous avez le profil d'approbateur : un autre membre du groupe doit la traiter."
+            "text": "Vous ne pouvez pas approuver votre propre demande : ni la réquisition dont vous êtes le demandeur, ni un bon de commande que vous avez créé ou qui découle de votre réquisition."
           },
           {
             "type": "h",
@@ -4285,22 +4351,22 @@
           },
           {
             "type": "p",
-            "text": "Une réquisition se corrige seulement pendant l'approbation, et toujours avec une trace : chaque soumission est conservée (onglet « Versions » de la fiche) et l'approbateur voit ce qui a changé."
+            "text": "Une réquisition se corrige seulement pendant sa validation, et toujours avec une trace : chaque soumission est conservée (onglet « Versions » de la fiche) et le chef de projet voit ce qui a changé."
           },
           {
             "type": "list",
             "items": [
-              "Approbateur (N1 / N2 / N3) : en plus de « Approuver » et « Rejeter », la décision « Renvoyer pour correction » (motif obligatoire : ce qui doit être corrigé). La réquisition passe « À corriger » et le demandeur est notifié.",
-              "Demandeur : tant que personne n'a pris l'approbation en charge, « Retirer pour corriger » sur la fiche de la réquisition. Si l'approbation est déjà prise en charge, demandez à l'approbateur de la renvoyer.",
+              "Chef de projet : en plus de « Approuver » et « Rejeter », la décision « Renvoyer pour correction » (motif obligatoire : ce qui doit être corrigé). La réquisition passe « À corriger » et le demandeur est notifié.",
+              "Demandeur : tant que le chef de projet n'a pas pris la validation en charge, « Retirer pour corriger » sur la fiche de la réquisition. Sinon, demandez-lui de la renvoyer.",
               "« À corriger » : seul le demandeur peut modifier (bouton « Corriger » de la fiche, ou la tâche « Corriger la réquisition ») — titre, articles, quantités, prix, lignes budgétaires, projet. « Enregistrer » garde les modifications ; « Soumettre à nouveau » crée une nouvelle version.",
-              "Après une nouvelle soumission : le budget est vérifié de nouveau et le circuit d'approbation recommence selon le NOUVEAU montant (passer de 20 000 à 30 000 envoie la demande au Manager niveau 2).",
+              "Après une nouvelle soumission : le budget est vérifié de nouveau, puis la réquisition revient au chef de projet.",
               "« Abandonner » (motif obligatoire) annule la réquisition.",
-              "Après approbation, la réquisition n'est plus modifiable : un changement passe par une nouvelle réquisition, ou par le bon de commande (« Solder le reliquat »)."
+              "Après validation, la réquisition n'est plus modifiable : un changement passe par une nouvelle réquisition, ou par le bon de commande (« Solder le reliquat »)."
             ]
           },
           {
             "type": "tip",
-            "text": "Seuls les approbateurs membres du projet de la réquisition reçoivent la tâche. Si personne ne la reçoit, vérifiez les membres du projet (Organisation → Projets)."
+            "text": "Les réquisitions déjà en cours avant ce circuit gardent l'ancien : approbation N1 / N2 / N3 de la réquisition, puis approbation du bon de commande par la Direction."
           },
           {
             "type": "links",
@@ -5889,7 +5955,9 @@
       "PROJECT_INVENTORY_PREFIX_CHANGED": "Code initial inventaire du projet modifié",
       "STOCK_ENTRY_VALIDATED": "Bon d'entrée validé",
       "STOCK_ENTRY_REJECTED": "Bon d'entrée refusé",
-      "STOCK_ENTRY_CANCELLED": "Bon d'entrée annulé"
+      "STOCK_ENTRY_CANCELLED": "Bon d'entrée annulé",
+      "PROJECT_MANAGER_CHANGED": "Chef de projet modifié",
+      "PURCHASE_ORDER_REVIEWED": "Bon de commande révisé"
     },
     "groups": {
       "all": "Tous les événements",
@@ -6237,12 +6305,15 @@
       "NOT_ON_PROJECT": "Vous n'avez pas le profil requis sur ce projet",
       "RETURN_REASON_REQUIRED": "Indiquez ce qui doit être corrigé",
       "DECISION_REQUIRED": "Choisissez une décision",
-      "RETURN_NOT_SUPPORTED": "Réquisition démarrée avant la mise à jour du circuit : le renvoi pour correction n'est pas possible (approuvez-la ou rejetez-la)"
+      "RETURN_NOT_SUPPORTED": "Réquisition démarrée avant la mise à jour du circuit : le renvoi pour correction n'est pas possible (approuvez-la ou rejetez-la)",
+      "PROJECT_REQUIRED": "Choisissez le projet : la réquisition est validée par son chef de projet",
+      "PROJECT_MANAGER_MISSING": "Ce projet n'a pas de chef de projet actif : demandez à l'administrateur de le désigner",
+      "REQUESTER_IS_PROJECT_MANAGER": "Vous êtes le chef de ce projet : vous ne pouvez pas valider votre propre réquisition — elle doit être faite par un autre membre du projet"
     },
     "returnNotSupported": "Renvoi pour correction indisponible : réquisition démarrée avant la mise à jour du circuit d'approbation."
   },
   "approvalPolicy": {
-    "title": "Seuils d'approbation (N1 / N2 / N3)",
+    "title": "Seuils d'approbation des bons de commande (N1 / N2 / N3)",
     "custom": "Seuils propres",
     "n1Label": "N1 (Manager niveau 1) en dessous de",
     "n2Label": "N2 (Manager niveau 2) en dessous de",
@@ -6250,8 +6321,8 @@
     "applies": "S'applique : {{summary}}",
     "inheritEnterprise": "Politique de l'entreprise",
     "inheritDefault": "Seuils par défaut",
-    "enterpriseTitle": "Seuils d'approbation",
-    "enterpriseHint": "Repris par les projets qui n'ont pas leur propre politique (fiche du projet). Le niveau d'une réquisition est fixé à la vérification du budget : une réquisition déjà en attente d'approbation garde le sien.",
+    "enterpriseTitle": "Seuils d'approbation des bons de commande",
+    "enterpriseHint": "Repris par les projets qui n'ont pas leur propre politique (fiche du projet). Le niveau d'un bon de commande est fixé à sa création, selon son montant ; la réquisition, elle, est validée par le chef de projet.",
     "saved": "Seuils d'approbation enregistrés",
     "levels": {
       "N1": "N1 — Manager niveau 1",

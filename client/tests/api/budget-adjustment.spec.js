@@ -90,7 +90,7 @@ test.describe.serial('API › Ajustement budgétaire', () => {
     expect(retry.status, JSON.stringify(retry.body)).toBe(200);
     expect(retry.body.data.taskCompleted).toBe(true);
     // Nouvelle vérification OK → statut repris, approbation N1 (5 000 < 25 000) sur le MÊME processus
-    const resumed = await waitFor(request, reqRetry, { status: 'IN_PROGRESS', taskKey: 'Activity_ValidationN1_Manager' });
+    const resumed = await waitFor(request, reqRetry, { status: 'IN_PROGRESS', taskKey: 'Activity_ProjectManagerApproval' });
     expect(resumed, 'la réquisition doit repartir vers l\'approbation N1').toBeTruthy();
     expect(resumed.process_instance_id).toBe(reqRetry.process_instance_id);
     const timeline = (await (await request.get(`/api/requisitions/${reqRetry.id}/timeline?lang=fr`, { headers: H() })).json()).data;

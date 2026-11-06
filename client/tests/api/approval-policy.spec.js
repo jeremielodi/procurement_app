@@ -1,15 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth } from './helpers.js';
+import { getToken, getApproverToken, getApproverId, auth, PO_LEVEL_TASKS, requisitionToPurchaseOrder } from './helpers.js';
 
 // Seuils d'approbation par projet (migration 26_approval_policies.sql) : politique du projet, sinon de l'entreprise,
-// sinon 25 000 / 100 000. Le niveau est calculé par check_budget (variable approvalLevel lue par le BPMN) et
-// enregistré sur la réquisition avec la politique appliquée. BpmnGo requis pour les circuits (sinon ignorés).
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-const WAIT = 45_000;
-const KEYS = { N1: 'Activity_ValidationN1_Manager', N2: 'Activity_ValidationN2_Finance', N3: 'Activity_ValidationN3_DG' };
+// sinon 25 000 / 100 000. Depuis le 2026-11-06 (migration 51) ils portent sur le BON DE COMMANDE : niveau calculé à
+// la création du bon (variable poApprovalLevel lue par le BPMN) et enregistré sur le bon avec la politique appliquée ;
+// la réquisition est validée par le chef de projet. BpmnGo requis pour les circuits (sinon ignorés).
+const KEYS = PO_LEVEL_TASKS;
 
-test.describe.serial('API › Seuils d\'approbation par projet', () => {
-  test.describe.configure({ timeout: 180_000 });
+test.describe.serial('API › Seuils d\'approbation par projet (bon de commande)', () => {
+  test.describe.configure({ timeout: 240_000 });
   const stamp = Date.now().toString(36);
   let admin, approver, dept, projectA, projectB, lines = {};
   const H = () => auth(admin);
@@ -22,27 +21,17 @@ test.describe.serial('API › Seuils d\'approbation par projet', () => {
       priority: 'MEDIUM', justification: 'x', items: [{ description: 'Article', quantity: 1, frequency: 1, unitPrice: amount, budgetLineId: lines[project.id] }],
     } })).json()).data;
   }
-  /** Première étape d'approbation ouverte de la réquisition, ou null */
-  async function approvalTask(request, req) {
-    const start = Date.now();
-    while (Date.now() - start < WAIT) {
-      const r = (await (await request.get(`/api/requisitions/${req.id}`, { headers: H() })).json()).data;
-      if (r?.process_instance_id) {
-        const tasks = (await (await request.get(`/api/tasks/process/${r.process_instance_id}`, { headers: H() })).json()).data || [];
-        const found = tasks.find(tk => tk.status !== 'COMPLETED' && Object.values(KEYS).includes(tk.taskDefinitionKey));
-        if (found) return { task: found, requisition: r };
-      }
-      await sleep(1500);
-    }
-    return null;
-  }
+  /** Réquisition validée par le chef de projet puis bon de commande du même montant → { po, task } ou null */
+  const order = async (request, project, amount, title) =>
+    requisitionToPurchaseOrder(request, { admin, approver, requisitionId: (await requisition(request, project, amount, title)).id, amount });
+  const poOf = async (request, flow) => (await (await request.get(`/api/purchase-orders/${flow.po.id}`, { headers: H() })).json()).data;
 
   test.beforeAll(async ({ request }) => {
     admin = await getToken(request);
     approver = await getApproverToken(request);
     [dept] = (await (await request.get('/api/departments', { headers: H() })).json()).data;
     const mk = async (code, extra = {}) => {
-      const res = await request.post('/api/projects/', { headers: H(), data: { code, name: `Projet ${code}`, ...extra } });
+      const res = await request.post('/api/projects/', { headers: H(), data: { code, name: `Projet ${code}`, projectManagerId: await getApproverId(request), ...extra } });
       expect(res.status(), await res.text()).toBe(201);
       const project = (await res.json()).data;
       lines[project.id] = (await (await request.post('/api/budget', { headers: H(), data: {
@@ -79,20 +68,17 @@ test.describe.serial('API › Seuils d\'approbation par projet', () => {
     expect((await (await request.get(`/api/projects/${projectA.id}/approval-policy`, { headers: H() })).json()).data.source).toBe('PROJECT');
   });
 
-  test('2 000 sur le projet A (N1 < 1 000, N2 < 5 000) → N2 : Manager niveau 2 (Finance ne l\'approuve plus) ; une seule approbation', async ({ request }) => {
-    const req = await requisition(request, projectA, 2000, 'N2');
-    const found = await approvalTask(request, req);
-    test.skip(!found, 'BpmnGo indisponible');
-    expect(found.task.taskDefinitionKey).toBe(KEYS.N2);
-    expect(found.requisition.approval_level).toBe('N2');
-    expect(found.requisition.approval_policy).toMatchObject({ n1Max: 1000, n2Max: 5000, source: 'PROJECT' });
-    const timeline = (await (await request.get(`/api/requisitions/${req.id}/timeline`, { headers: H() })).json()).data;
-    const event = timeline.events.find(e => e.title.startsWith("Niveau d'approbation : N2"));
-    expect(event?.details?.[0]).toContain('Politique du projet');
-    expect(event?.title).toContain('Manager niveau 2');
+  test('Bon de 2 000 sur le projet A (N1 < 1 000, N2 < 5 000) → N2 : Manager niveau 2 (pas Finance)', async ({ request }) => {
+    const flow = await order(request, projectA, 2000, 'N2');
+    test.skip(!flow, 'BpmnGo indisponible');
+    expect(flow.task.taskDefinitionKey).toBe(KEYS.N2);
+    const po = await poOf(request, flow);
+    expect(po.approval_level).toBe('N2');
+    expect(po.approval_policy).toMatchObject({ n1Max: 1000, n2Max: 5000, source: 'PROJECT' });
+    const timeline = (await (await request.get(`/api/requisitions/${flow.requisition.id}/timeline`, { headers: H() })).json()).data;
+    expect(timeline.steps.find(s => s.key === 'po_approval').info).toContain('niveau N2 (Manager niveau 2)');
 
-    // Groupe BpmnGo manager_n2 (migration 27) : un compte Finance ne peut plus prendre l'approbation N2,
-    // un « Manager niveau 2 » si (profils valables sur tous les projets pour ce test)
+    // Groupe BpmnGo manager_n2 : un compte Finance ne peut pas prendre l'approbation N2, un « Manager niveau 2 » si
     const mk = async (key, profile) => {
       const u = { email: `ap.${key}.${stamp}@nowhere.test`, password: 'Secret123' };
       const res = await request.post('/api/users', { headers: H(), data: {
@@ -103,24 +89,24 @@ test.describe.serial('API › Seuils d\'approbation par projet', () => {
       return (await (await request.post('/api/auth/login', { data: u })).json()).data.token;
     };
     const [financeToken, managerN2Token] = await Promise.all([mk('fin', 'prof_finance'), mk('mn2', 'prof_manager_n2')]);
-    const asFinance = ((await (await request.get(`/api/tasks/process/${found.requisition.process_instance_id}`, { headers: auth(financeToken) })).json()).data || []).find(tk => tk.id === found.task.id);
-    expect([found.task.candidateGroup, asFinance?.canClaim]).toEqual(['manager_n2', false]);
-    expect((await request.post(`/api/tasks/${found.task.id}/claim`, { headers: auth(financeToken) })).status()).toBe(403);
-    expect((await request.post(`/api/tasks/${found.task.id}/claim`, { headers: auth(managerN2Token) })).status()).toBe(200);
-    expect((await request.post(`/api/tasks/${found.task.id}/unclaim`, { headers: auth(managerN2Token) })).status()).toBe(200);
+    const asFinance = ((await (await request.get(`/api/tasks/process/${flow.requisition.process_instance_id}`, { headers: auth(financeToken) })).json()).data || []).find(tk => tk.id === flow.task.id);
+    expect([flow.task.candidateGroup, asFinance?.canClaim]).toEqual(['manager_n2', false]);
+    expect((await request.post(`/api/tasks/${flow.task.id}/claim`, { headers: auth(financeToken) })).status()).toBe(403);
+    expect((await request.post(`/api/tasks/${flow.task.id}/claim`, { headers: auth(managerN2Token) })).status()).toBe(200);
+    expect((await request.post(`/api/tasks/${flow.task.id}/unclaim`, { headers: auth(managerN2Token) })).status()).toBe(200);
 
-    const ok = await json(await request.post(`/api/tasks/${found.task.id}/complete`, { headers: auth(approver), data: { variables: { approved: true } } }));
+    const ok = await json(await request.post(`/api/purchase-orders/${flow.po.id}/approve`, { headers: auth(managerN2Token), data: { comments: 'OK' } }));
     expect(ok.status, JSON.stringify(ok.body)).toBe(200);
-    const after = (await (await request.get(`/api/requisitions/${req.id}`, { headers: H() })).json()).data;
-    expect(after.status).toBe('APPROVED');
+    expect((await poOf(request, flow)).status).toBe('PO_APPROVED');
   });
 
-  test('6 000 sur le projet A → N3 ; même montant sur le projet B (défaut) → N1', async ({ request }) => {
-    const [n3, n1] = await Promise.all([requisition(request, projectA, 6000, 'N3'), requisition(request, projectB, 6000, 'défaut N1')]);
-    const [a, b] = await Promise.all([approvalTask(request, n3), approvalTask(request, n1)]);
+  test('Bon de 6 000 sur le projet A → N3 ; même montant sur le projet B (défaut) → N1', async ({ request }) => {
+    // L'un après l'autre : deux bons créés en même temps peuvent recevoir le même numéro
+    const a = await order(request, projectA, 6000, 'N3');
+    const b = await order(request, projectB, 6000, 'défaut N1');
     test.skip(!a || !b, 'BpmnGo indisponible');
     expect([a.task.taskDefinitionKey, b.task.taskDefinitionKey]).toEqual([KEYS.N3, KEYS.N1]);
-    expect(b.requisition.approval_policy.source).toBe('DEFAULT');
+    expect((await poOf(request, b)).approval_policy.source).toBe('DEFAULT');
   });
 
   test('Politique de l\'entreprise reprise par un projet sans politique ; N1 = N2 : pas de niveau N2', async ({ request }) => {
@@ -133,11 +119,10 @@ test.describe.serial('API › Seuils d\'approbation par projet', () => {
     // Le projet A garde sa propre politique
     expect((await (await request.get(`/api/projects/${projectA.id}/approval-policy`, { headers: H() })).json()).data.source).toBe('PROJECT');
 
-    const req = await requisition(request, projectB, 600, 'entreprise N3');
-    const found = await approvalTask(request, req);
-    test.skip(!found, 'BpmnGo indisponible');
-    expect(found.task.taskDefinitionKey).toBe(KEYS.N3); // 600 ≥ 500 et pas de niveau N2
-    expect(found.requisition.approval_policy).toMatchObject({ n1Max: 500, n2Max: 500, source: 'ENTERPRISE' });
+    const flow = await order(request, projectB, 600, 'entreprise N3');
+    test.skip(!flow, 'BpmnGo indisponible');
+    expect(flow.task.taskDefinitionKey).toBe(KEYS.N3); // 600 ≥ 500 et pas de niveau N2
+    expect((await poOf(request, flow)).approval_policy).toMatchObject({ n1Max: 500, n2Max: 500, source: 'ENTERPRISE' });
 
     const reset = await json(await request.put('/api/enterprises/current/approval-policy', { headers: H(), data: { n1Max: null, n2Max: null } }));
     expect(reset.body.data.effective.source).toBe('DEFAULT');

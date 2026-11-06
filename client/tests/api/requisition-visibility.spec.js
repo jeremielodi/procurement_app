@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getToken, auth } from './helpers.js';
+import { getToken, getApproverId, auth } from './helpers.js';
 
 // Visibilité des réquisitions (migration 30_requisition_visibility.sql) : dans un projet, un utilisateur ne voit que
 // les réquisitions qu'il a créées, sauf s'il a sur ce projet un profil autre que « Demandeur » (managers, finance,
@@ -36,7 +36,7 @@ test.describe.serial('API › Visibilité des réquisitions par projet', () => {
       return (await res.json()).data;
     };
     projectP = await mkProject(`RVP-${stamp}`, { projectManagerId: users.chief.id });
-    projectQ = await mkProject(`RVQ-${stamp}`);
+    projectQ = await mkProject(`RVQ-${stamp}`, { projectManagerId: await getApproverId(request) });
     for (const [key, project] of [['alice', projectP], ['bob', projectP], ['mgrP', projectP], ['mgrQ', projectQ]]) {
       const res = await request.post('/api/projects/members', { headers: H(), data: { projectId: project.id, userId: users[key].id, role: 'MEMBER' } });
       expect(res.status(), await res.text()).toBe(200);

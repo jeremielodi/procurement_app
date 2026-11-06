@@ -52,6 +52,13 @@ function ClaimState({ task, userEmail }) {
       </span>
     );
   }
+  if (task.blockedReason === 'NOT_PROJECT_MANAGER') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 ring-1 ring-amber-200" data-testid="task-not-project-manager">
+        <ShieldAlert size={14} /> {t('taskList.notProjectManager')}
+      </span>
+    );
+  }
   if (task.assignee && (task.isMine || task.assignee === userEmail)) {
     return <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs text-green-800"><UserCheck size={13} /> {t('taskList.claimedByMe')}</span>;
   }

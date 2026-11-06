@@ -1,6 +1,6 @@
 // État du stock par projet : colonne « Projet (financement) » et filtre par projet / « Sans projet » de « État du stock ».
 import { test, expect } from '@playwright/test';
-import { getToken, auth } from '../api/helpers.js';
+import { getToken, getApproverId, auth } from '../api/helpers.js';
 
 test('État du stock : répartition et filtre par projet', async ({ page, request }) => {
   test.setTimeout(60_000); // données créées par l'API + premier chargement de l'écran en fin de campagne
@@ -9,7 +9,7 @@ test('État du stock : répartition et filtre par projet', async ({ page, reques
   const H = auth(admin);
   const locations = (await (await request.get('/api/public/locations')).json()).data;
   const cats = (await (await request.get('/api/public/market-categories')).json()).data;
-  const project = (await (await request.post('/api/projects/', { headers: H, data: { code: `E2E-SP-${stamp}`, name: `Projet stock ${stamp}` } })).json()).data;
+  const project = (await (await request.post('/api/projects/', { headers: H, data: { code: `E2E-SP-${stamp}`, name: `Projet stock ${stamp}`, projectManagerId: await getApproverId(request) } })).json()).data;
   const warehouse = (await (await request.post('/api/warehouses', { headers: H, data: { code: `E2E-SP-${stamp}`, name: `Dépôt E2E ${stamp}`, locationId: locations[0].id } })).json()).data;
   const item = (await (await request.post('/api/stock-items', { headers: H, data: { code: `E2E-SP-${stamp}`, name: 'Huile (bidon 5 L)', unit: 'bidon', categoryId: (cats.find(c => c.is_stockable) || cats[0]).id } })).json()).data;
   for (const [quantity, projectId] of [[7, project.id], [3, undefined]]) {

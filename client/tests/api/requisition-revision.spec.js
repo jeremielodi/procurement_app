@@ -4,7 +4,7 @@ import { getToken, getApproverToken, auth } from './helpers.js';
 // Correction d'une réquisition (migration 25_requisition_revisions.sql, BPMN Activity_ReviseRequisition) :
 //  - l'approbateur renvoie pour correction (motif obligatoire) → « À corriger » (RETURNED)
 //  - seul le demandeur modifie, et seulement dans cet état ; nouvelle soumission = version 2, nouveau circuit
-//    d'approbation selon le NOUVEAU montant (ici N1 → N2)
+//    : nouvelle vérification du budget puis nouvelle validation du chef de projet
 //  - le demandeur peut retirer sa réquisition tant que personne n'a pris l'approbation ; abandon = annulée
 // BpmnGo requis (sinon les tests s'ignorent).
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -72,7 +72,7 @@ test.describe.serial('API › Correction des réquisitions', () => {
   });
 
   test('Renvoi pour correction par l\'approbateur : motif obligatoire, « À corriger », étape personnelle du demandeur', async ({ request }) => {
-    task = await waitTask(request, 'Activity_ValidationN1_Manager');
+    task = await waitTask(request, 'Activity_ProjectManagerApproval');
     test.skip(!task, 'BpmnGo indisponible');
     const noReason = await json(await request.post(`/api/tasks/${task.id}/complete`, { headers: A(), data: { variables: { returnedForCorrection: true } } }));
     expect([noReason.status, noReason.body.code]).toEqual([400, 'RETURN_REASON_REQUIRED']);
@@ -97,12 +97,12 @@ test.describe.serial('API › Correction des réquisitions', () => {
     expect([direct.status, direct.body.code]).toEqual([400, 'FORM_REQUIRED']);
   });
 
-  test('Correction puis nouvelle soumission : version 2, changements visibles, nouveau circuit selon le nouveau montant (N2)', async ({ request }) => {
+  test('Correction puis nouvelle soumission : version 2, changements visibles, nouvelle validation du chef de projet', async ({ request }) => {
     test.skip(!task, 'BpmnGo indisponible');
     const current = await getReq(request);
     const [item] = current.items || (await (await request.get(`/api/requisitions/${req.id}`, { headers: H() })).json()).data.items;
     const itemId = item.id;
-    // 10 × 100 → 20 × 100 + enveloppes 100 × 280 = 30 000 → niveau N2 (≥ 25 000)
+    // 10 × 100 → 20 × 100 + enveloppes 100 × 280 = 30 000
     const put = await json(await request.put(`/api/requisitions/${req.id}`, { headers: H(), data: {
       title: current.title, description: 'x', justification: 'Besoin revu', priority: 'HIGH', departmentId: dept.id, projectId: project.id,
       items: [
@@ -130,8 +130,8 @@ test.describe.serial('API › Correction des réquisitions', () => {
     expect(versions.versions[0].changes.fields.find(f => f.field === 'amount')).toMatchObject({ before: 1000, after: 30000 });
     expect(versions.pendingChanges).toBeNull();
 
-    const n2 = await waitTask(request, 'Activity_ValidationN2_Finance');
-    expect(n2, 'nouveau circuit : approbation N2 (montant ≥ 25 000)').toBeTruthy();
+    const n2 = await waitTask(request, 'Activity_ProjectManagerApproval');
+    expect(n2, 'nouvelle validation du chef de projet').toBeTruthy();
     expect((await getReq(request)).status).not.toBe('RETURNED');
 
     const timeline = (await (await request.get(`/api/requisitions/${req.id}/timeline`, { headers: H() })).json()).data;
@@ -142,7 +142,7 @@ test.describe.serial('API › Correction des réquisitions', () => {
 
   test('Retrait par le demandeur : refusé si l\'approbation est prise en charge, accepté sinon', async ({ request }) => {
     test.skip(!task, 'BpmnGo indisponible');
-    const n2 = await waitTask(request, 'Activity_ValidationN2_Finance');
+    const n2 = await waitTask(request, 'Activity_ProjectManagerApproval');
     expect((await request.post(`/api/tasks/${n2.id}/claim`, { headers: A() })).status()).toBe(200);
     const claimed = await json(await request.post(`/api/requisitions/${req.id}/withdraw`, { headers: H(), data: {} }));
     expect([claimed.status, claimed.body.code]).toEqual([409, 'APPROVAL_IN_PROGRESS']);

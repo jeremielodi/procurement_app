@@ -337,13 +337,18 @@ async function processCheckBudget(task) {
     );
   }
 
-  // Niveau d'approbation selon la politique du projet (sinon de l'entreprise), sur le montant ACTUEL des articles
-  // (il a pu changer après une correction) : Gateway_AmountDecision lit approvalLevel
-  const approval = await approvalPolicy.assignRequisitionLevel(requisitionId);
-  await addWorkflowHistory(
-    processInstanceId, 'requisition', requisitionId, task.id, 'Approval Level', `APPROVAL_LEVEL_${approval.level}`,
-    JSON.stringify({ level: approval.level, amount: approval.amount, policy: approval.policy })
-  );
+  // Circuit du 2026-11-06 (approvalFlow = PROJECT_MANAGER) : la réquisition va au chef de projet, les niveaux
+  // N1 / N2 / N3 sont calculés sur le bon de commande — rien à enregistrer ici.
+  // Processus démarrés avant : niveau selon la politique du projet (sinon de l'entreprise), sur le montant ACTUEL des
+  // articles (il a pu changer après une correction) : Gateway_AmountDecision lit approvalLevel
+  const projectManagerFlow = getVariableValue(task.variables, 'approvalFlow') === 'PROJECT_MANAGER';
+  const approval = projectManagerFlow ? null : await approvalPolicy.assignRequisitionLevel(requisitionId);
+  if (approval) {
+    await addWorkflowHistory(
+      processInstanceId, 'requisition', requisitionId, task.id, 'Approval Level', `APPROVAL_LEVEL_${approval.level}`,
+      JSON.stringify({ level: approval.level, amount: approval.amount, policy: approval.policy })
+    );
+  }
 
   return {
     budgetAvailable: true,
@@ -361,10 +366,12 @@ async function processCheckBudget(task) {
       available: b.available,
       itemCount: b.items.length
     }))),
-    approvalLevel: approval.level,
-    estimatedAmount: approval.amount,
-    approvalN1Max: approval.policy.n1Max,
-    approvalN2Max: approval.policy.n2Max
+    ...(approval && {
+      approvalLevel: approval.level,
+      estimatedAmount: approval.amount,
+      approvalN1Max: approval.policy.n1Max,
+      approvalN2Max: approval.policy.n2Max,
+    }),
   };
 }
 

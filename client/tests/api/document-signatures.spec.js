@@ -2,11 +2,11 @@
  * tests/api/document-signatures.spec.js
  *
  * Signatures dans les PDF (cycle BpmnGo réel) :
- *   - réquisition : signature du demandeur, puis celle de l'approbateur N1 une fois l'étape approuvée — étape terminée
+ *   - réquisition : signature du demandeur, puis celle du chef de projet une fois l'étape approuvée — étape terminée
  *     sans prise en charge préalable, comme depuis la fenêtre de l'onglet tâches (l'auteur n'est alors connu que par
  *     la ligne APPROVED de TaskController)
  *   - bon de commande : signature du créateur (« Demandé par »), puis celle de l'approbateur (« Approuvé par ») une fois
- *     l'étape Activity_POApproval terminée — approbation historisée (approvals.entity_id TEXT, migration 44) et
+ *     l'étape Activity_POApprovalN1 terminée — approbation historisée (approvals.entity_id TEXT, migration 44) et
  *     approved_by renseigné
  * Une signature = une image intégrée au PDF : on compte les images avant / après chaque approbation.
  * Fonction (poste) figée au moment de l'action (migration 45) : changer le poste ensuite ne modifie pas les documents.
@@ -15,7 +15,7 @@
  */
 import { test, expect } from '@playwright/test';
 import zlib from 'node:zlib';
-import { getToken, getApproverToken, auth, directPurchaseVariables } from './helpers.js';
+import { getToken, getApproverToken, auth, directPurchaseVariables, passReview } from './helpers.js';
 
 const POLL_TIMEOUT = 60_000;
 
@@ -134,8 +134,8 @@ test.describe.serial('API › Signatures dans les PDF de réquisition et de bon 
     const before = imageCount(await pdf(request, `/api/requisitions/${req.id}/export/pdf`));
     expect(before, 'signature du demandeur').toBeGreaterThanOrEqual(1);
 
-    // Approbation N1 par un autre utilisateur, sans prise en charge préalable
-    const n1 = await waitForTask(request, 'Activity_ValidationN1_Manager');
+    // Validation par le chef de projet (autre utilisateur), sans prise en charge préalable
+    const n1 = await waitForTask(request, 'Activity_ProjectManagerApproval');
     const res = await complete(request, n1, { approved: true, returnedForCorrection: false, comment: 'OK' }, approverToken);
     expect(res.status(), await res.text()).toBe(200);
 
@@ -165,8 +165,10 @@ test.describe.serial('API › Signatures dans les PDF de réquisition et de bon 
     const before = imageCount(await pdf(request, `/api/purchase-orders/${po.id}/pdf`));
     expect(before, 'signature du créateur (« Demandé par »)').toBeGreaterThanOrEqual(1);
 
-    // Approbation depuis l'onglet tâches de la réquisition (autre utilisateur : séparation des tâches)
-    const approval = await waitForTask(request, 'Activity_POApproval');
+    // Révision du bon, puis approbation depuis l'onglet tâches de la réquisition (autre utilisateur : séparation des tâches)
+    await waitForTask(request, 'Activity_POReview');
+    await passReview(request, approverToken, po.id);
+    const approval = await waitForTask(request, 'Activity_POApprovalN1');
     const res = await complete(request, approval, { poApproved: true, poId: po.id, comment: 'OK' }, approverToken);
     expect(res.status(), await res.text()).toBe(200);
 

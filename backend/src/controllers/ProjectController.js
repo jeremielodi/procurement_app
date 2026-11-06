@@ -103,7 +103,15 @@ class ProjectController {
       const before = await projectModel.findById(id);
       await projectModel.update(id, { code, name, description, projectManagerId, status, startDate, endDate, isActive });
       // Changement de code : tracé (les documents restent liés au projet par son identifiant)
-      const after = code !== undefined ? await projectModel.findById(id) : null;
+      const after = code !== undefined || projectManagerId !== undefined ? await projectModel.findById(id) : null;
+      // Chef de projet (valide seul les réquisitions du projet) : changement tracé
+      if (before && after && String(after.project_manager_id || '') !== String(before.project_manager_id || '')) {
+        const name = (p) => (p.manager_email ? `${p.manager_first_name || ''} ${p.manager_last_name || ''}`.trim() + ` <${p.manager_email}>` : null);
+        await audit(req, AUDIT.PROJECT_MANAGER_CHANGED, {
+          entity: { type: 'project', id, label: `${after.code} — ${after.name}` },
+          oldValue: { projectManager: name(before) }, details: { projectManager: name(after) },
+        });
+      }
       if (before && after && after.code !== before.code) {
         await audit(req, AUDIT.PROJECT_CODE_CHANGED, {
           entity: { type: 'project', id, label: `${after.code} — ${after.name}` },

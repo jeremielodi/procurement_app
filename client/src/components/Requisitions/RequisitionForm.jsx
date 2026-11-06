@@ -19,8 +19,8 @@ import { t, getLocale, useTranslation } from '../../i18n'
 import { unitService } from '../../services/referenceService'
 import { findUnit, unitLabel } from '../../utils/units'
 import SearchSelect from '../Common/SearchSelect'
-import { revisionError } from './RevisionPanel'
-import { levelFor, levelLabel } from '../../utils/approvalPolicy'
+import { revisionError, REVISION_ERRORS } from './RevisionPanel'
+import { useAuth } from '../../hooks/useAuth'
 
 const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
 const priorityLabel = (p) => t(`priority.${p}`)
@@ -132,12 +132,6 @@ export default function RequisitionForm() {
 
   // Seuils d'approbation du projet choisi : niveau prévu selon le montant saisi (calculé de nouveau par le serveur
   // à la vérification du budget)
-  const { data: projectPolicyData } = useQuery({
-    queryKey: ['project-approval-policy', projectId],
-    queryFn: () => projectService.getApprovalPolicy(projectId),
-    enabled: !!projectId,
-  })
-  const projectPolicy = projectPolicyData?.data || null
 
   // Réquisition à corriger : valeurs actuelles + droits (seul le demandeur, seulement « À corriger »)
   const { data: editData, isLoading: editLoading } = useQuery({
@@ -186,6 +180,13 @@ export default function RequisitionForm() {
     ...(editing?.project_id && !(projectsData?.data || []).some(p => p.id === editing.project_id)
       ? [{ id: editing.project_id, code: editing.project_code, name: editing.project_name }] : []),
   ]
+  // Chef du projet choisi : il valide seul la réquisition (il ne peut pas valider la sienne)
+  const { user } = useAuth()
+  const chosenProject = projects.find(p => p.id === projectId) || null
+  const projectManagerName = chosenProject?.project_manager_id
+    ? `${chosenProject.manager_first_name || ''} ${chosenProject.manager_last_name || ''}`.trim() || chosenProject.manager_email
+    : null
+  const managerIsMe = !!chosenProject?.project_manager_id && String(chosenProject.project_manager_id) === String(user?.id)
   const departments = departmentsData?.data || []
   const enterprises = enterprisesData?.data || [];
   let currency = {};
@@ -219,7 +220,9 @@ export default function RequisitionForm() {
       navigate(requisitionId ? `/requisitions/${requisitionId}?pdf=1` : '/requisitions')
     },
     onError: (error) => {
-      toast.error(error.message || t('reqForm.createError'))
+      // Projet sans chef de projet, demandeur chef du projet… : message traduit
+      const code = error?.response?.data?.code
+      toast.error(REVISION_ERRORS.includes(code) ? revisionError(error) : error.message || t('reqForm.createError'), { duration: 7000 })
     },
   })
 
@@ -509,9 +512,9 @@ export default function RequisitionForm() {
             <div className="text-lg font-semibold text-blue-600">
               {t('reqForm.total', { amount: formatCurrency(totalAmount) })}
             </div>
-            {projectPolicy && (
-              <div className="text-xs text-gray-600" data-testid="expected-approval-level">
-                {t('approvalPolicy.expected', { level: levelLabel(levelFor(totalAmount, projectPolicy)), source: t(`approvalPolicy.source.${projectPolicy.source}`) })}
+            {chosenProject && projectManagerName && !managerIsMe && (
+              <div className="text-xs text-gray-600" data-testid="expected-approver">
+                {t('reqForm.validatedBy', { name: projectManagerName })}
               </div>
             )}
           </div>
@@ -589,6 +592,13 @@ export default function RequisitionForm() {
                 )}
               </SearchSelect>
               {!projectId && <p className="text-red-500 text-sm mt-1">{t('reqForm.projectRequired')}</p>}
+              {/* Validation par le chef du projet : obligatoire, et jamais par le demandeur lui-même */}
+              {chosenProject && !chosenProject.project_manager_id && (
+                <p className="text-sm text-red-600 mt-1" data-testid="project-no-manager">{t('reqForm.projectNoManager')}</p>
+              )}
+              {managerIsMe && (
+                <p className="text-sm text-red-600 mt-1" data-testid="project-manager-is-me">{t('revision.err.REQUESTER_IS_PROJECT_MANAGER')}</p>
+              )}
               {!projectsLoading && projects.length === 0 && (
                 <p className="text-sm text-amber-600 mt-1">
                   {t('reqForm.noProject')}

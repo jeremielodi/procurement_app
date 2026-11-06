@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getToken, auth } from './helpers.js';
+import { getToken, getApproverId, auth } from './helpers.js';
 
 // Code de projet modifiable : PUT /projects/:id { code } — normalisé en majuscules, obligatoire, 20 caractères au plus,
 // unique dans l'entreprise (sans tenir compte de la casse) ; les données liées suivent (rattachées par l'identifiant) ;
@@ -14,7 +14,7 @@ test.describe.serial('API › Code de projet modifiable', () => {
   test.beforeAll(async ({ request }) => {
     admin = await getToken(request);
     const mk = async (code) => {
-      const res = await request.post('/api/projects', { headers: auth(admin), data: { code, name: `Projet ${code}` } });
+      const res = await request.post('/api/projects', { headers: auth(admin), data: { code, name: `Projet ${code}`, projectManagerId: await getApproverId(request) } });
       expect(res.status(), await res.text()).toBe(201);
       return (await res.json()).data;
     };
@@ -59,7 +59,7 @@ test.describe.serial('API › Code de projet modifiable', () => {
     expect((await get(request, a.id)).code).toBe(`PCN-${stamp}`);
 
     // À la création aussi
-    const created = await json(await request.post('/api/projects', { headers: auth(admin), data: { code: `PCB-${stamp}`, name: 'Doublon' } }));
+    const created = await json(await request.post('/api/projects', { headers: auth(admin), data: { code: `PCB-${stamp}`, name: 'Doublon', projectManagerId: await getApproverId(request) } }));
     expect([created.status, created.body.code]).toEqual([409, 'PROJECT_CODE_EXISTS']);
   });
 });

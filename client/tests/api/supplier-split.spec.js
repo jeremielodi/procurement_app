@@ -14,7 +14,7 @@
  * Requiert BpmnGo.
  */
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth, PDF_BUFFER } from './helpers.js';
+import { getToken, getApproverToken, auth, PDF_BUFFER, passReview } from './helpers.js';
 
 const POLL_TIMEOUT = 60_000;
 const future = (days) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
@@ -81,7 +81,7 @@ test.describe.serial('Réquisition répartie entre plusieurs fournisseurs (BpmnG
     }, { timeout: 15_000 }).toBeTruthy();
     test.skip(!req.process_instance_id, 'BpmnGo indisponible');
 
-    const [n1] = await waitForTasks(request, 'Activity_ValidationN1_Manager');
+    const [n1] = await waitForTasks(request, 'Activity_ProjectManagerApproval');
     expect((await complete(request, n1, { approved: true, comment: 'OK' }, approverToken)).status()).toBe(200);
     await waitForTasks(request, 'Activity_DetermineType');
   });
@@ -166,7 +166,10 @@ test.describe.serial('Réquisition répartie entre plusieurs fournisseurs (BpmnG
     expect(again.status()).toBe(409);
     expect((await again.json()).code).toBe('LOT_ALREADY_ORDERED');
 
-    const approvals = await waitForTasks(request, 'Activity_POApproval', 3);
+    // Révision de chaque bon, puis une approbation N1 par part
+    await waitForTasks(request, 'Activity_POReview', 3);
+    for (const l of Object.values(lots)) await passReview(request, approverToken, l.po.id);
+    const approvals = await waitForTasks(request, 'Activity_POApprovalN1', 3);
     expect(approvals.map(t => String(t.lot?.poId)).sort()).toEqual(Object.values(lots).map(l => String(l.po.id)).sort());
     expect((await openTasks(request)).some(t => t.taskDefinitionKey === 'Activity_CreatePO')).toBe(false);
   });

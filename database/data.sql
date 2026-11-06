@@ -58,9 +58,9 @@ WHERE NOT EXISTS (
 INSERT INTO profiles (id, name, description)
 SELECT * FROM (VALUES
     ('prof_admin', 'Administrateur', 'Accès complet au système'),
-    ('prof_manager', 'Manager niveau 1', 'Approbation des réquisitions de niveau N1'),
-    ('prof_manager_n2', 'Manager niveau 2', 'Approbation des réquisitions de niveau N2'),
-    ('prof_manager_n3', 'Manager niveau 3', 'Approbation des réquisitions de niveau N3'),
+    ('prof_manager', 'Manager niveau 1', 'Approbation des bons de commande de niveau N1'),
+    ('prof_manager_n2', 'Manager niveau 2', 'Approbation des bons de commande de niveau N2'),
+    ('prof_manager_n3', 'Manager niveau 3', 'Approbation des bons de commande de niveau N3'),
     ('prof_user', 'Utilisateur', 'Utilisateur standard'),
     ('prof_requester', 'Demandeur', 'Peut créer des réquisitions'),
     ('prof_approver', 'Approbateur', 'Peut approuver les réquisitions'),
@@ -69,7 +69,7 @@ SELECT * FROM (VALUES
     ('prof_store_keeper', 'Magasinier', 'Gère les stocks'),
     ('prof_dg', 'Directeur Général', 'Direction générale (approbation des paiements)'),
     ('prof_logistic', 'Logistique', 'Réception marchandises et bon de livraison (GRN)'),
-    ('prof_management', 'Direction', 'Approbation des bons de commande'),
+    ('prof_management', 'Direction', 'Direction (pilotage)'),
     ('prof_supplier', 'Fournisseur', 'Fournisseur inscrit : répond aux appels d''offres')
 ) AS tmp(id, name, description)
 WHERE NOT EXISTS (

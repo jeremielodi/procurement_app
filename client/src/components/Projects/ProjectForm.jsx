@@ -145,10 +145,13 @@ export default function ProjectForm({ project, onClose }) {
       <div className="grid grid-cols-2 gap-4">
         
         <div>
-          <label className="block text-sm font-medium mb-1">{t('projects.projectManager')}</label>
+          {/* Chef de projet (budget holder) : obligatoire, il valide seul les réquisitions du projet */}
+          <label className="block text-sm font-medium mb-1">{t('projects.projectManager')} *</label>
           <SearchSelect
             value={formData.projectManagerId}
             onChange={(e) => setFormData({ ...formData, projectManagerId: e.target.value })}
+            required
+            data-testid="project-manager"
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="">{t('projects.select')}</option>
@@ -158,6 +161,7 @@ export default function ProjectForm({ project, onClose }) {
               </option>
             ))}
           </SearchSelect>
+          <p className="mt-1 text-xs text-gray-500">{t('projects.projectManagerHelp')}</p>
         </div>
       </div>
 

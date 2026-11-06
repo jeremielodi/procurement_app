@@ -36,7 +36,7 @@ import { purchaseOrderService } from '../../services/purchaseOrderService';
 import { grnService } from '../../services/grnService';
 import { invoiceService } from '../../services/invoiceService';
 import { t, getLocale } from '../../i18n';
-import { TASK_LABELS } from '../../utils/taskLabels';
+import { TASK_LABELS, PO_APPROVAL_TASKS } from '../../utils/taskLabels';
 import RevisionChanges from './RevisionChanges';
 import SearchSelect from '../Common/SearchSelect';
 import { supplierService } from '../../services/supplierService';
@@ -49,6 +49,8 @@ const PO_ACTIVE = ['PO_APPROVED', 'PO_SENT', 'PO_CONFIRMED', 'PO_RECEIVED', 'PO_
 
 // Formulaire de la fenêtre de décision par étape BPMN (les autres étapes : commentaire)
 const TASK_FORMS = {
+  // Validation de la réquisition par le chef de projet (anciens processus : N1 / N2 / N3)
+  Activity_ProjectManagerApproval: 'approval',
   Activity_ValidationN1_Manager: 'approval',
   Activity_ValidationN2_Finance: 'approval',
   Activity_ValidationN3_DG: 'approval',
@@ -199,7 +201,7 @@ export default function RequisitionTasks() {
     if (key === 'Activity_BudgetAdjustment') return { url: `/requisitions/${id}` };
     // Correction demandée par l'approbateur (ou retrait) : formulaire de modification, puis nouvelle soumission
     if (key === 'Activity_ReviseRequisition') return { url: `/requisitions/${id}/edit` };
-    const DOC_TASKS = ['Activity_POApproval', 'Activity_SupplierConfirmation', 'Activity_GoodsReceipt',
+    const DOC_TASKS = ['Activity_POReview', ...PO_APPROVAL_TASKS, 'Activity_SupplierConfirmation', 'Activity_GoodsReceipt',
       'Activity_ServiceAcceptance', 'Activity_EnterInvoice', 'Activity_ProcessPayment'];
     if (!DOC_TASKS.includes(key)) return null;
 
@@ -212,7 +214,8 @@ export default function RequisitionTasks() {
       return fromVars || pos.find(p => statuses.includes(p.status)) || null;
     };
 
-    if (key === 'Activity_POApproval') {
+    // Révision puis approbation du bon : sur la fiche du bon en attente
+    if (key === 'Activity_POReview' || PO_APPROVAL_TASKS.includes(key)) {
       const po = poFor(PO_PENDING);
       return po ? { url: q(`/purchase-orders/${po.id}`) } : { missing: 'poPending' };
     }
@@ -530,6 +533,13 @@ export default function RequisitionTasks() {
                             <span className="inline-flex items-center gap-1 text-amber-700 ml-3" data-testid="task-not-on-project">
                               <AlertCircle size={14} />
                               {t('taskList.notOnProject')}
+                            </span>
+                          )}
+                          {/* Validation de la réquisition : réservée au chef du projet */}
+                          {task.blockedReason === 'NOT_PROJECT_MANAGER' && (
+                            <span className="inline-flex items-center gap-1 text-amber-700 ml-3" data-testid="task-not-project-manager">
+                              <AlertCircle size={14} />
+                              {t('taskList.notProjectManager')}
                             </span>
                           )}
                           {isUnassigned && !canClaim && !task.blockedReason && task.candidateGroup && (

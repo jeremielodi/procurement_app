@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getToken, auth } from './helpers.js';
+import { getToken, getApproverId, auth } from './helpers.js';
 
 // Projet qui a financé chaque entrée en stock (migration 28_stock_funding_project.sql) :
 //  - réception (GRN) : projet de la réquisition du bon de commande, automatique (équipements compris)
@@ -18,7 +18,7 @@ test.describe.serial('API › Stock — projet de financement', () => {
       ['/api/public/locations', '/api/departments', '/api/suppliers', '/api/public/market-categories'].map(async (u) => (await (await request.get(u, { headers: H() })).json()).data)
     );
     refs = { dept: depts[0], supplier: suppliers[0] };
-    const mkProject = async (code) => (await (await request.post('/api/projects/', { headers: H(), data: { code, name: `Projet ${code}` } })).json()).data;
+    const mkProject = async (code) => (await (await request.post('/api/projects/', { headers: H(), data: { code, name: `Projet ${code}`, projectManagerId: await getApproverId(request) } })).json()).data;
     projectA = await mkProject(`SFA-${stamp}`);
     projectB = await mkProject(`SFB-${stamp}`);
     warehouse = (await (await request.post('/api/warehouses', { headers: H(), data: { code: `SF-${stamp}`.slice(0, 30), name: `Dépôt financement ${stamp}`, locationId: locations[0].id } })).json()).data;

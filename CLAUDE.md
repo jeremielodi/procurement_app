@@ -43,18 +43,17 @@ Le fichier `backend/src/services/CamundaService.js` montre comment appeler BpmnG
 ## Cycle procure-to-pay (objectif)
 1. **Réquisition** — employé crée une demande avec items + lignes budgétaires
 2. **Vérification budget** — automatique (Camunda service task `check_budget`)
-3. **Circuit d'approbation** — un niveau selon le montant, **seuils par projet** (sinon de l'entreprise, sinon par défaut — voir « Seuils d'approbation par projet ») :
-   - < 25 000 → Manager niveau 1 (N1, `prof_manager`)
-   - 25 000–99 999 → Manager niveau 2 (N2, `prof_manager_n2`)
-   - ≥ 100 000 → Manager niveau 3 (N3, `prof_manager_n3`)
-   - Une seule approbation, au niveau donné par le montant (migration `27_manager_approval_levels.sql` : Finance et DG n'approuvent plus les réquisitions)
+3. **Validation de la réquisition par le chef de projet** (budget holder, `projects.project_manager_id`) — lui seul, quel que soit le montant (2026-11-06, voir « Validation par le chef de projet »)
 4. **Classification méthode d'achat** — automatique (`classify_procurement`) :
    - ≤ 5 000 : Achat direct
    - ≤ 25 000 : Devis multiples
    - > 25 000 : Appel d'offres (RFP)
    - Source unique : justification approuvée
 5. **Sélection fournisseur** — devis / RFP / source unique / achat direct
-6. **Purchase Order** — créé par Procurement, approuvé par management
+6. **Purchase Order** — créé par Procurement, **révisé** (réviseur des bons de commande, approuver / rejeter — migration 52), puis approuvé à UN niveau selon son montant, **seuils par projet** (sinon de l'entreprise, sinon par défaut — voir « Seuils d'approbation par projet ») :
+   - < 25 000 → Manager niveau 1 (N1, `prof_manager`)
+   - 25 000–99 999 → Manager niveau 2 (N2, `prof_manager_n2`)
+   - ≥ 100 000 → Manager niveau 3 (N3, `prof_manager_n3`)
 7. **Envoi PO fournisseur** — email automatique (`send_po_notification`)
 8. **Confirmation fournisseur** — userTask d'attente de l'accusé de réception
 9. **Service Acceptance Note (SAN)** — le requester valide la livraison / prestation reçue (à chaque livraison, AVANT le GRN)
@@ -108,9 +107,8 @@ Process ID : `ProcurementProcess`
 ### User Tasks Camunda (actions humaines)
 | taskDefinitionKey | Nom | candidateGroups | Formulaire frontend |
 |---|---|---|---|
-| `Activity_ValidationN1_Manager` | Manager Level 1 Approval (N1) | `manager` | Fenêtre (onglet tâches de la réquisition) |
-| `Activity_ValidationN2_Finance` | Manager Level 2 Approval (N2) — id conservé | `manager_n2` | Fenêtre (onglet tâches de la réquisition) |
-| `Activity_ValidationN3_DG` | Manager Level 3 Approval (N3) — id conservé | `manager_n3` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_ProjectManagerApproval` | Project Manager Approval (Budget Holder) | `project_manager` (pas un profil : le chef du projet ACTUEL, jamais l'admin) | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_ValidationN1_Manager` / `N2_Finance` / `N3_DG` | Anciennes approbations de la réquisition (processus démarrés avant le 2026-11-06 seulement) | `manager` / `manager_n2` / `manager_n3` | Fenêtre (onglet tâches de la réquisition) |
 | `Activity_DetermineType` | Determine Procurement Type | `procurement` | Fenêtre (onglet tâches de la réquisition) |
 | `Activity_DirectPurchase` | Direct Purchase | `procurement` | Fenêtre (onglet tâches de la réquisition) : **fournisseur retenu + pro-forma obligatoires** (voir « Achat direct ») |
 | `Activity_RequestQuotations` | Request Multiple Quotations | `procurement` | Fenêtre (onglet tâches de la réquisition) |
@@ -118,7 +116,9 @@ Process ID : `ProcurementProcess`
 | `Activity_SoleSource` | Sole Source Justification | `procurement` | Fenêtre (onglet tâches de la réquisition) |
 | `Activity_AllocateSuppliers` | Allocate Items to Suppliers (réquisition répartie) | `procurement` | **→ `/requisitions/:id/allocation?taskId=`** (`SupplierAllocationForm`) — voir « Réquisition répartie entre plusieurs fournisseurs » |
 | `Activity_CreatePO` | Create Purchase Order | `procurement` | Fenêtre (onglet tâches de la réquisition) |
-| `Activity_POApproval` | Approve Purchase Order | `management` | Fenêtre (onglet tâches de la réquisition) |
+| `Activity_POReview` | Purchase Order Review (après `Activity_CreatePO`, `Gateway_POReviewDecision` : `poReviewed`) | `po_reviewer` | **→ fiche du PO** (« Approuver la révision » / « Rejeter ») ; `POST /tasks/:id/complete` → 400 `FORM_REQUIRED` |
+| `Activity_POApprovalN1` / `N2` / `N3` | PO Approval — Manager Level 1 / 2 / 3 (après `Gateway_POApprovalLevel`, variable locale `poApprovalLevel`) | `manager` / `manager_n2` / `manager_n3` | **→ fiche du PO** (`/purchase-orders/:id?taskId=`) |
+| `Activity_POApproval` | Ancienne approbation du PO par la Direction (processus démarrés avant le 2026-11-06) | `management` | **→ fiche du PO** |
 | `Activity_BudgetAdjustment` | Request Budget Adjustment | `requester` (assignee `${requester}`) | **→ fiche de la réquisition** (`BudgetAdjustmentPanel`) |
 | `Activity_ReviseRequisition` | Revise Requisition (renvoyée pour correction / retirée) | `requester` (assignee `${requester}`) | **→ `/requisitions/:id/edit`** (`RequisitionForm` en mode correction) ; terminée seulement par « Soumettre à nouveau » / « Abandonner » (`POST /tasks/:id/complete` → 400 `FORM_REQUIRED`) |
 | `Activity_SupplierConfirmation` | Supplier Order Confirmation | `procurement` | **→ fiche du PO `?confirm=1`** (`SupplierConfirmationPanel`) ; complétée aussi par la réponse du fournisseur sur son portail |
@@ -168,7 +168,29 @@ Le backend tente de compléter la tâche Camunda ; si `taskId` absent, il cherch
 - **Appel d'offres attribué par article** (2026-10-24) — migration `39_tender_per_item_award.sql` : `tenders.award_mode` (`SINGLE` / `PER_ITEM`, annoncé à la publication — `POST /tenders { awardMode }`, `PUT` : 409 `AWARD_MODE_LOCKED` dès qu'une offre existe), table `tender_awards` (article → offre, fournisseur, prix ; unique par article), `requisition_supplier_lots.tender_id`. `POST /tenders/:id/award { items: [{ requisitionItemId, supplierId }], comment }` (`awardPerItem` de `TenderController`) : 400 `AWARD_MODE_SINGLE`, `ITEM_NOT_FOUND`, `ITEM_AWARDED_TWICE`, `ITEM_NOT_QUOTED` (le fournisseur n'a pas chiffré l'article), `ITEM_NOT_AWARDED` (tout article ayant au moins une offre doit être attribué ; sans offre = non commandé), `AWARD_REQUIRED` ; 409 `SPLIT_NOT_SUPPORTED` (processus sans `supplierLots` : démarré avant la répartition). Un seul attributaire : `awarded_supplier_id`, chemin habituel. Plusieurs : `awarded_supplier_id` NULL, parts créées par `SupplierAllocationService.insertLots` (aussi utilisé par la répartition manuelle), `Activity_RFPProcess` terminée avec `supplierLots = [parts]` (`multiSupplier` reste false : pas d'étape de répartition) — awards + parts + statut + complétion BpmnGo dans **une transaction**. `GET /tenders/:id` → `awards` ; listes : `awarded_supplier_name` = noms des attributaires ; portail fournisseur : `is_awarded_to_me`, `award_mode`, `my_awarded_item_ids` (jamais les articles des autres) ; notification `notification.tender.wonItemsMessage`. Parts : `items[].awarded_unit_price` (prix de l'offre, repris par `POForm`). Front : `Tenders/AwardModeFields` (création + modification, verrouillé si offres), `TenderDetail` (colonne « Attribuer à » — meilleur prix d'office —, « Attribuer par article », récapitulatif par fournisseur, colonne « Attribué à »), bandeau « par article » et articles remportés dans `SupplierTenderDetail`. Aide : rubriques `tenders` et `sourcing`. Tests : `tests/api/tender-per-item.spec.js` (BpmnGo)
 - Tests : `tests/api/supplier-split.spec.js` (BpmnGo : 5 articles → 1 / 2 / 2, refus, part rejetée, deux parts en parallèle jusqu'au paiement, `COMPLETED`), `tests/e2e/supplier-split.spec.js`
 
+## Validation par le chef de projet, N1 / N2 / N3 sur le bon de commande (2026-11-06) — migration `51_project_manager_approval.sql`
+
+- Choix de l'utilisateur : la réquisition est validée par le **seul chef du projet** (budget holder) ; les niveaux N1 / N2 / N3 portent sur le **bon de commande** et **remplacent l'approbation de la Direction** ; renvoi pour correction / retrait / rejet inchangés ; projet sans chef de projet = réquisition bloquée
+- **BPMN (EN + FR, à redéployer dans BpmnGo)** : `Gateway_BudgetDecision` → `Activity_ProjectManagerApproval` (candidateGroups `project_manager`, **sans assignee** : le droit suit le chef de projet actuel en base) → `Gateway_ApprovalDecision` (inchangé). Sous-processus : `Activity_CreatePO` → `Gateway_POApprovalLevel` (`${poApprovalLevel == 'N1' | 'N2' | 'N3'}`) → `Activity_POApprovalN1/N2/N3` → `Gateway_POApprovalDecision` (`poApproved`). `poApprovalLevel` dans le `zeebe:ioMapping` de la part. `Gateway_AmountDecision`, `Activity_ValidationN*`, `Activity_POApproval` retirés du nouveau BPMN, **toujours gérés par le code** pour les processus démarrés avant (variable `approvalFlow = 'PROJECT_MANAGER'` posée au démarrage par `RequisitionController` : `check_budget` ne calcule alors plus de niveau de réquisition, `requisitions.approval_level` reste NULL)
+- Clés centralisées dans `utils/workflowLabels.js` : `PM_APPROVAL_TASK`, `REQUISITION_APPROVAL_TASKS` (chef de projet + anciens N1–N3), `PO_LEVEL_TASKS`, `PO_APPROVAL_TASKS` (N1–N3 + ancienne Direction) — utilisées par `TaskController`, `segregation`, `OrderTaskService`, suivi, PDF, tableau de bord. Client : `utils/taskLabels.PO_APPROVAL_TASKS`
+- **Chef de projet** : `utils/projectAccess.groupsOnProject` ajoute le groupe `project_manager` (`PROJECT_MANAGER_GROUP`) au chef du projet ; `TaskController.getTaskPermissions` : ni l'admin ni personne d'autre (`blockedReason: 'NOT_PROJECT_MANAGER'`, 403 `NOT_PROJECT_MANAGER` à la prise en charge / complétion) ; l'admin peut seulement libérer la tâche. Notification / email au seul chef de projet (`task_listner.getTaskRecipients`) ; « Qui bloque ? » : une personne si le projet a un chef actif
+- **Projet** (`ProjectModel.checkProjectManager`) : chef de projet obligatoire à la création, utilisateur actif de l'entreprise (ni fournisseur ni super admin) — 400 `PROJECT_MANAGER_REQUIRED` / `PROJECT_MANAGER_INVALID` ; `PUT /projects/:id` sans `projectManagerId` = inchangé (avant : effacé), vide = refusé ; audit `PROJECT_MANAGER_CHANGED` (avant / après). Front : champ obligatoire `project-manager` de `Projects/ProjectForm`
+- **Réquisition** (`utils/projectManager.forRequisition`, création et correction / nouvelle soumission du nouveau circuit) : 400 `PROJECT_REQUIRED`, 409 `PROJECT_MANAGER_MISSING` (pas de chef actif), 409 `REQUESTER_IS_PROJECT_MANAGER` (le chef de projet ne valide pas sa propre demande : une réquisition sur son projet doit venir d'un autre membre). Variables BpmnGo `projectManager` (email, information) / `projectManagerId`. Front : `RequisitionForm` affiche « Validation : <nom> (chef de projet) » (`expected-approver`) et les blocages (`project-no-manager`, `project-manager-is-me`)
+- **Bon de commande** : `approvalPolicy.assignPurchaseOrderLevel` à la création (`purchase_orders.approval_level` / `approval_policy`, montant total du bon, politique du projet) → `poApprovalLevel` envoyé avec la complétion de `Activity_CreatePO`. `POST /purchase-orders/:id/approve|reject` : groupe de l'étape ouverte (sinon du niveau enregistré) exigé sur le projet (admin : oui) — 403 `NOT_APPROVAL_LEVEL` ; `GET /purchase-orders/:id` → `can_approve_level`. Front : `PODetail` (`po-approval-level`, `po-not-approval-level`, boutons masqués). Suivi : info « PO-… : niveau N2 (Manager niveau 2) » de l'étape `po_approval`
+- Aide : rubriques `approval` et `roles` ; site vitrine (carte « Budget et approbations »)
+- Tests : `tests/api/project-manager-approval.spec.js` (BpmnGo), `approval-policy.spec.js` (niveaux sur le bon). **Helpers de test** : `getToken` désigne une fois par processus l'approbateur des tests (`approver.tests@procurement.com`) chef de tout projet sans chef (`ensureProjectManagers`) ; nouveau projet de test → `projectManagerId: await getApproverId(request)` ; `requisitionToPurchaseOrder` (validation du chef de projet → source unique → bon de commande)
+
+## Révision du bon de commande (2026-11-06) — migration `52_po_review.sql`
+
+- **BPMN (EN + FR, à redéployer)** : `Activity_CreatePO` → `Activity_POReview` (groupe `po_reviewer`) → `Gateway_POReviewDecision` : `${poReviewed == true}` → `Gateway_POApprovalLevel` (N1 / N2 / N3) ; `${poReviewed == false}` → `Event_POCancelled` (part arrêtée). `poReviewed` / `poReviewComment` locales à la part (`zeebe:ioMapping`). Processus démarrés avant : pas de révision
+- Profil **`prof_po_reviewer`** « Réviseur des bons de commande » (profil de workflow lié au projet), permission **`REVIEW_PURCHASE_ORDERS`** (réviseur + admin) ; colonnes PO `reviewed_by`, `reviewed_at`, `review_decision` (APPROVED / REJECTED), `review_comment`. Clé `PO_REVIEW_TASK` (`workflowLabels`), dans `ORDER_TASKS` et la séparation des tâches (ni le créateur du bon, ni le demandeur)
+- API `POST /purchase-orders/:id/review { decision: APPROVE | REJECT, comment }` (`REVIEW_PURCHASE_ORDERS` + `onProject`) : 400 `REVIEW_DECISION_REQUIRED` / `REVIEW_REASON_REQUIRED` (motif au rejet), 409 `NOT_IN_REVIEW`, 403 `NOT_PO_REVIEWER` / `SELF_APPROVAL` ; bon mis à jour puis étape BpmnGo terminée dans **une transaction** (502 `BPMNGO_ERROR` = rien d'enregistré) ; rejet = `PO_REJECTED` ; audit `PURCHASE_ORDER_REVIEWED` / `PURCHASE_ORDER_REJECTED` (`step: REVIEW`). Pendant la révision, `approve` / `reject` → 409 `PO_IN_REVIEW`. `GET /purchase-orders/:id` → `review_pending`, `can_review`
+- Front : boutons `po-review-approve` / `po-review-reject` de `PODetail` (fenêtre avec commentaire, motif obligatoire au rejet), bandeau `po-in-review` ; `RequisitionTasks` renvoie l'étape vers la fiche du bon. Suivi : étape `po_review` (« Révisé par … »), affichée seulement si la révision a lieu. Aide : rubriques `approval` et `roles`
+- Tests : `project-manager-approval.spec.js` (révision : contrôles, rejet, approbation) ; helpers `reviewPurchaseOrder`, `passReview` (bons créés par les tests), `requisitionToPurchaseOrder({ review })`
+
 ## Seuils d'approbation par projet (2026-10-14) — migration `26_approval_policies.sql`
+
+> Depuis le 2026-11-06 ces seuils fixent le niveau du **bon de commande** (section précédente) ; ce qui suit sur la réquisition ne vaut plus que pour les processus démarrés avant.
 
 - Colonnes `approval_n1_max` / `approval_n2_max` sur `projects` et `enterprise` (les deux ou aucun, N2 ≥ N1 > 0 ; N1 = N2 : pas de niveau N2) ; `requisitions.approval_level` (N1 / N2 / N3) + `approval_policy` (politique appliquée `{ n1Max, n2Max, source: PROJECT | ENTERPRISE | DEFAULT }`)
 - `utils/approvalPolicy.js` : `projectPolicy` (projet → entreprise → `DEFAULT_POLICY` 25 000 / 100 000), `levelFor` (< n1 → N1, < n2 → N2, sinon N3), `parsePolicy` (400 `APPROVAL_POLICY_INVALID`), `assignRequisitionLevel`. Même règle côté client : `client/src/utils/approvalPolicy.js`
@@ -506,12 +528,14 @@ Tous préfixés `po_` pour éviter les conflits avec les helpers de `Requisition
 ## Profils → candidateGroups Camunda
 | Profile DB | candidateGroup BPMN | Rôle |
 |------------|--------------------|----|
-| `prof_manager` (Manager niveau 1) | `manager` | Approbation N1 (défaut < 25 000) |
-| `prof_manager_n2` (Manager niveau 2) | `manager_n2` | Approbation N2 (défaut 25 000–99 999) |
-| `prof_manager_n3` (Manager niveau 3) | `manager_n3` | Approbation N3 (défaut ≥ 100 000) |
+| — (chef du projet, `projects.project_manager_id`) | `project_manager` | Validation des réquisitions de son projet (lui seul) |
+| `prof_manager` (Manager niveau 1) | `manager` | Approbation N1 du bon de commande (défaut < 25 000) |
+| `prof_manager_n2` (Manager niveau 2) | `manager_n2` | Approbation N2 du bon de commande (défaut 25 000–99 999) |
+| `prof_manager_n3` (Manager niveau 3) | `manager_n3` | Approbation N3 du bon de commande (défaut ≥ 100 000) |
 | `prof_finance` | `finance` | Factures, paiements + **seul profil avec le module Budget** (`MANAGE_BUDGET`) — n'approuve plus les réquisitions |
 | `prof_dg` | — | Approbation des paiements — n'approuve plus les réquisitions |
-| `prof_management` | `management` | Approbation PO |
+| `prof_po_reviewer` (Réviseur des bons de commande) | `po_reviewer` | Révision de chaque PO (approuver / rejeter) avant son approbation N1 / N2 / N3 |
+| `prof_management` | `management` | Pilotage ; approbation PO seulement pour les processus démarrés avant le 2026-11-06 |
 | `prof_procurement` | `procurement` | Création PO, méthode d'achat |
 | `prof_logistic` | `logistic` | Réception marchandises (GRN) |
 | `prof_requester` | `requester` | Création réquisition, SAN |

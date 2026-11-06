@@ -14,7 +14,7 @@
  *   npx playwright test tests/api/flow.spec.js --project=api --reporter=line
  */
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth } from './helpers.js';
+import { getToken, getApproverToken, auth, passReview } from './helpers.js';
 
 // ── Shared state ──────────────────────────────────────────────────────────────
 let token      = null;
@@ -25,13 +25,13 @@ let project    = null;
 let budgetLine = null;  // budget allocation ID for the test item
 
 let requisition   = null;   // { id, requisition_number, process_instance_id, ... }
-let approvalTask  = null;   // Camunda task object for Manager N1 approval
+let approvalTask  = null;   // Camunda task object : validation du chef de projet
 let purchaseOrder = null;   // { id, po_number, ... }
 let grn           = null;   // { id, grnNumber, status, grnCompliant }
 let invoice       = null;   // { id, invoiceNumber, matchStatus }
 let payment       = null;   // { id, paymentNumber, amount }
 
-const FLOW_AMOUNT  = 10000;  // < 25 000 → Manager N1 approval only
+const FLOW_AMOUNT  = 10000;  // bon de commande < 25 000 → approbation N1
 const POLL_TIMEOUT = 60_000; // 60 s pour que les workers Camunda s'exécutent
 const POLL_INTERVAL = 3_000; // sondage toutes les 3 s
 
@@ -188,7 +188,7 @@ test.describe.serial('🔄 BPMN Procurement Flow — end to end', () => {
   });
 
   // ── 3. Camunda : attendre la tâche d'approbation N1 ───────────────────────
-  test('3 · [Camunda] Attendre la tâche Activity_ValidationN1_Manager', async ({ request }) => {
+  test('3 · [Camunda] Attendre la tâche Activity_ProjectManagerApproval', async ({ request }) => {
     if (!requisition?.process_instance_id) {
       test.skip('Camunda non disponible (process_instance_id absent)');
       return;
@@ -202,21 +202,21 @@ test.describe.serial('🔄 BPMN Procurement Flow — end to end', () => {
     approvalTask = await waitForTask(
       request,
       requisition.process_instance_id,
-      'Activity_ValidationN1_Manager'
+      'Activity_ProjectManagerApproval'
     );
     console.log(`✅  Tâche approbation trouvée: ${approvalTask.id}`);
-    expect(approvalTask.taskDefinitionKey).toBe('Activity_ValidationN1_Manager');
+    expect(approvalTask.taskDefinitionKey).toBe('Activity_ProjectManagerApproval');
   });
 
-  // ── 4. Camunda : compléter l'approbation Manager N1 ──────────────────────
-  test('4 · [Camunda] Approuver la réquisition (Manager N1)', async ({ request }) => {
+  // ── 4. Camunda : compléter la validation du chef de projet ──────────────────────
+  test('4 · [Camunda] Valider la réquisition (chef de projet)', async ({ request }) => {
     if (!approvalTask) test.skip('Tâche approbation non trouvée (step 3 skipped)');
 
     const res  = await request.post(`/api/tasks/${approvalTask.id}/complete`, {
       headers: auth(approverToken),
       data: {
         variables: { approved: true },
-        taskDefinitionKey: 'Activity_ValidationN1_Manager',
+        taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     requisition.id,
         estimatedAmount:   FLOW_AMOUNT,
       }
@@ -287,6 +287,8 @@ test.describe.serial('🔄 BPMN Procurement Flow — end to end', () => {
   // ── 7. Approuver le bon de commande (PO_PENDING → PO_APPROVED) ────────────
   test('7 · Approuver le Purchase Order (PO_PENDING → PO_APPROVED)', async ({ request }) => {
     if (!purchaseOrder) test.skip('PO non créé');
+    // Révision du bon d'abord (si le processus la prévoit)
+    await passReview(request, approverToken, purchaseOrder.id);
 
     const res  = await request.post(`/api/purchase-orders/${purchaseOrder.id}/approve`, {
       headers: auth(approverToken),

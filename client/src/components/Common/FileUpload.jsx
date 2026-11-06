@@ -57,8 +57,10 @@ const FileUpload = ({ entityType, entityId, onUploadComplete, existingFiles = []
         name: file.name,
         size: file.size,
         type: file.type,
+        mime_type: file.type,
         temporary: true,
-        preview: URL.createObjectURL(file)
+        // Aperçu seulement pour une image (un PDF dans <img> s'affichait comme une image cassée)
+        preview: file.type?.startsWith('image/') ? URL.createObjectURL(file) : null
       }));
       setFiles(prev => [...prev, ...tempFiles]);
       if (onUploadComplete) onUploadComplete([...files, ...tempFiles]);

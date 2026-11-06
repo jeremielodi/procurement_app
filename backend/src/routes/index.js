@@ -197,6 +197,10 @@ router.post('/requisitions',
 );
 
 // Import d'articles Excel/CSV (avant /requisitions/:id)
+router.get('/requisitions/import-items/template',
+  hasPermission('CREATE_REQUISITIONS'),
+  requisitionImport.template
+);
 router.post('/requisitions/import-items',
   hasPermission('CREATE_REQUISITIONS'),
   requisitionImport.handleUpload,

@@ -26,6 +26,28 @@ test.describe('API › Réquisitions — import d\'articles & avancement', () =>
     expect(body.data.errors.map(e => e.line)).toEqual([4, 5]);
   });
 
+  // Modèle .xlsx (FR / EN) : réimporté tel quel, ses lignes d'exemple deviennent des articles (en-têtes reconnus, unités résolues)
+  for (const [lang, first] of [['fr', 'Ordinateur portable 15"'], ['en', '15" laptop']]) {
+    test(`GET /api/requisitions/import-items/template?lang=${lang} — .xlsx réimportable`, async ({ request }) => {
+      const res = await request.get(`/api/requisitions/import-items/template?lang=${lang}`, { headers: auth(token) });
+      expect(res.status()).toBe(200);
+      expect(res.headers()['content-type']).toContain('spreadsheetml');
+      const buffer = await res.body();
+      expect(buffer.subarray(0, 2).toString()).toBe('PK'); // archive .xlsx
+
+      const back = await request.post('/api/requisitions/import-items', {
+        headers: auth(token),
+        multipart: { file: { name: 'template.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer } },
+      });
+      const body = await back.json();
+      expect(back.status(), JSON.stringify(body)).toBe(200);
+      expect(body.data.errors).toEqual([]);
+      expect(body.data.items).toHaveLength(2);
+      expect(body.data.items[0]).toMatchObject({ description: first, quantity: 2, frequency: 1, unitPrice: 950, unitAbbr: 'pce' });
+      expect(body.data.items[1]).toMatchObject({ quantity: 10, frequency: 12, unitPrice: 6.5, unitAbbr: 'rame' });
+    });
+  }
+
   test('POST /api/requisitions/import-items — 400 colonnes manquantes', async ({ request }) => {
     const res = await request.post('/api/requisitions/import-items', {
       headers: auth(token), multipart: { file: csv('Nom,Montant\nA,1\n') },

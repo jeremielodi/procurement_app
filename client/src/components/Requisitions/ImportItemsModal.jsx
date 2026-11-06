@@ -25,17 +25,27 @@ const templateRows = () => [
   ...t('importItems.templateRows', { returnObjects: true }),
 ];
 
+const saveBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+// Modèle Excel généré par le serveur : listes déroulantes des unités et du catalogue de l'entreprise
+async function downloadXlsxTemplate() {
+  try {
+    saveBlob(await requisitionService.importItemsTemplate(), t('importItems.templateXlsxFile'));
+  } catch { toast.error(t('importItems.templateFailed')); }
+}
+
 function downloadTemplate() {
   const csv = templateRows()
     .map(row => row.map(v => (/[";\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)).join(';'))
     .join('\r\n');
-  const blob = new Blob(['﻿' + csv + '\r\n'], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = t('importItems.templateFile');
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  saveBlob(new Blob(['﻿' + csv + '\r\n'], { type: 'text/csv;charset=utf-8' }), t('importItems.templateFile'));
 }
 
 export default function ImportItemsModal({ isOpen, onClose, onImport, formatCurrency }) {
@@ -108,10 +118,16 @@ export default function ImportItemsModal({ isOpen, onClose, onImport, formatCurr
               onChange={(e) => { analyze(e.target.files?.[0] || null); e.target.value = ''; }}
             />
           </label>
-          <button type="button" onClick={downloadTemplate}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
-            <Download size={16} /> {t('importItems.downloadTemplate')}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={downloadXlsxTemplate} data-testid="import-template-xlsx"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
+              <FileSpreadsheet size={16} /> {t('importItems.templateXlsx')}
+            </button>
+            <button type="button" onClick={downloadTemplate} data-testid="import-template-csv"
+              className="inline-flex items-center gap-2 px-4 py-2 border border-green-600 text-green-700 hover:bg-green-50 rounded-lg text-sm font-medium">
+              <Download size={16} /> {t('importItems.templateCsv')}
+            </button>
+          </div>
         </div>
 
         <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-xs text-gray-600">

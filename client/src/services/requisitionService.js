@@ -116,6 +116,12 @@ class RequisitionService {
     return response.data
   }
 
+  // Modèle d'import .xlsx (unités, catalogue de l'entreprise, listes déroulantes) dans la langue de l'interface
+  async importItemsTemplate() {
+    const response = await api.get('/requisitions/import-items/template', { params: { lang: getLang() }, responseType: 'blob' })
+    return response.data
+  }
+
   // Import d'articles depuis Excel/CSV → aperçu { items, errors }
   async importItems(file) {
     const fd = new FormData()

@@ -1206,5 +1206,63 @@
       "OTHER": "Stock operation",
       "ENTRY": "Goods in note"
     }
+  },
+  "requisitionImport": {
+    "fileName": "requisition_items_template",
+    "sheets": {
+      "items": "Items",
+      "units": "Units of measure",
+      "catalog": "Catalogue",
+      "help": "Instructions"
+    },
+    "headers": {
+      "description": "Description",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "frequency": "Frequency",
+      "unitPrice": "Unit price",
+      "itemCode": "Item code"
+    },
+    "help": {
+      "description": "Item label. Optional when a catalogue item code is given (its name is then used).",
+      "quantity": "Number greater than 0 (decimals allowed).",
+      "unit": "Abbreviation or name of a unit (\"Units of measure\" sheet). Empty = the catalogue item's unit, otherwise Piece.",
+      "frequency": "Number of times (e.g. 12 for a monthly need over a year). Empty = 1. Line amount = quantity × frequency × unit price.",
+      "unitPrice": "Estimated unit price, 0 or more, in the requisition currency.",
+      "itemCode": "Code of an active stock catalogue item (\"Catalogue\" sheet). Empty = free-text item."
+    },
+    "ref": {
+      "unitAbbr": "Abbreviation",
+      "unitName": "Unit",
+      "itemCode": "Item code",
+      "itemName": "Name",
+      "itemUnit": "Unit",
+      "column": "Column",
+      "required": "Required",
+      "description": "Description"
+    },
+    "required": "Yes",
+    "optional": "No",
+    "examples": [
+      [
+        "15\" laptop",
+        "pce",
+        2,
+        1,
+        950
+      ],
+      [
+        "A4 paper ream",
+        "rame",
+        10,
+        12,
+        6.5
+      ]
+    ],
+    "rules": [
+      "The first row holds the headers: do not change them. Replace the example rows (in grey) with your items.",
+      "The budget line is not in the file: assign it in the form after the import.",
+      "At most 500 items, 2 MB file. Rows with errors are reported and skipped."
+    ]
   }
 }

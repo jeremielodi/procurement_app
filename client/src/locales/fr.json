@@ -1384,7 +1384,10 @@
     "add": "Ajouter",
     "analyzing": "Analyse du fichier…",
     "chooseFile": "Choisir un fichier .xlsx ou .csv",
-    "downloadTemplate": "Télécharger le modèle",
+    "templateXlsx": "Modèle Excel",
+    "templateCsv": "Modèle CSV",
+    "templateXlsxFile": "modele_articles_requisition.xlsx",
+    "templateFailed": "Impossible de télécharger le modèle",
     "expected": "Format attendu (1re ligne = en-têtes) — le modèle s'ouvre dans Excel :",
     "required": "obligatoire",
     "optional": "facultatif",
@@ -4133,7 +4136,7 @@
           {
             "type": "list",
             "items": [
-              "Bouton « Importer » : fichier .xlsx ou .csv, 2 Mo et 500 lignes maximum. Téléchargez le modèle proposé dans la fenêtre.",
+              "Bouton « Importer » : fichier .xlsx ou .csv, 2 Mo et 500 lignes maximum. « Modèle Excel » (listes déroulantes des unités et des articles du catalogue de votre entreprise) ou « Modèle CSV », dans la fenêtre.",
               "Colonnes : Description, Quantité, Fréquence (facultative, 1 par défaut), Prix unitaire, Code article (facultative).",
               "Un code article reconnu lie la ligne au catalogue ; un code inconnu est signalé ligne par ligne.",
               "Les lignes budgétaires ne sont pas importées : affectez-les ensuite dans le formulaire.",

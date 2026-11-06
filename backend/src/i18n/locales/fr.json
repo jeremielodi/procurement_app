@@ -1206,5 +1206,63 @@
       "OTHER": "Opération de stock",
       "ENTRY": "Bon d'entrée"
     }
+  },
+  "requisitionImport": {
+    "fileName": "modele_articles_requisition",
+    "sheets": {
+      "items": "Articles",
+      "units": "Unités de mesure",
+      "catalog": "Catalogue",
+      "help": "Mode d'emploi"
+    },
+    "headers": {
+      "description": "Description",
+      "quantity": "Quantité",
+      "unit": "Unité",
+      "frequency": "Fréquence",
+      "unitPrice": "Prix unitaire",
+      "itemCode": "Code article"
+    },
+    "help": {
+      "description": "Libellé de l'article. Facultatif si un code article du catalogue est indiqué (son nom est alors repris).",
+      "quantity": "Nombre supérieur à 0 (décimales acceptées).",
+      "unit": "Abréviation ou nom d'une unité (feuille « Unités de mesure »). Vide = unité de l'article du catalogue, sinon Pièce.",
+      "frequency": "Nombre de fois (ex. 12 pour un besoin mensuel sur un an). Vide = 1. Montant de la ligne = quantité × fréquence × prix unitaire.",
+      "unitPrice": "Prix unitaire estimé, 0 ou plus, dans la devise de la réquisition.",
+      "itemCode": "Code d'un article actif du catalogue de stock (feuille « Catalogue »). Vide = article en texte libre."
+    },
+    "ref": {
+      "unitAbbr": "Abréviation",
+      "unitName": "Unité",
+      "itemCode": "Code article",
+      "itemName": "Désignation",
+      "itemUnit": "Unité",
+      "column": "Colonne",
+      "required": "Obligatoire",
+      "description": "Description"
+    },
+    "required": "Oui",
+    "optional": "Non",
+    "examples": [
+      [
+        "Ordinateur portable 15\"",
+        "pce",
+        2,
+        1,
+        950
+      ],
+      [
+        "Ramette papier A4",
+        "rame",
+        10,
+        12,
+        6.5
+      ]
+    ],
+    "rules": [
+      "La première ligne contient les en-têtes : ne les modifiez pas. Remplacez les lignes d’exemple (en gris) par vos articles.",
+      "La ligne budgétaire ne figure pas dans le fichier : elle s'assigne dans le formulaire après l'import.",
+      "500 articles au maximum, fichier de 2 Mo au maximum. Les lignes en erreur sont signalées et ignorées."
+    ]
   }
 }

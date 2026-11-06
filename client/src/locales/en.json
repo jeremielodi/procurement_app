@@ -1384,7 +1384,10 @@
     "add": "Add",
     "analyzing": "Analyzing file…",
     "chooseFile": "Choose a .xlsx or .csv file",
-    "downloadTemplate": "Download template",
+    "templateXlsx": "Excel template",
+    "templateCsv": "CSV template",
+    "templateXlsxFile": "requisition_items_template.xlsx",
+    "templateFailed": "Could not download the template",
     "expected": "Expected format (1st row = headers) — the template opens in Excel:",
     "required": "required",
     "optional": "optional",
@@ -4133,7 +4136,7 @@
           {
             "type": "list",
             "items": [
-              "\"Import\" button: .xlsx or .csv file, 2 MB and 500 lines maximum. Download the template offered in the window.",
+              "\"Import\" button: .xlsx or .csv file, 2 MB and 500 lines maximum. \"Excel template\" (drop-down lists of units and of your organisation's catalogue items) or \"CSV template\", in the window.",
               "Columns: Description, Quantity, Frequency (optional, 1 by default), Unit price, Item code (optional).",
               "A recognised item code links the line to the catalogue; an unknown code is reported line by line.",
               "Budget lines are not imported: assign them afterwards in the form.",

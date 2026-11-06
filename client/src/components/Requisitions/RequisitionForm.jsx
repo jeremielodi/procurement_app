@@ -572,6 +572,7 @@ export default function RequisitionForm() {
                 value={projectId}
                 onChange={handleProjectChange}
                 data-testid="requisition-project"
+                searchThreshold={0}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${!projectId ? 'border-red-500' : 'border-gray-300'
                   }`}
                 disabled={projectsLoading}

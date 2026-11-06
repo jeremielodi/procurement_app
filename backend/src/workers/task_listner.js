@@ -175,11 +175,11 @@ async function getTaskRecipients(candidateGroup, requisitionId, taskDefinitionKe
       [requisitionId]
     );
   }
-  // Validation de la réquisition : le seul chef du projet (pas un profil)
+  // Validation de la réquisition : le chef du projet (pas un profil) et son intérimaire du jour (migration 53)
   if (taskDefinitionKey === PM_APPROVAL_TASK) {
     return db.select(
-      `SELECT u.id, u.email, u.first_name, u.language FROM requisitions r
-       JOIN projects p ON p.id = r.project_id JOIN users u ON u.id = p.project_manager_id
+      `SELECT DISTINCT u.id, u.email, u.first_name, u.language FROM requisitions r
+       JOIN users u ON user_manages_project(u.id, r.project_id)
        WHERE r.id = $1 AND u.is_active = true`,
       [requisitionId]
     );

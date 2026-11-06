@@ -8,6 +8,7 @@ import { t, getLocale } from '../../i18n';
 import LanguageSwitcher from '../Common/LanguageSwitcher';
 import AvatarPicker from '../Common/AvatarPicker';
 import SignaturePicker from '../Common/SignaturePicker';
+import DelegationCard from '../Common/DelegationCard';
 
 export default function Profile() {
   const { user, updateUser } = useAuth();
@@ -192,6 +193,9 @@ export default function Profile() {
         <p className="mb-4 text-sm text-gray-500">{t('signature.intro')}</p>
         <SignaturePicker version={user?.signatureVersion} onChange={(signatureVersion) => updateUser({ ...user, signatureVersion })} />
       </div>
+
+      {/* Intérim pendant une absence (chef de projet) : l'intérimaire valide les réquisitions de ses projets */}
+      <DelegationCard currentUserId={user?.id} />
 
       {/* Informations personnelles */}
       <div className="bg-white rounded-lg shadow">

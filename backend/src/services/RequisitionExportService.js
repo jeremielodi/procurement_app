@@ -565,7 +565,9 @@ class RequisitionExportService {
       : null;
     const approvers = await this.requisitionApprovers(requisition.id);
     const person = async (a) => (a ? {
-      name: [a.first_name, a.last_name].filter(Boolean).join(' '),
+      // Validation par l'intérimaire du chef de projet absent (migration 53) : « X (p.i. de Y) »
+      name: [a.first_name, a.last_name].filter(Boolean).join(' ')
+        + (a.on_behalf_name ? ` ${ctx.t('pdf.prf.onBehalfOf', { name: a.on_behalf_name })}` : ''),
       title: a.position || '',
       date: date(a.performed_at),
       signature: await signatureDataUri(a.performed_by),
@@ -653,8 +655,10 @@ class RequisitionExportService {
   async requisitionApprovers(requisitionId) {
     const rows = await db.select(
       `SELECT h.task_id, h.performed_by, h.performed_at, h.comments, h.action, u.first_name, u.last_name,
-              h.performed_by_position AS position -- fonction au moment de l'approbation (migration 45)
+              h.performed_by_position AS position, -- fonction au moment de l'approbation (migration 45)
+              NULLIF(TRIM(COALESCE(o.first_name, '') || ' ' || COALESCE(o.last_name, '')), '') AS on_behalf_name
        FROM workflow_history h LEFT JOIN users u ON u.id = h.performed_by
+       LEFT JOIN users o ON o.id = h.on_behalf_of
        WHERE h.entity_type = 'requisition' AND h.entity_id = $1
          AND (h.action = 'RESUBMITTED'
               OR (h.action = 'APPROVED' AND h.task_name = ANY($2))

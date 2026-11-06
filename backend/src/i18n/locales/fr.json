@@ -248,7 +248,8 @@
       "taskOfLot": "{task} — {supplier}"
     },
     "poApprovalLevel": "{po} : niveau {level} ({role})",
-    "reviewedBy": "Révisé par {name}"
+    "reviewedBy": "Révisé par {name}",
+    "onBehalfOf": "Par intérim de {name} (chef de projet)"
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -428,6 +429,10 @@
       "rejectedMessage": "{name} a refusé le bon d'entrée {number}. Consultez le motif.",
       "cancelledTitle": "Bon d'entrée annulé : {number}",
       "cancelledMessage": "{name} a annulé le bon d'entrée {number}."
+    },
+    "delegation": {
+      "title": "Intérim du chef de projet",
+      "message": "Vous assurez l'intérim de {name} du {start} au {end} : vous validez les réquisitions de ses projets."
     }
   },
   "pdf": {
@@ -811,7 +816,8 @@
       "additionalInfo": "Informations supplémentaires nécessaires pour lancer et faciliter cette demande :",
       "note1Title": "(1) Coûts des articles répartis entre les projets :",
       "note1": "si les coûts pour un ou plusieurs articles, y compris les frais d'expédition et de manutention, sont répartis entre les numéros de projet, indiquez-le en le saisissant sur une ligne distincte ou dans la section des notes.",
-      "note2": "(2) Veuillez joindre des pages pour les articles supplémentaires."
+      "note2": "(2) Veuillez joindre des pages pour les articles supplémentaires.",
+      "onBehalfOf": "(p.i. de {name})"
     },
     "stockEntry": {
       "title": "BON D'ENTRÉE EN STOCK",
@@ -968,7 +974,9 @@
     "STOCK_ENTRY_REJECTED": "Bon d'entrée refusé",
     "STOCK_ENTRY_CANCELLED": "Bon d'entrée annulé",
     "PROJECT_MANAGER_CHANGED": "Chef de projet modifié",
-    "PURCHASE_ORDER_REVIEWED": "Bon de commande révisé"
+    "PURCHASE_ORDER_REVIEWED": "Bon de commande révisé",
+    "DELEGATION_CREATED": "Intérim déclaré",
+    "DELEGATION_ENDED": "Intérim terminé"
   },
   "auditExport": {
     "sheet": "Journal d'audit",
@@ -998,7 +1006,8 @@
     "payment": "Paiement",
     "stock_issue": "Sortie de stock",
     "stock_adjustment": "Ajustement",
-    "stock_count": "Inventaire"
+    "stock_count": "Inventaire",
+    "delegation": "Intérim"
   },
   "receiptRecon": {
     "title": "Rapprochement réceptions ↔ stock",

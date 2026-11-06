@@ -106,6 +106,8 @@ const PATH_RESOURCES = [
   { re: new RegExp(`^/stock-counts/(${UUID})(/|$)`), table: 'stock_counts' },
   { re: new RegExp(`^/stock-adjustments/(${UUID})(/|$)`), table: 'stock_adjustments' },
   { re: new RegExp(`^/stock/movement-groups/(${UUID})(/|$)`), table: 'stock_movement_groups' },
+  // Intérim du chef de projet (migration 53)
+  { re: new RegExp(`^/delegations/(${UUID})(/|$)`), table: 'user_delegations' },
 ];
 
 // Clés de query / body → table
@@ -118,6 +120,7 @@ const KEY_TABLES = {
   grnId: 'goods_receipt_notes', grn_id: 'goods_receipt_notes',
   budgetLineId: 'budget_allocations', budget_line_id: 'budget_allocations', budgetId: 'budget_allocations',
   managerId: 'users', manager_id: 'users', projectManagerId: 'users', project_manager_id: 'users',
+  delegatorId: 'users', delegateId: 'users',
   userId: 'users', user_id: 'users', requesterId: 'users',
   // Gestion de stock (UUID : pas de collision avec les identifiants entiers des autres tables)
   warehouseId: 'warehouses', warehouse_id: 'warehouses', destinationWarehouseId: 'warehouses',

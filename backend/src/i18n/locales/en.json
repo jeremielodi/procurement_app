@@ -248,7 +248,8 @@
       "taskOfLot": "{task} — {supplier}"
     },
     "poApprovalLevel": "{po}: level {level} ({role})",
-    "reviewedBy": "Reviewed by {name}"
+    "reviewedBy": "Reviewed by {name}",
+    "onBehalfOf": "Acting for {name} (project manager)"
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -428,6 +429,10 @@
       "rejectedMessage": "{name} rejected stock entry {number}. See the reason.",
       "cancelledTitle": "Stock entry cancelled: {number}",
       "cancelledMessage": "{name} cancelled stock entry {number}."
+    },
+    "delegation": {
+      "title": "Acting project manager",
+      "message": "You are acting for {name} from {start} to {end}: you approve the requisitions of their projects."
     }
   },
   "pdf": {
@@ -811,7 +816,8 @@
       "additionalInfo": "Additional information needed to launch and facilitate this request:",
       "note1Title": "(1) Item costs split between projects:",
       "note1": "if the costs of one or more items, including shipping and handling, are split between project numbers, indicate it on a separate line or in the notes section.",
-      "note2": "(2) Please attach pages for additional items."
+      "note2": "(2) Please attach pages for additional items.",
+      "onBehalfOf": "(acting for {name})"
     },
     "stockEntry": {
       "title": "GOODS IN NOTE",
@@ -968,7 +974,9 @@
     "STOCK_ENTRY_REJECTED": "Stock entry rejected",
     "STOCK_ENTRY_CANCELLED": "Stock entry cancelled",
     "PROJECT_MANAGER_CHANGED": "Project manager changed",
-    "PURCHASE_ORDER_REVIEWED": "Purchase order reviewed"
+    "PURCHASE_ORDER_REVIEWED": "Purchase order reviewed",
+    "DELEGATION_CREATED": "Delegation declared",
+    "DELEGATION_ENDED": "Delegation ended"
   },
   "auditExport": {
     "sheet": "Audit log",
@@ -998,7 +1006,8 @@
     "payment": "Payment",
     "stock_issue": "Stock issue",
     "stock_adjustment": "Adjustment",
-    "stock_count": "Stock count"
+    "stock_count": "Stock count",
+    "delegation": "Delegation"
   },
   "receiptRecon": {
     "title": "Receipts ↔ stock reconciliation",

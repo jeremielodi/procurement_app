@@ -92,12 +92,14 @@ function getTaskPermissions(task, currentUser, conflict = null, projectId = null
   const pmTask = task.taskDefinitionKey === PM_APPROVAL_TASK;
   const inGroup = (currentUser.isAdmin && !pmTask) || onProject;
   if (pmTask) {
+    // Le titulaire et son intérimaire du jour (migration 53) traitent la validation même si l'autre l'a prise en
+    // charge (validation prise par le chef avant son congé, ou par l'intérimaire avant le retour du chef)
     const mine = isMine(task, currentUser);
     return {
       isMine: mine,
       canClaim: !isCompleted && !task.assignee && onProject && !conflict,
-      canUnclaim: !isCompleted && !!task.assignee && (mine || currentUser.isAdmin),
-      canComplete: !isCompleted && mine && onProject && !conflict,
+      canUnclaim: !isCompleted && !!task.assignee && (mine || onProject || currentUser.isAdmin),
+      canComplete: !isCompleted && onProject && !conflict && (mine || !!task.assignee),
       blockedReason: conflict || (!isCompleted && !onProject ? 'NOT_PROJECT_MANAGER' : null),
     };
   }
@@ -416,7 +418,8 @@ async function completeTask(req, res) {
       });
       return res.status(403).json({ success: false, code: 'TASK_NOT_IN_GROUP', message: `Cette tâche est réservée au groupe « ${task.candidateGroup} »` });
     }
-    if (task.assignee && !isMine(task, currentUser) && !currentUser.isAdmin) {
+    // Validation du chef de projet : le titulaire ou son intérimaire, quelle que soit la personne qui l'a prise en charge
+    if (task.assignee && !isMine(task, currentUser) && !currentUser.isAdmin && !(taskDefinitionKey === PM_APPROVAL_TASK && onProject)) {
       await audit(req, AUDIT.TASK_COMPLETION_DENIED, {
         entity: { type: 'task', id: taskDefinitionKey, label: taskLabel(task.taskDefinitionKey || taskDefinitionKey) || task.taskName || task.name },
         details: { taskId, reason: 'CLAIMED_BY_OTHER', assignee: task.assignee },
@@ -627,6 +630,8 @@ async function completeTask(req, res) {
             action: approved ? 'APPROVED' : 'REJECTED',
             comments: comment || null,
             performed_by: userId,
+            // Validation par l'intérimaire du chef de projet absent (migration 53) : chef remplacé
+            on_behalf_of: taskDefinitionKey === PM_APPROVAL_TASK ? currentUser.scope.actingFor?.get(String(task.projectId)) || null : null,
             performed_at: new Date()
           });
         }

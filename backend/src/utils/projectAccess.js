@@ -32,11 +32,22 @@ async function loadScope(userId) {
        WHERE pmp.user_id = $1`,
       [userId]
     ),
-    db.select('SELECT id FROM projects WHERE project_manager_id = $1', [userId]),
+    // Chef de projet, ou intérimaire aujourd'hui d'un chef absent (migration 53 : on_behalf = chef remplacé)
+    db.select(
+      `SELECT p.id, NULL::uuid AS on_behalf FROM projects p WHERE p.project_manager_id = $1
+       UNION
+       SELECT p.id, p.project_manager_id FROM projects p
+       JOIN user_delegations d ON d.delegator_id = p.project_manager_id
+       WHERE d.delegate_id = $1 AND delegation_active(d)`,
+      [userId]
+    ),
   ]);
   const scope = {
     userId: String(userId), isAdmin: false, global: new Set(), scoped: new Set(), everywhere: new Set(), byProject: new Map(),
-    managedProjects: new Set(managed.map(p => String(p.id))), // chef de projet
+    managedProjects: new Set(managed.map(p => String(p.id))), // chef de projet (ou intérimaire)
+    // Projets tenus par intérim → chef de projet remplacé (s'il est aussi chef en titre : pas d'intérim)
+    actingFor: new Map(managed.filter(p => p.on_behalf && !managed.some(o => !o.on_behalf && String(o.id) === String(p.id)))
+      .map(p => [String(p.id), p.on_behalf])),
   };
   for (const p of profiles) {
     const group = groupOf(p.profile_id);

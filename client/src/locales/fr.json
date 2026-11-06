@@ -4289,7 +4289,8 @@
               "Le projet est obligatoire sur toute réquisition, et chaque projet doit avoir un chef de projet (fiche du projet, champ « Chef de projet »). Sans chef de projet actif, la réquisition ne peut pas être soumise.",
               "Le formulaire de réquisition affiche « Validation : <nom> (chef de projet) » dès que le projet est choisi.",
               "Le chef de projet ne peut pas valider sa propre demande : une réquisition sur son projet doit être faite par un autre membre.",
-              "Changer de chef de projet (fiche du projet) transfère aussitôt les validations en attente au nouveau ; le changement est tracé dans le journal d'audit."
+              "Changer de chef de projet (fiche du projet) transfère aussitôt les validations en attente au nouveau ; le changement est tracé dans le journal d'audit.",
+              "Chef de projet en congé : depuis « Mon profil » → « Intérim pendant une absence » (ou par l'administrateur, fiche de l'utilisateur), désignez un intérimaire avec les dates. Pendant la période, l'intérimaire valide les réquisitions de tous vos projets, y compris celles déjà en attente ou que vous aviez prises en charge ; vous gardez la main. Le suivi et le PDF indiquent « par intérim de … ». L'intérim s'arrête seul à la date de fin (ou « Terminer maintenant »)."
             ]
           },
           {
@@ -5958,7 +5959,9 @@
       "STOCK_ENTRY_REJECTED": "Bon d'entrée refusé",
       "STOCK_ENTRY_CANCELLED": "Bon d'entrée annulé",
       "PROJECT_MANAGER_CHANGED": "Chef de projet modifié",
-      "PURCHASE_ORDER_REVIEWED": "Bon de commande révisé"
+      "PURCHASE_ORDER_REVIEWED": "Bon de commande révisé",
+      "DELEGATION_CREATED": "Intérim déclaré",
+      "DELEGATION_ENDED": "Intérim terminé"
     },
     "groups": {
       "all": "Tous les événements",
@@ -6028,7 +6031,8 @@
       "stock_issue": "Sortie de stock",
       "stock_adjustment": "Ajustement",
       "stock_count": "Inventaire",
-      "project": "Projet"
+      "project": "Projet",
+      "delegation": "Intérim"
     },
     "rule": {
       "SELF_APPROVAL": "approuver sa propre demande / son propre document",
@@ -6467,6 +6471,40 @@
       "SIGNATURE_TOO_LARGE": "Image trop volumineuse",
       "SIGNATURE_REQUIRED": "Dessinez ou choisissez une signature",
       "generic": "Impossible d'enregistrer la signature"
+    }
+  },
+  "delegation": {
+    "title": "Intérim pendant une absence",
+    "intro": "Chef de projet en congé : désignez un intérimaire. Pendant la période, il valide les réquisitions de tous vos projets (y compris celles déjà en attente) ; vous gardez la main.",
+    "introAdmin": "Absence de cet utilisateur : l'intérimaire valide les réquisitions de tous les projets dont il est chef, pendant la période choisie.",
+    "new": "Déclarer une absence",
+    "delegate": "Intérimaire",
+    "chooseDelegate": "Choisir l'intérimaire…",
+    "from": "Du",
+    "to": "Au (inclus)",
+    "reason": "Motif",
+    "reasonPlaceholder": "Congé annuel, mission…",
+    "save": "Enregistrer l'intérim",
+    "none": "Aucun intérim en cours ou prévu.",
+    "period": "du {{start}} au {{end}}",
+    "givenLine": "Intérim assuré par {{name}}",
+    "receivedLine_one": "Vous remplacez {{name}} ({{count}} projet)",
+    "receivedLine_other": "Vous remplacez {{name}} ({{count}} projets)",
+    "active": "en cours",
+    "endNow": "Terminer maintenant",
+    "cancel": "Annuler",
+    "created": "Intérim enregistré : l'intérimaire est prévenu",
+    "ended": "Intérim terminé",
+    "err": {
+      "DELEGATE_REQUIRED": "Choisissez l'intérimaire",
+      "DELEGATE_INVALID": "Intérimaire introuvable ou inactif",
+      "DELEGATE_SELF": "L'intérimaire doit être une autre personne",
+      "DATES_INVALID": "Dates invalides : la fin doit suivre le début",
+      "END_IN_PAST": "La date de fin est déjà passée",
+      "DELEGATION_OVERLAP": "Un intérim couvre déjà cette période : terminez-le d'abord",
+      "NOT_ALLOWED": "Action réservée à la personne concernée ou à l'administrateur",
+      "ALREADY_ENDED": "Cet intérim est déjà terminé",
+      "NOT_PROJECT_MANAGER": "L'intérim est réservé aux chefs de projet"
     }
   }
 }

@@ -4289,7 +4289,8 @@
               "A project is required on every requisition, and every project must have a project manager (project page, \"Project manager\" field). Without an active project manager, the requisition cannot be submitted.",
               "The requisition form shows \"Approval: <name> (project manager)\" as soon as the project is chosen.",
               "The project manager cannot approve their own request: a requisition on their project must be raised by another member.",
-              "Changing the project manager (project page) immediately hands pending approvals over to the new one; the change is recorded in the audit log."
+              "Changing the project manager (project page) immediately hands pending approvals over to the new one; the change is recorded in the audit log.",
+              "Project manager on leave: from \"My profile\" → \"Acting during an absence\" (or by the administrator, on the user page), choose an acting person and the dates. During the period, they approve the requisitions of all your projects, including those already pending or that you had claimed; you keep your rights. The tracking and the PDF show \"acting for …\". The delegation ends on its own at the end date (or \"End now\")."
             ]
           },
           {
@@ -5958,7 +5959,9 @@
       "STOCK_ENTRY_REJECTED": "Stock entry rejected",
       "STOCK_ENTRY_CANCELLED": "Stock entry cancelled",
       "PROJECT_MANAGER_CHANGED": "Project manager changed",
-      "PURCHASE_ORDER_REVIEWED": "Purchase order reviewed"
+      "PURCHASE_ORDER_REVIEWED": "Purchase order reviewed",
+      "DELEGATION_CREATED": "Delegation declared",
+      "DELEGATION_ENDED": "Delegation ended"
     },
     "groups": {
       "all": "All events",
@@ -6028,7 +6031,8 @@
       "stock_issue": "Stock issue",
       "stock_adjustment": "Adjustment",
       "stock_count": "Stock count",
-      "project": "Project"
+      "project": "Project",
+      "delegation": "Delegation"
     },
     "rule": {
       "SELF_APPROVAL": "approving one's own request / document",
@@ -6467,6 +6471,40 @@
       "SIGNATURE_TOO_LARGE": "Image too large",
       "SIGNATURE_REQUIRED": "Draw or choose a signature",
       "generic": "Unable to save the signature"
+    }
+  },
+  "delegation": {
+    "title": "Acting during an absence",
+    "intro": "Project manager on leave: choose an acting person. During the period, they approve the requisitions of all your projects (including those already pending); you keep your rights.",
+    "introAdmin": "This user's absence: the acting person approves the requisitions of all the projects they manage, during the chosen period.",
+    "new": "Declare an absence",
+    "delegate": "Acting person",
+    "chooseDelegate": "Choose the acting person…",
+    "from": "From",
+    "to": "To (inclusive)",
+    "reason": "Reason",
+    "reasonPlaceholder": "Annual leave, mission…",
+    "save": "Save",
+    "none": "No current or planned delegation.",
+    "period": "from {{start}} to {{end}}",
+    "givenLine": "Acting: {{name}}",
+    "receivedLine_one": "You are acting for {{name}} ({{count}} project)",
+    "receivedLine_other": "You are acting for {{name}} ({{count}} projects)",
+    "active": "in progress",
+    "endNow": "End now",
+    "cancel": "Cancel",
+    "created": "Delegation saved: the acting person has been notified",
+    "ended": "Delegation ended",
+    "err": {
+      "DELEGATE_REQUIRED": "Choose the acting person",
+      "DELEGATE_INVALID": "Acting person not found or inactive",
+      "DELEGATE_SELF": "The acting person must be someone else",
+      "DATES_INVALID": "Invalid dates: the end must follow the start",
+      "END_IN_PAST": "The end date is already past",
+      "DELEGATION_OVERLAP": "A delegation already covers this period: end it first",
+      "NOT_ALLOWED": "Only the person concerned or an administrator can do this",
+      "ALREADY_ENDED": "This delegation has already ended",
+      "NOT_PROJECT_MANAGER": "Delegation is reserved for project managers"
     }
   }
 }

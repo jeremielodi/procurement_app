@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, FolderKanban } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AvatarPicker from '../Common/AvatarPicker';
+import DelegationCard from '../Common/DelegationCard';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { t, LANGUAGES } from '../../i18n';
@@ -149,6 +150,8 @@ export default function UserForm({ user, onClose }) {
         <AvatarPicker userId={user.id} version={avatarVersion} firstName={user.first_name} lastName={user.last_name} size={64}
           onChange={(v) => { setAvatarVersion(v); queryClient.invalidateQueries({ queryKey: ['users'] }); }} />
       )}
+      {/* Intérim de cet utilisateur pendant son absence (chef de projet) — enregistré tout de suite */}
+      {user && <DelegationCard userId={user.id} />}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">{t('users.username')}</label>

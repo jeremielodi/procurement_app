@@ -933,6 +933,14 @@ router.get('/supplier-portal/tenders/:id', hasPermission('SUPPLIER_PORTAL'), ten
 router.put('/supplier-portal/tenders/:id/submission', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierSubmit.bind(tenderController));
 router.get('/supplier-portal/tenders/:id/submission/pdf', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierSubmissionPdf.bind(tenderController));
 
+// Intérim du chef de projet pendant son absence (migration 53) : tout utilisateur de l'entreprise pour lui-même,
+// l'administrateur (MANAGE_USERS) pour n'importe qui — contrôles dans DelegationService
+const delegationController = require('../controllers/DelegationController');
+router.get('/delegations', delegationController.list);
+router.get('/delegations/candidates', delegationController.candidates);
+router.post('/delegations', delegationController.create);
+router.post('/delegations/:id/end', delegationController.end);
+
 router.use('/upload',  uploadRoutes);
 // Journal d'audit (VIEW_AUDIT_LOGS : admin d'entreprise = son entreprise, super admin = toute la plateforme)
 const auditLogController = require('../controllers/AuditLogController');

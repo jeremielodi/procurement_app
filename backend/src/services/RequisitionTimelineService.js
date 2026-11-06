@@ -233,15 +233,22 @@ class RequisitionTimelineService {
       // Décision enregistrée par TaskController (doublon de TASK_COMPLETED : on complète l'événement)
       if ((action === 'APPROVED' || action === 'REJECTED') && TASK_CANDIDATE_GROUPS[row.task_name]) {
         const t = tasks.get(row.task_id);
+        // Validation par l'intérimaire du chef de projet absent (migration 53)
+        const interim = row.on_behalf_of ? T('timeline.onBehalfOf', { name: nameById.get(row.on_behalf_of) || '—' }) : null;
         if (t?.event) {
           if (row.comments && !t.event.details.some(d => d.startsWith(T('timeline.commentPrefix')))) {
             t.event.details.unshift(T('timeline.comment', { value: row.comments }));
+          }
+          if (interim) {
+            t.event.details.unshift(interim);
+            t.event.actor = who(row) || t.event.actor;
+            t.event.actorId = row.performed_by || t.event.actorId;
           }
         } else {
           events.push({
             date: row.performed_at, kind: action === 'REJECTED' ? 'danger' : 'success',
             title: `${taskLabel(row.task_name)} — ${T(action === 'REJECTED' ? 'timeline.rejectedWord' : 'timeline.approvedWord')}`,
-            actor: who(row) || T('timeline.system'), details: row.comments ? [T('timeline.comment', { value: row.comments })] : [], links: [],
+            actor: who(row) || T('timeline.system'), details: [interim, row.comments ? T('timeline.comment', { value: row.comments }) : null].filter(Boolean), links: [],
           });
         }
         continue;

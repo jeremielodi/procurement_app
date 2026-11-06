@@ -53,7 +53,9 @@ async function importItems(req, res) {
       for (const it of await stockItemModel.findByCodes(codes)) catalog.set(it.code.toUpperCase(), it);
     }
 
-    const findUnit = unitMatcher(await activeUnits());
+    const units = await activeUnits();
+    const findUnit = unitMatcher(units);
+    const unitsById = new Map(units.map(u => [u.id, u]));
 
     const items = [];
     const errors = [];
@@ -70,8 +72,8 @@ async function importItems(req, res) {
       const article = itemCode ? catalog.get(itemCode.toUpperCase()) : null;
 
       const unitText = col.unit !== undefined ? cellText(r[col.unit]).trim() : '';
-      // Unité : colonne du fichier, sinon celle de l'article du catalogue si elle correspond au référentiel
-      const unit = unitText ? findUnit(unitText) : (article?.unit ? findUnit(article.unit) : null);
+      // Unité : colonne du fichier, sinon celle de l'article du catalogue (unité du référentiel, migration 49)
+      const unit = unitText ? findUnit(unitText) : (article ? unitsById.get(article.unit_id) || null : null);
 
       const problems = [];
       if (unitText && !unit) problems.push(`unité ${unitText} inconnue`);
@@ -85,7 +87,7 @@ async function importItems(req, res) {
       else items.push({
         line, description: description || article?.name, quantity, frequency, unitPrice,
         ...(unit ? { unitId: unit.id, unitAbbr: unit.abbr } : {}),
-        ...(article ? { stockItemId: article.id, itemCode: article.code, itemName: article.name, unit: article.unit } : {}),
+        ...(article ? { stockItemId: article.id, itemCode: article.code, itemName: article.name, unit: article.unit, unit_id: article.unit_id } : {}),
       });
     });
 

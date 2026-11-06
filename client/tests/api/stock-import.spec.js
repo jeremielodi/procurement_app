@@ -125,7 +125,7 @@ test.describe.serial('API › Import des articles de stock', () => {
     expect(r.body.data).toMatchObject({ created: 3, updated: 0, openings: 3, openingQuantity: 150, skipped: 1 });
 
     const drug = await byCode(request, code('DRUG'));
-    expect(drug).toMatchObject({ is_stockable: true, track_lots: true, track_expiry: true, unit: 'boîte' });
+    expect(drug).toMatchObject({ is_stockable: true, track_lots: true, track_expiry: true, unit: 'Box' }); // « boîte » → unité Boîte du référentiel (abréviation)
     expect(Number(drug.stock_quantity)).toBe(50);
     const mv = (await (await request.get(`/api/stock/movements?stockItemId=${drug.id}`, { headers: auth(admin) })).json()).data;
     expect(mv.map(m => [m.movement_type, Number(m.quantity), m.lot_number]).sort()).toEqual([['OPENING', 20, 'LOT-B'], ['OPENING', 30, 'LOT-A']]);

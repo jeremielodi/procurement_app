@@ -2,8 +2,8 @@
 import api from './api';
 
 export const departmentService = {
-  getAll: async (params = {}) => {
-    const response = await api.get('/departments', { params });
+  getAll: async (params = {}, config = {}) => {
+    const response = await api.get('/departments', { params, ...config });
     return response.data;
   },
 

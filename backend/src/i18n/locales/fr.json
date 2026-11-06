@@ -1073,7 +1073,7 @@
     "help": {
       "code": "Code unique de l'article dans l'entreprise (lettres, chiffres, . - _). Un code existant met à jour l'article : seules les cellules remplies sont modifiées.",
       "name": "Nom de l'article (obligatoire pour un nouvel article).",
-      "unit": "Unité de gestion : pce, boîte, carton, L, kg… (obligatoire pour un nouvel article). Non modifiable une fois l'article mouvementé.",
+      "unit": "Unité de mesure du référentiel (feuille Référentiels) : abréviation, code ou nom — pce, Boîte, ltr, Litre, kg… (obligatoire pour un nouvel article). Non modifiable une fois l'article mouvementé.",
       "category": "Code ou nom de la catégorie (feuille Référentiels). Pour un nouvel article, « Stockable » suit la catégorie si la colonne est vide.",
       "description": "Texte libre.",
       "stockable": "Oui / Non. Seuls les articles stockables entrent en stock (Oui par défaut, ou selon la catégorie).",
@@ -1100,7 +1100,9 @@
       "required": "Obligatoire",
       "description": "Contenu attendu",
       "projectCode": "Code projet",
-      "projectName": "Projet"
+      "projectName": "Projet",
+      "unitAbbr": "Unité (abréviation)",
+      "unitName": "Unité de mesure"
     },
     "rules1": "1. Remplacez les lignes d'exemple (codes EX-…) par vos articles, une ligne par article. Les colonnes peuvent être dans n'importe quel ordre.",
     "rules2": "2. Pour un stock initial dans plusieurs dépôts ou plusieurs lots, répétez le code sur une ligne par dépôt / lot (la fiche article est lue sur la première ligne).",

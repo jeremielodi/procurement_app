@@ -96,7 +96,9 @@ export default function RequisitionForm() {
   const units = unitsData?.data || []
   const defaultUnitId = units.find(u => u.code === 'PIECE')?.id || units[0]?.id || ''
   // Unité proposée pour une ligne : celle de l'article du catalogue si elle existe dans le référentiel, sinon Pièce
-  const unitFor = (stockItem) => findUnit(units, stockItem?.unit)?.id || defaultUnitId
+  // Unité d'un article du catalogue : son unité du référentiel (unit_id), sinon correspondance du texte
+  const catalogUnitOf = (stockItem) => units.find(u => u.id === Number(stockItem?.unit_id)) || findUnit(units, stockItem?.unit)
+  const unitFor = (stockItem) => catalogUnitOf(stockItem)?.id || defaultUnitId
   useEffect(() => {
     if (!defaultUnitId) return
     ;(getValues('items') || []).forEach((it, i) => {
@@ -124,7 +126,8 @@ export default function RequisitionForm() {
   // Charger les départements actifs
   const { data: departmentsData, isLoading: departmentsLoading } = useQuery({
     queryKey: ['active-departments'],
-    queryFn: () => departmentService.getAll({ is_active: true })
+    // Département facultatif : aucun avertissement s'il n'y en a pas ou si la liste ne peut pas être lue
+    queryFn: () => departmentService.getAll({ is_active: true }, { skipErrorToast: true }).catch(() => ({ data: [] }))
   })
 
   // Seuils d'approbation du projet choisi : niveau prévu selon le montant saisi (calculé de nouveau par le serveur
@@ -172,7 +175,7 @@ export default function RequisitionForm() {
         specifications: it.specifications || null,
         budgetLineId: it.budget_line_id || '',
         budgetLineInfo: it.budget_line_id ? { id: it.budget_line_id, entity_code: it.budget_line_code, description: it.budget_line_description } : null,
-        stockItem: it.stock_item_id ? { id: it.stock_item_id, name: it.item_name, code: it.item_code, unit: it.unit } : null,
+        stockItem: it.stock_item_id ? { id: it.stock_item_id, name: it.item_name, code: it.item_code, unit: it.unit, unit_id: it.stock_unit_id } : null,
       })),
     })
   }, [editing, reset])
@@ -559,11 +562,6 @@ export default function RequisitionForm() {
               {errors.departmentId && (
                 <p className="text-red-500 text-sm mt-1">{errors.departmentId.message}</p>
               )}
-              {!departmentsLoading && departments.length === 0 && (
-                <p className="text-sm text-amber-600 mt-1">
-                  {t('reqForm.noDepartment')}
-                </p>
-              )}
             </div>
 
             <div>
@@ -765,8 +763,8 @@ export default function RequisitionForm() {
                           linked={item?.stockItem || null}
                           onLink={(stockItem) => {
                             setValue(`items.${index}.stockItem`, stockItem)
-                            // Unité de l'article du catalogue, si le référentiel la connaît
-                            const catalogUnit = findUnit(units, stockItem?.unit)
+                            // Unité de l'article du catalogue
+                            const catalogUnit = catalogUnitOf(stockItem)
                             if (catalogUnit) setValue(`items.${index}.unitId`, String(catalogUnit.id))
                             if (stockItem) setValue(`items.${index}.description`, stockItem.name, { shouldValidate: true })
                           }}

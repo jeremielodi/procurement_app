@@ -1239,7 +1239,6 @@
     "departmentLabel": "Department",
     "selectDepartment": "No department",
     "loadingDepartments": "Loading departments...",
-    "noDepartment": "⚠️ No department available. Please create departments first.",
     "projectLabel": "Project *",
     "selectProject": "Select a project",
     "loadingProjects": "Loading projects...",
@@ -3758,6 +3757,7 @@
         "CODE_INVALID": "invalid code \"{{value}}\" (letters, digits, . - _; 50 characters max)",
         "NAME_REQUIRED": "name required for a new item",
         "UNIT_REQUIRED": "unit required for a new item",
+        "UNIT_UNKNOWN": "unknown unit \"{{value}}\" — use a unit from the References sheet (abbreviation, code or name)",
         "CATEGORY_UNKNOWN": "unknown category \"{{value}}\"",
         "BOOL_INVALID": "{{column}}: \"{{value}}\" — answer Yes or No",
         "MIN_INVALID": "invalid minimum stock \"{{value}}\" (number ≥ 0)",
@@ -4850,6 +4850,10 @@
               [
                 "Stockable",
                 "The item enters stock on receipt. Default depends on the category (fuel, supplies… yes; hotel, rental… no)."
+              ],
+              [
+                "Unit",
+                "Chosen from the platform list of units of measure (Piece, Litre, Box…), the same as on requisitions: a catalogue item used in a requisition brings its unit with it. Missing unit: ask the platform super administrator."
               ],
               [
                 "Lot tracking",

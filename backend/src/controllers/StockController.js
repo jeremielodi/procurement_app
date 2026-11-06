@@ -9,6 +9,7 @@ const warehouseModel = require('../models/WarehouseModel');
 const stockItemModel = require('../models/StockItemModel');
 const stockModel = require('../models/StockModel');
 const referenceModel = require('../models/ReferenceModel');
+const { resolveItemUnit } = require('../utils/units');
 const importService = require('../services/StockItemImportService');
 const i18n = require('../i18n');
 const { audit, AUDIT } = require('../utils/auditLog');
@@ -69,7 +70,7 @@ const warehouses = {
       const body = req.body || {};
       if (!str(body.code, 30) || !str(body.name, 150) || !body.locationId) return bad(res, 'Code, nom et localisation requis');
       const error = await warehouses.validate(req, body);
-      if (error) return bad(res, error);
+      if (error) return bad(res, error.message || error, error.code);
       const row = await warehouseModel.create({
         enterpriseId: req.enterpriseId, locationId: body.locationId, code: str(body.code, 30).toUpperCase(), name: str(body.name, 150),
         address: str(body.address, 500), description: str(body.description, 1000), createdBy: req.user.id,
@@ -84,7 +85,7 @@ const warehouses = {
       if (!existing) return res.status(404).json({ success: false, message: 'Dépôt introuvable' });
       const body = req.body || {};
       const error = await warehouses.validate(req, body, req.params.id);
-      if (error) return bad(res, error);
+      if (error) return bad(res, error.message || error, error.code);
       await warehouseModel.update(req.params.id, {
         locationId: body.locationId, code: str(body.code, 30)?.toUpperCase(), name: str(body.name, 150),
         address: str(body.address, 500), description: str(body.description, 1000), isActive: bool(body.isActive),
@@ -119,7 +120,9 @@ function itemFields(body) {
     code: str(body.code, 50)?.toUpperCase(),
     name: str(body.name, 200),
     description: str(body.description, 2000),
-    unit: str(body.unit, 30),
+    // Unité du référentiel (units) : unitId, sinon texte (abréviation, nom) résolu par validateItem
+    unitId: body.unitId === undefined || body.unitId === '' ? undefined : body.unitId,
+    unitText: body.unit === undefined ? undefined : String(body.unit ?? ''),
     categoryId: body.categoryId === undefined ? undefined : (body.categoryId || null),
     isStockable: bool(body.isStockable),
     trackLots: bool(body.trackLots),
@@ -134,7 +137,13 @@ function itemFields(body) {
 async function validateItem(req, fields, existing = null) {
   if (fields.code !== undefined && !/^[A-Z0-9_.-]{1,50}$/.test(fields.code)) return 'Code invalide (lettres, chiffres, . - _ ; 50 caractères max)';
   if (fields.name !== undefined && !fields.name) return 'Désignation requise';
-  if (fields.unit !== undefined && !fields.unit) return 'Unité requise';
+  if (fields.unitId !== undefined || fields.unitText !== undefined) {
+    try { fields.unitId = await resolveItemUnit({ unitId: fields.unitId, unit: fields.unitText }); } catch (e) {
+      if (e.code === 'UNIT_INVALID') return { message: e.message, code: e.code };
+      throw e;
+    }
+  }
+  delete fields.unitText;
   if (fields.minQuantity !== undefined && fields.minQuantity !== null && !(fields.minQuantity >= 0)) return 'Stock minimum invalide';
   if (fields.reorderQuantity !== undefined && fields.reorderQuantity !== null && !(fields.reorderQuantity > 0)) return 'Quantité de réapprovisionnement invalide';
   if (fields.categoryId) {
@@ -154,7 +163,7 @@ async function validateItem(req, fields, existing = null) {
     if ((fields.isStockable !== undefined && fields.isStockable !== existing.is_stockable)
       || (fields.trackLots !== undefined && fields.trackLots !== existing.track_lots)
       || (fields.trackSerials !== undefined && fields.trackSerials !== existing.track_serials)
-      || (fields.unit !== undefined && fields.unit !== existing.unit)) {
+      || (fields.unitId !== undefined && Number(fields.unitId) !== Number(existing.unit_id))) {
       return 'Article déjà mouvementé : unité, « stockable » et suivi par lot ne sont plus modifiables';
     }
   }
@@ -208,7 +217,7 @@ const items = {
         fields.isStockable = !!(await referenceModel.getById('market_categories', fields.categoryId))?.is_stockable;
       }
       const error = await validateItem(req, fields);
-      if (error) return bad(res, error);
+      if (error) return bad(res, error.message || error, error.code);
       const row = await stockItemModel.create(fields, { enterpriseId: req.enterpriseId, createdBy: req.user.id });
       res.status(201).json({ success: true, data: await stockItemModel.getById(row.id), message: 'Article créé' });
     } catch (error) { return serverError(res, error, 'Erreur lors de la création de l\'article'); }
@@ -258,7 +267,7 @@ const items = {
       if (!existing) return res.status(404).json({ success: false, message: 'Article introuvable' });
       const fields = itemFields(req.body || {});
       const error = await validateItem(req, fields, existing);
-      if (error) return bad(res, error);
+      if (error) return bad(res, error.message || error, error.code);
       await stockItemModel.update(req.params.id, fields);
       res.json({ success: true, data: await stockItemModel.getById(req.params.id), message: 'Article mis à jour' });
     } catch (error) { return serverError(res, error, 'Erreur lors de la mise à jour de l\'article'); }

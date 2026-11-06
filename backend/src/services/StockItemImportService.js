@@ -19,6 +19,7 @@ const i18n = require('../i18n');
 const stockModel = require('../models/StockModel');
 const warehouseModel = require('../models/WarehouseModel');
 const { cellText, parseNumber, readRows, isBlankRow, dropLeadingBlankRows, mapHeader, normalize } = require('../utils/tabularImport');
+const { activeUnits, unitMatcher } = require('../utils/units');
 
 const MAX_ROWS = 2000;
 
@@ -93,7 +94,7 @@ async function loadContext(userId, codes) {
   const scope = tenant.filter('si.enterprise_id', params);
   params.push(codes);
   const items = await db.select(
-    `SELECT si.id, si.code, si.name, si.unit, si.description, si.category_id, si.is_stockable, si.track_lots,
+    `SELECT si.id, si.code, si.name, si.unit, si.unit_id, si.description, si.category_id, si.is_stockable, si.track_lots,
             si.track_expiry, si.track_serials, si.min_quantity::float8 AS min_quantity,
             si.reorder_quantity::float8 AS reorder_quantity, si.enterprise_id
      FROM stock_items si WHERE 1=1${scope} AND UPPER(si.code) = ANY($${params.length}::text[])`,
@@ -102,7 +103,7 @@ async function loadContext(userId, codes) {
   const ids = items.map(i => i.id);
   const projectParams = [];
   const projectScope = tenant.filter('p.enterprise_id', projectParams);
-  const [moved, lots, categories, accessible, allWarehouses, currencies, projects] = await Promise.all([
+  const [moved, lots, categories, accessible, allWarehouses, currencies, projects, units] = await Promise.all([
     ids.length ? db.select('SELECT DISTINCT stock_item_id, warehouse_id FROM stock_movements WHERE stock_item_id = ANY($1::uuid[])', [ids]) : [],
     ids.length ? db.select(`SELECT stock_item_id, UPPER(lot_number) AS lot, to_char(expiry_date, 'YYYY-MM-DD') AS expiry
                             FROM stock_lots WHERE stock_item_id = ANY($1::uuid[])`, [ids]) : [],
@@ -111,6 +112,7 @@ async function loadContext(userId, codes) {
     warehouseModel.list({ activeOnly: true }),
     db.select('SELECT id, format_key FROM currency'),
     db.select(`SELECT p.id, p.code, p.name FROM projects p WHERE 1=1${projectScope}`, projectParams),
+    activeUnits(),
   ]);
   const ent = (enterpriseId && await db.one('SELECT id, currency_id FROM enterprise WHERE id = $1', [enterpriseId]))
     || { id: enterpriseId, currency_id: null };
@@ -128,6 +130,8 @@ async function loadContext(userId, codes) {
     movedPairs: new Set(moved.map(m => `${m.stock_item_id}|${m.warehouse_id}`)),
     lotExpiry: new Map(lots.map(l => [`${l.stock_item_id}|${l.lot}`, l.expiry])),
     categoryBy,
+    // Unité : référentiel de la plateforme (abréviation, code, nom, traduction, abréviations usuelles)
+    findUnit: unitMatcher(units),
     accessibleBy: new Map(accessible.map(w => [w.code.toUpperCase(), w])),
     warehouseBy: new Map(allWarehouses.map(w => [w.code.toUpperCase(), w])),
     currencyBy: new Map(currencies.map(c => [c.format_key.toUpperCase(), c])),
@@ -185,10 +189,15 @@ async function analyze(file, { userId }) {
     // ---- Valeurs de la fiche article présentes sur la ligne
     const problems = [];
     const given = {};
+    let unitAbbr = null;
     const name = text(r, 'name').slice(0, 200);
     if (name) given.name = name;
-    const unit = text(r, 'unit').slice(0, 30);
-    if (unit) given.unit = unit;
+    const unitRaw = text(r, 'unit');
+    if (unitRaw) {
+      const unit = ctx.findUnit(unitRaw);
+      if (!unit) problems.push(fail(line, 'UNIT_UNKNOWN', { value: unitRaw }));
+      else { given.unit = unit.id; unitAbbr = unit.abbr; } // id de l'unité (comparaisons entre lignes)
+    }
     const description = text(r, 'description').slice(0, 2000);
     if (description) given.description = description;
     const categoryRaw = text(r, 'category');
@@ -226,7 +235,7 @@ async function analyze(file, { userId }) {
       entry = { line, code, existing, given, invalid: false };
       itemByCode.set(code, entry);
       if (!existing && !given.name) problems.push(fail(line, 'NAME_REQUIRED'));
-      if (!existing && !given.unit) problems.push(fail(line, 'UNIT_REQUIRED'));
+      if (!existing && !given.unit && !unitRaw) problems.push(fail(line, 'UNIT_REQUIRED')); // inconnue : UNIT_UNKNOWN déjà signalée
 
       // Règles de suivi (même logique que la fiche article)
       const base = existing || { is_stockable: given.category ? !!given.category.is_stockable : true, track_lots: false, track_expiry: false, track_serials: false };
@@ -242,18 +251,18 @@ async function analyze(file, { userId }) {
         && ((given.stockable !== undefined && given.stockable !== existing.is_stockable)
           || (given.trackLots !== undefined && given.trackLots !== existing.track_lots)
           || (given.trackSerials !== undefined && given.trackSerials !== existing.track_serials)
-          || (given.unit !== undefined && given.unit !== existing.unit))) {
+          || (given.unit !== undefined && given.unit !== existing.unit_id))) {
         problems.push(fail(line, 'LOCKED_FIELDS'));
       }
       entry.rules = { stockable, lots, expiry, serials };
-      entry.unit = given.unit ?? existing?.unit;
+      entry.unit = unitAbbr ?? existing?.unit; // abréviation affichée dans l'aperçu
       entry.name = given.name ?? existing?.name;
 
       if (problems.length) { entry.invalid = true; errors.push(...problems); continue; }
 
       // Champs SQL à écrire (création : toutes les valeurs ; mise à jour : seulement celles qui changent)
       const target = {
-        name: given.name, unit: given.unit, description: given.description, category_id: given.category?.id,
+        name: given.name, unit_id: given.unit, description: given.description, category_id: given.category?.id,
         is_stockable: given.stockable, track_lots: given.trackLots, track_expiry: given.trackExpiry, track_serials: given.trackSerials,
         min_quantity: given.minQuantity, reorder_quantity: given.reorderQuantity,
       };
@@ -410,17 +419,19 @@ async function apply(file, { userId }) {
 
 /**
  * Modèle à remplir, dans la langue demandée : .xlsx (feuille Articles avec exemples et listes déroulantes,
- * feuille Mode d'emploi, feuille Référentiels : catégories et dépôts accessibles) ou .csv (« ; » + BOM UTF-8)
+ * feuille Mode d'emploi, feuille Référentiels : catégories, dépôts accessibles, projets, unités de mesure) ou .csv (« ; » + BOM UTF-8)
  */
 async function template({ userId, lang, format = 'xlsx' }) {
   const T = i18n.translator(lang);
   const projectParams = [];
   const projectScope = tenant.filter('p.enterprise_id', projectParams);
-  const [categories, warehouses, projects] = await Promise.all([
+  const [categories, warehouses, projects, units] = await Promise.all([
     db.select('SELECT code, name, translations, is_stockable FROM market_categories WHERE is_active ORDER BY name'),
     warehouseModel.accessibleFor(userId),
     db.select(`SELECT p.code, p.name FROM projects p WHERE p.is_active${projectScope} ORDER BY p.code`, projectParams),
+    activeUnits(),
   ]);
+  const unitName = (u) => (lang !== 'fr' && u.translations?.[lang]?.name) || u.name;
   const prj = projects[0]?.code || '';
   const catName = (c) => (lang !== 'fr' && c.translations?.[lang]?.name) || c.name;
   const stockCat = categories.find(c => c.is_stockable) || categories[0];
@@ -460,21 +471,22 @@ async function template({ userId, lang, format = 'xlsx' }) {
     { header: T('stockImport.ref.categoryCode'), width: 18 }, { header: T('stockImport.ref.categoryName'), width: 40 }, { width: 4 },
     { header: T('stockImport.ref.warehouseCode'), width: 18 }, { header: T('stockImport.ref.warehouseName'), width: 36 }, { width: 4 },
     { header: T('stockImport.ref.yesNo'), width: 10 }, { width: 4 },
-    { header: T('stockImport.ref.projectCode'), width: 18 }, { header: T('stockImport.ref.projectName'), width: 40 },
+    { header: T('stockImport.ref.projectCode'), width: 18 }, { header: T('stockImport.ref.projectName'), width: 40 }, { width: 4 },
+    { header: T('stockImport.ref.unitAbbr'), width: 14 }, { header: T('stockImport.ref.unitName'), width: 30 },
   ];
   ref.getRow(1).font = { bold: true };
-  const rowsCount = Math.max(categories.length, warehouses.length, projects.length, 2);
+  const rowsCount = Math.max(categories.length, warehouses.length, projects.length, units.length, 2);
   for (let i = 0; i < rowsCount; i++) {
-    const c = categories[i], w = warehouses[i], p = projects[i];
+    const c = categories[i], w = warehouses[i], p = projects[i], u = units[i];
     ref.addRow([c?.code || null, c ? catName(c) : null, null, w?.code || null, w ? `${w.name} (${w.location_name})` : null, null, [yes, no][i] ?? null,
-      null, p?.code || null, p?.name || null]);
+      null, p?.code || null, p?.name || null, null, u?.abbr || null, u ? unitName(u) : null]);
   }
   const sheetRef = `'${T('stockImport.sheets.references').replace(/'/g, "''")}'`;
   const listOf = (column, count) => (count ? [`${sheetRef}!$${column}$2:$${column}$${count + 1}`] : null);
   const validations = {
     category: listOf('A', categories.length), warehouse: listOf('D', warehouses.length),
     stockable: listOf('G', 2), trackLots: listOf('G', 2), trackExpiry: listOf('G', 2), trackSerials: listOf('G', 2),
-    project: listOf('I', projects.length),
+    project: listOf('I', projects.length), unit: listOf('L', units.length),
   };
   FIELDS.forEach((f, i) => {
     const formulae = validations[f.key];

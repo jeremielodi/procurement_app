@@ -1239,7 +1239,6 @@
     "departmentLabel": "Département",
     "selectDepartment": "Aucun département",
     "loadingDepartments": "Chargement des départements...",
-    "noDepartment": "⚠️ Aucun département disponible. Veuillez d'abord créer des départements.",
     "projectLabel": "Projet *",
     "selectProject": "Sélectionner un projet",
     "loadingProjects": "Chargement des projets...",
@@ -3758,6 +3757,7 @@
         "CODE_INVALID": "code « {{value}} » invalide (lettres, chiffres, . - _ ; 50 caractères max)",
         "NAME_REQUIRED": "désignation obligatoire pour un nouvel article",
         "UNIT_REQUIRED": "unité obligatoire pour un nouvel article",
+        "UNIT_UNKNOWN": "unité « {{value}} » inconnue — utilisez une unité de la feuille Référentiels (abréviation, code ou nom)",
         "CATEGORY_UNKNOWN": "catégorie « {{value}} » inconnue",
         "BOOL_INVALID": "{{column}} : « {{value}} » — répondez Oui ou Non",
         "MIN_INVALID": "stock minimum « {{value}} » invalide (nombre ≥ 0)",
@@ -4850,6 +4850,10 @@
               [
                 "Stockable",
                 "L'article entre en stock à la réception. Par défaut selon la catégorie (carburant, fournitures… oui ; hôtellerie, location… non)."
+              ],
+              [
+                "Unité",
+                "Choisie dans la liste des unités de mesure de la plateforme (Pièce, Litre, Boîte…), la même que sur les réquisitions : un article du catalogue cité dans une réquisition y reprend son unité. Unité absente : demandez-la au super administrateur."
               ],
               [
                 "Suivi par lot",

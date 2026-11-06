@@ -9,14 +9,14 @@ import { Boxes, Plus, Pencil, RefreshCw, Search, AlertTriangle, ShoppingCart, Fi
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
 import { stockItemService } from '../../services/stockService';
-import { categoryService } from '../../services/referenceService';
+import { categoryService, unitService } from '../../services/referenceService';
+import { unitLabel } from '../../utils/units';
 import { usePermissions } from '../../hooks/usePermissions';
 import { t, getLocale, useTranslation } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 import ImportStockItemsModal from './ImportStockItemsModal';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
-const UNITS = ['pce', 'boîte', 'carton', 'paquet', 'rame', 'L', 'kg', 't', 'm', 'm²', 'm³', 'sac', 'lot', 'kit', 'paire'];
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 /** Quantité proposée : quantité de réapprovisionnement de l'article, sinon de quoi remonter à 2 × le minimum */
 export const suggestedRestock = (it) => {
@@ -26,7 +26,8 @@ export const suggestedRestock = (it) => {
   return Math.max(1, Math.ceil(qty));
 };
 
-const EMPTY = { code: '', name: '', description: '', unit: 'pce', categoryId: '', isStockable: true, trackLots: false, trackExpiry: false, trackSerials: false, minQuantity: '', reorderQuantity: '' };
+// unitId : unité du référentiel de la plateforme (GET /units) — Pièce par défaut, posée à l'ouverture
+const EMPTY = { code: '', name: '', description: '', unitId: '', categoryId: '', isStockable: true, trackLots: false, trackExpiry: false, trackSerials: false, minQuantity: '', reorderQuantity: '' };
 
 export default function StockItemList() {
   const { lang } = useTranslation();
@@ -43,7 +44,7 @@ export default function StockItemList() {
       navigate('/requisitions/new', { state: { prefill: {
         title: t('stock.items.restockTitle', { date: new Date().toLocaleDateString(getLocale()) }),
         justification: t('stock.items.restockJustification', { list: items.map(it => `${it.code} (${fmtQty(it.stock_quantity)} / ${fmtQty(it.min_quantity)} ${it.unit})`).join(', ') }),
-        items: items.map(it => ({ quantity: suggestedRestock(it), stockItem: { id: it.id, code: it.code, name: it.name, unit: it.unit, is_stockable: it.is_stockable, track_lots: it.track_lots, track_serials: it.track_serials } })),
+        items: items.map(it => ({ quantity: suggestedRestock(it), stockItem: { id: it.id, code: it.code, name: it.name, unit: it.unit, unit_id: it.unit_id, is_stockable: it.is_stockable, track_lots: it.track_lots, track_serials: it.track_serials } })),
       } } });
     } catch { /* toast api */ }
   };
@@ -58,6 +59,9 @@ export default function StockItemList() {
   const [importing, setImporting] = useState(false);
 
   useEffect(() => { categoryService.listPublic().then(r => setCategories(r.data || [])).catch(() => {}); }, [lang]);
+  const [units, setUnits] = useState([]);
+  useEffect(() => { unitService.list().then(r => setUnits(r.data || [])).catch(() => {}); }, [lang]);
+  const defaultUnitId = String(units.find(u => u.code === 'PIECE')?.id || units[0]?.id || '');
 
   // Recherche différée (pas de requête à chaque lettre)
   const [debounced, setDebounced] = useState(filters);
@@ -78,7 +82,7 @@ export default function StockItemList() {
   useEffect(() => { load(); }, [debounced, page, lang]);
 
   const openEdit = (it) => setEditing({
-    id: it.id, code: it.code, name: it.name, description: it.description || '', unit: it.unit, categoryId: it.category_id ? String(it.category_id) : '',
+    id: it.id, code: it.code, name: it.name, description: it.description || '', unitId: it.unit_id ? String(it.unit_id) : '', categoryId: it.category_id ? String(it.category_id) : '',
     isStockable: it.is_stockable, trackLots: it.track_lots, trackExpiry: it.track_expiry, trackSerials: it.track_serials,
     minQuantity: it.min_quantity !== null && it.min_quantity !== undefined ? String(Number(it.min_quantity)) : '',
     reorderQuantity: it.reorder_quantity !== null && it.reorder_quantity !== undefined ? String(Number(it.reorder_quantity)) : '',
@@ -92,11 +96,11 @@ export default function StockItemList() {
   };
 
   const save = async () => {
-    if (!editing.code.trim() || !editing.name.trim() || !editing.unit.trim()) { toast.error(t('stock.items.required')); return; }
+    if (!editing.code.trim() || !editing.name.trim() || !editing.unitId) { toast.error(t('stock.items.required')); return; }
     setSaving(true);
     try {
       const payload = {
-        code: editing.code.trim(), name: editing.name.trim(), description: editing.description, unit: editing.unit.trim(),
+        code: editing.code.trim(), name: editing.name.trim(), description: editing.description, unitId: Number(editing.unitId),
         categoryId: editing.categoryId ? Number(editing.categoryId) : null,
         isStockable: editing.isStockable, trackLots: editing.isStockable && editing.trackLots,
         trackExpiry: editing.isStockable && editing.trackLots && editing.trackExpiry,
@@ -134,7 +138,7 @@ export default function StockItemList() {
             </button>
           )}
           {canManage && (
-            <button onClick={() => setEditing({ ...EMPTY })} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm" data-testid="item-new">
+            <button onClick={() => setEditing({ ...EMPTY, unitId: defaultUnitId })} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm" data-testid="item-new">
               <Plus size={16} /> {t('stock.items.new')}
             </button>
           )}
@@ -236,9 +240,11 @@ export default function StockItemList() {
             </label>
             <label className="text-sm">
               <span className="mb-1 block font-medium text-gray-700">{t('stock.unit')} *</span>
-              <input className={inputCls} list="stock-units" maxLength={30} value={editing.unit} disabled={editing.hasStock}
-                onChange={e => setEditing({ ...editing, unit: e.target.value })} />
-              <datalist id="stock-units">{UNITS.map(u => <option key={u} value={u} />)}</datalist>
+              <SearchSelect className={inputCls} data-testid="stock-item-unit" value={editing.unitId} disabled={editing.hasStock}
+                onChange={e => setEditing({ ...editing, unitId: e.target.value })}>
+                {!editing.unitId && <option value="">{t('reqForm.unitChoose')}</option>}
+                {units.map(u => <option key={u.id} value={String(u.id)}>{unitLabel(u)}</option>)}
+              </SearchSelect>
             </label>
             <label className="text-sm">
               <span className="mb-1 block font-medium text-gray-700">{t('stock.minimum')}</span>

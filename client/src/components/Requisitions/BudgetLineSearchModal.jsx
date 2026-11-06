@@ -80,16 +80,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50"
-          >
-            <Filter size={16} />
-            {t('common.filters')}
-            {fundingSource !== 'all' && (
-              <span className="w-2 h-2 bg-blue-600 rounded-full" />
-            )}
-          </button>
+          
           <button
             onClick={handleReset}
             className="px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-50"
@@ -98,25 +89,7 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
           </button>
         </div>
 
-        {/* Filtres avancés */}
-        {showFilters && (
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">{t('budgetSearch.fundingSource')}</label>
-                <SearchSelect
-                  value={fundingSource}
-                  onChange={(e) => setFundingSource(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">{t('budgetSearch.all')}</option>
-                  {fundingSources.map(src => <option key={src} value={src}>{src}</option>)}
-                </SearchSelect>
-              </div>
-            </div>
-          </div>
-        )}
-
+    
         {/* Tableau des résultats */}
         {isLoading ? (
           <div className="flex justify-center py-8">
@@ -168,7 +141,6 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-1 text-sm text-gray-600">
-                            <MapPin size={14} />
                             {line.loc || '-'}
                           </div>
                         </td>
@@ -186,21 +158,6 @@ export default function BudgetLineSearchModal({ isOpen, onClose, onSelect, proje
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                           {line.activity_code || '-'}
                         </td>
-                        {/* <td className="px-4 py-3 whitespace-nowrap text-right">
-                          <span className="text-sm font-medium text-green-600">
-                            {formatCurrency(line.allocated_amount)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right">
-                          <span className="text-sm text-orange-600">
-                            {formatCurrency(line.utilized_amount)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right">
-                          <span className="text-sm font-semibold text-purple-600">
-                            {formatCurrency(line.remaining_amount)}
-                          </span>
-                        </td> */}
                         <td className="px-4 py-3 whitespace-nowrap text-center">
                           <button
                             onClick={(e) => {

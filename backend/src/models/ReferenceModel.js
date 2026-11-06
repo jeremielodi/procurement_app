@@ -9,8 +9,9 @@ const { localizedSql } = require('../utils/requestLang');
 const TABLES = {
   locations: { columns: ['code', 'name', 'province'], link: 'supplier_locations', linkColumn: 'location_id', tenderColumn: 'location_id' },
   market_categories: { columns: ['code', 'name', 'description', 'is_stockable'], translatable: ['name', 'description'], link: 'supplier_categories', linkColumn: 'category_id', tenderColumn: 'category_id' },
-  // Unités de mesure (migration 46) : utilisées par les lignes de réquisition (supplier_count = nombre de lignes)
-  units: { columns: ['code', 'abbr', 'name'], translatable: ['name'], link: 'requisition_items', linkColumn: 'unit_id', unique: ['abbr'] },
+  // Unités de mesure (migration 46) : utilisées par les lignes de réquisition et les articles du catalogue de stock
+  // (migration 49) — supplier_count = nombre de lignes + d'articles
+  units: { columns: ['code', 'abbr', 'name'], translatable: ['name'], link: 'requisition_items', linkColumn: 'unit_id', unique: ['abbr'], alsoUsedBy: 'stock_items' },
 };
 
 const MAX_TRANSLATION = { name: 150, description: 1000 };
@@ -21,10 +22,11 @@ class ReferenceModel {
    * sinon (écran d'administration) : valeurs françaises brutes + `translations` à éditer.
    */
   async list(table, { activeOnly = false } = {}) {
-    const { link, linkColumn, translatable = [] } = TABLES[table];
+    const { link, linkColumn, translatable = [], alsoUsedBy } = TABLES[table];
+    const alsoCount = alsoUsedBy ? ` + (SELECT COUNT(*) FROM ${alsoUsedBy} a WHERE a.${linkColumn} = r.id)` : '';
     const localized = activeOnly ? translatable.map(f => `, ${localizedSql('r', f)} AS ${f}`).join('') : '';
     return db.select(
-      `SELECT r.*${localized}, (SELECT COUNT(*) FROM ${link} l WHERE l.${linkColumn} = r.id)::int AS supplier_count
+      `SELECT r.*${localized}, ((SELECT COUNT(*) FROM ${link} l WHERE l.${linkColumn} = r.id)${alsoCount})::int AS supplier_count
        FROM ${table} r ${activeOnly ? 'WHERE r.is_active' : ''} ORDER BY ${activeOnly && translatable.includes('name') ? localizedSql('r') : 'r.name'}`,
       []
     );
@@ -99,11 +101,12 @@ class ReferenceModel {
 
   /** Supprime si jamais utilisé ; sinon { deleted: false } (désactiver à la place) */
   async delete(table, id) {
-    const { link, linkColumn, tenderColumn } = TABLES[table];
+    const { link, linkColumn, tenderColumn, alsoUsedBy } = TABLES[table];
     const used = await db.one(
       `SELECT EXISTS (SELECT 1 FROM ${link} WHERE ${linkColumn} = $1)
            ${tenderColumn ? `OR EXISTS (SELECT 1 FROM tenders WHERE ${tenderColumn} = $1)` : ''}
            ${table === 'market_categories' ? 'OR EXISTS (SELECT 1 FROM supplier_prequalifications WHERE category_id = $1)' : ''}
+           ${alsoUsedBy ? `OR EXISTS (SELECT 1 FROM ${alsoUsedBy} WHERE ${linkColumn} = $1)` : ''}
            AS used`,
       [id]
     );

@@ -75,7 +75,7 @@ export default function ImportItemsModal({ isOpen, onClose, onImport, formatCurr
       budgetLineId: '',
       budgetLineInfo: null,
       // Colonne « Code article » reconnue : ligne liée à l'article du catalogue
-      stockItem: i.stockItemId ? { id: i.stockItemId, code: i.itemCode, name: i.itemName, unit: i.unit } : null,
+      stockItem: i.stockItemId ? { id: i.stockItemId, code: i.itemCode, name: i.itemName, unit: i.unit, unit_id: i.unit_id } : null,
     })), { replace });
     toast.success(t('importItems.imported', { count: preview.items.length }));
     close();

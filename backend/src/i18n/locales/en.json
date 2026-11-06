@@ -1073,7 +1073,7 @@
     "help": {
       "code": "Unique item code within the company (letters, digits, . - _). An existing code updates the item: only filled cells are changed.",
       "name": "Item name (required for a new item).",
-      "unit": "Unit of measure: pce, box, carton, L, kg… (required for a new item). Cannot be changed once the item has stock movements.",
+      "unit": "Unit of measure from the reference list (References sheet): abbreviation, code or name — pce, Box, ltr, Litre, kg… (required for a new item). Cannot be changed once the item has movements.",
       "category": "Category code or name (Reference data sheet). For a new item, \"Stockable\" follows the category when the column is empty.",
       "description": "Free text.",
       "stockable": "Yes / No. Only stockable items are held in stock (Yes by default, or per category).",
@@ -1100,7 +1100,9 @@
       "required": "Required",
       "description": "Expected content",
       "projectCode": "Project code",
-      "projectName": "Project"
+      "projectName": "Project",
+      "unitAbbr": "Unit (abbreviation)",
+      "unitName": "Unit of measure"
     },
     "rules1": "1. Replace the sample rows (EX-… codes) with your items, one row per item. Columns may be in any order.",
     "rules2": "2. For opening stock in several warehouses or lots, repeat the code on one row per warehouse / lot (the item details are read from the first row).",

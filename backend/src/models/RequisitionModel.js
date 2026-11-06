@@ -329,7 +329,7 @@ class RequisitionModel {
       `SELECT ri.*, 
               b.entity_code as budget_line_code, 
               b.description as budget_line_description,
-              si.code AS item_code, si.name AS item_name, si.unit, si.is_stockable,
+              si.code AS item_code, si.name AS item_name, si.unit, si.unit_id AS stock_unit_id, si.is_stockable,
               un.abbr AS unit_abbr, ${localizedSql('un')} AS item_unit -- unité de mesure (référentiel, langue de la requête)
        FROM requisition_items ri
        LEFT JOIN units un ON un.id = ri.unit_id

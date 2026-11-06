@@ -7,12 +7,14 @@ const { localizedSql } = require('../utils/requestLang');
 
 const SELECT = () => `
   SELECT si.*, ${localizedSql('mc')} AS category_name, mc.code AS category_code,
+         ${localizedSql('un')} AS unit_name, -- unité du référentiel (si.unit = son abréviation, tenue par trigger)
          COALESCE((SELECT SUM(b.quantity) FROM stock_balances b WHERE b.stock_item_id = si.id), 0) AS stock_quantity
   FROM stock_items si
-  LEFT JOIN market_categories mc ON mc.id = si.category_id`;
+  LEFT JOIN market_categories mc ON mc.id = si.category_id
+  LEFT JOIN units un ON un.id = si.unit_id`;
 
 const COLUMNS = [
-  ['code', 'code'], ['name', 'name'], ['description', 'description'], ['unit', 'unit'], ['categoryId', 'category_id'],
+  ['code', 'code'], ['name', 'name'], ['description', 'description'], ['unitId', 'unit_id'], ['categoryId', 'category_id'],
   ['isStockable', 'is_stockable'], ['trackLots', 'track_lots'], ['trackExpiry', 'track_expiry'], ['trackSerials', 'track_serials'],
   ['minQuantity', 'min_quantity'], ['reorderQuantity', 'reorder_quantity'], ['isActive', 'is_active'],
 ];
@@ -63,7 +65,7 @@ class StockItemModel {
     if (!list.length) return [];
     const params = [list];
     return db.select(
-      `SELECT id, code, name, unit, is_stockable, is_active FROM stock_items si
+      `SELECT id, code, name, unit, unit_id, is_stockable, is_active FROM stock_items si
        WHERE UPPER(si.code) = ANY($1::text[])${tenant.filter('si.enterprise_id', params)}`,
       params
     );

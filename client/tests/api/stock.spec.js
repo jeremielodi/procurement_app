@@ -110,7 +110,7 @@ test.describe.serial('API › Gestion de stock', () => {
     }));
     expect(res.status, JSON.stringify(res.body)).toBe(200);
     const [fuelLine, freeLine] = res.body.data.items;
-    expect(fuelLine).toMatchObject({ stockItemId: fuel.id, itemCode: fuel.code, description: 'Gasoil', unit: 'L' }); // désignation reprise du catalogue
+    expect(fuelLine).toMatchObject({ stockItemId: fuel.id, itemCode: fuel.code, description: 'Gasoil', unit: 'ltr', unitAbbr: 'ltr' }); // désignation et unité (référentiel) reprises du catalogue
     expect(freeLine.stockItemId).toBeUndefined();
     expect(res.body.data.errors.map(e => e.line)).toEqual([4]);
   });

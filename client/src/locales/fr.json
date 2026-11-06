@@ -3922,10 +3922,10 @@
             "items": [
               "Réquisition (REQ-AAAA-NNNN) : le demandeur décrit ce qu'il faut acheter, les quantités, les prix estimés et la ligne budgétaire à imputer.",
               "Vérification du budget : automatique. Si une ligne budgétaire n'a pas assez de disponible, la réquisition passe « Budget insuffisant » : le demandeur change de ligne ou fait augmenter le budget, puis relance la vérification (ou abandonne la réquisition).",
-              "Approbation : un seul niveau, choisi selon le montant — Manager niveau 1 (N1), Manager niveau 2 (N2) ou Manager niveau 3 (N3).",
+              "Validation : par le chef du projet (budget holder), quel que soit le montant ; pendant son absence, par son intérimaire.",
               "Méthode d'achat : choisie par les achats — au moins celle imposée par le montant (achat direct, devis multiples, appel d'offres) ou source unique justifiée.",
               "Choix du fournisseur : devis, appel d'offres publié sur le portail fournisseurs, ou fournisseur unique.",
-              "Bon de commande (PO-AAAA-NNNN) : créé par les achats, approuvé par la direction, puis envoyé automatiquement par email au fournisseur.",
+              "Bon de commande (PO-AAAA-NNNN) : créé par les achats, révisé par le réviseur des bons de commande, approuvé à un seul niveau selon son montant — Manager niveau 1 (N1), 2 (N2) ou 3 (N3) — puis envoyé automatiquement par email au fournisseur.",
               "Acceptation de service (SAN-AAAA-NNNN) : à chaque livraison, le demandeur confirme d'abord que la livraison ou la prestation est conforme.",
               "Réception (GRN-AAAA-NNNN) : puis la logistique enregistre ce qui est arrivé (accepté / rejeté) ; les articles stockables entrent en stock. Tant qu'il reste à livrer, une nouvelle acceptation puis une nouvelle réception sont demandées ; si le fournisseur ne livrera pas le reste, « Solder le reliquat ».",
               "Facture (INV-AAAA-NNNN) : la finance saisit la facture du fournisseur ; le rapprochement 3 voies (commande + réception + facture) est automatique.",
@@ -4096,7 +4096,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "« Mes tâches » liste les actions qui vous attendent : approbations, choix de la méthode d'achat, création du bon de commande, réception, acceptation de service, facture, paiement… Une tâche apparaît quand BpmnGo atteint l'étape correspondante, pour les personnes ayant le profil requis sur le projet de la réquisition. Vous recevez aussi un email et une notification."
+            "text": "« Mes tâches » liste les actions qui vous attendent : validation des réquisitions (chef de projet ou intérimaire), choix de la méthode d'achat, création, révision et approbation du bon de commande, réception, acceptation de service, facture, paiement… Une tâche apparaît quand BpmnGo atteint l'étape correspondante, pour les personnes ayant le profil requis sur le projet de la réquisition (la validation : le chef du projet et son intérimaire). Vous recevez aussi un email et une notification."
           },
           {
             "type": "h",
@@ -4166,7 +4166,7 @@
           },
           {
             "type": "p",
-            "text": "Dans un projet, un demandeur ne voit que les réquisitions qu'il a lui-même créées. Les personnes ayant sur ce projet un autre profil (Manager niveau 1, 2 ou 3, Finance, Direction, Achats, Logistique, Magasinier, Auditeur…), le chef du projet et l'administrateur voient toutes les réquisitions du projet. La liste affiche le demandeur de chaque réquisition, avant le département."
+            "text": "Dans un projet, un demandeur ne voit que les réquisitions qu'il a lui-même créées. Les personnes ayant sur ce projet un autre profil (Manager niveau 1, 2 ou 3, Réviseur des bons de commande, Finance, Direction, Achats, Logistique, Magasinier, Auditeur…), le chef du projet (et son intérimaire pendant une absence) et l'administrateur voient toutes les réquisitions du projet. La liste affiche le demandeur de chaque réquisition, avant le département."
           },
           {
             "type": "h",
@@ -4387,7 +4387,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "Après approbation, l'équipe Achats choisit la méthode d'achat (tâche « Déterminer la méthode d'achat ») : l'étape suivante est celle de la méthode choisie (achat direct, devis multiples, appel d'offres ou justification de la source unique), puis la création du bon de commande. Une méthode moins exigeante que celle imposée par le montant n'est pas proposée."
+            "text": "Après la validation par le chef de projet, l'équipe Achats choisit la méthode d'achat (tâche « Déterminer la méthode d'achat ») : l'étape suivante est celle de la méthode choisie (achat direct, devis multiples, appel d'offres ou justification de la source unique), puis la création du bon de commande. Une méthode moins exigeante que celle imposée par le montant n'est pas proposée."
           },
           {
             "type": "table",
@@ -4442,7 +4442,7 @@
           },
           {
             "type": "warn",
-            "text": "Pas de fractionnement : la méthode d'achat et le niveau d'approbation restent ceux du montant TOTAL de la réquisition. Répartir une réquisition de 60 000 entre trois fournisseurs exige toujours un appel d'offres : publiez-le avec l'attribution « par article », la répartition se fait alors à l'attribution."
+            "text": "Pas de fractionnement pour la méthode d'achat : elle reste celle du montant TOTAL de la réquisition. Répartir une réquisition de 60 000 entre trois fournisseurs exige toujours un appel d'offres : publiez-le avec l'attribution « par article », la répartition se fait alors à l'attribution. Chaque bon de commande est ensuite révisé puis approuvé au niveau (N1, N2 ou N3) donné par son propre montant."
           },
           {
             "type": "tip",
@@ -4605,13 +4605,14 @@
       },
       "purchaseOrders": {
         "title": "Bons de commande",
-        "summary": "Création, approbation, envoi au fournisseur et suivi des livraisons.",
+        "summary": "Création, révision, approbation selon le montant, envoi au fournisseur et suivi des livraisons.",
         "blocks": [
           {
             "type": "steps",
             "items": [
               "Depuis la tâche « Créer le bon de commande », choisissez le fournisseur (préqualifié), les dates et l'adresse de livraison. Les articles de la réquisition sont repris avec leur article du catalogue ; vous pouvez ajuster quantités et prix.",
-              "Le bon de commande est créé directement « En attente d'approbation » : la direction reçoit la tâche d'approbation.",
+              "Le bon de commande est créé « En attente d'approbation » et passe d'abord en révision : le réviseur des bons de commande du projet l'approuve ou le rejette (motif obligatoire) depuis la fiche du bon (« Approuver la révision » / « Rejeter »).",
+              "Révision approuvée : un seul niveau d'approbation, selon le montant du bon et les seuils du projet — Manager niveau 1 (N1), 2 (N2) ou 3 (N3). Seul un manager de ce niveau, membre du projet, l'approuve ou le rejette ; la fiche du bon affiche « Approbation : niveau N… ».",
               "Une fois approuvé, il est envoyé automatiquement par email au fournisseur (dans la langue de son compte), avec le PDF."
             ]
           },
@@ -4641,11 +4642,11 @@
           },
           {
             "type": "warn",
-            "text": "Un bon de commande en cours d'approbation n'est plus modifiable. En cas d'erreur, il doit être rejeté par l'approbateur."
+            "text": "Un bon de commande en révision ou en cours d'approbation n'est plus modifiable. En cas d'erreur, il doit être rejeté par le réviseur ou par l'approbateur ; un bon rejeté arrête la commande de ce fournisseur."
           },
           {
             "type": "tip",
-            "text": "Le bon de commande est approuvé par une autre personne que celle qui l'a créé (et que le demandeur de la réquisition)."
+            "text": "Le bon de commande est révisé et approuvé par d'autres personnes que celle qui l'a créé (et que le demandeur de la réquisition)."
           },
           {
             "type": "h",
@@ -5348,11 +5349,11 @@
                 "Ne peut pas l'approuver"
               ],
               [
-                "Réquisition (N1, N2, N3)",
-                "Son demandeur"
+                "Réquisition (validation du chef de projet)",
+                "Son demandeur — un chef de projet ne peut donc pas faire de réquisition sur son propre projet"
               ],
               [
-                "Bon de commande",
+                "Bon de commande (révision, puis N1 / N2 / N3)",
                 "La personne qui l'a créé, et le demandeur de la réquisition"
               ],
               [
@@ -5371,11 +5372,11 @@
           },
           {
             "type": "p",
-            "text": "Dans « Mes tâches », une demande que vous ne pouvez pas traiter affiche « Votre propre demande : un autre membre du groupe doit la traiter ». Sur un bon de commande ou un paiement, le bouton d'approbation est remplacé par une explication. Une tâche BpmnGo ne peut être traitée que par un membre de son groupe (ou un administrateur), et pas si quelqu'un d'autre l'a prise en charge."
+            "text": "Dans « Mes tâches », une demande que vous ne pouvez pas traiter affiche « Votre propre demande : un autre membre du groupe doit la traiter ». Sur un bon de commande ou un paiement, le bouton d'approbation est remplacé par une explication. Une tâche BpmnGo ne peut être traitée que par un membre de son groupe (ou un administrateur), et pas si quelqu'un d'autre l'a prise en charge. Exception : la validation d'une réquisition revient au seul chef du projet ou à son intérimaire (jamais à l'administrateur), et l'un peut traiter celle que l'autre avait prise en charge."
           },
           {
             "type": "tip",
-            "text": "Dans une petite équipe, prévoyez au moins deux personnes par profil d'approbation (ex. deux managers), sinon les demandes d'un approbateur resteraient sans approbateur possible."
+            "text": "Dans une petite équipe, prévoyez au moins deux personnes par profil d'approbation (ex. deux managers par niveau, deux réviseurs), sinon les demandes d'un approbateur resteraient sans approbateur possible. Un chef de projet en congé désigne un intérimaire (« Mon profil » → « Intérim pendant une absence »)."
           },
           {
             "type": "h",
@@ -5717,8 +5718,8 @@
             "a": "Une ligne budgétaire n'avait pas assez de disponible. Ouvrez la réquisition : changez la ligne des articles concernés ou faites augmenter le budget par la Finance, puis « Relancer la vérification du budget ». Si l'achat n'est plus utile, « Abandonner la réquisition »."
           },
           {
-            "q": "Personne ne reçoit la tâche d'approbation.",
-            "a": "La tâche est envoyée aux personnes qui ont le profil requis ET sont membres du projet. Vérifiez les membres du projet et leurs profils ; « Qui bloque ? » signale un profil sans utilisateur."
+            "q": "Personne ne reçoit la tâche de validation ou d'approbation.",
+            "a": "Validation d'une réquisition : elle va au chef du projet (et à son intérimaire pendant une absence) — vérifiez que le projet a un chef de projet actif. Révision et approbation d'un bon de commande : elles vont aux personnes qui ont le profil requis (Réviseur des bons de commande, Manager du niveau du bon) ET sont membres du projet ; vérifiez les membres du projet et leurs profils. « Qui bloque ? » signale une étape sans personne pour la traiter."
           },
           {
             "q": "Je ne vois pas une tâche que mon collègue a prise.",
@@ -5766,7 +5767,7 @@
           },
           {
             "q": "Le bouton « Approuver » n'apparaît pas sur ma demande.",
-            "a": "C'est la séparation des tâches : on n'approuve pas sa propre réquisition, un bon de commande qu'on a créé, ni une facture ou un paiement qu'on a saisi. Un autre membre du groupe doit le faire."
+            "a": "C'est la séparation des tâches : on ne valide pas sa propre réquisition, on ne révise ni n'approuve un bon de commande qu'on a créé ou issu de sa réquisition, ni une facture ou un paiement qu'on a saisi. Un autre membre du groupe doit le faire. Sur un bon de commande, le bouton n'apparaît aussi que pour le réviseur pendant la révision, puis pour un manager du niveau du bon."
           },
           {
             "q": "Un paiement est bloqué « coordonnées bancaires ».",

@@ -3922,10 +3922,10 @@
             "items": [
               "Requisition (REQ-YYYY-NNNN): the requester describes what to buy, quantities, estimated prices and the budget line to charge.",
               "Budget check: automatic. If a budget line does not have enough available funds, the requisition becomes \"Insufficient budget\": the requester changes the line or has the budget increased, then restarts the check (or abandons the requisition).",
-              "Approval: a single level, chosen according to the amount — Manager level 1 (N1), Manager level 2 (N2) or Manager level 3 (N3).",
+              "Approval: by the project manager (budget holder), whatever the amount; during their absence, by their acting person.",
               "Purchasing method: chosen by Procurement — at least the one required by the amount (direct purchase, multiple quotations, call for tenders) or a justified sole source.",
               "Supplier selection: quotations, a call for tenders published on the supplier portal, or a single supplier.",
-              "Purchase order (PO-YYYY-NNNN): created by procurement, approved by management, then sent automatically by email to the supplier.",
+              "Purchase order (PO-YYYY-NNNN): created by procurement, reviewed by the purchase order reviewer, approved at a single level based on its amount — Manager level 1 (N1), 2 (N2) or 3 (N3) — then sent automatically by email to the supplier.",
               "Service acceptance (SAN-YYYY-NNNN): for each delivery, the requester first confirms that the delivery or service is compliant.",
               "Goods receipt (GRN-YYYY-NNNN): logistics then records what arrived (accepted / rejected); stockable items enter stock. While something remains to be delivered, a new acceptance and a new receipt are requested; if the supplier will not deliver the rest, \"Close remaining quantity\".",
               "Invoice (INV-YYYY-NNNN): finance records the supplier invoice; the 3-way match (order + receipt + invoice) is automatic.",
@@ -4096,7 +4096,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "\"My tasks\" lists the actions waiting for you: approvals, choosing the purchasing method, creating the purchase order, goods receipt, service acceptance, invoice, payment… A task appears when BpmnGo reaches the corresponding step, for the people holding the required profile on the requisition's project. You also receive an email and a notification."
+            "text": "\"My tasks\" lists the actions waiting for you: requisition approval (project manager or acting person), choosing the purchasing method, creating, reviewing and approving the purchase order, goods receipt, service acceptance, invoice, payment… A task appears when BpmnGo reaches the corresponding step, for the people holding the required profile on the requisition's project (requisition approval: the project manager and their acting person). You also receive an email and a notification."
           },
           {
             "type": "h",
@@ -4166,7 +4166,7 @@
           },
           {
             "type": "p",
-            "text": "Within a project, a requester only sees the requisitions they created themselves. People with another profile on that project (Manager level 1, 2 or 3, Finance, Management, Procurement, Logistics, Storekeeper, Auditor…), the project manager and the administrator see all the project's requisitions. The list shows each requisition's requester, before the department."
+            "text": "Within a project, a requester only sees the requisitions they created themselves. People with another profile on that project (Manager level 1, 2 or 3, Purchase order reviewer, Finance, Management, Procurement, Logistics, Storekeeper, Auditor…), the project manager (and their acting person during an absence) and the administrator see all the project's requisitions. The list shows each requisition's requester, before the department."
           },
           {
             "type": "h",
@@ -4387,7 +4387,7 @@
         "blocks": [
           {
             "type": "p",
-            "text": "After approval, the Procurement team selects the procurement method (\"Determine procurement method\" task): the next step is the one for the chosen method (direct purchase, multiple quotations, call for tenders or sole source justification), then the purchase order is created. A method less demanding than the one required by the amount is not offered."
+            "text": "After the project manager's approval, the Procurement team selects the procurement method (\"Determine procurement method\" task): the next step is the one for the chosen method (direct purchase, multiple quotations, call for tenders or sole source justification), then the purchase order is created. A method less demanding than the one required by the amount is not offered."
           },
           {
             "type": "table",
@@ -4442,7 +4442,7 @@
           },
           {
             "type": "warn",
-            "text": "No order splitting to avoid thresholds: the procurement method and the approval level stay those of the requisition's TOTAL amount. Splitting a 60,000 requisition between three suppliers still requires a call for tenders: publish it with the \"per item\" award, the split then happens at the award."
+            "text": "No splitting to avoid thresholds for the procurement method: it stays the one of the requisition's TOTAL amount. Splitting a 60,000 requisition between three suppliers still requires a call for tenders: publish it with the \"per item\" award, the split then happens at the award. Each purchase order is then reviewed and approved at the level (N1, N2 or N3) given by its own amount."
           },
           {
             "type": "tip",
@@ -4605,13 +4605,14 @@
       },
       "purchaseOrders": {
         "title": "Purchase orders",
-        "summary": "Creation, approval, sending to the supplier and delivery tracking.",
+        "summary": "Creation, review, approval by amount, sending to the supplier and delivery tracking.",
         "blocks": [
           {
             "type": "steps",
             "items": [
               "From the \"Create purchase order\" task, choose the supplier (prequalified), dates and delivery address. The requisition items are copied with their catalogue item; you can adjust quantities and prices.",
-              "The purchase order is created directly as \"Pending approval\": management receives the approval task.",
+              "The purchase order is created as \"Pending approval\" and first goes to review: the project's purchase order reviewer approves or rejects it (reason required) from the purchase order page (\"Approve review\" / \"Reject\").",
+              "Review approved: a single approval level, based on the purchase order amount and the project thresholds — Manager level 1 (N1), 2 (N2) or 3 (N3). Only a manager of that level who is a project member approves or rejects it; the purchase order page shows \"Approval: level N…\".",
               "Once approved, it is sent automatically by email to the supplier (in the language of their account), with the PDF."
             ]
           },
@@ -4641,11 +4642,11 @@
           },
           {
             "type": "warn",
-            "text": "A purchase order under approval can no longer be modified. In case of error, the approver must reject it."
+            "text": "A purchase order under review or approval can no longer be modified. In case of error, the reviewer or the approver must reject it; a rejected purchase order stops the order with that supplier."
           },
           {
             "type": "tip",
-            "text": "The purchase order is approved by someone other than the person who created it (and the requester of the requisition)."
+            "text": "The purchase order is reviewed and approved by people other than the person who created it (and the requester of the requisition)."
           },
           {
             "type": "h",
@@ -5348,11 +5349,11 @@
                 "Cannot be approved by"
               ],
               [
-                "Requisition (N1, N2, N3)",
-                "Its requester"
+                "Requisition (project manager approval)",
+                "Its requester — so a project manager cannot raise a requisition on their own project"
               ],
               [
-                "Purchase order",
+                "Purchase order (review, then N1 / N2 / N3)",
                 "The person who created it, and the requester of the requisition"
               ],
               [
@@ -5371,11 +5372,11 @@
           },
           {
             "type": "p",
-            "text": "In \"My tasks\", a request you cannot process shows \"Your own request: another member of the group must process it\". On a purchase order or payment, the approval button is replaced by an explanation. A BpmnGo task can only be processed by a member of its group (or an administrator), and not if someone else has claimed it."
+            "text": "In \"My tasks\", a request you cannot process shows \"Your own request: another member of the group must process it\". On a purchase order or payment, the approval button is replaced by an explanation. A BpmnGo task can only be processed by a member of its group (or an administrator), and not if someone else has claimed it. Exception: requisition approval belongs only to the project manager or their acting person (never the administrator), and either can process one the other had claimed."
           },
           {
             "type": "tip",
-            "text": "In a small team, plan at least two people per approval profile (e.g. two managers), otherwise an approver's own requests would have no possible approver."
+            "text": "In a small team, plan at least two people per approval profile (e.g. two managers per level, two reviewers), otherwise an approver's own requests would have no possible approver. A project manager on leave names an acting person (\"My profile\" → \"Acting during an absence\")."
           },
           {
             "type": "h",
@@ -5718,7 +5719,7 @@
           },
           {
             "q": "Nobody receives the approval task.",
-            "a": "The task is sent to people who have the required profile AND are project members. Check the project members and their profiles; \"Who is blocking?\" flags a profile without users."
+            "a": "Requisition approval: it goes to the project manager (and their acting person during an absence) — check that the project has an active project manager. Purchase order review and approval: they go to people who have the required profile (Purchase order reviewer, Manager of the order's level) AND are project members; check the project members and their profiles. \"Who is blocking?\" flags a step with nobody to handle it."
           },
           {
             "q": "I cannot see a task my colleague claimed.",
@@ -5766,7 +5767,7 @@
           },
           {
             "q": "The \"Approve\" button does not appear on my request.",
-            "a": "This is segregation of duties: you cannot approve your own requisition, an order you created, or an invoice or payment you entered. Another member of the group must do it."
+            "a": "This is segregation of duties: you cannot approve your own requisition, review or approve a purchase order you created or that comes from your requisition, or an invoice or payment you entered. Another member of the group must do it. On a purchase order, the button also only appears for the reviewer during the review, then for a manager of the order's level."
           },
           {
             "q": "A payment is blocked because of \"bank details\".",

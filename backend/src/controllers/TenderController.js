@@ -11,6 +11,8 @@ const referenceModel = require('../models/ReferenceModel');
 const supplierModel = require('../models/SupplierModel');
 const i18n = require('../i18n');
 const allocationService = require('../services/SupplierAllocationService');
+const storage = require('../services/StorageService');
+const tenderQuestions = require('../utils/tenderQuestions');
 
 const { appLink } = require('../utils/appUrl');
 
@@ -121,6 +123,13 @@ async function notifySuppliers(io, tender, kind, { only, exclude } = {}) {
     console.error('[Tender] notifySuppliers (non-fatal):', e.message);
     return 0;
   }
+}
+
+/** Offre renvoyée au fournisseur : sans la note technique ni les points (barème interne de l'acheteur) */
+function withoutScores(submission) {
+  if (!submission) return submission;
+  const { technical_score, ...rest } = submission;
+  return { ...rest, answers: (submission.answers || []).map(({ score, ...a }) => a) };
 }
 
 const err = (status, code, message, details) => Object.assign(new Error(message), { status, code, details });
@@ -322,10 +331,11 @@ class TenderController {
     try {
       const tender = await tenderModel.getById(req.params.id);
       if (!tender) return res.status(404).json({ success: false, message: 'Appel d\'offres introuvable' });
-      const [items, allSubmissions, registeredSuppliers] = await Promise.all([
+      const [items, allSubmissions, registeredSuppliers, questions] = await Promise.all([
         tenderModel.getItems(tender.requisition_id),
         tenderModel.getSubmissions(tender.id),
-        tenderModel.countRegisteredSuppliers(tender.id)
+        tenderModel.countRegisteredSuppliers(tender.id),
+        tenderModel.getQuestions(tender.id)
       ]);
       // Offres scellées : avant la clôture, seuls le nom du soumissionnaire et la date sont visibles
       const sealed = isSealed(tender);
@@ -339,7 +349,7 @@ class TenderController {
         : allSubmissions;
       const invitations = tender.audience === 'PREQUALIFIED' ? await tenderModel.getInvitations(tender.id) : [];
       const awards = tender.status === 'AWARDED' ? await tenderModel.getAwards(tender.id) : [];
-      res.json({ success: true, data: { ...tender, items, submissions, registeredSuppliers, sealed, invitations, awards } });
+      res.json({ success: true, data: { ...tender, items, submissions, registeredSuppliers, sealed, invitations, awards, questions } });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
@@ -373,18 +383,24 @@ class TenderController {
 
       const target = await targeting(b);
       const invited = target.audience === 'PREQUALIFIED' ? await selectedSuppliers(b, target) : [];
-      const tender = await tenderModel.create({
-        ...target,
-        tenderNumber: b.tenderNumber.trim(),
-        requisitionId: b.requisitionId,
-        taskId: b.taskId,
-        title: b.title.trim(),
-        description: b.description,
-        startDate: new Date(b.startDate),
-        endDate: new Date(b.endDate),
-        maxDeliveryDays: parseInt(b.maxDeliveryDays),
-        awardMode: AWARD_MODES.includes(b.awardMode) ? b.awardMode : 'SINGLE',
-        createdBy: req.user.id
+      // Questions aux fournisseurs : écrites avec l'AO (une question invalide = rien n'est publié)
+      const questions = tenderQuestions.normalizeQuestions(b.questions) || [];
+      const tender = await db.withTransaction(async (tx) => {
+        const created = await tenderModel.create({
+          ...target,
+          tenderNumber: b.tenderNumber.trim(),
+          requisitionId: b.requisitionId,
+          taskId: b.taskId,
+          title: b.title.trim(),
+          description: b.description,
+          startDate: new Date(b.startDate),
+          endDate: new Date(b.endDate),
+          maxDeliveryDays: parseInt(b.maxDeliveryDays),
+          awardMode: AWARD_MODES.includes(b.awardMode) ? b.awardMode : 'SINGLE',
+          createdBy: req.user.id
+        }, tx);
+        await tenderModel.replaceQuestions(tx, created.id, questions);
+        return created;
       });
 
       await db.insert('workflow_history', {
@@ -406,7 +422,7 @@ class TenderController {
       if (error.code === '23505') {
         return res.status(409).json({ success: false, message: 'Ce numéro d\'appel d\'offres est déjà utilisé' });
       }
-      if (error.status) return res.status(error.status).json({ success: false, message: error.message });
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
       console.error('Error creating tender:', error);
       res.status(500).json({ success: false, message: error.message });
     }
@@ -434,6 +450,14 @@ class TenderController {
         return res.status(409).json({ success: false, code: 'AWARD_MODE_LOCKED', message: 'Des offres ont déjà été déposées : le mode d\x27attribution ne peut plus changer' });
       }
 
+      // Questions : figées dès la première offre (les réponses reçues portent sur ce questionnaire)
+      // Questionnaire inchangé : rien n'est réécrit (recréer les questions effacerait les réponses reçues)
+      let questions = tenderQuestions.normalizeQuestions(req.body.questions);
+      if (questions && tenderQuestions.sameQuestions(questions, await tenderModel.getQuestions(tender.id))) questions = undefined;
+      if (questions && (await tenderModel.getSubmissions(tender.id)).length) {
+        return res.status(409).json({ success: false, code: 'QUESTIONS_LOCKED', message: 'Des offres ont déjà été déposées : les questions ne peuvent plus changer' });
+      }
+
       const target = await targeting({ audience: tender.audience, categoryId: tender.category_id, locationId: tender.location_id, ...req.body });
       let invitedChange = null;
       let invited = null;
@@ -450,6 +474,7 @@ class TenderController {
         maxDeliveryDays: parseInt(req.body.maxDeliveryDays),
         awardMode
       });
+      if (questions) await db.withTransaction(tx => tenderModel.replaceQuestions(tx, tender.id, questions));
       if (invited) invitedChange = await tenderModel.setInvitations(tender.id, invited, req.user.id);
       const updated = await tenderModel.getById(tender.id);
       const newlyInvited = new Set(invitedChange?.added || []);
@@ -459,7 +484,7 @@ class TenderController {
       await notifySuppliers(req.io, updated, 'updated', { exclude: newlyInvited });
       res.json({ success: true, data: updated, invitations: invitedChange });
     } catch (error) {
-      res.status(error.status || 500).json({ success: false, message: error.message });
+      res.status(error.status || 500).json({ success: false, code: error.code, message: error.message, details: error.details });
     }
   }
 
@@ -502,11 +527,12 @@ class TenderController {
           message: 'Offres scellées : le tableau comparatif sera disponible après la clôture des soumissions'
         });
       }
-      const [items, submissions] = await Promise.all([
+      const [items, submissions, questions] = await Promise.all([
         tenderModel.getItems(tender.requisition_id),
-        tenderModel.getSubmissions(tender.id)
+        tenderModel.getSubmissions(tender.id),
+        tenderModel.getQuestions(tender.id)
       ]);
-      const buffer = await generateComparisonWorkbook(tender, items, submissions);
+      const buffer = await generateComparisonWorkbook(tender, items, submissions, questions);
       const fileName = `comparatif_${tender.tender_number.replace(/[^\w.-]+/g, '_')}.xlsx`;
       res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.set('Content-Disposition', `attachment; filename="${fileName}"`);
@@ -712,10 +738,11 @@ class TenderController {
       if (!tender || tender.status === 'CANCELLED') {
         return res.status(404).json({ success: false, message: 'Appel d\'offres introuvable' });
       }
-      const [items, mySubmission, eligible] = await Promise.all([
+      const [items, mySubmission, eligible, questions] = await Promise.all([
         tenderModel.getItems(tender.requisition_id),
         tenderModel.getSubmission(tender.id, supplier.id),
-        tenderModel.isSupplierEligible(supplier.id, tender.id)
+        tenderModel.isSupplierEligible(supplier.id, tender.id),
+        tenderModel.getQuestions(tender.id)
       ]);
       if (!eligible && !mySubmission) {
         return res.status(404).json({ success: false, message: 'Appel d\'offres introuvable' });
@@ -747,7 +774,8 @@ class TenderController {
           award_mode: tender.award_mode,
           my_awarded_item_ids: myAwardedItemIds,
           items,
-          mySubmission
+          questions: questions.map(tenderQuestions.forSupplier),
+          mySubmission: withoutScores(mySubmission)
         }
       });
     } catch (error) {
@@ -811,7 +839,14 @@ class TenderController {
         if (isNaN(p) || p < 0) return res.status(400).json({ success: false, message: 'Prix unitaire invalide' });
       }
 
-      const result = await tenderModel.upsertSubmission(tender.id, supplier.id, { deliveryDays: days, notes, items: priced }, reqItems);
+      // Réponses aux questions de l'acheteur (obligatoires, format, documents déposés par CE fournisseur)
+      const { rows: answers, technicalScore } = tenderQuestions.checkAnswers(
+        await tenderModel.getQuestions(tender.id), req.body.answers, await tenderModel.answerFileIds(tender.id, supplier.id)
+      );
+
+      const result = await tenderModel.upsertSubmission(tender.id, supplier.id,
+        { deliveryDays: days, notes, items: priced, answers, technicalScore }, reqItems);
+      for (const key of result.orphanPaths) await storage.remove(key).catch(() => {});
 
       // Informer le créateur de l'appel d'offres
       if (tender.created_by) {
@@ -825,10 +860,11 @@ class TenderController {
 
       res.json({
         success: true,
-        data: await tenderModel.getSubmission(tender.id, supplier.id),
+        data: withoutScores(await tenderModel.getSubmission(tender.id, supplier.id)),
         message: result.updated ? 'Soumission mise à jour' : 'Soumission enregistrée'
       });
     } catch (error) {
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
       console.error('Error submitting tender offer:', error);
       res.status(500).json({ success: false, message: error.message });
     }
@@ -843,9 +879,9 @@ class TenderController {
       if (!tender) return res.status(404).json({ success: false, message: 'Appel d\'offres introuvable' });
       const submission = await tenderModel.getSubmission(tender.id, supplier.id);
       if (!submission) return res.status(404).json({ success: false, message: 'Aucune soumission pour cet appel d\'offres' });
-      const items = await tenderModel.getItems(tender.requisition_id);
+      const [items, questions] = await Promise.all([tenderModel.getItems(tender.requisition_id), tenderModel.getQuestions(tender.id)]);
 
-      const pdf = await submissionPdfService.generate({ tender, supplier, submission, items, lang: i18n.fromRequest(req) });
+      const pdf = await submissionPdfService.generate({ tender, supplier, submission, items, questions, lang: i18n.fromRequest(req) });
       res.set('Content-Type', 'application/pdf');
       res.set('Content-Disposition',
         `inline; filename="offre_${tender.tender_number.replace(/[^\w.-]+/g, '_')}_${supplier.supplier_code}.pdf"`);

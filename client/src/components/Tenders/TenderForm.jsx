@@ -10,6 +10,8 @@ import requisitionService from '../../services/requisitionService';
 import { toLocalInput, fmtMoney } from '../../utils/tenderStatus';
 import TenderTargetingFields from './TenderTargetingFields';
 import AwardModeFields from './AwardModeFields';
+import TenderQuestionsEditor from './TenderQuestionsEditor';
+import { questionErrorMessage } from '../../utils/tenderQuestions';
 import { t } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 
@@ -38,6 +40,7 @@ export default function TenderForm() {
     awardMode: 'SINGLE',
   });
   const [targeting, setTargeting] = useState({ audience: 'ALL', categoryId: '', locationId: '', supplierIds: [] });
+  const [questions, setQuestions] = useState([]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -96,11 +99,12 @@ export default function TenderForm() {
         categoryId: targeting.categoryId || null,
         locationId: targeting.locationId || null,
         ...(targeting.audience === 'PREQUALIFIED' ? { supplierIds: targeting.supplierIds } : {}),
+        questions,
       });
       toast.success(t('tenders.published', { count: res.notifiedSuppliers }));
       navigate(`/tenders/${res.data.id}`);
-    } catch (_) {
-      // toast via intercepteur
+    } catch (error) {
+      toast.error(questionErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -225,6 +229,10 @@ export default function TenderForm() {
 
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <AwardModeFields value={form.awardMode} onChange={(v) => set('awardMode', v)} />
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <TenderQuestionsEditor value={questions} onChange={setQuestions} />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">

@@ -531,7 +531,7 @@
       "points": [
         "Inscription libre et profil complet (localisations, catégories, documents)",
         "Préqualification par entreprise et par catégorie de marché",
-        "Consultation des appels d'offres ouverts et soumission en ligne",
+        "Consultation des appels d'offres ouverts, soumission en ligne et réponses au questionnaire de l'acheteur",
         "Suivi des offres et des marchés remportés"
       ],
       "cta": "Devenir fournisseur"
@@ -2249,6 +2249,90 @@
         "BPMNGO_ERROR": "Le moteur de workflow n'a pas accepté la fin de l'étape : rien n'a été enregistré.",
         "default": "Attribution impossible"
       }
+    },
+    "questions": {
+      "title": "Questions aux fournisseurs",
+      "titleCount": "Questions aux fournisseurs ({{count}})",
+      "hint": "Facultatif. Le fournisseur y répond avec son offre ; les réponses restent scellées jusqu'à la clôture. Seules les listes de choix sont notées (points par option, jamais montrés au fournisseur).",
+      "add": "Ajouter une question",
+      "fromLibrary": "Depuis la bibliothèque",
+      "fromLibraryBadge": "(bibliothèque)",
+      "none": "Aucune question : les fournisseurs remettent seulement leurs prix et leur délai.",
+      "locked": "Des offres ont déjà été déposées : les questions ne peuvent plus changer.",
+      "number": "Question {{n}}",
+      "up": "Monter",
+      "down": "Descendre",
+      "saveToLibrary": "Enregistrer dans la bibliothèque",
+      "savedToLibrary": "Question enregistrée dans la bibliothèque",
+      "totalPoints": "Barème : {{points}} points au total (note technique = points obtenus / total × 100).",
+      "label": "Question",
+      "labelPlaceholder": "Ex. : Êtes-vous en règle avec le fisc ?",
+      "type": "Type de réponse",
+      "types": {
+        "TEXT": "Texte libre",
+        "YES_NO": "Oui / Non",
+        "NUMBER": "Nombre",
+        "CHOICE": "Liste de choix (notée)",
+        "FILE": "Document à joindre"
+      },
+      "help": "Aide pour le fournisseur",
+      "helpPlaceholder": "Ex. : PDF de moins de 3 mois",
+      "required": "Réponse obligatoire",
+      "optional": "facultative",
+      "options": "Options proposées",
+      "points": "Points",
+      "optionPlaceholder": "Option {{n}}",
+      "addOption": "Ajouter une option",
+      "pointsHint": "Points accordés pour chaque option (0 = aucun). La note technique de l'offre additionne les points obtenus.",
+      "libraryTitle": "Bibliothèque de questions",
+      "libraryHint": "Questions réutilisables de votre entreprise, reprises à la création d'un appel d'offres. Les modifier ne change pas les appels d'offres déjà publiés.",
+      "libraryEmpty": "La bibliothèque est vide.",
+      "manageLibrary": "Gérer la bibliothèque",
+      "addSelected": "Ajouter ({{count}})",
+      "newTemplate": "Nouvelle question",
+      "editTemplate": "Modifier la question",
+      "optionsAndPoints": "Options (points)",
+      "status": "Statut",
+      "active": "Active",
+      "inactive": "Désactivée",
+      "activeHint": "Active (proposée à la création d'un appel d'offres)",
+      "deleteTitle": "Supprimer la question",
+      "deleteHint": "Supprimer « {{label}} » de la bibliothèque ? Les appels d'offres qui l'utilisent gardent leur copie.",
+      "sealedHint": "Offres scellées : les réponses seront visibles après la clôture.",
+      "answersTitle": "Réponses aux questions",
+      "question": "Question",
+      "maxPoints": "{{points}} points maximum",
+      "noAnswer": "Sans réponse",
+      "pointsOf": "{{points}} / {{max}} pt",
+      "technicalScore": "Note technique",
+      "technicalScoreHint": "Points obtenus aux listes de choix / points maximum",
+      "awardScore": "Note technique de cette offre : {{score}} %.",
+      "err": {
+        "default": "Enregistrement impossible",
+        "QUESTION_LABEL_REQUIRED": "Question {{n}} : saisissez son libellé.",
+        "QUESTION_LABEL_TOO_LONG": "Question {{n}} : 500 caractères maximum.",
+        "QUESTION_TYPE_INVALID": "Question {{n}} : type de réponse inconnu.",
+        "QUESTION_HELP_TOO_LONG": "Question {{n}} : l'aide compte 1 000 caractères maximum.",
+        "CHOICE_OPTIONS_REQUIRED": "Question {{n}} : une liste de choix compte de 2 à 20 options.",
+        "CHOICE_OPTION_INVALID": "Question {{n}} : chaque option doit avoir un libellé (200 caractères maximum).",
+        "CHOICE_OPTION_DUPLICATE": "Question {{n}} : deux options portent le libellé « {{option}} ».",
+        "CHOICE_SCORE_INVALID": "Question {{n}} : les points de « {{option}} » doivent être un nombre de 0 à 1 000.",
+        "QUESTIONS_INVALID": "Liste de questions invalide.",
+        "TOO_MANY_QUESTIONS": "50 questions maximum.",
+        "QUESTIONS_LOCKED": "Des offres ont déjà été déposées : les questions ne peuvent plus changer.",
+        "ANSWER_REQUIRED": "Répondez à la question « {{label}} ».",
+        "ANSWER_INVALID": "Réponse invalide à la question « {{label}} ».",
+        "ANSWER_TOO_LONG": "Réponse trop longue à la question « {{label}} » (4 000 caractères maximum).",
+        "ANSWER_FILE_INVALID": "Document introuvable pour la question « {{label}} » : déposez-le à nouveau.",
+        "ANSWER_UNKNOWN_QUESTION": "Réponse à une question qui n'existe plus : rechargez la page.",
+        "ANSWER_DUPLICATE": "Deux réponses à la même question.",
+        "ANSWERS_INVALID": "Réponses invalides.",
+        "ANSWER_FILE_TYPE": "Formats acceptés : PDF, JPG, PNG, Word ou Excel.",
+        "ANSWER_FILE_TOO_LARGE": "Document trop volumineux (10 Mo maximum).",
+        "ANSWER_FILE_REQUIRED": "Choisissez un document.",
+        "QUESTION_NOT_FILE": "Cette question n'attend pas de document.",
+        "TENDER_NOT_OPEN": "Les soumissions ne sont pas ouvertes."
+      }
     }
   },
   "portal": {
@@ -2377,6 +2461,18 @@
       "congrats_one": "Félicitations : vous avez remporté {{count}} article de cet appel d'offres.",
       "congrats_other": "Félicitations : vous avez remporté {{count}} articles de cet appel d'offres.",
       "notice": "Attribution par article : chaque article peut être attribué à un fournisseur différent. Vous pouvez ne chiffrer que les articles que vous fournissez."
+    },
+    "questions": {
+      "title": "Questions de l'acheteur",
+      "hint": "Vos réponses sont envoyées avec votre offre et restent modifiables jusqu'à la clôture. Les questions marquées * sont obligatoires.",
+      "optional": "(facultatif)",
+      "choose": "— Choisir —",
+      "chooseFile": "Joindre un document",
+      "replaceFile": "Remplacer",
+      "uploading": "Envoi…",
+      "fileFormats": "PDF, JPG, PNG, Word ou Excel — 10 Mo maximum",
+      "required": "Répondez à la question « {{label}} »",
+      "submitError": "Envoi de l'offre impossible"
     }
   },
   "docReview": {
@@ -4525,6 +4621,27 @@
             "text": "Un article sans aucune offre n'est pas commandé. Chaque fournisseur retenu ne voit, sur son portail, que les articles qu'il a remportés."
           },
           {
+            "type": "h",
+            "text": "Questions aux fournisseurs"
+          },
+          {
+            "type": "p",
+            "text": "Dans « Questions aux fournisseurs » du formulaire, ajoutez des questions auxquelles chaque fournisseur répond avec son offre : texte libre, Oui / Non, nombre, liste de choix ou document à joindre (attestation, référence, fiche technique). Cochez « Réponse obligatoire » si l'offre ne doit pas partir sans elle."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Liste de choix (notée) : donnez des points à chaque option (ex. garantie 24 mois = 10, 12 mois = 5, aucune = 0). Les points ne sont jamais montrés au fournisseur.",
+              "Note technique d'une offre = points obtenus / points maximum des listes notées × 100. Elle s'affiche sous les réponses, dans le tableau comparatif et dans l'Excel (feuille « Questionnaire »).",
+              "Les réponses et documents restent scellés comme les prix jusqu'à la clôture.",
+              "Les questions ne peuvent plus changer dès qu'une offre est déposée."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "« Depuis la bibliothèque » reprend les questions habituelles de votre entreprise (bouton « Bibliothèque de questions » de la liste des appels d'offres). L'icône de signet d'une question l'enregistre dans la bibliothèque. Modifier la bibliothèque ne change pas un appel d'offres déjà publié."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -4542,6 +4659,14 @@
           {
             "q": "Puis-je passer un appel d'offres en « par article » après publication ?",
             "a": "Oui, tant qu'aucune offre n'a été déposée (bouton « Modifier »). Ensuite le mode est verrouillé : changer les règles après réception des offres serait contestable."
+          },
+          {
+            "q": "La note technique choisit-elle le fournisseur ?",
+            "a": "Non. Elle aide à comparer les offres ; l'attribution reste votre décision (prix, délai, note technique, réponses). Indiquez votre justification au moment d'attribuer."
+          },
+          {
+            "q": "Puis-je ajouter une question après publication ?",
+            "a": "Oui, avec « Modifier », tant qu'aucune offre n'a été déposée. Ensuite le questionnaire est figé : les réponses reçues portent sur ces questions."
           }
         ]
       },
@@ -5802,7 +5927,8 @@
               "Ouvrez l'appel : saisissez vos prix unitaires article par article, votre délai de livraison (dans la limite demandée) et vos remarques.",
               "Vous pouvez modifier votre offre tant que l'appel est ouvert. Vos prix ne sont jamais visibles par les autres fournisseurs, ni par l'acheteur avant la clôture.",
               "Téléchargez le PDF de votre offre (avec votre logo) pour l'imprimer, la signer et la cacheter si l'acheteur le demande.",
-              "Après attribution, le résultat apparaît sur votre tableau de bord ; le bon de commande vous est envoyé par email."
+              "Après attribution, le résultat apparaît sur votre tableau de bord ; le bon de commande vous est envoyé par email.",
+              "Si l'acheteur pose des questions, répondez-y sous le tableau des prix (* = obligatoire) ; un document demandé se joint avec « Joindre un document ». Vos réponses restent modifiables jusqu'à la clôture et figurent dans le PDF de votre offre."
             ]
           },
           {

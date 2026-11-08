@@ -63,6 +63,7 @@ import ForgotPassword from './components/Auth/ForgotPassword';
 import ResetPasswordConfirm from './components/Auth/ResetPasswordConfirm';
 import TenderList from './components/Tenders/TenderList';
 import TenderForm from './components/Tenders/TenderForm';
+import QuestionTemplateList from './components/Tenders/QuestionTemplateList';
 import TenderDetail from './components/Tenders/TenderDetail';
 import SupplierTenderList from './components/SupplierPortal/SupplierTenderList';
 import SupplierTenderDetail from './components/SupplierPortal/SupplierTenderDetail';
@@ -354,6 +355,7 @@ function App() {
 
         {/* Appels d'offres (procurement) */}
         <Route path="/tenders" element={<ProtectedRoute requiredPermission="MANAGE_TENDERS"><Layout><TenderList /></Layout></ProtectedRoute>} />
+        <Route path="/tenders/question-templates" element={<ProtectedRoute requiredPermission="MANAGE_TENDERS"><Layout><QuestionTemplateList /></Layout></ProtectedRoute>} />
         <Route path="/tenders/new" element={<ProtectedRoute requiredPermission="MANAGE_TENDERS"><Layout><TenderForm /></Layout></ProtectedRoute>} />
         <Route path="/tenders/:id" element={<ProtectedRoute requiredPermission="MANAGE_TENDERS"><Layout><TenderDetail /></Layout></ProtectedRoute>} />
 

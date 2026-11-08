@@ -1,5 +1,6 @@
 // backend/src/services/TenderExportService.js
 const ExcelJS = require('exceljs');
+const { isScored, maxScore } = require('../utils/tenderQuestions');
 
 const BLUE = 'FF1E40AF';
 const LIGHT_BLUE = 'FFDBEAFE';
@@ -20,8 +21,9 @@ function fmtDate(d) {
  *  - "Comparatif" : tableau croisé items × fournisseurs (PU + total), meilleur prix en vert
  *  - "Détail"     : une ligne par (fournisseur, item) — prêt pour un tableau croisé dynamique
  *  - "Fournisseurs" : coordonnées et délais
+ *  - "Questionnaire" : réponses aux questions de l'acheteur (si l'AO en pose), points et note technique
  */
-async function generateComparisonWorkbook(tender, items, submissions) {
+async function generateComparisonWorkbook(tender, items, submissions, questions = []) {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'procureApp';
   wb.created = new Date();
@@ -145,6 +147,9 @@ async function generateComparisonWorkbook(tender, items, submissions) {
       return { value: ok ? 'Oui' : 'Non', fill: ok ? GREEN : RED };
     }],
     ['Items chiffrés', s => ({ value: `${s.items.length} / ${items.length}`, fill: s.items.length < items.length ? RED : null })],
+    ...(questions.some(isScored)
+      ? [['Note technique (%)', s => ({ value: s.technical_score === null || s.technical_score === undefined ? '—' : parseFloat(s.technical_score) })]]
+      : []),
     ['Dernière soumission', s => ({ value: fmtDate(s.updated_at || s.submitted_at) })],
     ['Remarques', s => ({ value: s.notes || '' })],
   ];
@@ -235,7 +240,58 @@ async function generateComparisonWorkbook(tender, items, submissions) {
   }));
   styleHeader(wf);
 
+  if (questions.length) addQuestionnaireSheet(wb, questions, submissions);
+
   return wb.xlsx.writeBuffer();
+}
+
+/** Réponse lisible : Oui / Non, libellé de l'option, nom du document */
+function answerText(q, a) {
+  if (!a) return '—';
+  switch (q.answer_type) {
+    case 'YES_NO': return a.value === 'YES' ? 'Oui' : 'Non';
+    case 'CHOICE': return q.options?.[Number(a.value)]?.label ?? '—';
+    case 'FILE': return a.file_name ? `Document : ${a.file_name}` : '—';
+    case 'NUMBER': return Number(a.value);
+    default: return a.value ?? '—';
+  }
+}
+
+const TYPE_LABELS = { TEXT: 'Texte', YES_NO: 'Oui / Non', NUMBER: 'Nombre', CHOICE: 'Liste de choix', FILE: 'Document' };
+
+function addQuestionnaireSheet(wb, questions, submissions) {
+  const ws = wb.addWorksheet('Questionnaire');
+  const scored = questions.some(isScored);
+  ws.columns = [
+    { header: 'N°', key: 'n', width: 6 },
+    { header: 'Question', key: 'q', width: 48 },
+    { header: 'Type', key: 'type', width: 15 },
+    { header: 'Obligatoire', key: 'req', width: 12 },
+    ...(scored ? [{ header: 'Points max', key: 'max', width: 11 }] : []),
+    ...submissions.map((s, i) => ({ header: s.supplier_name, key: `s${i}`, width: 30 })),
+  ];
+  questions.forEach((q, idx) => {
+    const row = {
+      n: idx + 1, q: q.label, type: TYPE_LABELS[q.answer_type] || q.answer_type, req: q.required ? 'Oui' : 'Non',
+      ...(scored ? { max: isScored(q) ? maxScore(q) : '' } : {}),
+    };
+    submissions.forEach((s, i) => {
+      const a = (s.answers || []).find(x => String(x.question_id) === String(q.id));
+      const text = answerText(q, a);
+      row[`s${i}`] = isScored(q) && a ? `${text} (${a.score ?? 0} pt)` : text;
+    });
+    const r = ws.addRow(row);
+    r.alignment = { wrapText: true, vertical: 'top' };
+  });
+  styleHeader(ws);
+  if (scored) {
+    const r = ws.addRow({
+      q: 'Note technique (%)',
+      ...Object.fromEntries(submissions.map((s, i) => [`s${i}`, s.technical_score === null || s.technical_score === undefined ? '—' : parseFloat(s.technical_score)])),
+    });
+    r.font = { bold: true };
+    r.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: LIGHT_BLUE } }; });
+  }
 }
 
 function styleHeader(sheet) {

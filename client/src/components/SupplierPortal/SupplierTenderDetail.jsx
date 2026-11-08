@@ -8,6 +8,8 @@ import { supplierPortalService } from '../../services/supplierPortalService';
 import { fmtDateTime, fmtMoney, timeLeft } from '../../utils/tenderStatus';
 import { enterpriseLogoUrl } from '../../contexts/EnterpriseContext';
 import { t } from '../../i18n';
+import TenderQuestionsForm from './TenderQuestionsForm';
+import { questionErrorMessage } from '../../utils/tenderQuestions';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50';
 
@@ -18,6 +20,7 @@ export default function SupplierTenderDetail() {
   const [prices, setPrices] = useState({});     // itemId → { unitPrice, comment }
   const [deliveryDays, setDeliveryDays] = useState('');
   const [notes, setNotes] = useState('');
+  const [answers, setAnswers] = useState({}); // questionId → { value, fileId, fileName }
   const [saving, setSaving] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -32,6 +35,9 @@ export default function SupplierTenderDetail() {
     setPrices(map);
     setDeliveryDays(sub ? String(sub.delivery_days) : '');
     setNotes(sub?.notes || '');
+    setAnswers(Object.fromEntries((sub?.answers || []).map(a => [a.question_id, {
+      value: a.value ?? '', fileId: a.file_id, fileName: a.file_name,
+    }])));
   };
 
   useEffect(() => {
@@ -63,6 +69,10 @@ export default function SupplierTenderDetail() {
     if (pricedCount === 0) return toast.error(t('portal.priceOne'));
     const bad = tender.items.find(i => prices[i.id]?.unitPrice && (isNaN(parseFloat(prices[i.id].unitPrice)) || parseFloat(prices[i.id].unitPrice) < 0));
     if (bad) return toast.error(t('portal.invalidPrice', { item: bad.item_description }));
+    const questions = tender.questions || [];
+    const isEmpty = (q) => (q.answer_type === 'FILE' ? !answers[q.id]?.fileId : String(answers[q.id]?.value ?? '').trim() === '');
+    const unanswered = questions.find(q => q.required && isEmpty(q));
+    if (unanswered) return toast.error(t('portal.questions.required', { label: unanswered.label }));
 
     setSaving(true);
     try {
@@ -72,10 +82,15 @@ export default function SupplierTenderDetail() {
         items: tender.items
           .filter(i => prices[i.id]?.unitPrice !== undefined && prices[i.id]?.unitPrice !== '')
           .map(i => ({ requisitionItemId: i.id, unitPrice: parseFloat(prices[i.id].unitPrice), comment: prices[i.id].comment || null })),
+        answers: questions.filter(q => !isEmpty(q)).map(q => (q.answer_type === 'FILE'
+          ? { questionId: q.id, fileId: answers[q.id].fileId }
+          : { questionId: q.id, value: answers[q.id].value })),
       });
       toast.success(res.message);
       hydrate({ ...tender, mySubmission: res.data });
-    } catch (_) { /* toast */ } finally {
+    } catch (error) {
+      toast.error(questionErrorMessage(error, 'portal.questions.submitError'));
+    } finally {
       setSaving(false);
     }
   };
@@ -215,6 +230,8 @@ export default function SupplierTenderDetail() {
             <textarea id="notes" rows={2} disabled={!editable} className={inputCls} value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
         </div>
+
+        <TenderQuestionsForm tenderId={tender.id} questions={tender.questions} value={answers} onChange={setAnswers} disabled={!editable} />
 
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-500">

@@ -12,6 +12,9 @@ import { TENDER_STATUS, fmtDateTime, fmtMoney, timeLeft, toLocalInput } from '..
 import TenderTargetingFields, { AUDIENCE_LABELS } from './TenderTargetingFields';
 import AwardModeFields from './AwardModeFields';
 import SearchSelect from '../Common/SearchSelect';
+import TenderQuestionsEditor from './TenderQuestionsEditor';
+import TenderAnswers from './TenderAnswers';
+import { toEditable, questionErrorMessage, maxScore } from '../../utils/tenderQuestions';
 import { t } from '../../i18n';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -128,16 +131,28 @@ export default function TenderDetail() {
     if (editForm.audience === 'PREQUALIFIED' && !(editForm.supplierIds || []).length) {
       return toast.error(t('tenders.selectInvitee'));
     }
-    const ok = await run(() => tenderService.update(tender.id, {
-      ...editForm,
-      categoryId: editForm.categoryId || null,
-      locationId: editForm.locationId || null,
-      supplierIds: editForm.audience === 'PREQUALIFIED' ? editForm.supplierIds : undefined,
-      startDate: new Date(editForm.startDate).toISOString(),
-      endDate: new Date(editForm.endDate).toISOString(),
-      maxDeliveryDays: parseInt(editForm.maxDeliveryDays),
-    }), t('tenders.updated'));
-    if (ok) setEditForm(null);
+    // Questions envoyées seulement tant qu'aucune offre n'est reçue (ensuite figées)
+    const { questions, ...fields } = editForm;
+    setBusy(true);
+    try {
+      const res = await tenderService.update(tender.id, {
+        ...fields,
+        ...(subs.length === 0 ? { questions } : {}),
+        categoryId: editForm.categoryId || null,
+        locationId: editForm.locationId || null,
+        supplierIds: editForm.audience === 'PREQUALIFIED' ? editForm.supplierIds : undefined,
+        startDate: new Date(editForm.startDate).toISOString(),
+        endDate: new Date(editForm.endDate).toISOString(),
+        maxDeliveryDays: parseInt(editForm.maxDeliveryDays),
+      });
+      toast.success(res?.message || t('tenders.updated'));
+      setEditForm(null);
+      await load();
+    } catch (error) {
+      toast.error(questionErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const doAwardPerItem = async () => {
@@ -201,6 +216,7 @@ export default function TenderDetail() {
               audience: tender.audience || 'ALL', categoryId: tender.category_id || '', locationId: tender.location_id || '',
               supplierIds: (tender.invitations || []).map(i => i.supplier_id),
               awardMode: tender.award_mode || 'SINGLE',
+              questions: (tender.questions || []).map(toEditable),
             })} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
               <Pencil size={16} /> {tender.effective_status === 'CLOSED' ? t('tenders.extend') : t('common.edit')}
             </button>
@@ -293,6 +309,8 @@ export default function TenderDetail() {
         </div>
       )}
 
+      <TenderAnswers tender={tender} />
+
       {/* Tableau croisé items × fournisseurs (après clôture uniquement) */}
       {!sealed && <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
         <div className="px-4 py-3 border-b border-gray-200 font-semibold text-gray-800">{t('tenders.priceComparison', { currency: cur })}</div>
@@ -371,6 +389,16 @@ export default function TenderDetail() {
                   </td>
                 ))}
               </tr>
+              {(tender.questions || []).some(q => maxScore(q) > 0) && (
+                <tr>
+                  <td colSpan={2} className="px-3 py-2 text-gray-600">{t('tenders.questions.technicalScore')}</td>
+                  {subs.map(s => (
+                    <td key={s.id} className="px-3 py-2 text-right" data-testid="comparison-technical-score">
+                      {s.technical_score === null || s.technical_score === undefined ? '—' : `${parseFloat(s.technical_score)} %`}
+                    </td>
+                  ))}
+                </tr>
+              )}
               <tr>
                 <td colSpan={2} className="px-3 py-2 text-gray-600">{t('tenders.deliveryTime')}</td>
                 {subs.map(s => <td key={s.id} className="px-3 py-2 text-right">{t('tenders.days', { count: s.delivery_days })}</td>)}
@@ -441,6 +469,10 @@ export default function TenderDetail() {
                 onChange={(v) => setEditForm(f => ({ ...f, awardMode: v }))} />
             </div>
             <div className="col-span-2 border-t pt-3">
+              <TenderQuestionsEditor value={editForm.questions} locked={subs.length > 0}
+                onChange={(questions) => setEditForm(f => ({ ...f, questions }))} />
+            </div>
+            <div className="col-span-2 border-t pt-3">
               <TenderTargetingFields
                 value={{ audience: editForm.audience, categoryId: editForm.categoryId, locationId: editForm.locationId, supplierIds: editForm.supplierIds }}
                 lockedIds={(tender.invitations || []).filter(i => i.submitted).map(i => i.supplier_id)}
@@ -456,6 +488,9 @@ export default function TenderDetail() {
         {awardTo && (
           <div className="space-y-3 text-sm">
             <p>{t('tenders.awardBefore')} <b>{awardTo.supplier_name}</b> {t('tenders.awardFor')} <b>{fmtMoney(awardTo.total_amount, cur)}</b>{t('tenders.awardDelivery', { days: awardTo.delivery_days })}</p>
+            {awardTo.technical_score !== null && awardTo.technical_score !== undefined && (
+              <p>{t('tenders.questions.awardScore', { score: parseFloat(awardTo.technical_score) })}</p>
+            )}
             {bestTotal !== null && parseFloat(awardTo.total_amount) !== bestTotal && (
               <p className="text-yellow-700 bg-yellow-50 p-2 rounded">{t('tenders.notCheapest')}</p>
             )}

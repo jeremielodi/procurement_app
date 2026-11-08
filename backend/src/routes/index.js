@@ -34,6 +34,7 @@ const paymentController = require('../controllers/PaymentController');
 const supplierPortalController = require('../controllers/SupplierPortalController');
 const supplierOrderController = require('../controllers/SupplierOrderController');
 const tenderController = require('../controllers/TenderController');
+const tenderQuestionController = require('../controllers/TenderQuestionController');
 const requisitionImport = require('../controllers/requisition/importItems');
 const referenceController = require('../controllers/ReferenceController');
 const stockController = require('../controllers/StockController');
@@ -907,6 +908,12 @@ router.get('/tenders/eligible-count', hasPermission('MANAGE_TENDERS'), tenderCon
 router.get('/tenders/by-requisition/:requisitionId', hasPermission('MANAGE_TENDERS'), tenderController.getByRequisition.bind(tenderController));
 router.get('/tenders/:id', hasPermission('MANAGE_TENDERS'), tenderController.getOne.bind(tenderController));
 router.get('/tenders/:id/export/excel', hasPermission('MANAGE_TENDERS'), tenderController.exportExcel.bind(tenderController));
+router.get('/tenders/:id/answer-files/:fileId', hasPermission('MANAGE_TENDERS'), tenderQuestionController.getAnswerFile.bind(tenderQuestionController));
+// Bibliothèque de questions aux fournisseurs (migration 54)
+router.get('/tender-question-templates', hasPermission('MANAGE_TENDERS'), tenderQuestionController.listTemplates.bind(tenderQuestionController));
+router.post('/tender-question-templates', hasPermission('MANAGE_TENDERS'), tenderQuestionController.createTemplate.bind(tenderQuestionController));
+router.put('/tender-question-templates/:id', hasPermission('MANAGE_TENDERS'), tenderQuestionController.updateTemplate.bind(tenderQuestionController));
+router.delete('/tender-question-templates/:id', hasPermission('MANAGE_TENDERS'), tenderQuestionController.deleteTemplate.bind(tenderQuestionController));
 router.post('/tenders', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'requisition', from.body('requisitionId')), tenderController.create.bind(tenderController));
 router.put('/tenders/:id', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), tenderController.update.bind(tenderController));
 router.post('/tenders/:id/close', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), tenderController.close.bind(tenderController));
@@ -932,6 +939,10 @@ router.get('/supplier-portal/tenders', hasPermission('SUPPLIER_PORTAL'), tenderC
 router.get('/supplier-portal/tenders/:id', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierGetOne.bind(tenderController));
 router.put('/supplier-portal/tenders/:id/submission', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierSubmit.bind(tenderController));
 router.get('/supplier-portal/tenders/:id/submission/pdf', hasPermission('SUPPLIER_PORTAL'), tenderController.supplierSubmissionPdf.bind(tenderController));
+router.post('/supplier-portal/tenders/:id/questions/:questionId/file', hasPermission('SUPPLIER_PORTAL'),
+  tenderQuestionController.handleAnswerFile,
+  tenderQuestionController.uploadAnswerFile.bind(tenderQuestionController));
+router.get('/supplier-portal/tenders/:id/answer-files/:fileId', hasPermission('SUPPLIER_PORTAL'), tenderQuestionController.getMyAnswerFile.bind(tenderQuestionController));
 
 // Intérim du chef de projet pendant son absence (migration 53) : tout utilisateur de l'entreprise pour lui-même,
 // l'administrateur (MANAGE_USERS) pour n'importe qui — contrôles dans DelegationService

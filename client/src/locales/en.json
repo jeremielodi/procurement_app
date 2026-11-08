@@ -531,7 +531,7 @@
       "points": [
         "Open registration and complete profile (locations, categories, documents)",
         "Prequalification per company and per market category",
-        "Browse open tenders and submit bids online",
+        "Browse open tenders, submit online and answer the buyer's questionnaire",
         "Track bids and awarded contracts"
       ],
       "cta": "Become a supplier"
@@ -2249,6 +2249,90 @@
         "BPMNGO_ERROR": "The workflow engine did not accept the end of the step: nothing was saved.",
         "default": "Award failed"
       }
+    },
+    "questions": {
+      "title": "Questions for suppliers",
+      "titleCount": "Questions for suppliers ({{count}})",
+      "hint": "Optional. Suppliers answer with their offer; answers stay sealed until closing. Only choice lists are scored (points per option, never shown to suppliers).",
+      "add": "Add a question",
+      "fromLibrary": "From the library",
+      "fromLibraryBadge": "(library)",
+      "none": "No questions: suppliers only submit their prices and delivery time.",
+      "locked": "Offers have already been submitted: the questions can no longer change.",
+      "number": "Question {{n}}",
+      "up": "Move up",
+      "down": "Move down",
+      "saveToLibrary": "Save to the library",
+      "savedToLibrary": "Question saved to the library",
+      "totalPoints": "Scoring: {{points}} points in total (technical score = points obtained / total × 100).",
+      "label": "Question",
+      "labelPlaceholder": "E.g.: Are your taxes up to date?",
+      "type": "Answer type",
+      "types": {
+        "TEXT": "Free text",
+        "YES_NO": "Yes / No",
+        "NUMBER": "Number",
+        "CHOICE": "Choice list (scored)",
+        "FILE": "Document to attach"
+      },
+      "help": "Help for the supplier",
+      "helpPlaceholder": "E.g.: PDF less than 3 months old",
+      "required": "Answer required",
+      "optional": "optional",
+      "options": "Options offered",
+      "points": "Points",
+      "optionPlaceholder": "Option {{n}}",
+      "addOption": "Add an option",
+      "pointsHint": "Points awarded for each option (0 = none). The offer's technical score adds up the points obtained.",
+      "libraryTitle": "Question library",
+      "libraryHint": "Your company's reusable questions, picked when creating a tender. Editing them does not change tenders already published.",
+      "libraryEmpty": "The library is empty.",
+      "manageLibrary": "Manage the library",
+      "addSelected": "Add ({{count}})",
+      "newTemplate": "New question",
+      "editTemplate": "Edit question",
+      "optionsAndPoints": "Options (points)",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Disabled",
+      "activeHint": "Active (offered when creating a tender)",
+      "deleteTitle": "Delete question",
+      "deleteHint": "Delete \"{{label}}\" from the library? Tenders using it keep their copy.",
+      "sealedHint": "Sealed offers: answers will be visible after closing.",
+      "answersTitle": "Answers to the questions",
+      "question": "Question",
+      "maxPoints": "{{points}} points maximum",
+      "noAnswer": "No answer",
+      "pointsOf": "{{points}} / {{max}} pts",
+      "technicalScore": "Technical score",
+      "technicalScoreHint": "Points obtained on choice lists / maximum points",
+      "awardScore": "Technical score of this offer: {{score}}%.",
+      "err": {
+        "default": "Could not save",
+        "QUESTION_LABEL_REQUIRED": "Question {{n}}: enter its wording.",
+        "QUESTION_LABEL_TOO_LONG": "Question {{n}}: 500 characters maximum.",
+        "QUESTION_TYPE_INVALID": "Question {{n}}: unknown answer type.",
+        "QUESTION_HELP_TOO_LONG": "Question {{n}}: help text is limited to 1,000 characters.",
+        "CHOICE_OPTIONS_REQUIRED": "Question {{n}}: a choice list has 2 to 20 options.",
+        "CHOICE_OPTION_INVALID": "Question {{n}}: each option needs a label (200 characters maximum).",
+        "CHOICE_OPTION_DUPLICATE": "Question {{n}}: two options are labelled \"{{option}}\".",
+        "CHOICE_SCORE_INVALID": "Question {{n}}: points for \"{{option}}\" must be a number from 0 to 1,000.",
+        "QUESTIONS_INVALID": "Invalid list of questions.",
+        "TOO_MANY_QUESTIONS": "50 questions maximum.",
+        "QUESTIONS_LOCKED": "Offers have already been submitted: the questions can no longer change.",
+        "ANSWER_REQUIRED": "Answer the question \"{{label}}\".",
+        "ANSWER_INVALID": "Invalid answer to the question \"{{label}}\".",
+        "ANSWER_TOO_LONG": "Answer too long for the question \"{{label}}\" (4,000 characters maximum).",
+        "ANSWER_FILE_INVALID": "Document not found for the question \"{{label}}\": upload it again.",
+        "ANSWER_UNKNOWN_QUESTION": "Answer to a question that no longer exists: reload the page.",
+        "ANSWER_DUPLICATE": "Two answers to the same question.",
+        "ANSWERS_INVALID": "Invalid answers.",
+        "ANSWER_FILE_TYPE": "Accepted formats: PDF, JPG, PNG, Word or Excel.",
+        "ANSWER_FILE_TOO_LARGE": "Document too large (10 MB maximum).",
+        "ANSWER_FILE_REQUIRED": "Choose a document.",
+        "QUESTION_NOT_FILE": "This question does not expect a document.",
+        "TENDER_NOT_OPEN": "Submissions are not open."
+      }
     }
   },
   "portal": {
@@ -2377,6 +2461,18 @@
       "congrats_one": "Congratulations: you won {{count}} item of this tender.",
       "congrats_other": "Congratulations: you won {{count}} items of this tender.",
       "notice": "Per-item award: each item may be awarded to a different supplier. You may price only the items you supply."
+    },
+    "questions": {
+      "title": "Buyer's questions",
+      "hint": "Your answers are sent with your offer and can be changed until closing. Questions marked * are required.",
+      "optional": "(optional)",
+      "choose": "— Choose —",
+      "chooseFile": "Attach a document",
+      "replaceFile": "Replace",
+      "uploading": "Uploading…",
+      "fileFormats": "PDF, JPG, PNG, Word or Excel — 10 MB maximum",
+      "required": "Answer the question \"{{label}}\"",
+      "submitError": "Could not send the offer"
     }
   },
   "docReview": {
@@ -4525,6 +4621,27 @@
             "text": "An item with no bid is not ordered. Each selected supplier only sees, on its portal, the items it won."
           },
           {
+            "type": "h",
+            "text": "Questions for suppliers"
+          },
+          {
+            "type": "p",
+            "text": "In the form's \"Questions for suppliers\" section, add questions each supplier answers with their offer: free text, Yes / No, number, choice list or document to attach (certificate, reference, data sheet). Tick \"Answer required\" if the offer cannot be sent without it."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Choice list (scored): give points to each option (e.g. 24-month warranty = 10, 12 months = 5, none = 0). Points are never shown to suppliers.",
+              "An offer's technical score = points obtained / maximum points of scored lists × 100. It is shown below the answers, in the comparison table and in the Excel file (\"Questionnaire\" sheet).",
+              "Answers and documents stay sealed, like prices, until closing.",
+              "Questions can no longer change once an offer has been submitted."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "\"From the library\" picks your company's usual questions (\"Question library\" button of the tender list). The bookmark icon of a question saves it to the library. Editing the library does not change a tender already published."
+          },
+          {
             "type": "links",
             "links": [
               {
@@ -4542,6 +4659,14 @@
           {
             "q": "Can I switch a tender to \"per item\" after publication?",
             "a": "Yes, as long as no bid has been submitted (\"Edit\" button). After that the mode is locked: changing the rules after receiving bids would be open to challenge."
+          },
+          {
+            "q": "Does the technical score choose the supplier?",
+            "a": "No. It helps compare offers; the award remains your decision (price, delivery time, technical score, answers). Enter your justification when awarding."
+          },
+          {
+            "q": "Can I add a question after publishing?",
+            "a": "Yes, with \"Edit\", as long as no offer has been submitted. After that the questionnaire is frozen: the answers received relate to these questions."
           }
         ]
       },
@@ -5802,7 +5927,8 @@
               "Open the call: enter your unit prices item by item, your delivery time (within the requested limit) and your remarks.",
               "You can modify your bid as long as the call is open. Your prices are never visible to other suppliers, nor to the buyer before closing.",
               "Download the PDF of your bid (with your logo) to print, sign and stamp it if the buyer requests it.",
-              "After the award, the result appears on your dashboard; the purchase order is sent to you by email."
+              "After the award, the result appears on your dashboard; the purchase order is sent to you by email.",
+              "If the buyer asks questions, answer them below the price table (* = required); a requested document is attached with \"Attach a document\". Your answers can be changed until closing and appear in your offer PDF."
             ]
           },
           {

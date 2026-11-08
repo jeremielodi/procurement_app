@@ -686,7 +686,7 @@
       "totalAmount": "Total amount",
       "proposedDelivery": "Proposed delivery time",
       "submittedOn": "Submitted / updated on",
-      "no": "No.",
+      "no": "No",
       "designation": "Description",
       "quantity": "Quantity",
       "unitPrice": "Unit price ({currency})",
@@ -696,7 +696,13 @@
       "remarks": "Remarks",
       "declaration": "We, the undersigned, <b>{supplier}</b>, undertake to deliver the goods/services described above at the prices stated, within <b>{days} days</b> of receipt of the purchase order.",
       "representative": "Name, position and signature of the representative",
-      "stamp": "Company stamp"
+      "stamp": "Company stamp",
+      "questionnaire": "Answers to the buyer's questionnaire",
+      "question": "Question",
+      "answer": "Answer",
+      "yes": "Yes",
+      "noAnswer": "No answer",
+      "attached": "Attached document: {name}"
     },
     "requisitionList": {
       "title": "Requisition list",

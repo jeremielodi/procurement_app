@@ -87,6 +87,7 @@ const PATH_RESOURCES = [
   { re: /^\/invoices\/(\d+)(\/|$)/, table: 'invoices' },
   { re: /^\/payments\/(\d+)(\/|$)/, table: 'payments' },
   { re: /^\/tenders\/(\d+)(\/|$)/, table: 'tenders' },
+  { re: new RegExp(`^/tender-question-templates/(${UUID})$`), table: 'tender_question_templates' },
   { re: new RegExp(`^/budget/(${UUID})(/|$)`), table: 'budget_allocations' },
   { re: new RegExp(`^/budget/by-project/(${UUID})$`), table: 'projects' },
   { re: new RegExp(`^/departments/(${UUID})(/|$)`), table: 'departments' },

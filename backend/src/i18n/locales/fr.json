@@ -686,7 +686,7 @@
       "totalAmount": "Montant total",
       "proposedDelivery": "Délai de livraison proposé",
       "submittedOn": "Soumis / modifié le",
-      "no": "N°",
+      "no": "Non",
       "designation": "Désignation",
       "quantity": "Quantité",
       "unitPrice": "Prix unitaire ({currency})",
@@ -696,7 +696,13 @@
       "remarks": "Remarques",
       "declaration": "Nous, soussignés, <b>{supplier}</b>, nous engageons à livrer les biens/services décrits ci-dessus aux prix indiqués, dans un délai de <b>{days} jours</b> à compter de la réception du bon de commande.",
       "representative": "Nom, fonction et signature du représentant",
-      "stamp": "Cachet de l'entreprise"
+      "stamp": "Cachet de l'entreprise",
+      "questionnaire": "Réponses au questionnaire de l'acheteur",
+      "question": "Question",
+      "answer": "Réponse",
+      "yes": "Oui",
+      "noAnswer": "Sans réponse",
+      "attached": "Document joint : {name}"
     },
     "requisitionList": {
       "title": "Liste des réquisitions",

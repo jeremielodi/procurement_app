@@ -1,7 +1,7 @@
 // src/components/Tenders/TenderList.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Gavel, Plus, Search, RefreshCw, Eye, Users } from 'lucide-react';
+import { Gavel, Plus, Search, RefreshCw, Eye, Users, Library } from 'lucide-react';
 import { tenderService } from '../../services/tenderService';
 import { TENDER_STATUS, fmtDateTime, timeLeft } from '../../utils/tenderStatus';
 import { t } from '../../i18n';
@@ -39,12 +39,21 @@ export default function TenderList() {
             <Users size={14} /> {t('tenders.registered', { count: registered })}
           </p>
         </div>
-        <button
-          onClick={() => navigate('/tenders/new')}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-        >
-          <Plus size={16} /> {t('tenders.new')}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => navigate('/tenders/question-templates')}
+            data-testid="question-library-link"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+          >
+            <Library size={16} /> {t('tenders.questions.libraryTitle')}
+          </button>
+          <button
+            onClick={() => navigate('/tenders/new')}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            <Plus size={16} /> {t('tenders.new')}
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-3 mb-4">

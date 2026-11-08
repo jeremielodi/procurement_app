@@ -97,8 +97,9 @@ class TenderModel {
     );
   }
 
-  async create(data) {
-    return db.one(
+  /** tx : transaction (db.withTransaction) — l'AO et ses questions sont écrits ensemble */
+  async create(data, tx = db) {
+    return tx.one(
       `INSERT INTO tenders
          (tender_number, requisition_id, task_id, title, description,
           start_date, end_date, max_delivery_days, status, created_by, audience, category_id, location_id, award_mode)
@@ -148,7 +149,12 @@ class TenderModel {
        WHERE ts.tender_id = $1`,
       [tenderId]
     );
-    return submissions.map(s => ({ ...s, items: items.filter(i => i.submission_id === s.id) }));
+    const answers = await this.getAnswers(submissions.map(s => s.id));
+    return submissions.map(s => ({
+      ...s,
+      items: items.filter(i => i.submission_id === s.id),
+      answers: answers.filter(a => a.submission_id === s.id),
+    }));
   }
 
   async getSubmission(tenderId, supplierId) {
@@ -161,14 +167,17 @@ class TenderModel {
       'SELECT * FROM tender_submission_items WHERE submission_id = $1',
       [submission.id]
     );
+    submission.answers = await this.getAnswers([submission.id]);
     return submission;
   }
 
   /**
-   * Crée ou remplace la soumission d'un fournisseur.
+   * Crée ou remplace la soumission d'un fournisseur, avec ses réponses aux questions, dans une transaction.
    * items : [{ requisitionItemId, unitPrice, comment }] — quantités prises depuis la réquisition.
+   * answers : lignes contrôlées par utils/tenderQuestions.checkAnswers ; technicalScore : note technique.
+   * Les documents déposés pour une question mais plus utilisés sont supprimés : orphanPaths (à retirer du stockage).
    */
-  async upsertSubmission(tenderId, supplierId, { deliveryDays, notes, items }, reqItems) {
+  async upsertSubmission(tenderId, supplierId, { deliveryDays, notes, items, answers = [], technicalScore = null }, reqItems) {
     const byId = new Map(reqItems.map(i => [String(i.id), i]));
     const lines = items.map(i => {
       const ri = byId.get(String(i.requisitionItemId));
@@ -178,55 +187,114 @@ class TenderModel {
     });
     const totalAmount = lines.reduce((s, l) => s + l.totalPrice, 0);
 
-    const existing = await db.one(
-      'SELECT id FROM tender_submissions WHERE tender_id = $1 AND supplier_id = $2',
+    return db.withTransaction(async (tx) => {
+      const existing = await tx.one(
+        'SELECT id FROM tender_submissions WHERE tender_id = $1 AND supplier_id = $2 FOR UPDATE',
+        [tenderId, supplierId]
+      );
+      let submissionId = existing?.id;
+      if (existing) {
+        await tx.exec(
+          `UPDATE tender_submissions SET delivery_days = $2, notes = $3, total_amount = $4, technical_score = $5, updated_at = NOW()
+           WHERE id = $1`,
+          [existing.id, deliveryDays, notes || null, totalAmount, technicalScore]
+        );
+        await tx.exec('DELETE FROM tender_submission_items WHERE submission_id = $1', [existing.id]);
+        await tx.exec('DELETE FROM tender_submission_answers WHERE submission_id = $1', [existing.id]);
+      } else {
+        submissionId = (await tx.one(
+          `INSERT INTO tender_submissions (tender_id, supplier_id, delivery_days, notes, total_amount, technical_score)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+          [tenderId, supplierId, deliveryDays, notes || null, totalAmount, technicalScore]
+        )).id;
+      }
+      for (const l of lines) {
+        await tx.exec(
+          `INSERT INTO tender_submission_items (submission_id, requisition_item_id, unit_price, total_price, comment)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [submissionId, l.requisitionItemId, l.unitPrice, l.totalPrice, l.comment]
+        );
+      }
+      for (const a of answers) {
+        await tx.exec(
+          `INSERT INTO tender_submission_answers (submission_id, question_id, value, file_id, score)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [submissionId, a.questionId, a.value, a.fileId, a.score]
+        );
+      }
+      const orphans = await tx.select(
+        `DELETE FROM tender_answer_files f
+         WHERE f.tender_id = $1 AND f.supplier_id = $2
+           AND NOT EXISTS (SELECT 1 FROM tender_submission_answers a WHERE a.file_id = f.id)
+         RETURNING f.file_path`,
+        [tenderId, supplierId]
+      );
+      return { id: submissionId, totalAmount, updated: !!existing, orphanPaths: orphans.map(o => o.file_path) };
+    });
+  }
+
+  // ---------- Questions aux fournisseurs (migration 54) ----------
+
+  async getQuestions(tenderId) {
+    return db.select(
+      `SELECT id, position, label, help_text, answer_type, options, required, template_id
+       FROM tender_questions WHERE tender_id = $1 ORDER BY position, id`,
+      [tenderId]
+    );
+  }
+
+  /** Remplace les questions (questions normalisées par utils/tenderQuestions) ; modèle d'une autre entreprise ignoré */
+  async replaceQuestions(tx, tenderId, questions) {
+    await tx.exec('DELETE FROM tender_questions WHERE tender_id = $1', [tenderId]);
+    for (const [i, q] of questions.entries()) {
+      await tx.exec(
+        `INSERT INTO tender_questions (tender_id, position, label, help_text, answer_type, options, required, template_id)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7,
+                 (SELECT qt.id FROM tender_question_templates qt JOIN tenders tn ON tn.enterprise_id = qt.enterprise_id
+                  WHERE qt.id::text = $8 AND tn.id = $1))`,
+        [tenderId, i + 1, q.label, q.helpText, q.answerType, JSON.stringify(q.options), q.required, q.templateId]
+      );
+    }
+  }
+
+  /** Réponses des soumissions (document : nom du fichier) */
+  async getAnswers(submissionIds) {
+    if (!submissionIds.length) return [];
+    return db.select(
+      `SELECT a.submission_id, a.question_id, a.value, a.file_id, a.score::float8 AS score,
+              f.file_name, f.mime_type
+       FROM tender_submission_answers a
+       LEFT JOIN tender_answer_files f ON f.id = a.file_id
+       WHERE a.submission_id = ANY($1::int[])`,
+      [submissionIds]
+    );
+  }
+
+  /** Documents déposés par un fournisseur pour cet AO : Map questionId → Set(fileId) */
+  async answerFileIds(tenderId, supplierId) {
+    const rows = await db.select(
+      'SELECT id, question_id FROM tender_answer_files WHERE tender_id = $1 AND supplier_id = $2',
       [tenderId, supplierId]
     );
-
-    const transaction = db.transaction();
-    let submissionId = existing?.id;
-    if (existing) {
-      transaction.addUpdateQuery('tender_submissions', {
-        delivery_days: deliveryDays,
-        notes: notes || null,
-        total_amount: totalAmount,
-        updated_at: new Date()
-      }, 'id', existing.id);
-      transaction.addDeleteQuery('tender_submission_items', 'submission_id', existing.id);
-      for (const l of lines) {
-        transaction.addInsertQuery('tender_submission_items', {
-          submission_id: existing.id,
-          requisition_item_id: l.requisitionItemId,
-          unit_price: l.unitPrice,
-          total_price: l.totalPrice,
-          comment: l.comment
-        });
-      }
-      await transaction.execute();
-    } else {
-      const created = await db.one(
-        `INSERT INTO tender_submissions (tender_id, supplier_id, delivery_days, notes, total_amount)
-         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [tenderId, supplierId, deliveryDays, notes || null, totalAmount]
-      );
-      submissionId = created.id;
-      for (const l of lines) {
-        transaction.addInsertQuery('tender_submission_items', {
-          submission_id: submissionId,
-          requisition_item_id: l.requisitionItemId,
-          unit_price: l.unitPrice,
-          total_price: l.totalPrice,
-          comment: l.comment
-        });
-      }
-      try {
-        await transaction.execute();
-      } catch (e) {
-        await db.delete('tender_submissions', 'id', submissionId);
-        throw e;
-      }
+    const out = new Map();
+    for (const r of rows) {
+      const k = String(r.question_id);
+      if (!out.has(k)) out.set(k, new Set());
+      out.get(k).add(r.id);
     }
-    return { id: submissionId, totalAmount, updated: !!existing };
+    return out;
+  }
+
+  async addAnswerFile({ tenderId, questionId, supplierId, filePath, fileName, mimeType, fileSize, userId }) {
+    return db.one(
+      `INSERT INTO tender_answer_files (tender_id, question_id, supplier_id, file_path, file_name, mime_type, file_size, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, question_id, file_name, mime_type, file_size`,
+      [tenderId, questionId, supplierId, filePath, fileName, mimeType, fileSize, userId]
+    );
+  }
+
+  async getAnswerFile(tenderId, fileId) {
+    return db.one('SELECT * FROM tender_answer_files WHERE tender_id = $1 AND id::text = $2', [tenderId, String(fileId)]);
   }
 
   // ---------- Vue fournisseur ----------

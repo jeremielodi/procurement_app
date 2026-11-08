@@ -59,8 +59,22 @@ export const supplierPortalService = {
     const response = await api.get(`/supplier-portal/tenders/${id}`);
     return response.data;
   },
+  // Erreurs des réponses (code) traduites par l'écran
   submit: async (id, data) => {
-    const response = await api.put(`/supplier-portal/tenders/${id}/submission`, data);
+    const response = await api.put(`/supplier-portal/tenders/${id}/submission`, data, { skipErrorToast: true });
+    return response.data;
+  },
+  // Document de réponse à une question : déposé avant l'envoi de l'offre, cité ensuite par son id
+  uploadAnswerFile: async (id, questionId, file) => {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await api.post(`/supplier-portal/tenders/${id}/questions/${questionId}/file`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }, skipErrorToast: true,
+    });
+    return response.data;
+  },
+  getMyAnswerFile: async (id, fileId) => {
+    const response = await api.get(`/supplier-portal/tenders/${id}/answer-files/${fileId}`, { responseType: 'blob' });
     return response.data;
   },
   getSubmissionPdf: async (id) => {

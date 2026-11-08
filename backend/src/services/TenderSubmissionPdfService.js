@@ -49,6 +49,8 @@ class TenderSubmissionPdfService {
   .notes { margin-top: 12px; }
   .declaration { margin-top: 18px; color: #374151; line-height: 1.5; }
   .signature { display: flex; justify-content: space-between; margin-top: 24px; page-break-inside: avoid; }
+  .answers td.q { width: 45%; color: #374151; }
+  .answers .help { color: #6B7280; font-size: 9px; }
   .sig-box { width: 48%; border: 1px dashed #9CA3AF; border-radius: 6px; height: 120px; padding: 8px; color: #6B7280; }
 </style></head>
 <body>
@@ -115,6 +117,22 @@ class TenderSubmissionPdfService {
   <div class="box notes"><h3>{{L.remarks}}</h3>{{submission.notes}}</div>
   {{/if}}
 
+  {{#if answers.length}}
+  <h3 style="margin:16px 0 0;font-size:12px;color:#1E40AF">{{L.questionnaire}}</h3>
+  <table class="answers">
+    <thead><tr><th style="width:28px">{{L.no}}</th><th>{{L.question}}</th><th>{{L.answer}}</th></tr></thead>
+    <tbody>
+      {{#each answers}}
+      <tr>
+        <td>{{tsub_index1 @index}}</td>
+        <td class="q">{{this.label}}{{#if this.help}}<div class="help">{{this.help}}</div>{{/if}}</td>
+        <td>{{this.answer}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{/if}}
+
   <p class="declaration">
     {{{T.declaration}}}
   </p>
@@ -127,7 +145,7 @@ class TenderSubmissionPdfService {
   }
 
   /** lang : langue du document ('fr' par défaut) */
-  async generate({ tender, supplier, submission, items, lang }) {
+  async generate({ tender, supplier, submission, items, questions = [], lang }) {
     const priced = new Map(submission.items.map(i => [String(i.requisition_item_id), i]));
     const lines = items.map(item => {
       const p = priced.get(String(item.id));
@@ -154,8 +172,20 @@ class TenderSubmissionPdfService {
       // HTML (gras) : valeurs échappées avant interpolation, rendu avec {{{ }}}
       declaration: ctx.t(k + 'declaration', { supplier: Handlebars.escapeExpression(supplier.name), days: Handlebars.escapeExpression(submission.delivery_days) }),
     };
+    // Réponses aux questions de l'acheteur, en texte lisible (jamais les points du barème)
+    const answers = questions.map(q => {
+      const a = (submission.answers || []).find(x => String(x.question_id) === String(q.id));
+      let answer = ctx.t(k + 'noAnswer');
+      if (a) {
+        if (q.answer_type === 'YES_NO') answer = ctx.t(k + (a.value === 'YES' ? 'yes' : 'no'));
+        else if (q.answer_type === 'CHOICE') answer = q.options?.[Number(a.value)]?.label ?? answer;
+        else if (q.answer_type === 'FILE') answer = a.file_name ? ctx.t(k + 'attached', { name: a.file_name }) : answer;
+        else answer = a.value ?? answer;
+      }
+      return { label: q.label, help: q.help_text, answer };
+    });
     const html = Handlebars.compile(this.getTemplate())({
-      tender, supplier, submission, lines, ...ctx, T,
+      tender, supplier, submission, lines, answers, ...ctx, T,
       currency,
       logo: await logoDataUri(supplier.logo_path) // data URI : pas de requête réseau depuis Chromium
     });

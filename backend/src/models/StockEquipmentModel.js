@@ -8,6 +8,7 @@ const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const stockModel = require('./StockModel');
 const warehouseModel = require('./WarehouseModel');
+const { SEGMENT_RE } = require('../utils/assetTags');
 
 const EPS = 1e-9;
 const CONDITIONS = ['GOOD', 'DAMAGED', 'LOST'];
@@ -229,7 +230,7 @@ class StockEquipmentModel {
     const total = (await db.one(`SELECT COUNT(*)::int AS n ${from}`, params)).n;
     params.push(Math.min(parseInt(limit) || 100, 500), parseInt(offset) || 0);
     const rows = await db.select(
-      `SELECT un.id, un.serial_number, un.asset_tag, un.status, un.condition, un.notes, un.updated_at,
+      `SELECT un.id, un.serial_number, un.asset_tag, un.status, un.condition, un.notes, un.updated_at, un.acquisition_date, un.tag_project_code,
               it.id AS stock_item_id, it.code AS item_code, it.name AS item_name,
               w.id AS warehouse_id, w.name AS warehouse_name,
               h.id AS holder_id, TRIM(COALESCE(h.first_name, '') || ' ' || COALESCE(h.last_name, '')) AS holder_name, h.email AS holder_email,
@@ -303,7 +304,7 @@ class StockEquipmentModel {
    * Mise à jour d'une unité : n° d'inventaire, notes, état (GOOD / DAMAGED, en stock uniquement)
    * ou réforme (RETIRED, en stock uniquement → mouvement ADJUSTMENT_OUT)
    */
-  async updateUnit(id, { assetTag, notes, condition, retire, reason }, { userId }) {
+  async updateUnit(id, { assetTag, notes, condition, retire, reason, acquisitionDate, tagProjectCode }, { userId }) {
     return db.withTransaction(async (tx) => {
       const unit = await tx.one('SELECT * FROM stock_units WHERE id = $1 FOR UPDATE', [id]);
       if (!unit || unit.status === 'VOID') throw fail(404, 'NOT_FOUND', 'Équipement introuvable');
@@ -318,6 +319,17 @@ class StockEquipmentModel {
       const set = (col, value) => { params.push(value); fields.push(`${col} = $${params.length}`); };
       if (assetTag !== undefined) set('asset_tag', String(assetTag || '').trim() || null);
       if (notes !== undefined) set('notes', String(notes || '').slice(0, 2000) || null);
+      // Codification du n° d'inventaire (migration 57) : année d'acquisition et segment projet du TAG
+      if (acquisitionDate !== undefined) {
+        const d = acquisitionDate ? String(acquisitionDate).slice(0, 10) : null;
+        if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) throw fail(400, 'DATE_INVALID', 'Date d\'acquisition invalide');
+        set('acquisition_date', d);
+      }
+      if (tagProjectCode !== undefined) {
+        const code = String(tagProjectCode || '').trim().toUpperCase() || null;
+        if (code && !SEGMENT_RE.test(code)) throw fail(400, 'TAG_PROJECT_INVALID', 'Segment projet invalide (lettres et chiffres, séparés par des tirets)');
+        set('tag_project_code', code);
+      }
       if (condition !== undefined) {
         if (!['GOOD', 'DAMAGED'].includes(condition)) throw fail(400, 'INVALID_CONDITION', 'État invalide');
         set('condition', condition);

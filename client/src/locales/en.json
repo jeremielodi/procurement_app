@@ -3278,7 +3278,9 @@
       "trackSerialsHint": "At every receipt (goods receipt note), a serial number will be required for each accepted unit (one per line); the asset tag is assigned automatically (INVT-YYYY-NNNNN, or the project's initial inventory code). Equipment already in stock: Equipment › \"Register existing equipment\".",
       "restockPlanning": "Replenish (forecast)",
       "leadTimeDays": "Lead time (days)",
-      "leadTimeHint": "Empty = company lead time"
+      "leadTimeHint": "Empty = company lead time",
+      "assetCategory": "Tag category (asset tag)",
+      "assetCategoryHint": "2 to 5 letter code in equipment asset tags (e.g. IMA-MIHR-LAP-2026-001)."
     },
     "mv": {
       "title": "Stock movements",
@@ -3705,7 +3707,14 @@
       "updated": "Equipment updated",
       "truncated": "{{shown}} shown out of {{total}}: refine the search",
       "departmentHolder": "Department {{name}}",
-      "serialsPlaceholder": "One per line: serial number ; asset tag (optional: assigned automatically if empty)\nE.g. 5CD1234XYZ"
+      "serialsPlaceholder": "One per line: serial number ; asset tag (optional: assigned automatically if empty)\nE.g. 5CD1234XYZ",
+      "tagTitle": "Asset tag codification",
+      "acquisitionDate": "Acquisition date",
+      "tagProject": "Tag project segment",
+      "regenerate": "Recalculate the asset tag",
+      "regenerateConfirm": "Replace tag {{tag}} with a new one following the codification? Remember to change the label.",
+      "regenerated": "Asset tag recalculated",
+      "tagHint": "The tag follows the \"My company\" codification; empty segment = funding project's inventory prefix."
     },
     "count": {
       "title": "Stock counts",
@@ -3909,7 +3918,8 @@
         "currency": "Currency",
         "lotNumber": "Lot number",
         "expiryDate": "Expiry date",
-        "project": "Project code"
+        "project": "Project code",
+        "assetCategory": "Tag category"
       },
       "err": {
         "CODE_REQUIRED": "empty code",
@@ -3942,7 +3952,8 @@
         "OPENING_EXISTS": "the item already has stock or movements in warehouse {{warehouse}}: use a stock count or an adjustment",
         "LOT_EXPIRY_MISMATCH": "lot {{lot}} already exists with expiry date {{expiry}}",
         "DUPLICATE_OPENING": "same item, warehouse and lot as row {{line}}",
-        "PROJECT_UNKNOWN": "Unknown project: \"{{value}}\" (code of a company project)"
+        "PROJECT_UNKNOWN": "Unknown project: \"{{value}}\" (code of a company project)",
+        "ASSET_CATEGORY_INVALID": "invalid tag category \"{{value}}\" (2 to 5 letters or digits)"
       },
       "fileErr": {
         "UNREADABLE": "Unreadable file: make sure it is an .xlsx or .csv file",
@@ -4068,7 +4079,9 @@
         "condition": "Condition",
         "unitCost": "Unit cost",
         "currency": "Currency",
-        "notes": "Notes"
+        "notes": "Notes",
+        "tagProject": "Tag project segment",
+        "acquisitionDate": "Acquisition date"
       },
       "rules": "Serial number required for a serial-tracked item (unique per item); empty asset tag = assigned automatically; condition Good or Damaged. Assets enter stock at the given warehouse.",
       "analyzing": "Analysing the file…",
@@ -4127,7 +4140,43 @@
         "TAG_NOT_TRACKED": "item \"{{value}}\" has no serial numbers: no asset tag",
         "QUANTITY_SERIAL": "one unit per row: quantity empty or 1 (\"{{value}}\")",
         "QUANTITY_INVALID": "invalid quantity \"{{value}}\"",
-        "OPENING_EXISTS": "item \"{{value}}\": stock already exists in warehouse {{warehouse}} (a new import would double it)"
+        "OPENING_EXISTS": "item \"{{value}}\": stock already exists in warehouse {{warehouse}} (a new import would double it)",
+        "TAG_PROJECT_INVALID": "invalid project segment \"{{value}}\" (letters and digits separated by hyphens)",
+        "DATE_INVALID": "invalid acquisition date \"{{value}}\" (YYYY-MM-DD, DD/MM/YYYY or year)",
+        "UNIT_REQUIRED": "item code and serial number required",
+        "UNIT_NOT_FOUND": "equipment \"{{value}}\" not found for item {{item}}",
+        "ITEM_CATEGORY_MISSING": "item \"{{value}}\" has no tag category (item record)"
+      }
+    },
+    "retag": {
+      "button": "Re-tag (Excel / CSV)",
+      "title": "Recalculate asset tags",
+      "format": "Codification: ORGANISATION-PROJECT-CATEGORY-YEAR-NNN (e.g. IMA-MIHR-LAP-2026-001)",
+      "hint": "File: Item code and Serial number (required), Acquisition date and Tag project segment. New tags are assigned in file order; the former one is added to the equipment notes.",
+      "confirm": "Re-tag",
+      "confirmN_one": "Re-tag {{count}} unit",
+      "confirmN_other": "Re-tag {{count}} units",
+      "working": "Re-tagging…",
+      "done_one": "{{count}} asset tag recalculated",
+      "done_other": "{{count}} asset tags recalculated",
+      "download": "Download the mapping",
+      "newPattern": "New tag (pattern)",
+      "fileErr": {
+        "UNREADABLE": "Unreadable file: use a .xlsx or .csv file",
+        "EMPTY": "The file contains no equipment",
+        "MISSING_COLUMNS": "\"Item code\" and \"Serial number\" columns are required",
+        "TOO_MANY_ROWS": "At most {{max}} rows per import",
+        "NOTHING_TO_IMPORT": "No valid row",
+        "NO_FILE": "No file received",
+        "ASSET_TAG_ORG_REQUIRED": "First set the organisation prefix in \"My company\" › Asset tag codification"
+      },
+      "csv": {
+        "item": "Item code",
+        "name": "Item",
+        "serial": "Serial number",
+        "oldTag": "Former asset tag",
+        "newTag": "New asset tag",
+        "file": "asset-tag-mapping"
       }
     }
   },
@@ -5652,6 +5701,27 @@
           },
           {
             "type": "h",
+            "text": "Asset tag codification (TAG)"
+          },
+          {
+            "type": "p",
+            "text": "Each piece of equipment carries a tag of the form ORGANISATION-PROJECT-CATEGORY-YEAR-NNN, for example IMA-MIHR-LAP-2026-001. The sequence number restarts at 001 for each project, category and year."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "My company › \"Asset tag codification\": enter the organisation prefix (e.g. IMA). Without a prefix, the former codification still applies.",
+              "On each serial-tracked item record, fill in the \"Tag category\" (VEH, MOT, TAB, LAP, MON, IMP, PRO, GEN, REF, CLM, COM, UPS, CAM, TEL, SCO…) — also via the \"Tag category\" column of the catalogue import.",
+              "The PROJECT segment is the equipment's \"tag project segment\" when set, otherwise the funding project's inventory prefix. The YEAR is the acquisition year, otherwise the registration year.",
+              "Equipment already registered: Stock › Equipment › \"Re-tag (Excel / CSV)\" with Item code, Serial number, Acquisition date and Tag project segment. Check the preview, confirm, then download the old / new tag mapping to redo the labels."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "The former tag is kept in the equipment notes. For a single device: equipment record › \"Recalculate the asset tag\"."
+          },
+          {
+            "type": "h",
             "text": "Recovering equipment"
           },
           {
@@ -6349,7 +6419,8 @@
       "STOCK_REQUEST_VALIDATED": "Store request approved",
       "STOCK_REQUEST_REJECTED": "Store request rejected",
       "STOCK_REQUEST_CLOSED": "Store request closed",
-      "STOCK_UNITS_IMPORTED": "Existing assets imported (Excel / CSV)"
+      "STOCK_UNITS_IMPORTED": "Existing assets imported (Excel / CSV)",
+      "STOCK_UNITS_RETAGGED": "Asset tags recalculated (codification)"
     },
     "groups": {
       "all": "All events",
@@ -7037,5 +7108,58 @@
     "validation": "Have each request approved before it is fulfilled",
     "validationHint": "Approver: the project manager (or acting manager), otherwise the department head, otherwise an administrator — never the requester. They can reduce the quantities.",
     "saved": "Option saved"
+  },
+  "assetCategories": {
+    "VEH": "Vehicle",
+    "MOT": "Motorbike",
+    "TAB": "Tablet",
+    "LAP": "Laptop",
+    "MON": "Monitor",
+    "IMP": "Printer",
+    "PRO": "Projector",
+    "GEN": "Generator",
+    "REF": "Refrigerator",
+    "CLM": "Air conditioner",
+    "COM": "Communication equipment",
+    "UPS": "UPS",
+    "CAM": "Camera",
+    "TEL": "Phone",
+    "SCO": "Scanner",
+    "DSK": "Desktop computer (proposed)",
+    "DSQ": "Hard drive / storage (proposed)",
+    "AUD": "Audio, speaker (proposed)",
+    "TVS": "Television (proposed)",
+    "ELM": "Household appliance (proposed)"
+  },
+  "assetTagSettings": {
+    "title": "Asset tag codification",
+    "hint": "Physical marking (TAG) of each piece of equipment: ORGANISATION – PROJECT – CATEGORY – YEAR – SEQUENCE NUMBER. Empty prefix = former codification (project prefix-YYYY-NNNNN).",
+    "org": "Organisation prefix",
+    "example": "Example",
+    "saved": "Codification saved",
+    "segment": "Segment",
+    "meaning": "Meaning",
+    "segments": {
+      "org": {
+        "label": "Organisation",
+        "text": "Prefix above (e.g. IMA)"
+      },
+      "project": {
+        "label": "Project",
+        "text": "Project that funded the acquisition: the equipment's segment, otherwise the funding project's \"inventory prefix\" (project record)"
+      },
+      "category": {
+        "label": "Category",
+        "text": "Item tag category code (item record: LAP, TAB, VEH…)"
+      },
+      "year": {
+        "label": "Year",
+        "text": "Year the equipment was acquired, otherwise registration year"
+      },
+      "number": {
+        "label": "Sequence number",
+        "text": "3 digits, restarts at 001 for each project, category and year"
+      }
+    }
   }
 }

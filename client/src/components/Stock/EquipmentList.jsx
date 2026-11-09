@@ -3,7 +3,7 @@
 // enregistrement du parc existant (saisie, ou import Excel / CSV : ImportStockUnitsModal), fiche (historique, état, réforme).
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Laptop, Plus, RefreshCw, Search, History, FileUp } from 'lucide-react';
+import { Laptop, Plus, RefreshCw, Search, History, FileUp, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
 import { equipmentService, stockItemService, warehouseService } from '../../services/stockService';
@@ -14,6 +14,7 @@ import SearchSelect from '../Common/SearchSelect';
 import SerialNumbersHelp from './SerialNumbersHelp';
 import FundingProjectSelect from './FundingProjectSelect';
 import ImportStockUnitsModal from './ImportStockUnitsModal';
+import RetagUnitsModal from './RetagUnitsModal';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const STATUS_CLS = { IN_STOCK: 'bg-green-100 text-green-800', ASSIGNED: 'bg-blue-100 text-blue-800', IN_TRANSIT: 'bg-violet-100 text-violet-800', LOST: 'bg-red-100 text-red-700', RETIRED: 'bg-gray-200 text-gray-600' };
@@ -21,6 +22,31 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(getLocale()) : '—')
 
 export function UnitStatusBadge({ status }) {
   return <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_CLS[status] || 'bg-gray-100'}`}>{t(`stock.equipment.status.${status}`)}</span>;
+}
+
+/** Codification du n° d'inventaire (ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN) : date d'acquisition, segment projet, recalcul */
+function TagCodification({ unit, onSave }) {
+  const [date, setDate] = useState(unit.acquisition_date || '');
+  const [segment, setSegment] = useState(unit.tag_project_code || '');
+  useEffect(() => { setDate(unit.acquisition_date || ''); setSegment(unit.tag_project_code || ''); }, [unit.id, unit.acquisition_date, unit.tag_project_code]);
+  const payload = { acquisitionDate: date || null, tagProjectCode: segment.trim().toUpperCase() || null };
+  return (
+    <div className="rounded-lg border border-gray-200 p-3" data-testid="unit-tag-codification">
+      <div className="mb-2 font-medium text-gray-800">{t('stock.equipment.tagTitle')}</div>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-xs text-gray-600">{t('stock.equipment.acquisitionDate')}
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1 block w-44 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" data-testid="unit-acquisition-date" />
+        </label>
+        <label className="text-xs text-gray-600">{t('stock.equipment.tagProject')}
+          <input value={segment} onChange={e => setSegment(e.target.value.toUpperCase())} maxLength={20} placeholder="MIHR" className="mt-1 block w-40 rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" data-testid="unit-tag-project" />
+        </label>
+        <button type="button" onClick={() => onSave(payload, t('stock.equipment.updated'))} className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50">{t('common.save')}</button>
+        <button type="button" onClick={() => { if (window.confirm(t('stock.equipment.regenerateConfirm', { tag: unit.asset_tag || '—' }))) onSave({ ...payload, assetTag: '' }, t('stock.equipment.regenerated')); }}
+          className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50" data-testid="unit-regenerate-tag">{t('stock.equipment.regenerate')}</button>
+      </div>
+      <p className="mt-1 text-xs text-gray-500">{t('stock.equipment.tagHint')}</p>
+    </div>
+  );
 }
 
 export default function EquipmentList() {
@@ -34,6 +60,7 @@ export default function EquipmentList() {
   const [loading, setLoading] = useState(true);
   const [register, setRegister] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [retagging, setRetagging] = useState(false);
   const [saving, setSaving] = useState(false);
   const [detail, setDetail] = useState(null);
 
@@ -93,6 +120,11 @@ export default function EquipmentList() {
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="rounded-lg border border-gray-300 p-2 hover:bg-gray-50" title={t('common.refresh')} aria-label={t('common.refresh')}><RefreshCw size={16} /></button>
+          {hasPermission('MANAGE_STOCK_ITEMS') && (
+            <button onClick={() => setRetagging(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" data-testid="unit-retag">
+              <Tag size={16} /> {t('stock.retag.button')}
+            </button>
+          )}
           {hasPermission('MANAGE_STOCK_ITEMS') && (
             <button onClick={() => setImporting(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" data-testid="unit-import">
               <FileUp size={16} /> {t('stock.unitImport.button')}
@@ -211,6 +243,7 @@ export default function EquipmentList() {
               <span className="text-gray-500">{detail.status === 'ASSIGNED' ? t('stock.equipment.heldBy', { name: detail.department_name ? t('stock.equipment.departmentHolder', { name: detail.department_name }) : detail.holder_name }) : detail.warehouse_name}</span>
             </div>
             {detail.notes && <p className="rounded bg-gray-50 p-2 text-gray-700">{detail.notes}</p>}
+            {hasPermission('MANAGE_STOCK_ITEMS') && <TagCodification unit={detail} onSave={updateUnit} />}
             {detail.status === 'IN_STOCK' && hasPermission('ISSUE_STOCK') && (
               <div className="flex flex-wrap gap-2">
                 {detail.condition === 'GOOD'
@@ -227,6 +260,7 @@ export default function EquipmentList() {
         )}
       </Modal>
       <ImportStockUnitsModal isOpen={importing} onClose={() => setImporting(false)} onImported={load} />
+      <RetagUnitsModal isOpen={retagging} onClose={() => setRetagging(false)} onDone={load} />
     </div>
   );
 }

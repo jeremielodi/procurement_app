@@ -134,6 +134,8 @@ function itemFields(body) {
     trackSerials: bool(body.trackSerials),
     minQuantity: numOrNull(body.minQuantity),
     leadTimeDays: numOrNull(body.leadTimeDays),
+    // Code catégorie du n° d'inventaire (migration 57) : vide = aucun
+    assetCategory: body.assetCategory === undefined ? undefined : (String(body.assetCategory || '').trim().toUpperCase() || null),
     reorderQuantity: numOrNull(body.reorderQuantity),
     isActive: bool(body.isActive),
   };
@@ -151,6 +153,9 @@ async function validateItem(req, fields, existing = null) {
   delete fields.unitText;
   if (fields.minQuantity !== undefined && fields.minQuantity !== null && !(fields.minQuantity >= 0)) return 'Stock minimum invalide';
   if (fields.reorderQuantity !== undefined && fields.reorderQuantity !== null && !(fields.reorderQuantity > 0)) return 'Quantité de réapprovisionnement invalide';
+  if (fields.assetCategory && !/^[A-Z0-9]{2,5}$/.test(fields.assetCategory)) {
+    return { message: 'Catégorie TAG invalide (2 à 5 lettres ou chiffres)', code: 'ASSET_CATEGORY_INVALID' };
+  }
   if (fields.leadTimeDays !== undefined && fields.leadTimeDays !== null && !(Number.isInteger(fields.leadTimeDays) && fields.leadTimeDays >= 0 && fields.leadTimeDays <= 365)) {
     return { message: 'Délai de livraison invalide (0 à 365 jours)', code: 'LEAD_TIME_INVALID' };
   }

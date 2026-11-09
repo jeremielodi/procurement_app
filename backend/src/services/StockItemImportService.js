@@ -28,6 +28,8 @@ const FIELDS = [
   { key: 'code', required: true }, { key: 'name', required: true }, { key: 'unit', required: true },
   { key: 'category' }, { key: 'description' }, { key: 'stockable', bool: true }, { key: 'trackLots', bool: true },
   { key: 'trackExpiry', bool: true }, { key: 'trackSerials', bool: true }, { key: 'minQuantity' }, { key: 'reorderQuantity' },
+  // Code catégorie du n° d'inventaire des équipements (migration 57 : IMA-PROJET-LAP-2026-001)
+  { key: 'assetCategory' },
   { key: 'warehouse', opening: true }, { key: 'openingQuantity', opening: true }, { key: 'unitCost', opening: true },
   { key: 'currency', opening: true }, { key: 'lotNumber', opening: true }, { key: 'expiryDate', opening: true },
   // Projet qui a financé le stock initial (facultatif, migration 28)
@@ -46,6 +48,7 @@ const ALIASES = {
   trackExpiry: ['suivi de peremption', 'suivi peremption', 'peremption suivie', 'track expiry', 'expiry tracking'],
   trackSerials: ['suivi par n° de serie', 'n° de serie', 'numeros de serie', 'track serials', 'serial tracking', 'serial numbers'],
   minQuantity: ['stock minimum', 'minimum', 'stock min', 'min', 'minimum stock', 'min quantity'],
+  assetCategory: ['categorie tag', 'code categorie tag', "categorie d'actif", 'code tag', 'asset category', 'tag category'],
   reorderQuantity: ['quantite de reapprovisionnement', 'qte reappro', 'reapprovisionnement', 'reorder quantity', 'reorder qty'],
   warehouse: ['code depot', 'depot', 'warehouse', 'warehouse code'],
   openingQuantity: ['quantite initiale', 'stock initial', 'quantite en stock', 'qte initiale', 'opening quantity', 'initial quantity', 'opening stock'],
@@ -68,6 +71,7 @@ const columnAliases = () => {
 const TRUE = ['oui', 'o', 'yes', 'y', 'x', '1', 'vrai', 'true'];
 const FALSE = ['non', 'n', 'no', '0', 'faux', 'false', '-'];
 const CODE_RE = /^[A-Z0-9_.-]{1,50}$/;
+const ASSET_CATEGORY_RE = /^[A-Z0-9]{2,5}$/;
 
 function fail(line, code, params = {}) { return { line, code, params }; }
 
@@ -96,7 +100,7 @@ async function loadContext(userId, codes) {
   const items = await db.select(
     `SELECT si.id, si.code, si.name, si.unit, si.unit_id, si.description, si.category_id, si.is_stockable, si.track_lots,
             si.track_expiry, si.track_serials, si.min_quantity::float8 AS min_quantity,
-            si.reorder_quantity::float8 AS reorder_quantity, si.enterprise_id
+            si.reorder_quantity::float8 AS reorder_quantity, si.asset_category, si.enterprise_id
      FROM stock_items si WHERE 1=1${scope} AND UPPER(si.code) = ANY($${params.length}::text[])`,
     params
   );
@@ -220,6 +224,12 @@ async function analyze(file, { userId }) {
       else given[key] = n;
     }
 
+    const assetCategory = text(r, 'assetCategory').toUpperCase();
+    if (assetCategory) {
+      if (!ASSET_CATEGORY_RE.test(assetCategory)) problems.push(fail(line, 'ASSET_CATEGORY_INVALID', { value: assetCategory }));
+      else given.assetCategory = assetCategory;
+    }
+
     // ---- Fiche article : première ligne du code, ou cohérence avec elle
     let entry = itemByCode.get(code);
     if (entry) {
@@ -264,7 +274,7 @@ async function analyze(file, { userId }) {
       const target = {
         name: given.name, unit_id: given.unit, description: given.description, category_id: given.category?.id,
         is_stockable: given.stockable, track_lots: given.trackLots, track_expiry: given.trackExpiry, track_serials: given.trackSerials,
-        min_quantity: given.minQuantity, reorder_quantity: given.reorderQuantity,
+        min_quantity: given.minQuantity, reorder_quantity: given.reorderQuantity, asset_category: given.assetCategory,
       };
       const fields = {};
       for (const [k, v] of Object.entries(target)) {
@@ -440,9 +450,9 @@ async function template({ userId, lang, format = 'xlsx' }) {
   const headers = FIELDS.map(f => T(`stockImport.headers.${f.key}`));
   // Exemples : consommable avec stock initial, médicament suivi par lot / péremption, équipement (sans stock initial)
   const examples = [
-    ['EX-PAPER-A4', T('stockImport.example.paper'), T('stockImport.example.paperUnit'), stockCat?.code || '', '', yes, no, no, no, 20, 50, wh, 120, 4.5, '', '', '', prj],
-    ['EX-PARACETAMOL', T('stockImport.example.drug'), T('stockImport.example.drugUnit'), stockCat?.code || '', '', yes, yes, yes, no, 10, 40, wh, 30, 2.1, '', 'L2026-01', '2027-06-30', ''],
-    ['EX-LAPTOP', T('stockImport.example.laptop'), T('stockImport.example.laptopUnit'), stockCat?.code || '', T('stockImport.example.laptopDesc'), yes, no, no, yes, '', '', '', '', '', '', '', '', ''],
+    ['EX-PAPER-A4', T('stockImport.example.paper'), T('stockImport.example.paperUnit'), stockCat?.code || '', '', yes, no, no, no, 20, 50, '', wh, 120, 4.5, '', '', '', prj],
+    ['EX-PARACETAMOL', T('stockImport.example.drug'), T('stockImport.example.drugUnit'), stockCat?.code || '', '', yes, yes, yes, no, 10, 40, '', wh, 30, 2.1, '', 'L2026-01', '2027-06-30', ''],
+    ['EX-LAPTOP', T('stockImport.example.laptop'), T('stockImport.example.laptopUnit'), stockCat?.code || '', T('stockImport.example.laptopDesc'), yes, no, no, yes, '', '', 'LAP', '', '', '', '', '', '', ''],
   ];
 
   if (format === 'csv') {

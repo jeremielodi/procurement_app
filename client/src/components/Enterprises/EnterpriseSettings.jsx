@@ -6,6 +6,7 @@ import DailyReportSettings from './DailyReportSettings';
 import ApprovalPolicySettings from './ApprovalPolicySettings';
 import StockPlanningSettings from './StockPlanningSettings';
 import StockRequestSettings from './StockRequestSettings';
+import AssetTagSettings from './AssetTagSettings';
 import { enterpriseService } from '../../services/enterpriseService';
 import { useEnterprise } from '../../contexts/EnterpriseContext';
 import { t } from '../../i18n';
@@ -39,6 +40,7 @@ export default function EnterpriseSettings() {
       <ApprovalPolicySettings />
       <StockPlanningSettings />
       <StockRequestSettings />
+      <AssetTagSettings />
       <DailyReportSettings />
     </div>
   );

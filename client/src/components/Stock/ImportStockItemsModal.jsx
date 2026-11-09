@@ -9,13 +9,14 @@ import Modal from '../Common/Modal';
 import { stockItemService } from '../../services/stockService';
 import { t, getLocale } from '../../i18n';
 
-const ITEM_COLUMNS = ['code', 'name', 'unit', 'category', 'description', 'stockable', 'trackLots', 'trackExpiry', 'trackSerials', 'minQuantity', 'reorderQuantity'];
+const ITEM_COLUMNS = ['code', 'name', 'unit', 'category', 'description', 'stockable', 'trackLots', 'trackExpiry', 'trackSerials', 'minQuantity', 'reorderQuantity', 'assetCategory'];
 const OPENING_COLUMNS = ['warehouse', 'openingQuantity', 'unitCost', 'currency', 'lotNumber', 'expiryDate'];
 const REQUIRED = ['code', 'name', 'unit'];
 // Champs SQL modifiés → colonne du modèle
 const FIELD_COLUMN = {
   name: 'name', unit: 'unit', description: 'description', category_id: 'category', is_stockable: 'stockable', track_lots: 'trackLots',
   track_expiry: 'trackExpiry', track_serials: 'trackSerials', min_quantity: 'minQuantity', reorder_quantity: 'reorderQuantity',
+  asset_category: 'assetCategory',
 };
 const ACTION_STYLE = {
   CREATE: 'bg-green-100 text-green-800', UPDATE: 'bg-blue-100 text-blue-800', UNCHANGED: 'bg-gray-100 text-gray-600',

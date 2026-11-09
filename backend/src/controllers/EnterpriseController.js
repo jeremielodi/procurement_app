@@ -13,6 +13,7 @@ const { saveLogo, removeLogo, sendLogo } = require('../utils/logoUpload');
 const dailyReportService = require('../services/DailyRequisitionReportService');
 const approvalPolicy = require('../utils/approvalPolicy');
 const stockPlanning = require('../services/StockPlanningService');
+const assetTags = require('../utils/assetTags');
 
 // Journal d'audit : champs suivis d'une entreprise
 const ENTERPRISE_FIELDS = ['name', 'code', 'address', 'phone', 'email', 'website', 'tax_id', 'registration_number', 'po_terms', 'currency_id', 'is_active'];
@@ -245,6 +246,41 @@ class EnterpriseController {
       res.json({ success: true, data: { ...after, defaults: stockPlanning.DEFAULTS } });
     } catch (error) {
       if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * GET /enterprises/current/asset-tags — codification des n° d'inventaire (migration 57)
+   * → { org, example, categories, proposed }
+   */
+  async getAssetTags(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      const row = await db.one('SELECT asset_tag_org FROM enterprise WHERE id = $1', [req.enterpriseId]);
+      const org = row?.asset_tag_org || null;
+      res.json({ success: true, data: { org, example: assetTags.example(org), categories: assetTags.CATEGORIES, proposed: assetTags.PROPOSED } });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /** PUT /enterprises/current/asset-tags { org } — vide = ancienne codification ; tracé ENTERPRISE_UPDATED */
+  async setAssetTags(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      const org = assetTags.parseOrg(req.body?.org);
+      const before = await db.one('SELECT name, asset_tag_org FROM enterprise WHERE id = $1', [req.enterpriseId]);
+      await db.exec('UPDATE enterprise SET asset_tag_org = $2, last_update = CURRENT_TIMESTAMP WHERE id = $1', [req.enterpriseId, org]);
+      if ((before?.asset_tag_org || null) !== org) {
+        await audit(req, AUDIT.ENTERPRISE_UPDATED, {
+          entity: { type: 'enterprise', id: req.enterpriseId, label: before?.name },
+          oldValue: { asset_tag_org: before?.asset_tag_org || null }, details: { asset_tag_org: org },
+        });
+      }
+      return this.getAssetTags(req, res);
+    } catch (error) {
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message });
       res.status(500).json({ success: false, message: error.message });
     }
   }

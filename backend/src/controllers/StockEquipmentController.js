@@ -167,12 +167,40 @@ module.exports = {
     }
   },
 
-  /** PUT /stock-units/:id { assetTag, notes, condition, retire, reason } */
+  /**
+   * POST /stock-units/retag (multipart : file ; confirm=1 pour écrire) — recodification des n° d'inventaire (migration 57) :
+   * sans confirm = aperçu ; avec confirm = nouveaux n° (ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN) en une transaction
+   */
+  async retagUnits(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(403).json({ success: false, message: 'Réservé aux utilisateurs d\'une entreprise' });
+      if (!req.file) return res.status(400).json({ success: false, code: 'NO_FILE', message: 'Aucun fichier reçu' });
+      if (!['1', 'true'].includes(String(req.body?.confirm ?? req.query.confirm))) {
+        return res.json({ success: true, data: await unitImportService.retagPreview(req.file) });
+      }
+      const result = await unitImportService.retagApply(req.file);
+      await audit(req, AUDIT.STOCK_UNITS_RETAGGED, {
+        entity: { type: 'stock_units', id: null, label: req.file.originalname },
+        details: { file: req.file.originalname, units: result.units, skippedLines: result.skipped,
+          sample: result.changes.slice(0, 20).map(c => ({ serial: c.serial, from: c.oldTag, to: c.newTag })) },
+        enterpriseId: req.enterpriseId,
+      });
+      res.json({ success: true, data: result, message: 'N° d\'inventaire recalculés' });
+    } catch (error) {
+      if (error.status && error.status < 500) {
+        return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
+      }
+      return sendError(res, error, 'Erreur lors de la recodification');
+    }
+  },
+
+  /** PUT /stock-units/:id { assetTag, notes, condition, retire, reason, acquisitionDate, tagProjectCode } */
   async updateUnit(req, res) {
     try {
       const b = req.body || {};
       await equipmentModel.updateUnit(req.params.id, {
         assetTag: b.assetTag, notes: b.notes, condition: b.condition, retire: b.retire === true, reason: b.reason,
+        acquisitionDate: b.acquisitionDate, tagProjectCode: b.tagProjectCode,
       }, { userId: req.user.id });
       res.json({ success: true, data: await equipmentModel.getUnit(req.params.id), message: 'Équipement mis à jour' });
     } catch (error) { return sendError(res, error, 'Erreur lors de la mise à jour de l\'équipement'); }

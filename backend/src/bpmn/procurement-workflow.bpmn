@@ -463,10 +463,13 @@
           <dc:Bounds x="1178" y="140" width="84" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_ProjectManagerApproval_di" bpmnElement="Activity_ProjectManagerApproval">
+        <dc:Bounds x="760" y="395" width="100" height="80" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_ApprovalDecision_di" bpmnElement="Gateway_ApprovalDecision" isMarkerVisible="true">
         <dc:Bounds x="1075" y="410" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1135" y="428" width="54" height="14" />
+          <dc:Bounds x="1123" y="473" width="54" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_DetermineType_di" bpmnElement="Activity_DetermineType">
@@ -524,15 +527,6 @@
           <dc:Bounds x="1525" y="140" width="90" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_CloseRequisition_di" bpmnElement="Task_CloseRequisition">
-        <dc:Bounds x="4630" y="237" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Gateway_SplitDecision_di" bpmnElement="Gateway_SplitDecision" isMarkerVisible="true">
-        <dc:Bounds x="2045" y="785" width="50" height="50" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_AllocateSuppliers_di" bpmnElement="Activity_AllocateSuppliers">
-        <dc:Bounds x="2140" y="960" width="100" height="80" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="SubProcess_SupplierOrder_di" bpmnElement="SubProcess_SupplierOrder" isExpanded="true">
         <dc:Bounds x="2360" y="47" width="2180" height="1215" />
         <bpmndi:BPMNLabel />
@@ -546,6 +540,24 @@
       <bpmndi:BPMNShape id="Activity_CreatePO_di" bpmnElement="Activity_CreatePO">
         <dc:Bounds x="2460" y="762" width="100" height="80" />
         <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_POReview_di" bpmnElement="Activity_POReview">
+        <dc:Bounds x="2460" y="592" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_POReviewDecision_di" bpmnElement="Gateway_POReviewDecision" isMarkerVisible="true">
+        <dc:Bounds x="2485" y="472" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_POApprovalLevel_di" bpmnElement="Gateway_POApprovalLevel" isMarkerVisible="true">
+        <dc:Bounds x="2575" y="402" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_POApprovalN1_di" bpmnElement="Activity_POApprovalN1">
+        <dc:Bounds x="2665" y="277" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_POApprovalN2_di" bpmnElement="Activity_POApprovalN2">
+        <dc:Bounds x="2665" y="387" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_POApprovalN3_di" bpmnElement="Activity_POApprovalN3">
+        <dc:Bounds x="2665" y="497" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_POApprovalDecision_di" bpmnElement="Gateway_POApprovalDecision" isMarkerVisible="true">
         <dc:Bounds x="2855" y="402" width="50" height="50" />
@@ -629,9 +641,59 @@
           <dc:Bounds x="4480" y="287" width="41" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_LotStart_CreatePO_di" bpmnElement="Flow_LotStart_CreatePO">
-        <di:waypoint x="2428" y="802" />
-        <di:waypoint x="2460" y="802" />
+      <bpmndi:BPMNEdge id="Flow_CreatePO_POApproval_di" bpmnElement="Flow_CreatePO_POApproval">
+        <di:waypoint x="2510" y="762" />
+        <di:waypoint x="2510" y="672" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_POReview_Gateway_di" bpmnElement="Flow_POReview_Gateway">
+        <di:waypoint x="2510" y="592" />
+        <di:waypoint x="2510" y="522" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_POReview_OK_di" bpmnElement="Flow_POReview_OK">
+        <di:waypoint x="2510" y="472" />
+        <di:waypoint x="2510" y="427" />
+        <di:waypoint x="2575" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_POReview_Rejected_di" bpmnElement="Flow_POReview_Rejected">
+        <di:waypoint x="2485" y="497" />
+        <di:waypoint x="2445" y="497" />
+        <di:waypoint x="2445" y="107" />
+        <di:waypoint x="3012" y="107" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_POLevel_N1_di" bpmnElement="Flow_POLevel_N1">
+        <di:waypoint x="2600" y="402" />
+        <di:waypoint x="2600" y="317" />
+        <di:waypoint x="2665" y="317" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_POApprovalN1_Gateway_di" bpmnElement="Flow_POApprovalN1_Gateway">
+        <di:waypoint x="2765" y="317" />
+        <di:waypoint x="2790" y="317" />
+        <di:waypoint x="2790" y="427" />
+        <di:waypoint x="2855" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_POLevel_N2_di" bpmnElement="Flow_POLevel_N2">
+        <di:waypoint x="2625" y="427" />
+        <di:waypoint x="2665" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_POApprovalN2_Gateway_di" bpmnElement="Flow_POApprovalN2_Gateway">
+        <di:waypoint x="2765" y="427" />
+        <di:waypoint x="2855" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_POLevel_N3_di" bpmnElement="Flow_POLevel_N3">
+        <di:waypoint x="2600" y="452" />
+        <di:waypoint x="2600" y="537" />
+        <di:waypoint x="2665" y="537" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_POApprovalN3_Gateway_di" bpmnElement="Flow_POApprovalN3_Gateway">
+        <di:waypoint x="2765" y="537" />
+        <di:waypoint x="2790" y="537" />
+        <di:waypoint x="2790" y="427" />
+        <di:waypoint x="2855" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_POApproved_SendPO_di" bpmnElement="Flow_POApproved_SendPO">
+        <di:waypoint x="2880" y="452" />
+        <di:waypoint x="2880" y="802" />
+        <di:waypoint x="2980" y="802" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_PORejected_Cancel_di" bpmnElement="Flow_PORejected_Cancel">
         <di:waypoint x="2880" y="402" />
@@ -647,10 +709,24 @@
         <di:waypoint x="3200" y="107" />
         <di:waypoint x="3320" y="107" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SAN_Gateway_di" bpmnElement="Flow_SAN_Gateway">
+        <di:waypoint x="3420" y="107" />
+        <di:waypoint x="3465" y="107" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_SAN_OK_di" bpmnElement="Flow_SAN_OK">
         <di:waypoint x="3490" y="132" />
         <di:waypoint x="3490" y="1182" />
         <di:waypoint x="3670" y="1182" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SAN_DeliveryClosed_di" bpmnElement="Flow_SAN_DeliveryClosed">
+        <di:waypoint x="3490" y="82" />
+        <di:waypoint x="3490" y="54" />
+        <di:waypoint x="3890" y="54" />
+        <di:waypoint x="3890" y="229" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SAN_Rejected_di" bpmnElement="Flow_SAN_Rejected">
+        <di:waypoint x="3515" y="107" />
+        <di:waypoint x="3572" y="107" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_GRN_Gateway_di" bpmnElement="Flow_GRN_Gateway">
         <di:waypoint x="3770" y="1182" />
@@ -670,20 +746,6 @@
         <di:waypoint x="3915" y="1182" />
         <di:waypoint x="3992" y="1182" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_SAN_Gateway_di" bpmnElement="Flow_SAN_Gateway">
-        <di:waypoint x="3420" y="107" />
-        <di:waypoint x="3465" y="107" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_SAN_DeliveryClosed_di" bpmnElement="Flow_SAN_DeliveryClosed">
-        <di:waypoint x="3490" y="82" />
-        <di:waypoint x="3490" y="54" />
-        <di:waypoint x="3890" y="54" />
-        <di:waypoint x="3890" y="229" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_SAN_Rejected_di" bpmnElement="Flow_SAN_Rejected">
-        <di:waypoint x="3515" y="107" />
-        <di:waypoint x="3572" y="107" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_EnterInvoice_ProcessInvoice_di" bpmnElement="Flow_EnterInvoice_ProcessInvoice">
         <di:waypoint x="3940" y="269" />
         <di:waypoint x="4010" y="269" />
@@ -700,10 +762,23 @@
         <di:waypoint x="4220" y="244" />
         <di:waypoint x="4220" y="213" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_LotStart_CreatePO_di" bpmnElement="Flow_LotStart_CreatePO">
+        <di:waypoint x="2428" y="802" />
+        <di:waypoint x="2460" y="802" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Payment_LotCompleted_di" bpmnElement="Flow_Payment_LotCompleted">
         <di:waypoint x="4430" y="269" />
         <di:waypoint x="4482" y="269" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Gateway_SplitDecision_di" bpmnElement="Gateway_SplitDecision" isMarkerVisible="true">
+        <dc:Bounds x="2045" y="785" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_AllocateSuppliers_di" bpmnElement="Activity_AllocateSuppliers">
+        <dc:Bounds x="2140" y="960" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CloseRequisition_di" bpmnElement="Task_CloseRequisition">
+        <dc:Bounds x="4630" y="237" width="100" height="80" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_Start_CheckBudget_di" bpmnElement="Flow_Start_CheckBudget">
         <di:waypoint x="218" y="115" />
         <di:waypoint x="218" y="260" />
@@ -712,6 +787,11 @@
       <bpmndi:BPMNEdge id="Flow_CheckBudget_Gateway_di" bpmnElement="Flow_CheckBudget_Gateway">
         <di:waypoint x="390" y="260" />
         <di:waypoint x="475" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Budget_OK_di" bpmnElement="Flow_Budget_OK">
+        <di:waypoint x="525" y="260" />
+        <di:waypoint x="525" y="435" />
+        <di:waypoint x="760" y="435" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Budget_KO_di" bpmnElement="Flow_Budget_KO">
         <di:waypoint x="500" y="235" />
@@ -732,9 +812,13 @@
         <di:waypoint x="885" y="115" />
         <di:waypoint x="1202" y="115" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PMApproval_Gateway_di" bpmnElement="Flow_PMApproval_Gateway">
+        <di:waypoint x="860" y="435" />
+        <di:waypoint x="1075" y="435" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Approved_DetermineType_di" bpmnElement="Flow_Approved_DetermineType">
-        <di:waypoint x="1125" y="435" />
-        <di:waypoint x="1125" y="810" />
+        <di:waypoint x="1100" y="460" />
+        <di:waypoint x="1100" y="810" />
         <di:waypoint x="1200" y="810" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Approval_Rejected_di" bpmnElement="Flow_Approval_Rejected">
@@ -743,9 +827,8 @@
         <di:waypoint x="1238" y="115" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Approval_Returned_di" bpmnElement="Flow_Approval_Returned">
-        <di:waypoint x="1100" y="460" />
-        <di:waypoint x="1100" y="500" />
-        <di:waypoint x="1340" y="500" />
+        <di:waypoint x="1125" y="435" />
+        <di:waypoint x="1340" y="435" />
         <di:waypoint x="1340" y="155" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Revise_Decision_di" bpmnElement="Flow_Revise_Decision">
@@ -838,90 +921,6 @@
       <bpmndi:BPMNEdge id="Flow_Close_Completed_di" bpmnElement="Flow_Close_Completed">
         <di:waypoint x="4630" y="277" />
         <di:waypoint x="4528" y="277" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="Activity_ProjectManagerApproval_di" bpmnElement="Activity_ProjectManagerApproval">
-        <dc:Bounds x="760" y="395" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_Budget_OK_di" bpmnElement="Flow_Budget_OK">
-        <di:waypoint x="525" y="260" />
-        <di:waypoint x="525" y="435" />
-        <di:waypoint x="760" y="435" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_PMApproval_Gateway_di" bpmnElement="Flow_PMApproval_Gateway">
-        <di:waypoint x="860" y="435" />
-        <di:waypoint x="1075" y="435" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="Gateway_POApprovalLevel_di" bpmnElement="Gateway_POApprovalLevel" isMarkerVisible="true">
-        <dc:Bounds x="2575" y="402" width="50" height="50" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_POApprovalN1_di" bpmnElement="Activity_POApprovalN1">
-        <dc:Bounds x="2665" y="277" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_POApprovalN2_di" bpmnElement="Activity_POApprovalN2">
-        <dc:Bounds x="2665" y="387" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_POApprovalN3_di" bpmnElement="Activity_POApprovalN3">
-        <dc:Bounds x="2665" y="497" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_POLevel_N1_di" bpmnElement="Flow_POLevel_N1">
-        <di:waypoint x="2600" y="402" />
-        <di:waypoint x="2600" y="317" />
-        <di:waypoint x="2665" y="317" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_POLevel_N2_di" bpmnElement="Flow_POLevel_N2">
-        <di:waypoint x="2625" y="427" />
-        <di:waypoint x="2665" y="427" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_POLevel_N3_di" bpmnElement="Flow_POLevel_N3">
-        <di:waypoint x="2600" y="452" />
-        <di:waypoint x="2600" y="537" />
-        <di:waypoint x="2665" y="537" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_POApprovalN1_Gateway_di" bpmnElement="Flow_POApprovalN1_Gateway">
-        <di:waypoint x="2765" y="317" />
-        <di:waypoint x="2790" y="317" />
-        <di:waypoint x="2790" y="427" />
-        <di:waypoint x="2855" y="427" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_POApprovalN2_Gateway_di" bpmnElement="Flow_POApprovalN2_Gateway">
-        <di:waypoint x="2765" y="427" />
-        <di:waypoint x="2855" y="427" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_POApprovalN3_Gateway_di" bpmnElement="Flow_POApprovalN3_Gateway">
-        <di:waypoint x="2765" y="537" />
-        <di:waypoint x="2790" y="537" />
-        <di:waypoint x="2790" y="427" />
-        <di:waypoint x="2855" y="427" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_POApproved_SendPO_di" bpmnElement="Flow_POApproved_SendPO">
-        <di:waypoint x="2880" y="452" />
-        <di:waypoint x="2880" y="802" />
-        <di:waypoint x="2980" y="802" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="Activity_POReview_di" bpmnElement="Activity_POReview">
-        <dc:Bounds x="2460" y="592" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Gateway_POReviewDecision_di" bpmnElement="Gateway_POReviewDecision" isMarkerVisible="true">
-        <dc:Bounds x="2485" y="472" width="50" height="50" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_CreatePO_POApproval_di" bpmnElement="Flow_CreatePO_POApproval">
-        <di:waypoint x="2510" y="762" />
-        <di:waypoint x="2510" y="672" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_POReview_Gateway_di" bpmnElement="Flow_POReview_Gateway">
-        <di:waypoint x="2510" y="592" />
-        <di:waypoint x="2510" y="522" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_POReview_OK_di" bpmnElement="Flow_POReview_OK">
-        <di:waypoint x="2510" y="472" />
-        <di:waypoint x="2510" y="427" />
-        <di:waypoint x="2575" y="427" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_POReview_Rejected_di" bpmnElement="Flow_POReview_Rejected">
-        <di:waypoint x="2485" y="497" />
-        <di:waypoint x="2445" y="497" />
-        <di:waypoint x="2445" y="107" />
-        <di:waypoint x="3012" y="107" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

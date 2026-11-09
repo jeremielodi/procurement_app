@@ -9,7 +9,7 @@ import Modal from '../Common/Modal';
 import { equipmentService } from '../../services/stockService';
 import { t, getLocale } from '../../i18n';
 
-const COLUMNS = ['item', 'serial', 'assetTag', 'warehouse', 'quantity', 'project', 'condition', 'unitCost', 'currency', 'notes'];
+const COLUMNS = ['item', 'serial', 'assetTag', 'warehouse', 'quantity', 'project', 'tagProject', 'acquisitionDate', 'condition', 'unitCost', 'currency', 'notes'];
 const REQUIRED = ['item', 'warehouse'];
 const FILE_ERRORS = ['UNREADABLE', 'EMPTY', 'MISSING_COLUMNS', 'TOO_MANY_ROWS', 'NOTHING_TO_IMPORT', 'NO_FILE'];
 

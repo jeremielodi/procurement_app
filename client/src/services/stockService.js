@@ -106,6 +106,13 @@ export const equipmentService = {
     if (confirm) fd.append('confirm', '1');
     return api.post('/stock-units/import', fd, { headers: { 'Content-Type': 'multipart/form-data' }, skipErrorToast: true }).then(data);
   },
+  // Recodification des n° d'inventaire (ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN) : aperçu puis confirmation
+  retagFile: (file, { confirm = false } = {}) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    if (confirm) fd.append('confirm', '1');
+    return api.post('/stock-units/retag', fd, { headers: { 'Content-Type': 'multipart/form-data' }, skipErrorToast: true }).then(data);
+  },
   updateUnit: (id, payload) => api.put(`/stock-units/${id}`, payload).then(data),
   // { data: lignes détenues, user: { id, first_name, last_name, email, is_active } }
   holdings: (userId) => api.get('/stock-holdings', { params: { userId } }).then(data),

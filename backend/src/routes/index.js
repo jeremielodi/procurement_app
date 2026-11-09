@@ -149,6 +149,9 @@ router.put('/enterprises/current/daily-report', hasPermission('MANAGE_USERS'), e
 // Paramètres de la prévision du réapprovisionnement (migration 55) : lecture avec le stock, modification par l'administrateur
 router.get('/enterprises/current/stock-planning', hasAnyPermission('VIEW_STOCK', 'MANAGE_USERS'), e.getStockPlanning.bind(e));
 router.put('/enterprises/current/stock-planning', hasPermission('MANAGE_USERS'), e.setStockPlanning.bind(e));
+// Codification des n° d'inventaire des équipements (migration 57) : lecture avec le stock, modification par l'administrateur
+router.get('/enterprises/current/asset-tags', hasAnyPermission('VIEW_STOCK', 'MANAGE_USERS'), e.getAssetTags.bind(e));
+router.put('/enterprises/current/asset-tags', hasPermission('MANAGE_USERS'), e.setAssetTags.bind(e));
 // Demandes au magasin (migration 56) : validation exigée ou non
 router.get('/enterprises/current/stock-requests', hasPermission('MANAGE_USERS'), require('../controllers/StockRequestController').getSettings);
 router.put('/enterprises/current/stock-requests', hasPermission('MANAGE_USERS'), require('../controllers/StockRequestController').setSettings);
@@ -843,6 +846,8 @@ router.post('/stock-units/register', authenticate, hasPermission('MANAGE_STOCK_I
 // Import du parc existant (Excel / CSV) : modèle, aperçu, confirmation — avant /stock-units/:id
 router.get('/stock-units/import/template', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), equipmentController.importTemplate);
 router.post('/stock-units/import', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.importUnits);
+// Recodification des n° d'inventaire (migration 57 : ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN)
+router.post('/stock-units/retag', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.retagUnits);
 router.get('/stock-units/:id', authenticate, hasPermission('VIEW_STOCK'), equipmentController.getUnit);
 router.put('/stock-units/:id', authenticate, hasPermission('ISSUE_STOCK'), equipmentController.updateUnit);
 

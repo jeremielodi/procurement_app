@@ -19,6 +19,8 @@ const i18n = require('../i18n');
 const stockModel = require('../models/StockModel');
 const warehouseModel = require('../models/WarehouseModel');
 const { cellText, parseNumber, readRows, isBlankRow, dropLeadingBlankRows, mapHeader, normalize } = require('../utils/tabularImport');
+const { parseDate } = require('./StockItemImportService');
+const { SEGMENT_RE } = require('../utils/assetTags');
 
 const MAX_ROWS = 3000;
 const EPS = 1e-9;
@@ -26,7 +28,7 @@ const EPS = 1e-9;
 // Ordre des colonnes du modèle
 const FIELDS = [
   { key: 'item', required: true }, { key: 'serial' }, { key: 'assetTag' }, { key: 'warehouse', required: true },
-  { key: 'quantity' }, { key: 'project' }, { key: 'condition' }, { key: 'unitCost' }, { key: 'currency' }, { key: 'notes' },
+  { key: 'quantity' }, { key: 'project' }, { key: 'tagProject' }, { key: 'acquisitionDate' }, { key: 'condition' }, { key: 'unitCost' }, { key: 'currency' }, { key: 'notes' },
 ];
 
 // En-têtes acceptés en plus de ceux du modèle (toutes langues : stockUnitImport.headers.*)
@@ -37,6 +39,9 @@ const ALIASES = {
   warehouse: ['code depot', 'depot', 'warehouse', 'warehouse code'],
   quantity: ['quantite', 'qte', 'quantity', 'qty'],
   project: ['code projet', 'projet', 'projet de financement', 'project code', 'project', 'funding project'],
+  // Codification des n° d'inventaire (migration 57)
+  tagProject: ['segment projet', 'segment projet (tag)', 'projet tag', 'code projet tag', 'tag project', 'tag project code'],
+  acquisitionDate: ["date d'acquisition", 'acquisition', "annee d'acquisition", 'acquis le', 'acquisition date', 'acquisition year', 'acquired'],
   condition: ['etat', 'condition', 'state'],
   unitCost: ['cout unitaire', 'cout', 'prix unitaire', 'cout us$', 'unit cost', 'cost'],
   currency: ['devise', 'currency'],
@@ -55,6 +60,14 @@ const GOOD = ['bon', 'bon etat', 'good', 'ok', 'neuf', 'new', 'tres bon', 'moyen
 const DAMAGED = ['endommage', 'mauvais', 'damaged', 'broken', 'en panne', 'hs', 'defectueux'];
 
 function fail(line, code, params = {}) { return { line, code, params }; }
+
+/** Date d'acquisition : AAAA-MM-JJ, JJ/MM/AAAA, date Excel ou année seule (→ 1er janvier) ; null si vide, undefined si invalide */
+function acquisitionDateOf(raw) {
+  const s = cellText(raw).trim();
+  if (!s && typeof raw !== 'number') return null;
+  if (/^(19|20)\d{2}$/.test(s)) return `${s}-01-01`;
+  return parseDate(typeof raw === 'number' ? raw : s) || undefined;
+}
 
 async function loadContext(userId, codes) {
   const enterpriseId = tenant.enterpriseId();
@@ -166,6 +179,11 @@ async function analyze(file, { userId }) {
     if (DAMAGED.includes(conditionRaw)) condition = 'DAMAGED';
     else if (!GOOD.includes(conditionRaw)) problems.push(fail(line, 'CONDITION_INVALID', { value: text(r, 'condition') }));
 
+    const tagProject = text(r, 'tagProject').toUpperCase().slice(0, 20) || null;
+    if (tagProject && !SEGMENT_RE.test(tagProject)) problems.push(fail(line, 'TAG_PROJECT_INVALID', { value: tagProject }));
+    const acquisitionDate = acquisitionDateOf(raw(r, 'acquisitionDate'));
+    if (acquisitionDate === undefined) problems.push(fail(line, 'DATE_INVALID', { value: text(r, 'acquisitionDate') }));
+
     const serial = text(r, 'serial').slice(0, 100);
     const assetTag = text(r, 'assetTag').slice(0, 100);
     const notes = text(r, 'notes').slice(0, 2000) || null;
@@ -186,7 +204,7 @@ async function analyze(file, { userId }) {
       if (problems.length) { errors.push(...problems); continue; }
       fileSerials.set(`${item.id}|${serial.toUpperCase()}`, line);
       if (assetTag) fileTags.set(assetTag.toUpperCase(), line);
-      const unit = { line, item, serial, assetTag: assetTag || null, warehouse, project, condition, unitCost, currencyId, notes };
+      const unit = { line, item, serial, assetTag: assetTag || null, warehouse, project, condition, unitCost, currencyId, notes, tagProject, acquisitionDate };
       units.push(unit);
       if (assetTag) pending.push(unit);
       continue;
@@ -234,7 +252,7 @@ async function preview(file, { userId }) {
     units: units.map(u => ({
       line: u.line, code: u.item.code, name: u.item.name, serial: u.serial, assetTag: u.assetTag, warehouse: ref(u.warehouse),
       project: u.project && { code: u.project.code, name: u.project.name }, condition: u.condition,
-      unitCost: u.unitCost, currency: u.unitCost !== null ? currencyCode(ctx, u.currencyId) : null,
+      tagProject: u.tagProject, acquisitionDate: u.acquisitionDate, unitCost: u.unitCost, currency: u.unitCost !== null ? currencyCode(ctx, u.currencyId) : null,
     })),
     openings: openings.map(o => ({
       lines: o.lines, code: o.item.code, name: o.item.name, unit: o.item.unit, warehouse: ref(o.warehouse),
@@ -261,9 +279,10 @@ async function apply(file, { userId }) {
   const result = await db.withTransaction(async (tx) => {
     for (const u of units) {
       const row = await tx.one(
-        `INSERT INTO stock_units (enterprise_id, stock_item_id, serial_number, asset_tag, status, condition, warehouse_id, created_by, project_id, notes)
-         VALUES ($1, $2, $3, $4, 'IN_STOCK', $5, $6, $7, $8, $9) RETURNING id`,
-        [enterpriseId, u.item.id, u.serial, u.assetTag, u.condition, u.warehouse.id, userId, u.project?.id || null, u.notes]
+        `INSERT INTO stock_units (enterprise_id, stock_item_id, serial_number, asset_tag, status, condition, warehouse_id, created_by, project_id, notes,
+                                  acquisition_date, tag_project_code)
+         VALUES ($1, $2, $3, $4, 'IN_STOCK', $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+        [enterpriseId, u.item.id, u.serial, u.assetTag, u.condition, u.warehouse.id, userId, u.project?.id || null, u.notes, u.acquisitionDate, u.tagProject]
       );
       await stockModel.addMovement(tx, {
         enterpriseId, stockItemId: u.item.id, warehouseId: u.warehouse.id, unitId: row.id, type: 'OPENING', quantity: 1,
@@ -305,9 +324,9 @@ async function template({ userId, lang, format = 'xlsx' }) {
   const prj = projects[0]?.code || '';
   const good = T('stockUnitImport.good'), damaged = T('stockUnitImport.damaged');
   const examples = [
-    [serialItem, '5CG1403NX4', 'INV-0001', wh, '', prj, good, 1450, 'USD', T('stockUnitImport.example.note')],
-    [serialItem, '5CG1403P4M', '', wh, '', prj, damaged, '', '', ''],
-    [plainItem, '', '', wh, 12, prj, '', 45, 'USD', ''],
+    [serialItem, '5CG1403NX4', 'INV-0001', wh, '', prj, '', '2022-03-15', good, 1450, 'USD', T('stockUnitImport.example.note')],
+    [serialItem, '5CG1403P4M', '', wh, '', prj, 'MIHR', '2021', damaged, '', '', ''],
+    [plainItem, '', '', wh, 12, prj, '', '', '', 45, 'USD', ''],
   ];
   if (format === 'csv') {
     const esc = (v) => { const s = String(v ?? ''); return /[";\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
@@ -368,4 +387,117 @@ async function template({ userId, lang, format = 'xlsx' }) {
   };
 }
 
-module.exports = { preview, apply, template, MAX_ROWS };
+// ============================================================================
+// Recodification des n° d'inventaire (migration 57) : une ligne par équipement existant (Code article + N° de série),
+// avec la date d'acquisition et le segment projet du TAG. À la confirmation, le n° est recalculé par le trigger
+// (ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN, dans l'ordre du fichier) et l'ancien est ajouté aux notes de l'équipement.
+// Exige le préfixe d'organisation (409 ASSET_TAG_ORG_REQUIRED) et le code catégorie de chaque article.
+// ============================================================================
+const RETAG_FIELDS = [{ key: 'item', required: true }, { key: 'serial', required: true }, { key: 'acquisitionDate' }, { key: 'tagProject' }];
+
+async function retagAnalyze(file) {
+  let rows;
+  try {
+    rows = await readRows(file);
+  } catch (e) {
+    const err = new Error('Fichier illisible : vérifiez qu\'il s\'agit bien d\'un .xlsx ou .csv'); err.status = 400; err.code = 'UNREADABLE';
+    throw err;
+  }
+  dropLeadingBlankRows(rows);
+  if (rows.length < 2) { const e = new Error('Le fichier ne contient aucun équipement'); e.status = 400; e.code = 'EMPTY'; throw e; }
+  const aliases = columnAliases();
+  const col = mapHeader(rows[0], Object.fromEntries(RETAG_FIELDS.map(f => [f.key, aliases[f.key]])));
+  const missing = RETAG_FIELDS.filter(f => f.required && col[f.key] === undefined).map(f => f.key);
+  if (missing.length) {
+    const e = new Error('Colonnes « Code article » et « N° de série » obligatoires'); e.status = 400; e.code = 'MISSING_COLUMNS'; e.details = { missing };
+    throw e;
+  }
+  const dataRows = rows.slice(1).map((r, i) => ({ r, line: i + 2 })).filter(({ r }) => !isBlankRow(r));
+  if (dataRows.length > MAX_ROWS) {
+    const e = new Error(`Maximum ${MAX_ROWS} lignes par import`); e.status = 400; e.code = 'TOO_MANY_ROWS'; e.details = { max: MAX_ROWS };
+    throw e;
+  }
+  const enterpriseId = tenant.enterpriseId();
+  const org = enterpriseId ? (await db.one('SELECT asset_tag_org FROM enterprise WHERE id = $1', [enterpriseId]))?.asset_tag_org : null;
+  if (!org) {
+    const e = new Error('Renseignez d\'abord le préfixe d\'organisation des n° d\'inventaire (« Mon entreprise »)');
+    e.status = 409; e.code = 'ASSET_TAG_ORG_REQUIRED';
+    throw e;
+  }
+  const raw = (r, key) => (col[key] === undefined ? '' : r[col[key]]);
+  const text = (r, key) => cellText(raw(r, key)).trim();
+  const params = [[...new Set(dataRows.map(({ r }) => text(r, 'item').toUpperCase()).filter(Boolean))]];
+  const units = await db.select(
+    `SELECT un.id, un.serial_number, un.asset_tag, un.status, un.acquisition_date, un.tag_project_code,
+            si.code AS item_code, si.name AS item_name, si.asset_category
+     FROM stock_units un JOIN stock_items si ON si.id = un.stock_item_id
+     WHERE un.status <> 'VOID' AND UPPER(si.code) = ANY($1::text[])${tenant.filter('un.enterprise_id', params)}`,
+    params
+  );
+  const unitBy = new Map(units.map(u => [`${u.item_code.toUpperCase()}|${u.serial_number.toUpperCase()}`, u]));
+  const seen = new Map();
+  const errors = [];
+  const lines = [];
+  for (const { r, line } of dataRows) {
+    const problems = [];
+    const code = text(r, 'item').toUpperCase();
+    const serial = text(r, 'serial');
+    const key = `${code}|${serial.toUpperCase()}`;
+    const unit = unitBy.get(key);
+    if (!code || !serial) problems.push(fail(line, 'UNIT_REQUIRED'));
+    else if (!unit) problems.push(fail(line, 'UNIT_NOT_FOUND', { value: serial, item: code }));
+    else if (!unit.asset_category) problems.push(fail(line, 'ITEM_CATEGORY_MISSING', { value: code }));
+    if (seen.has(key)) problems.push(fail(line, 'SERIAL_DUPLICATE', { value: serial, other: seen.get(key) }));
+    const tagProject = text(r, 'tagProject').toUpperCase().slice(0, 20) || null;
+    if (tagProject && !SEGMENT_RE.test(tagProject)) problems.push(fail(line, 'TAG_PROJECT_INVALID', { value: tagProject }));
+    const acquisitionDate = acquisitionDateOf(raw(r, 'acquisitionDate'));
+    if (acquisitionDate === undefined) problems.push(fail(line, 'DATE_INVALID', { value: text(r, 'acquisitionDate') }));
+    if (problems.length) { errors.push(...problems); continue; }
+    seen.set(key, line);
+    lines.push({ line, unit, tagProject, acquisitionDate });
+  }
+  return { enterpriseId, org, lines, errors, totalLines: dataRows.length };
+}
+
+/** Aperçu : équipements trouvés, ancien n°, éléments du nouveau (le n° exact est attribué à la confirmation) */
+async function retagPreview(file) {
+  const { org, lines, errors, totalLines } = await retagAnalyze(file);
+  return {
+    org,
+    units: lines.map(l => ({
+      line: l.line, code: l.unit.item_code, name: l.unit.item_name, serial: l.unit.serial_number, oldTag: l.unit.asset_tag,
+      pattern: `${org}-${l.tagProject || l.unit.tag_project_code || '…'}-${l.unit.asset_category}-${(l.acquisitionDate || '').slice(0, 4) || new Date().getFullYear()}-NNN`,
+    })),
+    errors,
+    summary: { totalLines, units: lines.length, errors: errors.length },
+  };
+}
+
+/** Recodification en une transaction ; → correspondance ancien / nouveau n° (marquage physique) */
+async function retagApply(file) {
+  const { enterpriseId, lines, errors, totalLines } = await retagAnalyze(file);
+  if (!lines.length) {
+    const e = new Error('Aucune ligne valide'); e.status = 400; e.code = 'NOTHING_TO_IMPORT'; e.details = { errors };
+    throw e;
+  }
+  const changes = await db.withTransaction(async (tx) => {
+    const out = [];
+    for (const l of lines) {
+      // Ancien n° conservé dans les notes (traçabilité de l'ancien marquage)
+      const note = l.unit.asset_tag ? `Ancien n° d'inventaire : ${l.unit.asset_tag}` : null;
+      const row = await tx.one(
+        `UPDATE stock_units SET acquisition_date = COALESCE($2::date, acquisition_date), tag_project_code = COALESCE($3, tag_project_code),
+                notes = CASE WHEN $4::text IS NULL OR COALESCE(notes, '') LIKE '%' || $4 || '%' THEN notes
+                             ELSE NULLIF(CONCAT_WS(' — ', NULLIF(notes, ''), $4), '') END,
+                asset_tag = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND enterprise_id = $5 RETURNING asset_tag`,
+        [l.unit.id, l.acquisitionDate, l.tagProject, note, enterpriseId]
+      );
+      out.push({ line: l.line, code: l.unit.item_code, name: l.unit.item_name, serial: l.unit.serial_number, oldTag: l.unit.asset_tag, newTag: row.asset_tag });
+    }
+    return out;
+  });
+  return { units: changes.length, changes, totalLines, skipped: errors.length, errors };
+}
+
+module.exports = { preview, apply, template, retagPreview, retagApply, MAX_ROWS };

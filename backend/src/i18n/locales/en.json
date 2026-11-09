@@ -1007,7 +1007,8 @@
     "STOCK_REQUEST_VALIDATED": "Store request approved",
     "STOCK_REQUEST_REJECTED": "Store request rejected",
     "STOCK_REQUEST_CLOSED": "Store request closed",
-    "STOCK_UNITS_IMPORTED": "Existing assets imported (Excel / CSV)"
+    "STOCK_UNITS_IMPORTED": "Existing assets imported (Excel / CSV)",
+    "STOCK_UNITS_RETAGGED": "Asset tags recalculated (codification)"
   },
   "auditExport": {
     "sheet": "Audit log",
@@ -1121,7 +1122,8 @@
       "currency": "Currency",
       "lotNumber": "Lot number",
       "expiryDate": "Expiry date",
-      "project": "Project code"
+      "project": "Project code",
+      "assetCategory": "Tag category"
     },
     "help": {
       "code": "Unique item code within the company (letters, digits, . - _). An existing code updates the item: only filled cells are changed.",
@@ -1141,7 +1143,8 @@
       "currency": "Opening stock: currency code of the cost (USD, EUR, CDF…). Empty = company currency.",
       "lotNumber": "Opening stock: lot number (required if the item is lot-tracked). One row per lot.",
       "expiryDate": "Opening stock: lot expiry date, YYYY-MM-DD or DD/MM/YYYY (required if expiry is tracked).",
-      "project": "Project that funded this opening stock (project code, References sheet). Optional: empty = not assigned."
+      "project": "Project that funded this opening stock (project code, References sheet). Optional: empty = not assigned.",
+      "assetCategory": "Category code in equipment asset tags (2 to 5 letters: LAP, TAB, VEH, MOT, MON, IMP, PRO, GEN, REF, CLM, COM, UPS, CAM, TEL, SCO…). E.g. IMA-MIHR-LAP-2026-001."
     },
     "ref": {
       "categoryCode": "Category code",
@@ -1352,7 +1355,9 @@
       "condition": "Condition",
       "unitCost": "Unit cost",
       "currency": "Currency",
-      "notes": "Notes"
+      "notes": "Notes",
+      "tagProject": "Tag project segment",
+      "acquisitionDate": "Acquisition date"
     },
     "help": {
       "item": "Catalogue item code (References sheet). The item must exist, be active and stockable; lot-tracked items go through the catalogue import.",
@@ -1364,7 +1369,9 @@
       "condition": "Good (default) or Damaged (also: bad, broken). For equipment.",
       "unitCost": "Unit purchase cost (weighted average cost valuation). Optional.",
       "currency": "Currency code of the cost (USD, EUR, CDF…). Empty = company currency.",
-      "notes": "Free text: holder, acquisition date, remarks… (equipment record)."
+      "notes": "Free text: holder, acquisition date, remarks… (equipment record).",
+      "tagProject": "Project that funded the acquisition, in the asset tag (e.g. MIHR). Empty = inventory prefix of the funding project.",
+      "acquisitionDate": "Date (YYYY-MM-DD, DD/MM/YYYY) or year of acquisition: year in the asset tag. Empty = registration year."
     },
     "sheets": {
       "units": "Existing assets",

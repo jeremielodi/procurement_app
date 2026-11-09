@@ -3278,7 +3278,9 @@
       "trackSerialsHint": "À chaque réception (bon de réception), un n° de série sera demandé pour chaque unité acceptée (un par ligne) ; le n° d'inventaire est attribué automatiquement (INVT-AAAA-NNNNN, ou le code initial inventaire du projet). Équipements déjà en stock : Équipements › « Enregistrer le parc existant ».",
       "restockPlanning": "Réapprovisionner (prévision)",
       "leadTimeDays": "Délai de livraison (jours)",
-      "leadTimeHint": "Vide = délai de l'entreprise"
+      "leadTimeHint": "Vide = délai de l'entreprise",
+      "assetCategory": "Catégorie TAG (n° d'inventaire)",
+      "assetCategoryHint": "Code de 2 à 5 lettres dans le n° d'inventaire des équipements (ex. IMA-MIHR-LAP-2026-001)."
     },
     "mv": {
       "title": "Mouvements de stock",
@@ -3705,7 +3707,14 @@
       "updated": "Équipement mis à jour",
       "truncated": "{{shown}} affichés sur {{total}} : affinez la recherche",
       "departmentHolder": "Département {{name}}",
-      "serialsPlaceholder": "Un par ligne : n° de série ; n° d'inventaire (facultatif : attribué automatiquement si vide)\nEx. 5CD1234XYZ"
+      "serialsPlaceholder": "Un par ligne : n° de série ; n° d'inventaire (facultatif : attribué automatiquement si vide)\nEx. 5CD1234XYZ",
+      "tagTitle": "Codification du n° d'inventaire",
+      "acquisitionDate": "Date d'acquisition",
+      "tagProject": "Segment projet (TAG)",
+      "regenerate": "Recalculer le n° d'inventaire",
+      "regenerateConfirm": "Remplacer le n° {{tag}} par un nouveau n° selon la codification ? Pensez à changer l'étiquette.",
+      "regenerated": "N° d'inventaire recalculé",
+      "tagHint": "Le n° suit la codification de « Mon entreprise » ; segment vide = code initial inventaire du projet de financement."
     },
     "count": {
       "title": "Inventaires",
@@ -3909,7 +3918,8 @@
         "currency": "Devise",
         "lotNumber": "N° de lot",
         "expiryDate": "Date de péremption",
-        "project": "Code projet"
+        "project": "Code projet",
+        "assetCategory": "Catégorie TAG"
       },
       "err": {
         "CODE_REQUIRED": "code vide",
@@ -3942,7 +3952,8 @@
         "OPENING_EXISTS": "l'article a déjà du stock ou des mouvements dans le dépôt {{warehouse}} : utilisez un inventaire ou un ajustement",
         "LOT_EXPIRY_MISMATCH": "le lot {{lot}} existe déjà avec la date de péremption {{expiry}}",
         "DUPLICATE_OPENING": "même article, dépôt et lot que la ligne {{line}}",
-        "PROJECT_UNKNOWN": "Projet inconnu : « {{value}} » (code d'un projet de l'entreprise)"
+        "PROJECT_UNKNOWN": "Projet inconnu : « {{value}} » (code d'un projet de l'entreprise)",
+        "ASSET_CATEGORY_INVALID": "catégorie TAG « {{value}} » invalide (2 à 5 lettres ou chiffres)"
       },
       "fileErr": {
         "UNREADABLE": "Fichier illisible : vérifiez qu'il s'agit bien d'un .xlsx ou d'un .csv",
@@ -4068,7 +4079,9 @@
         "condition": "État",
         "unitCost": "Coût unitaire",
         "currency": "Devise",
-        "notes": "Notes"
+        "notes": "Notes",
+        "tagProject": "Segment projet (TAG)",
+        "acquisitionDate": "Date d'acquisition"
       },
       "rules": "N° de série obligatoire pour un article suivi par n° de série (unique par article) ; n° d'inventaire vide = attribué automatiquement ; état Bon ou Endommagé. Les biens entrent en stock au dépôt indiqué.",
       "analyzing": "Analyse du fichier…",
@@ -4127,7 +4140,43 @@
         "TAG_NOT_TRACKED": "article « {{value}} » sans n° de série : pas de n° d'inventaire",
         "QUANTITY_SERIAL": "un équipement par ligne : quantité vide ou 1 (« {{value}} »)",
         "QUANTITY_INVALID": "quantité « {{value}} » invalide",
-        "OPENING_EXISTS": "article « {{value}} » : du stock existe déjà au dépôt {{warehouse}} (un nouvel import doublerait le stock)"
+        "OPENING_EXISTS": "article « {{value}} » : du stock existe déjà au dépôt {{warehouse}} (un nouvel import doublerait le stock)",
+        "TAG_PROJECT_INVALID": "segment projet « {{value}} » invalide (lettres et chiffres, séparés par des tirets)",
+        "DATE_INVALID": "date d'acquisition « {{value}} » invalide (AAAA-MM-JJ, JJ/MM/AAAA ou année)",
+        "UNIT_REQUIRED": "code article et n° de série obligatoires",
+        "UNIT_NOT_FOUND": "équipement « {{value}} » introuvable pour l'article {{item}}",
+        "ITEM_CATEGORY_MISSING": "l'article « {{value}} » n'a pas de catégorie TAG (fiche article)"
+      }
+    },
+    "retag": {
+      "button": "Recodifier (Excel / CSV)",
+      "title": "Recodifier les n° d'inventaire",
+      "format": "Codification : ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN (ex. IMA-MIHR-LAP-2026-001)",
+      "hint": "Fichier : Code article et N° de série (obligatoires), Date d'acquisition et Segment projet (TAG). Le nouveau n° est attribué dans l'ordre du fichier ; l'ancien est ajouté aux notes de l'équipement.",
+      "confirm": "Recodifier",
+      "confirmN_one": "Recodifier {{count}} équipement",
+      "confirmN_other": "Recodifier {{count}} équipements",
+      "working": "Recodification en cours…",
+      "done_one": "{{count}} n° d'inventaire recalculé",
+      "done_other": "{{count}} n° d'inventaire recalculés",
+      "download": "Télécharger la correspondance",
+      "newPattern": "Nouveau n° (forme)",
+      "fileErr": {
+        "UNREADABLE": "Fichier illisible : utilisez un fichier .xlsx ou .csv",
+        "EMPTY": "Le fichier ne contient aucun équipement",
+        "MISSING_COLUMNS": "Colonnes « Code article » et « N° de série » obligatoires",
+        "TOO_MANY_ROWS": "Au plus {{max}} lignes par import",
+        "NOTHING_TO_IMPORT": "Aucune ligne valide",
+        "NO_FILE": "Aucun fichier reçu",
+        "ASSET_TAG_ORG_REQUIRED": "Renseignez d'abord le préfixe d'organisation dans « Mon entreprise » › Codification des n° d'inventaire"
+      },
+      "csv": {
+        "item": "Code article",
+        "name": "Article",
+        "serial": "N° de série",
+        "oldTag": "Ancien n° d'inventaire",
+        "newTag": "Nouveau n° d'inventaire",
+        "file": "correspondance-numeros-inventaire"
       }
     }
   },
@@ -5652,6 +5701,27 @@
           },
           {
             "type": "h",
+            "text": "Codification des n° d'inventaire (TAG)"
+          },
+          {
+            "type": "p",
+            "text": "Chaque équipement porte un n° de la forme ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN, par exemple IMA-MIHR-LAP-2026-001. Le n° séquentiel repart à 001 pour chaque projet, catégorie et année."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Mon entreprise › « Codification des n° d'inventaire » : saisissez le préfixe d'organisation (ex. IMA). Sans préfixe, l'ancienne codification reste appliquée.",
+              "Fiche de chaque article suivi par n° de série : renseignez la « Catégorie TAG » (VEH, MOT, TAB, LAP, MON, IMP, PRO, GEN, REF, CLM, COM, UPS, CAM, TEL, SCO…) — aussi par la colonne « Catégorie TAG » de l'import du catalogue.",
+              "Le segment PROJET est le « segment projet (TAG) » de l'équipement s'il est renseigné, sinon le code initial inventaire du projet de financement. L'ANNÉE est l'année d'acquisition, sinon l'année d'enregistrement.",
+              "Équipements déjà enregistrés : Stock › Équipements › « Recodifier (Excel / CSV) » avec Code article, N° de série, Date d'acquisition et Segment projet (TAG). Vérifiez l'aperçu, confirmez, puis téléchargez la correspondance ancien / nouveau n° pour refaire les étiquettes."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "L'ancien n° est conservé dans les notes de l'équipement. Pour un seul appareil : fiche de l'équipement › « Recalculer le n° d'inventaire »."
+          },
+          {
+            "type": "h",
             "text": "Récupérer le matériel"
           },
           {
@@ -6349,7 +6419,8 @@
       "STOCK_REQUEST_VALIDATED": "Demande au magasin validée",
       "STOCK_REQUEST_REJECTED": "Demande au magasin rejetée",
       "STOCK_REQUEST_CLOSED": "Demande au magasin soldée",
-      "STOCK_UNITS_IMPORTED": "Parc existant importé (Excel / CSV)"
+      "STOCK_UNITS_IMPORTED": "Parc existant importé (Excel / CSV)",
+      "STOCK_UNITS_RETAGGED": "N° d'inventaire recalculés (codification)"
     },
     "groups": {
       "all": "Tous les événements",
@@ -7037,5 +7108,58 @@
     "validation": "Faire valider chaque demande avant qu'elle soit servie",
     "validationHint": "Validateur : chef du projet indiqué (ou son intérimaire), sinon responsable du département, sinon un administrateur — jamais le demandeur. Il peut réduire les quantités.",
     "saved": "Option enregistrée"
+  },
+  "assetCategories": {
+    "VEH": "Véhicule",
+    "MOT": "Moto",
+    "TAB": "Tablette",
+    "LAP": "Ordinateur portable",
+    "MON": "Moniteur",
+    "IMP": "Imprimante",
+    "PRO": "Projecteur",
+    "GEN": "Groupe électrogène",
+    "REF": "Réfrigérateur",
+    "CLM": "Climatiseur",
+    "COM": "Équipement de communication",
+    "UPS": "Onduleur",
+    "CAM": "Caméra",
+    "TEL": "Téléphone",
+    "SCO": "Scanner",
+    "DSK": "Ordinateur de bureau (proposé)",
+    "DSQ": "Disque dur / stockage (proposé)",
+    "AUD": "Audio, haut-parleur (proposé)",
+    "TVS": "Téléviseur (proposé)",
+    "ELM": "Électroménager (proposé)"
+  },
+  "assetTagSettings": {
+    "title": "Codification des n° d'inventaire",
+    "hint": "Marquage physique (TAG) de chaque équipement : ORGANISATION – PROJET – CATÉGORIE – ANNÉE – N° SÉQUENTIEL. Préfixe vide = ancienne codification (code initial du projet-AAAA-NNNNN).",
+    "org": "Préfixe d'organisation",
+    "example": "Exemple",
+    "saved": "Codification enregistrée",
+    "segment": "Segment",
+    "meaning": "Signification",
+    "segments": {
+      "org": {
+        "label": "Organisation",
+        "text": "Préfixe ci-dessus (ex. IMA)"
+      },
+      "project": {
+        "label": "Projet",
+        "text": "Projet ayant financé l'acquisition : segment de l'équipement, sinon « code initial inventaire » du projet de financement (fiche du projet)"
+      },
+      "category": {
+        "label": "Catégorie",
+        "text": "Code catégorie TAG de l'article (fiche article : LAP, TAB, VEH…)"
+      },
+      "year": {
+        "label": "Année",
+        "text": "Année d'acquisition de l'équipement, sinon année d'enregistrement"
+      },
+      "number": {
+        "label": "N° séquentiel",
+        "text": "3 chiffres, repart à 001 pour chaque projet, catégorie et année"
+      }
+    }
   }
 }

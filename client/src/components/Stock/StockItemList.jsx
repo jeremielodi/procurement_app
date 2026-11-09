@@ -16,11 +16,12 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { t, getLocale, useTranslation } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 import ImportStockItemsModal from './ImportStockItemsModal';
+import { ASSET_CATEGORIES } from '../Enterprises/AssetTagSettings';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 // unitId : unité du référentiel de la plateforme (GET /units) — Pièce par défaut, posée à l'ouverture
-const EMPTY = { code: '', name: '', description: '', unitId: '', categoryId: '', isStockable: true, trackLots: false, trackExpiry: false, trackSerials: false, minQuantity: '', reorderQuantity: '', leadTimeDays: '' };
+const EMPTY = { code: '', name: '', description: '', unitId: '', categoryId: '', isStockable: true, trackLots: false, trackExpiry: false, trackSerials: false, minQuantity: '', reorderQuantity: '', leadTimeDays: '', assetCategory: '' };
 
 export default function StockItemList() {
   const { lang } = useTranslation();
@@ -66,6 +67,7 @@ export default function StockItemList() {
     minQuantity: it.min_quantity !== null && it.min_quantity !== undefined ? String(Number(it.min_quantity)) : '',
     reorderQuantity: it.reorder_quantity !== null && it.reorder_quantity !== undefined ? String(Number(it.reorder_quantity)) : '',
     leadTimeDays: it.lead_time_days !== null && it.lead_time_days !== undefined ? String(it.lead_time_days) : '',
+    assetCategory: it.asset_category || '',
     isActive: it.is_active, hasStock: Number(it.stock_quantity) > 0,
   });
 
@@ -88,6 +90,7 @@ export default function StockItemList() {
         minQuantity: editing.minQuantity === '' ? null : Number(editing.minQuantity),
         reorderQuantity: editing.reorderQuantity === '' ? null : Number(editing.reorderQuantity),
         leadTimeDays: editing.leadTimeDays === '' ? null : Number(editing.leadTimeDays),
+        assetCategory: editing.assetCategory.trim().toUpperCase() || null,
         ...(editing.id ? { isActive: editing.isActive } : {}),
       };
       if (editing.id) await stockItemService.update(editing.id, payload);
@@ -232,6 +235,15 @@ export default function StockItemList() {
             <label className="text-sm">
               <span className="mb-1 block font-medium text-gray-700">{t('stock.items.reorderQuantity')}</span>
               <input type="number" min="0" step="any" className={inputCls} value={editing.reorderQuantity} onChange={e => setEditing({ ...editing, reorderQuantity: e.target.value })} placeholder={t('stock.items.reorderHint')} />
+            </label>
+            <label className="text-sm sm:col-span-2">
+              <span className="mb-1 block font-medium text-gray-700">{t('stock.items.assetCategory')}</span>
+              <input list="asset-category-list" maxLength={5} className={`${inputCls} font-mono uppercase`} value={editing.assetCategory} data-testid="item-asset-category"
+                onChange={e => setEditing({ ...editing, assetCategory: e.target.value.toUpperCase() })} placeholder="LAP" />
+              <datalist id="asset-category-list">
+                {ASSET_CATEGORIES.map(c => <option key={c} value={c}>{t(`assetCategories.${c}`)}</option>)}
+              </datalist>
+              <span className="mt-1 block text-xs text-gray-500">{t('stock.items.assetCategoryHint')}</span>
             </label>
             <label className="text-sm sm:col-span-2">
               <span className="mb-1 block font-medium text-gray-700">{t('stock.items.leadTimeDays')}</span>

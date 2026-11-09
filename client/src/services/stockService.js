@@ -97,6 +97,15 @@ export const equipmentService = {
   unit: (id) => api.get(`/stock-units/${id}`).then(data),
   // Parc existant : { stockItemId, warehouseId, units: [{ serialNumber, assetTag }] }
   register: (payload) => api.post('/stock-units/register', payload, { skipErrorToast: true }).then(data),
+  // Import du parc existant (Excel / CSV) : modèle, aperçu puis confirmation (même fichier)
+  importTemplate: (format = 'xlsx') =>
+    api.get('/stock-units/import/template', { params: { format, lang: getLang() }, responseType: 'blob' }).then(data),
+  importFile: (file, { confirm = false } = {}) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    if (confirm) fd.append('confirm', '1');
+    return api.post('/stock-units/import', fd, { headers: { 'Content-Type': 'multipart/form-data' }, skipErrorToast: true }).then(data);
+  },
   updateUnit: (id, payload) => api.put(`/stock-units/${id}`, payload).then(data),
   // { data: lignes détenues, user: { id, first_name, last_name, email, is_active } }
   holdings: (userId) => api.get('/stock-holdings', { params: { userId } }).then(data),

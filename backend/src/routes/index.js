@@ -840,6 +840,9 @@ router.get('/stock-adjustments', authenticate, hasPermission('VIEW_STOCK'), stoc
 router.post('/stock-adjustments', authenticate, hasPermission('ADJUST_STOCK'), stockCountController.createAdjustment);
 router.get('/stock-units', authenticate, hasPermission('VIEW_STOCK'), equipmentController.units);
 router.post('/stock-units/register', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), equipmentController.registerUnits);
+// Import du parc existant (Excel / CSV) : modèle, aperçu, confirmation — avant /stock-units/:id
+router.get('/stock-units/import/template', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), equipmentController.importTemplate);
+router.post('/stock-units/import', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.importUnits);
 router.get('/stock-units/:id', authenticate, hasPermission('VIEW_STOCK'), equipmentController.getUnit);
 router.put('/stock-units/:id', authenticate, hasPermission('ISSUE_STOCK'), equipmentController.updateUnit);
 

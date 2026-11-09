@@ -4,6 +4,8 @@
 const ExcelJS = require('exceljs');
 const multer = require('multer');
 const path = require('path');
+const tenant = require('./tenant');
+const { requestLanguage } = require('./requestLang');
 
 /** Middleware multer (mémoire) : .xlsx / .csv, taille maximale en Mo → 400 lisible */
 function uploadHandler({ maxMb = 2 } = {}) {
@@ -18,12 +20,19 @@ function uploadHandler({ maxMb = 2 } = {}) {
   }).single('file');
 
   return (req, res, next) => {
+    // Contexte « entreprise courante » (AsyncLocalStorage) : multer rappelle à la fin du flux de la requête, dans un
+    // autre contexte asynchrone quand le fichier arrive en plusieurs morceaux — sans ce rétablissement, les requêtes
+    // de l'import ne seraient plus cloisonnées par entreprise (tenant.filter vide) et l'écriture serait refusée
+    const store = tenant.current();
     upload(req, res, (err) => {
       if (err) {
         const message = err.code === 'LIMIT_FILE_SIZE' ? `Fichier trop volumineux (${maxMb} Mo maximum)` : err.message;
         return res.status(400).json({ success: false, message });
       }
-      next();
+      // Langue de la requête (même mécanisme) : noms de catégories / unités traduits
+      const resume = () => requestLanguage(req, res, next);
+      if (store) tenant.run(store, resume);
+      else resume();
     });
   };
 }

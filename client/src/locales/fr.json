@@ -4049,6 +4049,86 @@
       "monthlyConsumption": "Consommation par mois ({{unit}})",
       "noConsumption": "Aucune consommation sur les 12 derniers mois.",
       "consumption": "Consommation"
+    },
+    "unitImport": {
+      "button": "Importer (Excel / CSV)",
+      "title": "Importer le parc existant",
+      "templateTitle": "Modèle à remplir",
+      "templateHint": "Une ligne par bien : un équipement à n° de série par ligne, ou une quantité pour un article sans n° de série. Les articles doivent déjà exister dans le catalogue.",
+      "templateFile": "modele-import-parc-existant",
+      "templateFailed": "Téléchargement du modèle impossible",
+      "columnsLabel": "Colonnes :",
+      "columns": {
+        "item": "Code article",
+        "serial": "N° de série",
+        "assetTag": "N° d'inventaire",
+        "warehouse": "Code dépôt",
+        "quantity": "Quantité",
+        "project": "Code projet",
+        "condition": "État",
+        "unitCost": "Coût unitaire",
+        "currency": "Devise",
+        "notes": "Notes"
+      },
+      "rules": "N° de série obligatoire pour un article suivi par n° de série (unique par article) ; n° d'inventaire vide = attribué automatiquement ; état Bon ou Endommagé. Les biens entrent en stock au dépôt indiqué.",
+      "analyzing": "Analyse du fichier…",
+      "importing": "Import en cours…",
+      "confirm": "Importer",
+      "confirmN_one": "Importer {{count}} bien",
+      "confirmN_other": "Importer {{count}} biens",
+      "ready": "Vérifiez l'aperçu : rien n'est écrit avant la confirmation.",
+      "nothing": "Aucune ligne valide à importer.",
+      "sumUnits_one": "{{count}} équipement",
+      "sumUnits_other": "{{count}} équipements",
+      "sumQuantity_one": "{{count}} article sans n° de série ({{quantity}} unités)",
+      "sumQuantity_other": "{{count}} articles sans n° de série ({{quantity}} unités)",
+      "sumDamaged_one": "{{count}} endommagé",
+      "sumDamaged_other": "{{count}} endommagés",
+      "sumAutoTags_one": "{{count}} n° d'inventaire attribué automatiquement",
+      "sumAutoTags_other": "{{count}} n° d'inventaire attribués automatiquement",
+      "tabUnits": "Équipements ({{count}})",
+      "tabQuantities": "Quantités ({{count}})",
+      "lines": "Lignes",
+      "autoTag": "automatique",
+      "noUnits": "Aucun équipement à n° de série.",
+      "noQuantities": "Aucune quantité d'article sans n° de série.",
+      "warning": "Les biens entrent « en stock » au dépôt indiqué. Un bien remis à une personne : faites ensuite un bon de sortie.",
+      "done": "Parc existant importé : {{units}} équipement(s), {{quantity}} unité(s) d'articles sans n° de série — opération {{operation}}",
+      "doneSkipped_one": "{{count}} ligne en erreur ignorée",
+      "doneSkipped_other": "{{count}} lignes en erreur ignorées",
+      "failed": "L'import a échoué",
+      "fileErr": {
+        "UNREADABLE": "Fichier illisible : utilisez un fichier .xlsx ou .csv",
+        "EMPTY": "Le fichier ne contient aucun bien",
+        "MISSING_COLUMNS": "Colonnes « Code article » et « Code dépôt » obligatoires : utilisez le modèle",
+        "TOO_MANY_ROWS": "Au plus {{max}} lignes par import",
+        "NOTHING_TO_IMPORT": "Aucune ligne valide à importer",
+        "NO_FILE": "Aucun fichier reçu"
+      },
+      "err": {
+        "ITEM_REQUIRED": "code article manquant",
+        "ITEM_UNKNOWN": "article « {{value}} » introuvable dans le catalogue",
+        "ITEM_INACTIVE": "article « {{value}} » désactivé",
+        "ITEM_NOT_STOCKABLE": "article « {{value}} » non stocké",
+        "ITEM_LOTS": "article « {{value}} » suivi par lot : utilisez l'import du catalogue (stock initial)",
+        "WAREHOUSE_REQUIRED": "code dépôt manquant",
+        "WAREHOUSE_UNKNOWN": "dépôt « {{value}} » introuvable",
+        "WAREHOUSE_FORBIDDEN": "vous n'avez pas accès au dépôt « {{value}} »",
+        "PROJECT_UNKNOWN": "projet « {{value}} » introuvable",
+        "COST_INVALID": "coût « {{value}} » invalide",
+        "CURRENCY_UNKNOWN": "devise « {{value}} » inconnue",
+        "CONDITION_INVALID": "état « {{value}} » invalide (Bon ou Endommagé)",
+        "SERIAL_REQUIRED": "n° de série obligatoire (article « {{value}} » suivi par n° de série)",
+        "SERIAL_DUPLICATE": "n° de série « {{value}} » déjà sur la ligne {{other}}",
+        "SERIAL_EXISTS": "n° de série « {{value}} » déjà enregistré pour cet article",
+        "SERIAL_NOT_TRACKED": "article « {{value}} » sans n° de série : laissez la colonne vide",
+        "TAG_DUPLICATE": "n° d'inventaire « {{value}} » déjà sur la ligne {{other}}",
+        "TAG_EXISTS": "n° d'inventaire « {{value}} » déjà attribué dans l'entreprise",
+        "TAG_NOT_TRACKED": "article « {{value}} » sans n° de série : pas de n° d'inventaire",
+        "QUANTITY_SERIAL": "un équipement par ligne : quantité vide ou 1 (« {{value}} »)",
+        "QUANTITY_INVALID": "quantité « {{value}} » invalide",
+        "OPENING_EXISTS": "article « {{value}} » : du stock existe déjà au dépôt {{warehouse}} (un nouvel import doublerait le stock)"
+      }
     }
   },
   "help": {
@@ -5551,6 +5631,27 @@
           },
           {
             "type": "h",
+            "text": "Importer le parc existant (Excel / CSV)"
+          },
+          {
+            "type": "p",
+            "text": "Pour un inventaire déjà tenu dans un tableur : Stock › Équipements › « Importer (Excel / CSV) ». Une ligne par bien : un équipement à n° de série par ligne, ou une quantité pour un article sans n° de série. Les articles doivent déjà exister dans le catalogue (Stock › Articles › Importer)."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Colonnes obligatoires : Code article et Code dépôt. N° de série obligatoire pour un article suivi par n° de série.",
+              "N° d'inventaire facultatif : vide = attribué automatiquement. Il doit être unique dans l'entreprise.",
+              "État : Bon (par défaut) ou Endommagé. Code projet, coût unitaire, devise et notes (détenteur, date d'acquisition…) facultatifs.",
+              "L'aperçu ne modifie rien ; la confirmation écrit toutes les lignes valides en une seule opération de stock."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Les biens entrent « en stock » au dépôt indiqué. Pour ceux déjà remis à une personne, faites ensuite un bon de sortie vers l'employé. Un second import du même fichier est refusé (n° de série déjà enregistrés, stock déjà présent)."
+          },
+          {
+            "type": "h",
             "text": "Récupérer le matériel"
           },
           {
@@ -6247,7 +6348,8 @@
       "STOCK_PLANNING_CHANGED": "Paramètres de prévision du stock modifiés",
       "STOCK_REQUEST_VALIDATED": "Demande au magasin validée",
       "STOCK_REQUEST_REJECTED": "Demande au magasin rejetée",
-      "STOCK_REQUEST_CLOSED": "Demande au magasin soldée"
+      "STOCK_REQUEST_CLOSED": "Demande au magasin soldée",
+      "STOCK_UNITS_IMPORTED": "Parc existant importé (Excel / CSV)"
     },
     "groups": {
       "all": "Tous les événements",

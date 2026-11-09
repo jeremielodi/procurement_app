@@ -1006,7 +1006,8 @@
     "STOCK_PLANNING_CHANGED": "Stock forecast settings changed",
     "STOCK_REQUEST_VALIDATED": "Store request approved",
     "STOCK_REQUEST_REJECTED": "Store request rejected",
-    "STOCK_REQUEST_CLOSED": "Store request closed"
+    "STOCK_REQUEST_CLOSED": "Store request closed",
+    "STOCK_UNITS_IMPORTED": "Existing assets imported (Excel / CSV)"
   },
   "auditExport": {
     "sheet": "Audit log",
@@ -1338,5 +1339,63 @@
       "OK": "Sufficient",
       "NO_CONSUMPTION": "No consumption"
     }
+  },
+  "stockUnitImport": {
+    "fileName": "existing-assets-import-template",
+    "headers": {
+      "item": "Item code",
+      "serial": "Serial number",
+      "assetTag": "Asset tag",
+      "warehouse": "Warehouse code",
+      "quantity": "Quantity",
+      "project": "Project code",
+      "condition": "Condition",
+      "unitCost": "Unit cost",
+      "currency": "Currency",
+      "notes": "Notes"
+    },
+    "help": {
+      "item": "Catalogue item code (References sheet). The item must exist, be active and stockable; lot-tracked items go through the catalogue import.",
+      "serial": "Required for a serial-tracked item: one row per unit. Unique per item. Empty for an item without serial numbers.",
+      "assetTag": "Optional (equipment): asset tag already on the unit, unique in the company. Empty = assigned automatically.",
+      "warehouse": "Code of the warehouse where the asset is (References sheet, warehouses you have access to).",
+      "quantity": "Items without serial numbers: quantity (1 by default). Equipment: empty or 1.",
+      "project": "Project that funded the asset (code, References sheet). Optional: empty = unassigned.",
+      "condition": "Good (default) or Damaged (also: bad, broken). For equipment.",
+      "unitCost": "Unit purchase cost (weighted average cost valuation). Optional.",
+      "currency": "Currency code of the cost (USD, EUR, CDF…). Empty = company currency.",
+      "notes": "Free text: holder, acquisition date, remarks… (equipment record)."
+    },
+    "sheets": {
+      "units": "Existing assets",
+      "references": "References",
+      "help": "Instructions"
+    },
+    "ref": {
+      "itemCode": "Item code",
+      "itemName": "Item",
+      "serials": "Serial numbers?",
+      "warehouseCode": "Warehouse code",
+      "warehouseName": "Warehouse",
+      "projectCode": "Project code",
+      "projectName": "Project",
+      "condition": "Condition",
+      "column": "Column",
+      "required": "Required",
+      "description": "Description"
+    },
+    "required": "Required",
+    "optional": "Optional",
+    "yes": "Yes",
+    "no": "No",
+    "good": "Good",
+    "damaged": "Damaged",
+    "example": {
+      "note": "Holder: Jean K. — acquired in 2022"
+    },
+    "rules1": "One row per asset: one serial-tracked unit per row; for an item without serial numbers, the quantity (rows of the same item and warehouse are added up).",
+    "rules2": "Nothing is written until you confirm the preview; rows with errors are reported and skipped.",
+    "rules3": "Assets enter \"in stock\" at the given warehouse (opening stock movement). An asset handed to someone: then create an issue note.",
+    "rules4": "An item without serial numbers that already has stock in the warehouse is refused: a second import does not double the stock."
   }
 }

@@ -1006,7 +1006,8 @@
     "STOCK_PLANNING_CHANGED": "Paramètres de prévision du stock modifiés",
     "STOCK_REQUEST_VALIDATED": "Demande au magasin validée",
     "STOCK_REQUEST_REJECTED": "Demande au magasin rejetée",
-    "STOCK_REQUEST_CLOSED": "Demande au magasin soldée"
+    "STOCK_REQUEST_CLOSED": "Demande au magasin soldée",
+    "STOCK_UNITS_IMPORTED": "Parc existant importé (Excel / CSV)"
   },
   "auditExport": {
     "sheet": "Journal d'audit",
@@ -1338,5 +1339,63 @@
       "OK": "Suffisant",
       "NO_CONSUMPTION": "Sans consommation"
     }
+  },
+  "stockUnitImport": {
+    "fileName": "modele-import-parc-existant",
+    "headers": {
+      "item": "Code article",
+      "serial": "N° de série",
+      "assetTag": "N° d'inventaire",
+      "warehouse": "Code dépôt",
+      "quantity": "Quantité",
+      "project": "Code projet",
+      "condition": "État",
+      "unitCost": "Coût unitaire",
+      "currency": "Devise",
+      "notes": "Notes"
+    },
+    "help": {
+      "item": "Code de l'article du catalogue (feuille Référentiels). L'article doit exister, être actif et stockable ; les articles suivis par lot passent par l'import du catalogue.",
+      "serial": "Obligatoire pour un article suivi par n° de série : une ligne par équipement. Unique par article. Vide pour un article sans n° de série.",
+      "assetTag": "Facultatif (équipements) : n° d'inventaire déjà collé sur le bien, unique dans l'entreprise. Vide = attribué automatiquement.",
+      "warehouse": "Code du dépôt où se trouve le bien (feuille Référentiels, dépôts auxquels vous avez accès).",
+      "quantity": "Articles sans n° de série : quantité (1 par défaut). Équipements : vide ou 1.",
+      "project": "Projet qui a financé le bien (code, feuille Référentiels). Facultatif : vide = non attribué.",
+      "condition": "Bon (par défaut) ou Endommagé (aussi : mauvais, en panne). Pour les équipements.",
+      "unitCost": "Coût d'achat unitaire (valorisation au coût moyen). Facultatif.",
+      "currency": "Code de la devise du coût (USD, EUR, CDF…). Vide = devise de l'entreprise.",
+      "notes": "Texte libre : détenteur, date d'acquisition, remarques… (fiche de l'équipement)."
+    },
+    "sheets": {
+      "units": "Parc existant",
+      "references": "Référentiels",
+      "help": "Mode d'emploi"
+    },
+    "ref": {
+      "itemCode": "Code article",
+      "itemName": "Article",
+      "serials": "N° de série ?",
+      "warehouseCode": "Code dépôt",
+      "warehouseName": "Dépôt",
+      "projectCode": "Code projet",
+      "projectName": "Projet",
+      "condition": "État",
+      "column": "Colonne",
+      "required": "Obligatoire",
+      "description": "Description"
+    },
+    "required": "Obligatoire",
+    "optional": "Facultatif",
+    "yes": "Oui",
+    "no": "Non",
+    "good": "Bon",
+    "damaged": "Endommagé",
+    "example": {
+      "note": "Détenteur : Jean K. — acquis en 2022"
+    },
+    "rules1": "Une ligne par bien : un équipement à n° de série par ligne ; pour un article sans n° de série, la quantité (les lignes d'un même article et dépôt sont additionnées).",
+    "rules2": "Rien n'est écrit tant que vous n'avez pas confirmé l'aperçu ; les lignes en erreur sont signalées et ignorées.",
+    "rules3": "Les biens entrent « en stock » au dépôt indiqué (mouvement de stock initial). Un bien remis à une personne : faites ensuite un bon de sortie.",
+    "rules4": "Un article sans n° de série qui a déjà du stock dans le dépôt est refusé : un second import ne double pas le stock."
   }
 }

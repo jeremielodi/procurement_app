@@ -4049,6 +4049,86 @@
       "monthlyConsumption": "Consumption per month ({{unit}})",
       "noConsumption": "No consumption in the last 12 months.",
       "consumption": "Consumption"
+    },
+    "unitImport": {
+      "button": "Import (Excel / CSV)",
+      "title": "Import existing assets",
+      "templateTitle": "Template to fill in",
+      "templateHint": "One row per asset: one serial-tracked unit per row, or a quantity for an item without serial numbers. Items must already exist in the catalogue.",
+      "templateFile": "existing-assets-import-template",
+      "templateFailed": "Unable to download the template",
+      "columnsLabel": "Columns:",
+      "columns": {
+        "item": "Item code",
+        "serial": "Serial number",
+        "assetTag": "Asset tag",
+        "warehouse": "Warehouse code",
+        "quantity": "Quantity",
+        "project": "Project code",
+        "condition": "Condition",
+        "unitCost": "Unit cost",
+        "currency": "Currency",
+        "notes": "Notes"
+      },
+      "rules": "Serial number required for a serial-tracked item (unique per item); empty asset tag = assigned automatically; condition Good or Damaged. Assets enter stock at the given warehouse.",
+      "analyzing": "Analysing the file…",
+      "importing": "Importing…",
+      "confirm": "Import",
+      "confirmN_one": "Import {{count}} asset",
+      "confirmN_other": "Import {{count}} assets",
+      "ready": "Check the preview: nothing is written before you confirm.",
+      "nothing": "No valid row to import.",
+      "sumUnits_one": "{{count}} unit",
+      "sumUnits_other": "{{count}} units",
+      "sumQuantity_one": "{{count}} item without serial numbers ({{quantity}} units)",
+      "sumQuantity_other": "{{count}} items without serial numbers ({{quantity}} units)",
+      "sumDamaged_one": "{{count}} damaged",
+      "sumDamaged_other": "{{count}} damaged",
+      "sumAutoTags_one": "{{count}} asset tag assigned automatically",
+      "sumAutoTags_other": "{{count}} asset tags assigned automatically",
+      "tabUnits": "Equipment ({{count}})",
+      "tabQuantities": "Quantities ({{count}})",
+      "lines": "Rows",
+      "autoTag": "automatic",
+      "noUnits": "No serial-tracked unit.",
+      "noQuantities": "No quantity of items without serial numbers.",
+      "warning": "Assets enter \"in stock\" at the given warehouse. An asset handed to someone: then create an issue note.",
+      "done": "Existing assets imported: {{units}} unit(s), {{quantity}} unit(s) of items without serial numbers — operation {{operation}}",
+      "doneSkipped_one": "{{count}} row with errors skipped",
+      "doneSkipped_other": "{{count}} rows with errors skipped",
+      "failed": "The import failed",
+      "fileErr": {
+        "UNREADABLE": "Unreadable file: use a .xlsx or .csv file",
+        "EMPTY": "The file contains no asset",
+        "MISSING_COLUMNS": "\"Item code\" and \"Warehouse code\" columns are required: use the template",
+        "TOO_MANY_ROWS": "At most {{max}} rows per import",
+        "NOTHING_TO_IMPORT": "No valid row to import",
+        "NO_FILE": "No file received"
+      },
+      "err": {
+        "ITEM_REQUIRED": "item code missing",
+        "ITEM_UNKNOWN": "item \"{{value}}\" not found in the catalogue",
+        "ITEM_INACTIVE": "item \"{{value}}\" is deactivated",
+        "ITEM_NOT_STOCKABLE": "item \"{{value}}\" is not stocked",
+        "ITEM_LOTS": "item \"{{value}}\" is lot-tracked: use the catalogue import (opening stock)",
+        "WAREHOUSE_REQUIRED": "warehouse code missing",
+        "WAREHOUSE_UNKNOWN": "warehouse \"{{value}}\" not found",
+        "WAREHOUSE_FORBIDDEN": "you do not have access to warehouse \"{{value}}\"",
+        "PROJECT_UNKNOWN": "project \"{{value}}\" not found",
+        "COST_INVALID": "invalid cost \"{{value}}\"",
+        "CURRENCY_UNKNOWN": "unknown currency \"{{value}}\"",
+        "CONDITION_INVALID": "invalid condition \"{{value}}\" (Good or Damaged)",
+        "SERIAL_REQUIRED": "serial number required (item \"{{value}}\" is serial-tracked)",
+        "SERIAL_DUPLICATE": "serial number \"{{value}}\" already on row {{other}}",
+        "SERIAL_EXISTS": "serial number \"{{value}}\" already registered for this item",
+        "SERIAL_NOT_TRACKED": "item \"{{value}}\" has no serial numbers: leave the column empty",
+        "TAG_DUPLICATE": "asset tag \"{{value}}\" already on row {{other}}",
+        "TAG_EXISTS": "asset tag \"{{value}}\" already used in the company",
+        "TAG_NOT_TRACKED": "item \"{{value}}\" has no serial numbers: no asset tag",
+        "QUANTITY_SERIAL": "one unit per row: quantity empty or 1 (\"{{value}}\")",
+        "QUANTITY_INVALID": "invalid quantity \"{{value}}\"",
+        "OPENING_EXISTS": "item \"{{value}}\": stock already exists in warehouse {{warehouse}} (a new import would double it)"
+      }
     }
   },
   "help": {
@@ -5551,6 +5631,27 @@
           },
           {
             "type": "h",
+            "text": "Import existing assets (Excel / CSV)"
+          },
+          {
+            "type": "p",
+            "text": "For an inventory already kept in a spreadsheet: Stock › Equipment › \"Import (Excel / CSV)\". One row per asset: one serial-tracked unit per row, or a quantity for an item without serial numbers. Items must already exist in the catalogue (Stock › Items › Import)."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Required columns: Item code and Warehouse code. Serial number required for a serial-tracked item.",
+              "Asset tag optional: empty = assigned automatically. It must be unique in the company.",
+              "Condition: Good (default) or Damaged. Project code, unit cost, currency and notes (holder, acquisition date…) optional.",
+              "The preview changes nothing; confirming writes all valid rows in a single stock operation."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Assets enter \"in stock\" at the given warehouse. For those already handed to someone, then create an issue note to the employee. Importing the same file again is refused (serial numbers already registered, stock already present)."
+          },
+          {
+            "type": "h",
             "text": "Recovering equipment"
           },
           {
@@ -6247,7 +6348,8 @@
       "STOCK_PLANNING_CHANGED": "Stock forecast settings changed",
       "STOCK_REQUEST_VALIDATED": "Store request approved",
       "STOCK_REQUEST_REJECTED": "Store request rejected",
-      "STOCK_REQUEST_CLOSED": "Store request closed"
+      "STOCK_REQUEST_CLOSED": "Store request closed",
+      "STOCK_UNITS_IMPORTED": "Existing assets imported (Excel / CSV)"
     },
     "groups": {
       "all": "All events",

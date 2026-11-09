@@ -7,6 +7,8 @@ const stockModel = require('../models/StockModel');
 const i18n = require('../i18n');
 const db = require('../config/database');
 const stockReturnPdfService = require('../services/StockReturnPdfService');
+const unitImportService = require('../services/StockUnitImportService');
+const { audit, AUDIT } = require('../utils/auditLog');
 
 function sendError(res, error, fallback) {
   if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, line: error.line, remaining: error.remaining });
@@ -125,6 +127,44 @@ module.exports = {
       const result = await equipmentModel.registerUnits({ stockItemId: b.stockItemId, warehouseId: b.warehouseId, units: b.units || [], projectId: b.projectId || null }, { userId: req.user.id });
       res.status(201).json({ success: true, data: result, message: 'Équipements enregistrés' });
     } catch (error) { return sendError(res, error, 'Erreur lors de l\'enregistrement des équipements'); }
+  },
+
+  /** GET /stock-units/import/template?format=xlsx|csv&lang= — modèle d'import du parc existant (articles, dépôts accessibles, projets) */
+  async importTemplate(req, res) {
+    try {
+      const format = req.query.format === 'csv' ? 'csv' : 'xlsx';
+      const file = await unitImportService.template({ userId: req.user.id, lang: i18n.fromRequest(req), format });
+      res.set('Content-Type', file.contentType);
+      res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}"`);
+      res.end(file.buffer);
+    } catch (error) { return sendError(res, error, 'Erreur lors de la génération du modèle'); }
+  },
+
+  /**
+   * POST /stock-units/import (multipart : file ; confirm=1 pour écrire) — parc existant depuis Excel / CSV :
+   * sans confirm = aperçu { units, openings, errors, summary } ; avec confirm = lignes valides écrites en une transaction
+   */
+  async importUnits(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(403).json({ success: false, message: 'Réservé aux utilisateurs d\'une entreprise' });
+      if (!req.file) return res.status(400).json({ success: false, code: 'NO_FILE', message: 'Aucun fichier reçu' });
+      if (!['1', 'true'].includes(String(req.body?.confirm ?? req.query.confirm))) {
+        return res.json({ success: true, data: await unitImportService.preview(req.file, { userId: req.user.id }) });
+      }
+      const result = await unitImportService.apply(req.file, { userId: req.user.id });
+      await audit(req, AUDIT.STOCK_UNITS_IMPORTED, {
+        entity: { type: 'stock_units', id: null, label: req.file.originalname },
+        details: { file: req.file.originalname, units: result.units, openings: result.openings, openingQuantity: result.openingQuantity,
+          damaged: result.damaged, operation: result.groupNumber, skippedLines: result.skipped },
+        enterpriseId: req.enterpriseId,
+      });
+      res.json({ success: true, data: result, message: 'Import terminé' });
+    } catch (error) {
+      if (error.status && error.status < 500) {
+        return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
+      }
+      return sendError(res, error, 'Erreur lors de l\'import du parc existant');
+    }
   },
 
   /** PUT /stock-units/:id { assetTag, notes, condition, retire, reason } */

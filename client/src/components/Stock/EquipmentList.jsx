@@ -1,9 +1,9 @@
 // src/components/Stock/EquipmentList.jsx
 // Parc d'équipements suivis par n° de série : où est chaque unité (dépôt) ou qui la détient,
-// enregistrement du parc existant, fiche (historique, état, réforme).
+// enregistrement du parc existant (saisie, ou import Excel / CSV : ImportStockUnitsModal), fiche (historique, état, réforme).
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Laptop, Plus, RefreshCw, Search, History } from 'lucide-react';
+import { Laptop, Plus, RefreshCw, Search, History, FileUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
 import { equipmentService, stockItemService, warehouseService } from '../../services/stockService';
@@ -13,6 +13,7 @@ import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 import SerialNumbersHelp from './SerialNumbersHelp';
 import FundingProjectSelect from './FundingProjectSelect';
+import ImportStockUnitsModal from './ImportStockUnitsModal';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const STATUS_CLS = { IN_STOCK: 'bg-green-100 text-green-800', ASSIGNED: 'bg-blue-100 text-blue-800', IN_TRANSIT: 'bg-violet-100 text-violet-800', LOST: 'bg-red-100 text-red-700', RETIRED: 'bg-gray-200 text-gray-600' };
@@ -32,6 +33,7 @@ export default function EquipmentList() {
   const [debounced, setDebounced] = useState(filters);
   const [loading, setLoading] = useState(true);
   const [register, setRegister] = useState(null);
+  const [importing, setImporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [detail, setDetail] = useState(null);
 
@@ -91,6 +93,11 @@ export default function EquipmentList() {
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="rounded-lg border border-gray-300 p-2 hover:bg-gray-50" title={t('common.refresh')} aria-label={t('common.refresh')}><RefreshCw size={16} /></button>
+          {hasPermission('MANAGE_STOCK_ITEMS') && (
+            <button onClick={() => setImporting(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" data-testid="unit-import">
+              <FileUp size={16} /> {t('stock.unitImport.button')}
+            </button>
+          )}
           {hasPermission('MANAGE_STOCK_ITEMS') && (
             <button onClick={() => setRegister({ stockItemId: '', warehouseId: warehouses.length === 1 ? warehouses[0].id : '', text: '', projectId: '' })} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700" data-testid="register-units">
               <Plus size={16} /> {t('stock.equipment.register')}
@@ -219,6 +226,7 @@ export default function EquipmentList() {
           </div>
         )}
       </Modal>
+      <ImportStockUnitsModal isOpen={importing} onClose={() => setImporting(false)} onImported={load} />
     </div>
   );
 }

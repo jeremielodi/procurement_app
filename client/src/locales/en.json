@@ -5412,6 +5412,39 @@
           },
           {
             "type": "h",
+            "text": "Project that funded the stock"
+          },
+          {
+            "type": "p",
+            "text": "Every stock entry keeps the project that paid for the item: \"Project (funding)\" column of the movement log (filter by project or \"No project\"), of the item record and of the equipment list (\"Funded by…\")."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Goods receipt: project of the purchase order's requisition, taken automatically — including received equipment.",
+              "Imported opening stock (\"Project code\" column), existing equipment (\"Register existing equipment\") and stock-in adjustments: project to choose, optional (empty = not assigned).",
+              "Issues, transfers, returns and cancellations move stock already received: each quantity keeps its funding project."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Stock by project"
+          },
+          {
+            "type": "p",
+            "text": "Each item's stock is tracked by warehouse, lot and project. In \"Stock levels\", the \"All projects\" filter shows one project's stock or the stock \"No project\"; the \"Project (funding)\" column gives the breakdown. The Excel export adds a \"By project\" sheet and the valuation can be filtered by project (current stock only)."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Stock issue with a project: this project's stock is used first, then stock without a project — never another project's stock. Without a project: stock without a project first, then project stock. The issue details show the project of each line.",
+              "Transfer between warehouses: the project follows the goods to the destination warehouse.",
+              "Stock-out adjustment: \"Stock to remove\" — a project, \"No project\" or automatic (stock without a project first).",
+              "Stock count: the item is counted without distinguishing projects; a surplus enters without a project, a shortage is taken from stock without a project first, then from projects."
+            ]
+          },
+          {
+            "type": "h",
             "text": "Physical inventory"
           },
           {
@@ -5537,39 +5570,6 @@
           {
             "type": "p",
             "text": "Stock › \"Receipt reconciliation\" compares each goods receipt line with the stock movements it produced: quantity accepted = quantity entered, same warehouse, same lot, cost = purchase order price, cancelled receipt properly reversed, number of serial numbers = quantity accepted. By default only discrepancies are shown; \"Export (Excel)\" produces a summary and the line-by-line detail (movement numbers, reversing entries)."
-          },
-          {
-            "type": "h",
-            "text": "Project that funded the stock"
-          },
-          {
-            "type": "p",
-            "text": "Every stock entry keeps the project that paid for the item: \"Project (funding)\" column of the movement log (filter by project or \"No project\"), of the item record and of the equipment list (\"Funded by…\")."
-          },
-          {
-            "type": "list",
-            "items": [
-              "Goods receipt: project of the purchase order's requisition, taken automatically — including received equipment.",
-              "Imported opening stock (\"Project code\" column), existing equipment (\"Register existing equipment\") and stock-in adjustments: project to choose, optional (empty = not assigned).",
-              "Issues, transfers, returns and cancellations move stock already received: each quantity keeps its funding project."
-            ]
-          },
-          {
-            "type": "h",
-            "text": "Stock by project"
-          },
-          {
-            "type": "p",
-            "text": "Each item's stock is tracked by warehouse, lot and project. In \"Stock levels\", the \"All projects\" filter shows one project's stock or the stock \"No project\"; the \"Project (funding)\" column gives the breakdown. The Excel export adds a \"By project\" sheet and the valuation can be filtered by project (current stock only)."
-          },
-          {
-            "type": "list",
-            "items": [
-              "Stock issue with a project: this project's stock is used first, then stock without a project — never another project's stock. Without a project: stock without a project first, then project stock. The issue details show the project of each line.",
-              "Transfer between warehouses: the project follows the goods to the destination warehouse.",
-              "Stock-out adjustment: \"Stock to remove\" — a project, \"No project\" or automatic (stock without a project first).",
-              "Stock count: the item is counted without distinguishing projects; a surplus enters without a project, a shortage is taken from stock without a project first, then from projects."
-            ]
           },
           {
             "type": "links",
@@ -6123,7 +6123,8 @@
               "\"My company\": name, logo, address, contacts, tax ID / trade register, currency. They appear on every PDF.",
               "Warehouses and logistics access (see \"Stock\").",
               "Supplier prequalification and verification of their documents.",
-              "\"My company\" › \"Daily requisition report\": an email every night at midnight to administrators and managers, in their language, project by project (latest 20 requisitions, current step, blocked requisitions). \"Send me a sample now\" sends it to you immediately."
+              "\"My company\" › \"Daily requisition report\": an email every night at midnight to administrators and managers, in their language, project by project (latest 20 requisitions, current step, blocked requisitions). \"Send me a sample now\" sends it to you immediately.",
+              "Other \"My company\" settings: \"Purchase order approval thresholds\" (N1 / N2 / N3, can be overridden per project), \"Asset tag codification\" (organisation prefix, e.g. IMA → IMA-MIHR-LAP-2026-001; see \"Equipment\"), \"Replenishment forecast\" (consumption period, safety stock, order frequency and lead time; see \"Stock\") and \"Store requests\" (approval of requests before they are served)."
             ]
           },
           {

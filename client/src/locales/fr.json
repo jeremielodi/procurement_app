@@ -6123,7 +6123,8 @@
               "« Mon entreprise » : nom, logo, adresse, contacts, NIF / RCCM, devise. Ils apparaissent sur tous les PDF.",
               "Dépôts et accès de la logistique (voir « Stock »).",
               "Préqualification des fournisseurs et vérification de leurs documents.",
-              "« Mon entreprise » › « Rapport quotidien des réquisitions » : un email chaque nuit à minuit aux administrateurs et managers, dans leur langue, projet par projet (20 dernières réquisitions, étape en cours, réquisitions bloquées). « Recevoir un exemple maintenant » vous l'envoie tout de suite."
+              "« Mon entreprise » › « Rapport quotidien des réquisitions » : un email chaque nuit à minuit aux administrateurs et managers, dans leur langue, projet par projet (20 dernières réquisitions, étape en cours, réquisitions bloquées). « Recevoir un exemple maintenant » vous l'envoie tout de suite.",
+              "Autres réglages de « Mon entreprise » : « Seuils d'approbation des bons de commande » (N1 / N2 / N3, remplaçables projet par projet), « Codification des n° d'inventaire » (préfixe d'organisation, ex. IMA → IMA-MIHR-LAP-2026-001 ; voir « Équipements »), « Prévision du réapprovisionnement » (période de consommation, stock de sécurité, fréquence et délai de commande ; voir « Stock ») et « Demandes au magasin » (validation des demandes avant leur service)."
             ]
           },
           {

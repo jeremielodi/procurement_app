@@ -2,7 +2,8 @@
 // Nouvelle demande au magasin (tout utilisateur de l'entreprise) : dépôt, pour moi ou pour un département, projet
 // (facultatif : son chef de projet valide si l'entreprise exige une validation), date souhaitée, motif, articles stockables
 // avec la quantité disponible dans le dépôt (indicative : le magasinier sert selon le stock du moment).
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ClipboardList, Plus, Trash2, Send, User, Building2, Warehouse } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -21,13 +22,36 @@ export const requestError = (err) => {
   return REQUEST_ERRORS.includes(d.code) ? t(`stockRequests.err.${d.code}`) : (d.message || t('common.errorOccurred'));
 };
 
-/** Article stockable du dépôt (recherche) avec la quantité disponible */
+/** Article stockable du dépôt (recherche) avec la quantité disponible.
+ *  Liste en portail (position fixe, comme SearchSelect) : jamais coupée par le cadre du tableau des articles,
+ *  ouverte vers le haut si la place manque en bas, au moins 28rem de large pour les désignations longues. */
 function ItemPicker({ warehouseId, value, onChange, exclude }) {
   const [q, setQ] = useState('');
   const [options, setOptions] = useState([]);
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
+  const inputRef = useRef(null);
   const timer = useRef(null);
   useEffect(() => () => clearTimeout(timer.current), []);
+  const place = useCallback(() => {
+    const r = inputRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const below = window.innerHeight - r.bottom;
+    const up = below < 240 && r.top > below;
+    const width = Math.min(Math.max(r.width, 448), window.innerWidth - 16);
+    setPos({
+      left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)), width,
+      top: up ? undefined : r.bottom + 4, bottom: up ? window.innerHeight - r.top + 4 : undefined,
+      maxHeight: Math.min(384, (up ? r.top : below) - 12),
+    });
+  }, []);
+  useEffect(() => {
+    if (!open) return undefined;
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+  }, [open, place]);
   const search = (text) => {
     setQ(text);
     clearTimeout(timer.current);
@@ -45,18 +69,20 @@ function ItemPicker({ warehouseId, value, onChange, exclude }) {
   }
   return (
     <div className="relative">
-      <input value={q} onChange={e => search(e.target.value)} onFocus={() => search(q)} onBlur={() => setTimeout(() => setOpen(false), 150)}
+      <input ref={inputRef} value={q} onChange={e => search(e.target.value)} onFocus={() => search(q)} onBlur={() => setTimeout(() => setOpen(false), 150)}
         disabled={!warehouseId} placeholder={t('stockRequests.itemSearch')} className={inputCls} data-testid="request-item-search" />
-      {open && (
-        <ul className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 text-sm shadow-lg">
+      {open && pos && createPortal(
+        <ul className="fixed z-[1000] overflow-auto rounded-lg border border-gray-200 bg-white py-1 text-sm shadow-lg" data-testid="request-item-options"
+          style={{ left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom, maxHeight: pos.maxHeight }}>
           {options.filter(o => !exclude.includes(o.id)).length === 0 && <li className="px-3 py-2 text-gray-500">{t('refs.none')}</li>}
           {options.filter(o => !exclude.includes(o.id)).map(o => (
-            <li key={o.id} onMouseDown={(e) => { e.preventDefault(); onChange(o); setOpen(false); setQ(''); }} className="flex cursor-pointer justify-between gap-3 px-3 py-1.5 hover:bg-blue-50">
-              <span><b>{o.name}</b> <span className="font-mono text-xs text-gray-500">{o.code}</span></span>
+            <li key={o.id} onMouseDown={(e) => { e.preventDefault(); onChange(o); setOpen(false); setQ(''); }} className="flex cursor-pointer items-start justify-between gap-3 px-3 py-2 hover:bg-blue-50">
+              <span className="min-w-0"><b>{o.name}</b> <span className="font-mono text-xs text-gray-500">{o.code}</span></span>
               <span className={`whitespace-nowrap text-xs ${o.available > 0 ? 'text-green-700' : 'text-red-600'}`}>{t('stockRequests.availableShort', { qty: fmtQty(o.available), unit: o.unit })}</span>
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.body
       )}
     </div>
   );

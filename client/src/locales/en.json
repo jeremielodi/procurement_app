@@ -4183,6 +4183,53 @@
       "templateHint": "Pre-filled with your equipment: fill in the acquisition date and project segment, keep the rows to re-tag, then import the file.",
       "templateFile": "asset-tag-recoding-template",
       "templateFailed": "Could not download the template"
+    },
+    "assignImport": {
+      "button": "Import assignments",
+      "title": "Import existing assignments",
+      "format": "Who holds which equipment: Item code + Serial number (or Asset tag) + Holder email",
+      "hint": "For equipment already handed over (asset register). One issue note is created per warehouse and holder; each holder is notified and confirms receipt. Row without email = the equipment stays in the warehouse. The holder needs an active procureApp account.",
+      "templateHint": "Pre-filled with the equipment in stock and the holder noted in their notes: fill in the “Holder email” column (suggested when the name matches exactly one user), then import the file.",
+      "templateFile": "equipment-assignments-template",
+      "confirm": "Save assignments",
+      "confirmN_one": "Assign {{count}} item of equipment",
+      "confirmN_other": "Assign {{count}} items of equipment",
+      "working": "Creating issue notes…",
+      "failed": "Could not import the assignments",
+      "done_one": "{{count}} item of equipment assigned",
+      "done_other": "{{count}} items of equipment assigned",
+      "doneIssues_one": "{{count}} issue note created ({{units}} item(s)) — holders have been notified",
+      "doneIssues_other": "{{count}} issue notes created ({{units}} item(s)) — holders have been notified",
+      "sumUnits_one": "{{count}} item to assign",
+      "sumUnits_other": "{{count}} items to assign",
+      "sumHolders_one": "{{count}} holder",
+      "sumHolders_other": "{{count}} holders",
+      "sumIssues_one": "{{count}} issue note",
+      "sumIssues_other": "{{count}} issue notes",
+      "sumSkipped_one": "{{count}} row without email (stays in the warehouse)",
+      "sumSkipped_other": "{{count}} rows without email (stay in the warehouse)",
+      "holder": "Holder",
+      "issue": "Issue note",
+      "units": "Equipment",
+      "damaged": "Damaged",
+      "fileErr": {
+        "UNREADABLE": "Unreadable file: use an .xlsx or .csv file",
+        "EMPTY": "The file contains no equipment",
+        "MISSING_COLUMNS": "Required columns: “Item code” + “Serial number” (or “Asset tag”) and “Holder email”",
+        "TOO_MANY_ROWS": "At most {{max}} rows per import",
+        "NOTHING_TO_IMPORT": "No valid row",
+        "NO_FILE": "No file received"
+      },
+      "err": {
+        "UNIT_REQUIRED": "item code and serial number (or asset tag) required",
+        "UNIT_NOT_FOUND": "equipment {{value}} not found",
+        "UNIT_ASSIGNED": "equipment {{value}} already assigned to {{name}}",
+        "UNIT_NOT_IN_STOCK": "equipment {{value}} not in stock",
+        "WAREHOUSE_FORBIDDEN": "you have no access to warehouse {{value}}",
+        "HOLDER_UNKNOWN": "no user of the enterprise with email {{value}}",
+        "HOLDER_INACTIVE": "account {{value}} is deactivated or not an employee account",
+        "UNIT_DUPLICATE": "equipment {{value}} already on row {{other}}"
+      }
     }
   },
   "help": {
@@ -5702,7 +5749,28 @@
           },
           {
             "type": "tip",
-            "text": "Assets enter \"in stock\" at the given warehouse. For those already handed to someone, then create an issue note to the employee. Importing the same file again is refused (serial numbers already registered, stock already present)."
+            "text": "Assets enter \"in stock\" at the given warehouse. For those already handed to someone, then use \"Import assignments\" (below) or an issue note to the employee. Importing the same file again is refused (serial numbers already registered, stock already present)."
+          },
+          {
+            "type": "h",
+            "text": "Import existing assignments"
+          },
+          {
+            "type": "p",
+            "text": "To know who holds each piece of equipment already handed over (asset register): Stock › Equipment › \"Import assignments\"."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Download the \"Excel template\": it lists the equipment in stock in your warehouses, with the holder noted in their notes.",
+              "Fill in the \"Holder email\" column (email of the person's procureApp account; suggested when the name matches exactly one user). Leave it empty for equipment that stays in the warehouse (office, meeting room, store). People without an account must first be created in Users.",
+              "Import the file, check the preview (equipment, holders, issue notes, errors), then \"Assign\".",
+              "One issue note is created per warehouse and holder, as a single operation; each holder is notified and confirms receipt in \"My received items\"."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Damaged equipment can be assigned. Equipment already assigned is refused: recover it first (Returns). A wrong holder is fixed by cancelling the issue note, then importing the row again."
           },
           {
             "type": "h",

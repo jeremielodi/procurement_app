@@ -86,6 +86,7 @@ const AUDIT = {
   STOCK_COUNT_VALIDATED: 'STOCK_COUNT_VALIDATED',
   STOCK_ITEMS_IMPORTED: 'STOCK_ITEMS_IMPORTED', // catalogue (+ stock initial) importé depuis Excel / CSV
   STOCK_UNITS_RETAGGED: 'STOCK_UNITS_RETAGGED', // n° d'inventaire recalculés (codification ORG-PROJET-CAT-ANNÉE-NNN)
+  STOCK_UNITS_ASSIGNED: 'STOCK_UNITS_ASSIGNED', // affectations existantes importées (bons de sortie vers les détenteurs)
   STOCK_UNITS_IMPORTED: 'STOCK_UNITS_IMPORTED', // parc existant (équipements à n° de série, quantités) importé depuis Excel / CSV
   PO_DELIVERY_CLOSED: 'PO_DELIVERY_CLOSED', // reliquat d'un bon de commande soldé (le fournisseur ne livrera pas le reste)
   SUPPLIER_ALLOCATION_RECORDED: 'SUPPLIER_ALLOCATION_RECORDED', // articles d'une réquisition répartis entre plusieurs fournisseurs

@@ -64,9 +64,11 @@ class StockIssueModel {
   /**
    * @param {object} data { destinationType = 'USER', warehouseId, recipientId, destinationWarehouseId, departmentId,
    *                        projectId, purpose, lines: [{ stockItemId, lotId?, quantity, unitIds? }] }
-   * @param {object} context  { userId } — doit avoir accès au dépôt source
+   * @param {object} context  { userId } — doit avoir accès au dépôt source ;
+   *   tx : transaction englobante (import des affectations : tous les bons dans une seule opération) ;
+   *   allowDamaged : remise d'un équipement endommagé (affectation déjà existante, enregistrée après coup)
    */
-  async create({ destinationType = 'USER', warehouseId, recipientId, destinationWarehouseId, departmentId, projectId, purpose, stockRequestId, lines = [] }, { userId }) {
+  async create({ destinationType = 'USER', warehouseId, recipientId, destinationWarehouseId, departmentId, projectId, purpose, stockRequestId, lines = [] }, { userId, tx: outerTx, allowDamaged = false }) {
     const type = String(destinationType || 'USER').toUpperCase();
     if (!DESTINATIONS.includes(type)) throw fail(400, 'INVALID_DESTINATION', 'Type de sortie invalide');
     if (!Array.isArray(lines) || !lines.length) throw fail(400, 'NO_LINES', 'Ajoutez au moins un article');
@@ -75,7 +77,8 @@ class StockIssueModel {
     if (!warehouse) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès à ce dépôt');
     const isTransfer = type === 'WAREHOUSE';
 
-    return db.withTransaction(async (tx) => {
+    const run = (fn) => (outerTx ? fn(outerTx) : db.withTransaction(fn));
+    return run(async (tx) => {
       // ---- Demande au magasin servie par ce bon (migration 56) : verrouillée, même dépôt / destination, projet de la demande
       let served = null;
       if (stockRequestId) {
@@ -141,7 +144,7 @@ class StockIssueModel {
             const u = units.find(x => String(x.id) === id);
             // Un transfert déplace aussi le matériel endommagé (ex. vers un dépôt de réparation) ; une remise exige le bon état
             if (!u || String(u.stock_item_id) !== String(item.id) || u.status !== 'IN_STOCK' || String(u.warehouse_id) !== String(warehouse.id)
-                || (!isTransfer && u.condition !== 'GOOD') || used.has(`unit:${id}`)) {
+                || (!isTransfer && !allowDamaged && u.condition !== 'GOOD') || used.has(`unit:${id}`)) {
               throw fail(400, 'UNIT_UNAVAILABLE', `${item.name} : équipement ${u?.serial_number || id} indisponible (pas en stock dans ce dépôt, endommagé ou déjà choisi)`, { line: index });
             }
             used.set(`unit:${id}`, 1);

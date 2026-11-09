@@ -4183,6 +4183,53 @@
       "templateHint": "Pré-rempli avec vos équipements : complétez la date d'acquisition et le segment projet, gardez les lignes à recodifier, puis importez le fichier.",
       "templateFile": "modele-recodification-numeros-inventaire",
       "templateFailed": "Téléchargement du modèle impossible"
+    },
+    "assignImport": {
+      "button": "Importer les affectations",
+      "title": "Importer les affectations existantes",
+      "format": "Qui détient quel équipement : Code article + N° de série (ou N° d'inventaire) + Email du détenteur",
+      "hint": "Pour les équipements déjà remis (registre des biens). Un bon de sortie est créé par dépôt et par détenteur ; chacun est notifié et confirme la réception. Ligne sans email = l'équipement reste au dépôt. Le détenteur doit avoir un compte procureApp actif.",
+      "templateHint": "Pré-rempli avec les équipements en stock et le détenteur relevé dans leurs notes : complétez la colonne « Email du détenteur » (proposée quand le nom correspond à un seul utilisateur), puis importez le fichier.",
+      "templateFile": "modele-affectations-equipements",
+      "confirm": "Enregistrer les affectations",
+      "confirmN_one": "Affecter {{count}} équipement",
+      "confirmN_other": "Affecter {{count}} équipements",
+      "working": "Création des bons de sortie…",
+      "failed": "Import des affectations impossible",
+      "done_one": "{{count}} équipement affecté",
+      "done_other": "{{count}} équipements affectés",
+      "doneIssues_one": "{{count}} bon de sortie créé ({{units}} équipement(s)) — les détenteurs ont été notifiés",
+      "doneIssues_other": "{{count}} bons de sortie créés ({{units}} équipement(s)) — les détenteurs ont été notifiés",
+      "sumUnits_one": "{{count}} équipement à affecter",
+      "sumUnits_other": "{{count}} équipements à affecter",
+      "sumHolders_one": "{{count}} détenteur",
+      "sumHolders_other": "{{count}} détenteurs",
+      "sumIssues_one": "{{count}} bon de sortie",
+      "sumIssues_other": "{{count}} bons de sortie",
+      "sumSkipped_one": "{{count}} ligne sans email (reste au dépôt)",
+      "sumSkipped_other": "{{count}} lignes sans email (restent au dépôt)",
+      "holder": "Détenteur",
+      "issue": "Bon de sortie",
+      "units": "Équipements",
+      "damaged": "Endommagé",
+      "fileErr": {
+        "UNREADABLE": "Fichier illisible : utilisez un fichier .xlsx ou .csv",
+        "EMPTY": "Le fichier ne contient aucun équipement",
+        "MISSING_COLUMNS": "Colonnes obligatoires : « Code article » + « N° de série » (ou « N° d'inventaire ») et « Email du détenteur »",
+        "TOO_MANY_ROWS": "Au plus {{max}} lignes par import",
+        "NOTHING_TO_IMPORT": "Aucune ligne valide",
+        "NO_FILE": "Aucun fichier reçu"
+      },
+      "err": {
+        "UNIT_REQUIRED": "code article et n° de série (ou n° d'inventaire) requis",
+        "UNIT_NOT_FOUND": "équipement {{value}} introuvable",
+        "UNIT_ASSIGNED": "équipement {{value}} déjà affecté à {{name}}",
+        "UNIT_NOT_IN_STOCK": "équipement {{value}} pas en stock",
+        "WAREHOUSE_FORBIDDEN": "vous n'avez pas accès au dépôt {{value}}",
+        "HOLDER_UNKNOWN": "aucun utilisateur de l'entreprise avec l'email {{value}}",
+        "HOLDER_INACTIVE": "le compte {{value}} est désactivé ou n'est pas un compte d'employé",
+        "UNIT_DUPLICATE": "équipement {{value}} déjà présent ligne {{other}}"
+      }
     }
   },
   "help": {
@@ -5702,7 +5749,28 @@
           },
           {
             "type": "tip",
-            "text": "Les biens entrent « en stock » au dépôt indiqué. Pour ceux déjà remis à une personne, faites ensuite un bon de sortie vers l'employé. Un second import du même fichier est refusé (n° de série déjà enregistrés, stock déjà présent)."
+            "text": "Les biens entrent « en stock » au dépôt indiqué. Pour ceux déjà remis à une personne, utilisez ensuite « Importer les affectations » (ci-dessous) ou un bon de sortie vers l'employé. Un second import du même fichier est refusé (n° de série déjà enregistrés, stock déjà présent)."
+          },
+          {
+            "type": "h",
+            "text": "Importer les affectations existantes"
+          },
+          {
+            "type": "p",
+            "text": "Pour savoir chez qui se trouve chaque équipement déjà remis (registre des biens) : Stock › Équipements › « Importer les affectations »."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Téléchargez le « Modèle Excel » : il liste les équipements en stock de vos dépôts, avec le détenteur relevé dans leurs notes.",
+              "Complétez la colonne « Email du détenteur » (email du compte procureApp de la personne ; proposé quand le nom correspond à un seul utilisateur). Laissez-la vide pour un équipement qui reste au dépôt (bureau, salle de réunion, stock). Les personnes sans compte doivent d'abord être créées dans Utilisateurs.",
+              "Importez le fichier, vérifiez l'aperçu (équipements, détenteurs, bons de sortie, erreurs), puis « Affecter ».",
+              "Un bon de sortie est créé par dépôt et par détenteur, en une seule opération ; chaque détenteur est notifié et confirme la réception dans « Mes articles reçus »."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Le matériel endommagé peut être affecté. Un équipement déjà affecté est refusé : récupérez-le d'abord (Retours). Une erreur de détenteur se corrige en annulant le bon de sortie, puis en réimportant la ligne."
           },
           {
             "type": "h",

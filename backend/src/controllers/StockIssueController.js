@@ -63,6 +63,14 @@ async function notifyReceivers(req, issue, key, link) {
 /** Lien de la notification : « Mes articles reçus » pour une personne, sinon la fiche du bon */
 const issueLink = (issue) => (issue.destination_type !== 'WAREHOUSE' && issue.recipient_id ? `/my-items/${issue.id}` : `/stock/issues/${issue.id}`);
 
+/** Bon créé : bénéficiaire / responsable / dépôt de destination notifiés (aussi pour l'import des affectations) */
+async function notifyCreated(req, issueId) {
+  const issue = await stockIssueModel.getById(issueId);
+  const key = issue.destination_type === 'WAREHOUSE' ? 'transfer'
+    : issue.destination_type === 'DEPARTMENT' && !issue.recipient_id ? 'departmentIssued' : 'issued';
+  await notifyReceivers(req, issue, key, issueLink(issue));
+}
+
 /** Consultation d'un bon : VIEW_STOCK, bénéficiaire, ou personne qui peut en confirmer la réception */
 async function canView(req, issue) {
   if (String(issue.recipient_id) === String(req.user.id)) return true;
@@ -71,6 +79,8 @@ async function canView(req, issue) {
 }
 
 module.exports = {
+  notifyCreated,
+
   /** GET /stock-issues — ?mine=1 : bons dont je suis bénéficiaire (sans VIEW_STOCK : toujours les miens) */
   async list(req, res) {
     try {
@@ -117,10 +127,7 @@ module.exports = {
         },
         { userId: req.user.id }
       );
-      const issue = await stockIssueModel.getById(result.id);
-      const key = issue.destination_type === 'WAREHOUSE' ? 'transfer'
-        : issue.destination_type === 'DEPARTMENT' && !issue.recipient_id ? 'departmentIssued' : 'issued';
-      await notifyReceivers(req, issue, key, issueLink(issue));
+      await notifyCreated(req, result.id);
       if (result.stockRequestId) await stockRequestNotify.served(req, result.stockRequestId, result.requestStatus);
       res.status(201).json({ success: true, data: result, message: 'Sortie enregistrée' });
     } catch (error) { return sendError(res, error, 'Erreur lors de la sortie de stock'); }

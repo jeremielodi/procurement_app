@@ -9,6 +9,8 @@ const ExcelJS = require('exceljs');
 const db = require('../config/database');
 const stockReturnPdfService = require('../services/StockReturnPdfService');
 const unitImportService = require('../services/StockUnitImportService');
+const assignmentImportService = require('../services/StockAssignmentImportService');
+const { notifyCreated } = require('./StockIssueController');
 const { audit, AUDIT } = require('../utils/auditLog');
 
 function sendError(res, error, fallback) {
@@ -244,6 +246,44 @@ module.exports = {
         return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
       }
       return sendError(res, error, 'Erreur lors de la recodification');
+    }
+  },
+
+  /** GET /stock-units/assignments/import/template?format=xlsx|csv&lang= — modèle pré-rempli avec les équipements en stock */
+  async assignmentTemplate(req, res) {
+    try {
+      const format = req.query.format === 'csv' ? 'csv' : 'xlsx';
+      const file = await assignmentImportService.template({ userId: req.user.id, lang: i18n.fromRequest(req), format });
+      res.set('Content-Type', file.contentType);
+      res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}"`);
+      res.end(file.buffer);
+    } catch (error) { return sendError(res, error, 'Erreur lors de la génération du modèle'); }
+  },
+
+  /**
+   * POST /stock-units/assignments/import (multipart : file ; confirm=1 pour écrire) — affectations existantes :
+   * sans confirm = aperçu ; avec confirm = un bon de sortie par dépôt × détenteur, en une transaction ; détenteurs notifiés
+   */
+  async importAssignments(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(403).json({ success: false, message: 'Réservé aux utilisateurs d\'une entreprise' });
+      if (!req.file) return res.status(400).json({ success: false, code: 'NO_FILE', message: 'Aucun fichier reçu' });
+      if (!['1', 'true'].includes(String(req.body?.confirm ?? req.query.confirm))) {
+        return res.json({ success: true, data: await assignmentImportService.preview(req.file, { userId: req.user.id }) });
+      }
+      const result = await assignmentImportService.apply(req.file, { userId: req.user.id, lang: i18n.fromRequest(req) });
+      for (const issue of result.issues) await notifyCreated(req, issue.id);
+      await audit(req, AUDIT.STOCK_UNITS_ASSIGNED, {
+        entity: { type: 'stock_units', id: null, label: req.file.originalname },
+        details: { file: req.file.originalname, units: result.units, issues: result.issues.map(i => i.issueNumber), skippedLines: result.errors.length },
+        enterpriseId: req.enterpriseId,
+      });
+      res.json({ success: true, data: result, message: 'Affectations enregistrées' });
+    } catch (error) {
+      if (error.status && error.status < 500) {
+        return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details, line: error.line });
+      }
+      return sendError(res, error, 'Erreur lors de l\'import des affectations');
     }
   },
 

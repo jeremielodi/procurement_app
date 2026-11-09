@@ -118,6 +118,15 @@ export const equipmentService = {
     if (confirm) fd.append('confirm', '1');
     return api.post('/stock-units/retag', fd, { headers: { 'Content-Type': 'multipart/form-data' }, skipErrorToast: true }).then(data);
   },
+  // Affectations existantes (registre) : modèle pré-rempli, aperçu puis confirmation → bons de sortie vers les détenteurs
+  assignmentTemplate: (format = 'xlsx') =>
+    api.get('/stock-units/assignments/import/template', { params: { format, lang: getLang() }, responseType: 'blob' }).then(data),
+  importAssignments: (file, { confirm = false } = {}) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    if (confirm) fd.append('confirm', '1');
+    return api.post('/stock-units/assignments/import', fd, { headers: { 'Content-Type': 'multipart/form-data' }, skipErrorToast: true }).then(data);
+  },
   updateUnit: (id, payload) => api.put(`/stock-units/${id}`, payload).then(data),
   // { data: lignes détenues, user: { id, first_name, last_name, email, is_active } }
   holdings: (userId) => api.get('/stock-holdings', { params: { userId } }).then(data),

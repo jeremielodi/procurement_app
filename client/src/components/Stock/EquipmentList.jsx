@@ -1,9 +1,10 @@
 // src/components/Stock/EquipmentList.jsx
 // Parc d'équipements suivis par n° de série : où est chaque unité (dépôt) ou qui la détient,
-// enregistrement du parc existant (saisie, ou import Excel / CSV : ImportStockUnitsModal), fiche (historique, état, réforme).
+// enregistrement du parc existant (saisie, ou import Excel / CSV : ImportStockUnitsModal), affectations existantes
+// (AssignUnitsModal → bons de sortie vers les détenteurs), fiche (historique, état, réforme).
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Laptop, Plus, RefreshCw, Search, History, FileUp, Tag, Download } from 'lucide-react';
+import { Laptop, Plus, RefreshCw, Search, History, FileUp, Tag, Download, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
 import { equipmentService, stockItemService, warehouseService } from '../../services/stockService';
@@ -15,6 +16,7 @@ import SerialNumbersHelp from './SerialNumbersHelp';
 import FundingProjectSelect from './FundingProjectSelect';
 import ImportStockUnitsModal from './ImportStockUnitsModal';
 import RetagUnitsModal from './RetagUnitsModal';
+import AssignUnitsModal from './AssignUnitsModal';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const STATUS_CLS = { IN_STOCK: 'bg-green-100 text-green-800', ASSIGNED: 'bg-blue-100 text-blue-800', IN_TRANSIT: 'bg-violet-100 text-violet-800', LOST: 'bg-red-100 text-red-700', RETIRED: 'bg-gray-200 text-gray-600' };
@@ -61,6 +63,7 @@ export default function EquipmentList() {
   const [register, setRegister] = useState(null);
   const [importing, setImporting] = useState(false);
   const [retagging, setRetagging] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [detail, setDetail] = useState(null);
@@ -132,11 +135,16 @@ export default function EquipmentList() {
           <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900"><Laptop /> {t('stock.equipment.title')}</h1>
           <p className="text-sm text-gray-500">{t('stock.equipment.subtitle')}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={load} className="rounded-lg border border-gray-300 p-2 hover:bg-gray-50" title={t('common.refresh')} aria-label={t('common.refresh')}><RefreshCw size={16} /></button>
           <button onClick={exportExcel} disabled={exporting} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50" data-testid="unit-export">
             <Download size={16} /> {t('stock.equipment.export')}
           </button>
+          {hasPermission('ISSUE_STOCK') && (
+            <button onClick={() => setAssigning(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" data-testid="unit-assign-import">
+              <UserCheck size={16} /> {t('stock.assignImport.button')}
+            </button>
+          )}
           {hasPermission('MANAGE_STOCK_ITEMS') && (
             <button onClick={() => setRetagging(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" data-testid="unit-retag">
               <Tag size={16} /> {t('stock.retag.button')}
@@ -278,6 +286,7 @@ export default function EquipmentList() {
       </Modal>
       <ImportStockUnitsModal isOpen={importing} onClose={() => setImporting(false)} onImported={load} />
       <RetagUnitsModal isOpen={retagging} onClose={() => setRetagging(false)} onDone={load} />
+      <AssignUnitsModal isOpen={assigning} onClose={() => setAssigning(false)} onDone={load} />
     </div>
   );
 }

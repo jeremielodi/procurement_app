@@ -1469,5 +1469,44 @@
       "GOOD": "Good",
       "DAMAGED": "Damaged"
     }
+  },
+  "stockAssignmentImport": {
+    "fileName": "equipment_assignments_template",
+    "sheet": "Assignments",
+    "helpSheet": "Instructions",
+    "purpose": "Existing assignment (register import)",
+    "exampleName": "Laptop (example)",
+    "headers": {
+      "item": "Item code",
+      "serial": "Serial number",
+      "assetTag": "Asset tag",
+      "email": "Holder email",
+      "purpose": "Purpose",
+      "name": "Description",
+      "warehouse": "Current warehouse",
+      "condition": "Condition",
+      "holder": "Holder noted (notes)",
+      "notes": "Equipment notes"
+    },
+    "conditions": {
+      "GOOD": "Good",
+      "DAMAGED": "Damaged"
+    },
+    "help": {
+      "item": "Catalogue item code (with the serial number).",
+      "serial": "Equipment serial number. Together with the item code, it identifies the equipment.",
+      "assetTag": "Asset tag: identifies the equipment without item code or serial number.",
+      "email": "Email of the procureApp account of the person holding the equipment. Empty = the equipment stays in the warehouse. People without an account must be created first (Users).",
+      "purpose": "Purpose of the issue note (optional). Default: “Existing assignment (register import)”.",
+      "name": "Information: item description (ignored on import).",
+      "warehouse": "Information: warehouse holding the equipment (ignored on import).",
+      "condition": "Information: equipment condition. Damaged equipment can be assigned (ignored on import).",
+      "holder": "Information: holder noted in the notes (“Détenteur : …”), to help you enter the email (ignored on import).",
+      "notes": "Information: equipment notes (ignored on import)."
+    },
+    "rules1": "Only equipment “in stock” in a warehouse you can access can be assigned.",
+    "rules2": "One issue note is created per warehouse and holder; everything is saved as a single operation.",
+    "rules3": "Each holder is notified and confirms receipt in “My received items”.",
+    "rules4": "The email is suggested when exactly one user has the first and last name of the noted holder: check it."
   }
 }

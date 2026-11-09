@@ -1469,5 +1469,44 @@
       "GOOD": "Bon",
       "DAMAGED": "Endommagé"
     }
+  },
+  "stockAssignmentImport": {
+    "fileName": "modele_affectations_equipements",
+    "sheet": "Affectations",
+    "helpSheet": "Mode d'emploi",
+    "purpose": "Affectation existante (import du registre)",
+    "exampleName": "Ordinateur portable (exemple)",
+    "headers": {
+      "item": "Code article",
+      "serial": "N° de série",
+      "assetTag": "N° d'inventaire",
+      "email": "Email du détenteur",
+      "purpose": "Motif",
+      "name": "Désignation",
+      "warehouse": "Dépôt actuel",
+      "condition": "État",
+      "holder": "Détenteur relevé (notes)",
+      "notes": "Notes de l'équipement"
+    },
+    "conditions": {
+      "GOOD": "Bon",
+      "DAMAGED": "Endommagé"
+    },
+    "help": {
+      "item": "Code de l'article du catalogue (avec le N° de série).",
+      "serial": "N° de série de l'équipement. Avec le code article, il identifie l'équipement.",
+      "assetTag": "N° d'inventaire : permet d'identifier l'équipement sans code article ni n° de série.",
+      "email": "Email du compte procureApp de la personne qui détient l'équipement. Vide = l'équipement reste au dépôt. Les personnes sans compte doivent d'abord être créées (Utilisateurs).",
+      "purpose": "Motif du bon de sortie (facultatif). Par défaut : « Affectation existante (import du registre) ».",
+      "name": "Information : désignation de l'article (ignorée à l'import).",
+      "warehouse": "Information : dépôt où se trouve l'équipement (ignorée à l'import).",
+      "condition": "Information : état de l'équipement. Le matériel endommagé peut être affecté (ignorée à l'import).",
+      "holder": "Information : détenteur relevé dans les notes (« Détenteur : … »), pour vous aider à saisir l'email (ignorée à l'import).",
+      "notes": "Information : notes de l'équipement (ignorées à l'import)."
+    },
+    "rules1": "Seuls les équipements « en stock » dans un dépôt auquel vous avez accès peuvent être affectés.",
+    "rules2": "Un bon de sortie est créé par dépôt et par détenteur ; tout est enregistré en une seule opération.",
+    "rules3": "Chaque détenteur est notifié et confirme la réception dans « Mes articles reçus ».",
+    "rules4": "L'email est proposé quand un seul utilisateur porte le prénom et le nom du détenteur relevé : vérifiez-le."
   }
 }

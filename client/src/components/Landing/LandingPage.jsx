@@ -6,7 +6,7 @@ import {
   ShoppingCart, CheckCircle2, Building2, ShieldCheck, Truck, Receipt, CreditCard,
   Workflow, BarChart3, Bell, Lock, FileSpreadsheet, Gavel, ArrowRight, Menu, X,
   ClipboardCheck, PackageCheck, LogIn, Store, FileText, Warehouse, Layers, Laptop, History, Sparkles,
-  ArrowLeftRight, ClipboardList, Coins, Users, Scale, ScrollText, FileSearch,
+  ArrowLeftRight, ClipboardList, Coins, Users, Scale, ScrollText, FileSearch, TrendingUp,
 } from 'lucide-react';
 import { t as tr, useTranslation } from '../../i18n';
 import LanguageSwitcher from '../Common/LanguageSwitcher';
@@ -17,7 +17,7 @@ const OWNER = 'Digitales Solutions';
 // Icônes des listes (dans l'ordre des tableaux de landing.* dans src/locales/*.json)
 const FEATURE_ICONS = [ShoppingCart, Workflow, Gavel, FileText, Receipt, BarChart3, Bell, FileSpreadsheet];
 const STEP_ICONS = [ClipboardCheck, CheckCircle2, Gavel, FileText, PackageCheck, Receipt, CreditCard];
-const STOCK_ICONS = [Warehouse, PackageCheck, Truck, Layers, Laptop, History, ArrowLeftRight, ClipboardList, Coins];
+const STOCK_ICONS = [Warehouse, PackageCheck, Truck, Layers, Laptop, History, ArrowLeftRight, ClipboardList, Coins, TrendingUp];
 const AUDIT_ICONS = [History, Users, Scale, Gavel, ClipboardCheck, ScrollText];
 const SECURITY_ICONS = [Building2, Lock, ShieldCheck];
 
@@ -217,9 +217,9 @@ export default function LandingPage() {
             <h2 className="mt-4 text-3xl font-bold">{t.stock.title}</h2>
             <p className="mt-3 text-blue-100/90 leading-relaxed">{t.stock.subtitle}</p>
           </div>
-          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-5 gap-5">
             {t.stock.items.map(([Icon, title, desc]) => (
-              <div key={title} className="rounded-xl bg-white/5 border border-white/10 p-6 hover:bg-white/10 transition">
+              <div key={title} className="rounded-xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 transition">
                 <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-500/20 text-blue-200">
                   <Icon className="w-5 h-5" />
                 </div>

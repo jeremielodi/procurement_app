@@ -144,7 +144,8 @@
     "auditLog": "Audit log",
     "collapse": "Collapse menu",
     "expand": "Expand menu",
-    "receiptRecon": "Receipt reconciliation"
+    "receiptRecon": "Receipt reconciliation",
+    "stockPlanning": "Forecast"
   },
   "header": {
     "toggleSidebar": "Show / hide menu",
@@ -522,6 +523,10 @@
         {
           "title": "Weighted average cost valuation",
           "desc": "Stock value at weighted average cost, per warehouse or for the whole company, at any date — ideal for closing."
+        },
+        {
+          "title": "Replenishment forecast",
+          "desc": "Average consumption excluding stock-outs, safety stock and quantity to order per warehouse; one click prepares the replenishment requisition."
         }
       ]
     },
@@ -1294,7 +1299,9 @@
     "unitRequired": "Unit is required",
     "unitChoose": "Choose…",
     "validatedBy": "Approval: {{name}} (project manager)",
-    "projectNoManager": "This project has no project manager: the requisition cannot be submitted until the administrator assigns one"
+    "projectNoManager": "This project has no project manager: the requisition cannot be submitted until the administrator assigns one",
+    "destinationWarehouse": "→ Warehouse: {{name}}",
+    "removeDestination": "Remove the destination warehouse"
   },
   "reqDetail": {
     "cancelled": "Requisition cancelled successfully",
@@ -3225,7 +3232,10 @@
       "expiredOnly": "Expired",
       "within": "Within {{days}} days",
       "empty": "No stock for these criteria.",
-      "itemTotal": "Item total"
+      "itemTotal": "Item total",
+      "toOrder": "To order (forecast)",
+      "stockoutCount_one": "of which {{count}} out of stock",
+      "stockoutCount_other": "of which {{count}} out of stock"
     },
     "items": {
       "title": "Item catalogue",
@@ -3262,14 +3272,12 @@
       "allMovements": "All movements",
       "serials": "Serial numbers",
       "trackSerialsLabel": "Equipment tracked by serial number (assigned then recovered: laptop, phone, GPS…)",
-      "restock_one": "Restock ({{count}} item)",
-      "restock_other": "Restock ({{count}} items)",
-      "nothingToRestock": "No items below minimum stock",
-      "restockTitle": "Stock replenishment — {{date}}",
-      "restockJustification": "Items below minimum stock (stock / minimum): {{list}}",
       "reorderQuantity": "Reorder quantity",
       "reorderHint": "Optional: quantity proposed below the minimum",
-      "trackSerialsHint": "At every receipt (goods receipt note), a serial number will be required for each accepted unit (one per line); the asset tag is assigned automatically (INVT-YYYY-NNNNN, or the project's initial inventory code). Equipment already in stock: Equipment › \"Register existing equipment\"."
+      "trackSerialsHint": "At every receipt (goods receipt note), a serial number will be required for each accepted unit (one per line); the asset tag is assigned automatically (INVT-YYYY-NNNNN, or the project's initial inventory code). Equipment already in stock: Equipment › \"Register existing equipment\".",
+      "restockPlanning": "Replenish (forecast)",
+      "leadTimeDays": "Lead time (days)",
+      "leadTimeHint": "Empty = company lead time"
     },
     "mv": {
       "title": "Stock movements",
@@ -3325,7 +3333,9 @@
       "selectedCount": "{{count}} user(s) selected",
       "required": "Code, name and location are required",
       "created": "Warehouse created",
-      "updated": "Warehouse updated"
+      "updated": "Warehouse updated",
+      "safetyStockMonths": "Safety stock (months of consumption)",
+      "safetyStockHint": "Empty = company value"
     },
     "entry": {
       "title": "Goods in notes",
@@ -3978,6 +3988,61 @@
         "OTHER": "Stock operation",
         "ENTRY": "Goods in note"
       }
+    },
+    "planning": {
+      "title": "Replenishment forecast",
+      "subtitle": "Average monthly consumption excluding stock-outs, safety stock and quantity to order, per warehouse or for the whole company.",
+      "restockTitle": "Stock replenishment — {{date}}",
+      "restockJustification": "Replenishment based on the stock forecast: {{list}}.",
+      "restockLine": "stock {{stock}} {{unit}}, consumption {{amc}} / month",
+      "nothingToOrder": "Nothing to order.",
+      "restockSelected_one": "Replenish ({{count}} line)",
+      "restockSelected_other": "Replenish ({{count}} lines)",
+      "restockAll_one": "Replenish ({{count}} line to order)",
+      "restockAll_other": "Replenish ({{count}} lines to order)",
+      "settings": {
+        "period_one": "Consumption over {{count}} month",
+        "period_other": "Consumption over {{count}} months",
+        "safety": "Safety stock: {{value}} months",
+        "lead": "Lead time: {{value}} days",
+        "interval": "Order frequency: {{value}} months",
+        "change": "Change settings"
+      },
+      "view": "View",
+      "allWarehouses": "All warehouses (detail)",
+      "enterpriseTotal": "Whole company (total)",
+      "searchPlaceholder": "Search an item (code, name)…",
+      "all": "All",
+      "selectAll": "Select all lines to order",
+      "status": {
+        "STOCKOUT": "Out of stock",
+        "BELOW_SAFETY": "Below safety",
+        "TO_ORDER": "To order",
+        "OVERSTOCK": "Overstock",
+        "OK": "Sufficient",
+        "NO_CONSUMPTION": "No consumption"
+      },
+      "col": {
+        "status": "Status",
+        "stock": "Stock",
+        "amc": "AMC",
+        "amcHint": "Average monthly consumption: issues to an employee or a department, minus cancellations and returns, excluding stock-out days",
+        "months": "Months of stock",
+        "thresholds": "Safety / Min / Max",
+        "thresholdsHint": "Safety = AMC × safety months; minimum = safety + AMC × lead time; maximum = minimum + AMC × order frequency",
+        "onOrder": "On order",
+        "requested": "Requested",
+        "toOrder": "To order"
+      },
+      "basisMin": "Based on the item's minimum stock (no consumption)",
+      "stockoutDays": "{{value}} stock-out days in the period",
+      "none": "No item to show.",
+      "method": "Consumption = issues to an employee or a department, minus cancellations and returns (transfers, losses and adjustments excluded), divided by the days the item was available (at least 30). On order = remaining quantity of active purchase orders for this warehouse; requested = requisitions in progress not yet ordered. To order = maximum − (stock + on order + requested), as soon as this total reaches the minimum.",
+      "itemTitle": "Replenishment forecast",
+      "openScreen": "Open the forecast",
+      "monthlyConsumption": "Consumption per month ({{unit}})",
+      "noConsumption": "No consumption in the last 12 months.",
+      "consumption": "Consumption"
     }
   },
   "help": {
@@ -5184,11 +5249,66 @@
           },
           {
             "type": "h",
-            "text": "Restocking"
+            "text": "Replenishment forecast"
           },
           {
             "type": "p",
-            "text": "In the item list, the \"Restock\" button appears when items are below their minimum stock: it opens a new requisition pre-filled with these items (reorder quantity, otherwise enough to get back to the minimum) and a justification. Complete the project, budget lines and prices, then submit."
+            "text": "Stock → Forecast computes, for each item and each warehouse, the average monthly consumption (AMC) and the quantity to order. Consumption = issues to an employee or a department, minus cancellations and returns; transfers between warehouses, losses and adjustments are not included. Days when the item was out of stock do not count: a stock-out does not lower the consumption."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Value",
+                "Calculation"
+              ],
+              [
+                "Safety stock",
+                "AMC × safety months (company setting, or the warehouse's)"
+              ],
+              [
+                "Minimum",
+                "Safety stock + AMC × lead time (company setting, or the item's)"
+              ],
+              [
+                "Maximum",
+                "Minimum + AMC × order frequency"
+              ],
+              [
+                "On order",
+                "Remaining quantity of active purchase orders for this warehouse"
+              ],
+              [
+                "Requested",
+                "Requisitions in progress not yet ordered"
+              ],
+              [
+                "To order",
+                "Maximum − (stock + on order + requested), as soon as this total reaches the minimum"
+              ]
+            ]
+          },
+          {
+            "type": "list",
+            "items": [
+              "\"Out of stock\": no stock left in the warehouse while the item is consumed.",
+              "\"Below safety\": the stock fell below the safety stock.",
+              "\"To order\": stock + on order + requested reached the minimum.",
+              "\"Overstock\": more than the maximum. \"No consumption\": no issue during the period (dormant stock)."
+            ]
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Choose the view: all warehouses (one line per item and warehouse), one warehouse, or the whole company (one line per item).",
+              "Tick the lines to order (or none: every line to order is taken) then \"Replenish\".",
+              "A requisition opens with the quantities to order and each line's destination warehouse (\"→ Warehouse: …\"). Complete the project, budget lines and prices, then submit.",
+              "While the requisition is in progress, the quantity counts as \"requested\"; once the purchase order is created, it becomes \"on order\" in that warehouse until it is received."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Settings: \"My company\" → \"Replenishment forecast\" (consumption period, safety stock, order frequency, lead time). A warehouse can have its own safety stock (Stock → Warehouses), an item its own lead time (Stock → Items). An item with no consumption falls back on its minimum stock in the \"whole company\" view."
           },
           {
             "type": "h",
@@ -5253,6 +5373,10 @@
               {
                 "to": "/stock/items",
                 "label": "Items"
+              },
+              {
+                "to": "/stock/planning",
+                "label": "Forecast"
               },
               {
                 "to": "/stock/movements",
@@ -6088,7 +6212,8 @@
       "PROJECT_MANAGER_CHANGED": "Project manager changed",
       "PURCHASE_ORDER_REVIEWED": "Purchase order reviewed",
       "DELEGATION_CREATED": "Delegation declared",
-      "DELEGATION_ENDED": "Delegation ended"
+      "DELEGATION_ENDED": "Delegation ended",
+      "STOCK_PLANNING_CHANGED": "Stock forecast settings changed"
     },
     "groups": {
       "all": "All events",
@@ -6633,5 +6758,20 @@
       "ALREADY_ENDED": "This delegation has already ended",
       "NOT_PROJECT_MANAGER": "Delegation is reserved for project managers"
     }
+  },
+  "stockPlanningSettings": {
+    "title": "Replenishment forecast",
+    "hint": "Values used to compute the average consumption and the quantity to order. A warehouse can have its own safety stock, an item its own lead time.",
+    "amcMonths": "Consumption period (months)",
+    "amcMonthsHint": "Days when the item was out of stock do not count.",
+    "safetyMonths": "Safety stock (months)",
+    "safetyMonthsHint": "Reserve kept on top of the lead time.",
+    "orderIntervalMonths": "Order frequency (months)",
+    "orderIntervalMonthsHint": "Time between two orders of the same item: sets the maximum stock.",
+    "leadTimeDays": "Lead time (days)",
+    "leadTimeDaysHint": "From order to receipt, when the item has none of its own.",
+    "formula": "Minimum = consumption × (safety + lead time); maximum = minimum + consumption × frequency; to order = maximum − (stock + on order + requested) as soon as this total reaches the minimum.",
+    "saved": "Forecast settings saved",
+    "invalid": "{{field}}: value from {{min}} to {{max}}"
   }
 }

@@ -48,6 +48,7 @@ import StockCountList from './components/Stock/StockCountList';
 import StockCountDetail from './components/Stock/StockCountDetail';
 import StockAdjustments from './components/Stock/StockAdjustments';
 import StockValuation from './components/Stock/StockValuation';
+import StockPlanning from './components/Stock/StockPlanning';
 import ReceiptReconciliation from './components/Stock/ReceiptReconciliation';
 import SANList from './components/SAN/SANList';
 import SANForm from './components/SAN/SANForm';
@@ -330,6 +331,7 @@ function App() {
         <Route path="/stock/issues" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockIssueList /></Layout></ProtectedRoute>} />
         <Route path="/stock/issues/new" element={<ProtectedRoute requiredPermission="ISSUE_STOCK"><Layout><StockIssueForm /></Layout></ProtectedRoute>} />
         <Route path="/stock/issues/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockIssueDetail /></Layout></ProtectedRoute>} />
+        <Route path="/stock/planning" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockPlanning /></Layout></ProtectedRoute>} />
         <Route path="/stock/valuation" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockValuation /></Layout></ProtectedRoute>} />
         <Route path="/stock/reconciliation" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><ReceiptReconciliation /></Layout></ProtectedRoute>} />
         <Route path="/stock/counts" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockCountList /></Layout></ProtectedRoute>} />

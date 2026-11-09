@@ -5,6 +5,7 @@
 const ExcelJS = require('exceljs');
 const valuationService = require('../services/StockValuationService');
 const reconciliationService = require('../services/ReceiptReconciliationService');
+const planningService = require('../services/StockPlanningService');
 const warehouseModel = require('../models/WarehouseModel');
 const stockItemModel = require('../models/StockItemModel');
 const stockModel = require('../models/StockModel');
@@ -61,6 +62,8 @@ const warehouses = {
       if (!location || !location.is_active) return 'Localisation introuvable ou inactive';
     }
     if (code && await warehouseModel.findByCode(req.enterpriseId, code, exceptId)) return `Le code ${code} est déjà utilisé`;
+    const safety = numOrNull(body.safetyStockMonths);
+    if (safety !== undefined && safety !== null && !(safety >= 0 && safety <= 24)) return { message: 'Stock de sécurité invalide (0 à 24 mois)', code: 'SAFETY_STOCK_INVALID' };
     return null;
   },
 
@@ -73,7 +76,7 @@ const warehouses = {
       if (error) return bad(res, error.message || error, error.code);
       const row = await warehouseModel.create({
         enterpriseId: req.enterpriseId, locationId: body.locationId, code: str(body.code, 30).toUpperCase(), name: str(body.name, 150),
-        address: str(body.address, 500), description: str(body.description, 1000), createdBy: req.user.id,
+        address: str(body.address, 500), description: str(body.description, 1000), safetyStockMonths: numOrNull(body.safetyStockMonths) ?? null, createdBy: req.user.id,
       });
       res.status(201).json({ success: true, data: await warehouseModel.getById(row.id), message: 'Dépôt créé' });
     } catch (error) { return serverError(res, error, 'Erreur lors de la création du dépôt'); }
@@ -89,6 +92,7 @@ const warehouses = {
       await warehouseModel.update(req.params.id, {
         locationId: body.locationId, code: str(body.code, 30)?.toUpperCase(), name: str(body.name, 150),
         address: str(body.address, 500), description: str(body.description, 1000), isActive: bool(body.isActive),
+        safetyStockMonths: numOrNull(body.safetyStockMonths),
       });
       res.json({ success: true, data: await warehouseModel.getById(req.params.id), message: 'Dépôt mis à jour' });
     } catch (error) { return serverError(res, error, 'Erreur lors de la mise à jour du dépôt'); }
@@ -129,6 +133,7 @@ function itemFields(body) {
     trackExpiry: bool(body.trackExpiry),
     trackSerials: bool(body.trackSerials),
     minQuantity: numOrNull(body.minQuantity),
+    leadTimeDays: numOrNull(body.leadTimeDays),
     reorderQuantity: numOrNull(body.reorderQuantity),
     isActive: bool(body.isActive),
   };
@@ -146,6 +151,9 @@ async function validateItem(req, fields, existing = null) {
   delete fields.unitText;
   if (fields.minQuantity !== undefined && fields.minQuantity !== null && !(fields.minQuantity >= 0)) return 'Stock minimum invalide';
   if (fields.reorderQuantity !== undefined && fields.reorderQuantity !== null && !(fields.reorderQuantity > 0)) return 'Quantité de réapprovisionnement invalide';
+  if (fields.leadTimeDays !== undefined && fields.leadTimeDays !== null && !(Number.isInteger(fields.leadTimeDays) && fields.leadTimeDays >= 0 && fields.leadTimeDays <= 365)) {
+    return { message: 'Délai de livraison invalide (0 à 365 jours)', code: 'LEAD_TIME_INVALID' };
+  }
   if (fields.categoryId) {
     const category = await referenceModel.getById('market_categories', fields.categoryId);
     if (!category) return 'Catégorie introuvable';
@@ -306,6 +314,41 @@ const stock = {
       const asOf = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.asOf || '')) ? req.query.asOf : undefined;
       res.json({ success: true, data: await valuationService.valuation({ asOf, categoryId: req.query.categoryId, warehouseId: req.query.warehouseId, projectId: req.query.projectId }) });
     } catch (error) { return serverError(res, error, 'Erreur lors de la valorisation du stock'); }
+  },
+
+  /**
+   * GET /stock/planning?level=enterprise|warehouse&warehouseId=&categoryId=&search=&status=A,B — prévision du réapprovisionnement
+   * (une ligne par article × dépôt, ou par article pour level=enterprise)
+   */
+  async planning(req, res) {
+    try {
+      const { level, warehouseId, categoryId, search, status } = req.query;
+      res.json({ success: true, data: await planningService.plan({ level, warehouseId, categoryId, search, status }) });
+    } catch (error) { return serverError(res, error, 'Erreur lors du calcul de la prévision'); }
+  },
+
+  /** GET /stock/planning/items/:id?warehouseId= — prévision d'un article par dépôt + total, consommation des 12 derniers mois */
+  async planningItem(req, res) {
+    try {
+      const item = await stockItemModel.getById(req.params.id);
+      if (!item) return res.status(404).json({ success: false, code: 'NOT_FOUND', message: 'Article introuvable' });
+      res.json({ success: true, data: await planningService.itemDetail(req.params.id, { warehouseId: req.query.warehouseId }) });
+    } catch (error) { return serverError(res, error, 'Erreur lors du calcul de la prévision'); }
+  },
+
+  /** GET /stock/planning/export — Excel de la prévision (mêmes filtres) */
+  async exportPlanning(req, res) {
+    try {
+      const T = i18n.translator(i18n.fromRequest(req));
+      const { level, warehouseId, categoryId, search, status } = req.query;
+      const wb = await planningService.workbook({ level, warehouseId, categoryId, search, status }, T);
+      res.set({
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="prevision-stock-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+      });
+      await wb.xlsx.write(res);
+      res.end();
+    } catch (error) { return serverError(res, error, "Erreur lors de l'export de la prévision"); }
   },
 
   /** GET /stock/receipt-reconciliation — rapprochement réceptions ↔ stock (fromDate, toDate, warehouseId, search, onlyIssues) */

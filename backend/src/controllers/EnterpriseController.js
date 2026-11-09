@@ -12,6 +12,7 @@ const enterpriseModel = require('../models/EnterpriseModel');
 const { saveLogo, removeLogo, sendLogo } = require('../utils/logoUpload');
 const dailyReportService = require('../services/DailyRequisitionReportService');
 const approvalPolicy = require('../utils/approvalPolicy');
+const stockPlanning = require('../services/StockPlanningService');
 
 // Journal d'audit : champs suivis d'une entreprise
 const ENTERPRISE_FIELDS = ['name', 'code', 'address', 'phone', 'email', 'website', 'tax_id', 'registration_number', 'po_terms', 'currency_id', 'is_active'];
@@ -214,6 +215,36 @@ class EnterpriseController {
       return this.getApprovalPolicy(req, res);
     } catch (error) {
       if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * GET /enterprises/current/stock-planning — paramètres de la prévision du réapprovisionnement
+   * → { amcMonths, safetyMonths, orderIntervalMonths, leadTimeDays, defaults }
+   */
+  async getStockPlanning(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      res.json({ success: true, data: { ...(await stockPlanning.settings(req.enterpriseId)), defaults: stockPlanning.DEFAULTS } });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /** PUT /enterprises/current/stock-planning { amcMonths, safetyMonths, orderIntervalMonths, leadTimeDays } — tracé STOCK_PLANNING_CHANGED */
+  async setStockPlanning(req, res) {
+    try {
+      if (!req.enterpriseId) return res.status(404).json({ success: false, message: 'Entreprise non trouvée' });
+      const before = await stockPlanning.settings(req.enterpriseId);
+      const after = await stockPlanning.saveSettings(req.enterpriseId, req.body || {});
+      if (JSON.stringify(before) !== JSON.stringify(after)) {
+        const name = (await db.one('SELECT name FROM enterprise WHERE id = $1', [req.enterpriseId]))?.name;
+        await audit(req, AUDIT.STOCK_PLANNING_CHANGED, { entity: { type: 'enterprise', id: req.enterpriseId, label: name }, oldValue: before, details: after });
+      }
+      res.json({ success: true, data: { ...after, defaults: stockPlanning.DEFAULTS } });
+    } catch (error) {
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
       res.status(500).json({ success: false, message: error.message });
     }
   }

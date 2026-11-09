@@ -62,6 +62,8 @@ export default function RequisitionForm() {
           description: it.stockItem?.name || it.description || '', quantity: it.quantity || 1, frequency: 1, unitPrice: it.unitPrice || 0,
           unitId: '', // unité du catalogue (ou Pièce) appliquée au chargement des unités
           budgetLineId: '', budgetLineInfo: null, stockItem: it.stockItem || null,
+          // Dépôt où arrivera l'article (prévision du réapprovisionnement) : quantité « en commande » par dépôt
+          destinationWarehouse: it.destinationWarehouse || null,
         }))
         : [{
           description: '',
@@ -170,6 +172,7 @@ export default function RequisitionForm() {
         budgetLineId: it.budget_line_id || '',
         budgetLineInfo: it.budget_line_id ? { id: it.budget_line_id, entity_code: it.budget_line_code, description: it.budget_line_description } : null,
         stockItem: it.stock_item_id ? { id: it.stock_item_id, name: it.item_name, code: it.item_code, unit: it.unit, unit_id: it.stock_unit_id } : null,
+        destinationWarehouse: it.destination_warehouse_id ? { id: it.destination_warehouse_id, name: it.destination_warehouse_name } : null,
       })),
     })
   }, [editing, reset])
@@ -300,6 +303,7 @@ export default function RequisitionForm() {
           budgetLineId: item.budgetLineId,
           specifications: item.specifications || null,
           stockItemId: item.stockItem?.id || null,
+          destinationWarehouseId: (item.stockItem && item.destinationWarehouse?.id) || null,
         })),
       })
       if (resubmit) {
@@ -338,7 +342,8 @@ export default function RequisitionForm() {
         budgetLineId: item.budgetLineId,
         specifications: item.specifications || null,
         // Article du catalogue (gestion de stock) ; absent = texte libre
-        stockItemId: item.stockItem?.id || null
+        stockItemId: item.stockItem?.id || null,
+        destinationWarehouseId: (item.stockItem && item.destinationWarehouse?.id) || null
       }))
 
       await createMutation.mutateAsync({
@@ -774,6 +779,8 @@ export default function RequisitionForm() {
                           linked={item?.stockItem || null}
                           onLink={(stockItem) => {
                             setValue(`items.${index}.stockItem`, stockItem)
+                            // Le dépôt de destination ne vaut que pour l'article du catalogue choisi au départ
+                            if (item?.destinationWarehouse && stockItem?.id !== item?.stockItem?.id) setValue(`items.${index}.destinationWarehouse`, null)
                             // Unité de l'article du catalogue
                             const catalogUnit = catalogUnitOf(stockItem)
                             if (catalogUnit) setValue(`items.${index}.unitId`, String(catalogUnit.id))
@@ -783,6 +790,13 @@ export default function RequisitionForm() {
                           className={`w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 ${!item?.description ? 'border-red-400 bg-red-50' : 'border-gray-300'
                             }`}
                         />
+                        {item?.stockItem && item?.destinationWarehouse && (
+                          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800" data-testid="item-destination-warehouse">
+                            {t('reqForm.destinationWarehouse', { name: item.destinationWarehouse.name })}
+                            <button type="button" onClick={() => setValue(`items.${index}.destinationWarehouse`, null, { shouldDirty: true })}
+                              aria-label={t('reqForm.removeDestination')} className="text-emerald-700 hover:text-emerald-900"><X size={12} /></button>
+                          </span>
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         <input

@@ -38,15 +38,15 @@ class WarehouseModel {
 
   async create(data) {
     return db.one(
-      `INSERT INTO warehouses (enterprise_id, location_id, code, name, address, description, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [data.enterpriseId, data.locationId, data.code, data.name, data.address || null, data.description || null, data.createdBy]
+      `INSERT INTO warehouses (enterprise_id, location_id, code, name, address, description, created_by, safety_stock_months)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [data.enterpriseId, data.locationId, data.code, data.name, data.address || null, data.description || null, data.createdBy, data.safetyStockMonths ?? null]
     );
   }
 
   async update(id, data) {
     const fields = {};
-    for (const [key, col] of [['locationId', 'location_id'], ['code', 'code'], ['name', 'name'], ['address', 'address'], ['description', 'description'], ['isActive', 'is_active']]) {
+    for (const [key, col] of [['locationId', 'location_id'], ['code', 'code'], ['name', 'name'], ['address', 'address'], ['description', 'description'], ['isActive', 'is_active'], ['safetyStockMonths', 'safety_stock_months']]) {
       if (data[key] !== undefined) fields[col] = data[key];
     }
     if (!Object.keys(fields).length) return;

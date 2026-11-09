@@ -44,6 +44,10 @@ export const stockService = {
   // Valorisation au CMUP (asOf, warehouseId, categoryId) et export Excel
   valuation: (params = {}) => api.get('/stock/valuation', { params }).then(data),
   exportValuation: (params = {}) => api.get('/stock/valuation/export', { params: { ...params, lang: getLang() }, responseType: 'blob' }).then(data),
+  // Prévision du réapprovisionnement (level=enterprise | warehouseId, categoryId, search, status), détail d'un article, Excel
+  planning: (params = {}) => api.get('/stock/planning', { params }).then(data),
+  planningItem: (id, params = {}) => api.get(`/stock/planning/items/${id}`, { params }).then(data),
+  exportPlanning: (params = {}) => api.get('/stock/planning/export', { params: { ...params, lang: getLang() }, responseType: 'blob' }).then(data),
   // Rapprochement réceptions ↔ stock (audit)
   receiptReconciliation: (params = {}) => api.get('/stock/receipt-reconciliation', { params }).then(data),
   exportReceiptReconciliation: (params = {}) => api.get('/stock/receipt-reconciliation/export', { params: { ...params, lang: getLang() }, responseType: 'blob' }).then(data),

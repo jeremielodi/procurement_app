@@ -18,7 +18,7 @@ test('Parc existant : format, exemple et nombre de n° saisis', async ({ page })
   const help = page.getByTestId('serials-help');
   await expect(help).toContainText('Comment saisir les n° de série');
   await expect(help).toContainText('n° de série ; n° d\'inventaire');
-  await expect(help).toContainText('5CD1234XYZ ; INV-0042');
+  await expect(help).toContainText('5CD1234XYZ ; INVT-0042'); // préfixe par défaut INVT (migration 50)
   await page.getByLabel('N° de série').fill('SN-A ; INV-1\nSN-B\n');
   await expect(page.getByTestId('serials-count')).toHaveText('2 saisi(s)');
 });

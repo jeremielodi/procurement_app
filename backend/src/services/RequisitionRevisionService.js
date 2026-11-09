@@ -15,6 +15,7 @@ const i18n = require('../i18n');
 const { requisitionDelivery } = require('../utils/requisitionDelivery');
 const { resolveUnitId } = require('../utils/units');
 const projectManagers = require('../utils/projectManager');
+const stockPlanning = require('./StockPlanningService');
 const { REQUISITION_APPROVAL_TASKS } = require('../utils/workflowLabels');
 
 // Validation de la réquisition : chef de projet (anciens processus : N1 / N2 / N3)
@@ -289,6 +290,7 @@ class RequisitionRevisionService {
       // Projet obligatoire avec un chef de projet (qui validera la nouvelle version) autre que le demandeur
       const projectId = data.projectId || null;
       if (pmFlow) await projectManagers.forRequisition(projectId, req.requester_id);
+      await stockPlanning.checkDestinations(items, req.enterprise_id);
       for (const [line, it] of items.entries()) {
         if (!it.budgetLineId) throw fail(400, 'BUDGET_LINE_REQUIRED', 'Ligne budgétaire obligatoire', { line });
         const budget = await tx.one(
@@ -311,17 +313,18 @@ class RequisitionRevisionService {
         const lineTotal = quantity * frequency * unitPrice;
         total += lineTotal;
         const code = (await tx.one('SELECT entity_code FROM budget_allocations WHERE id = $1', [it.budgetLineId]))?.entity_code || null;
-        const values = [text(it.description), quantity, frequency, unitPrice, lineTotal, text(it.specifications) || null, it.budgetLineId, code, it.stockItemId || null, unitId];
+        const values = [text(it.description), quantity, frequency, unitPrice, lineTotal, text(it.specifications) || null, it.budgetLineId, code, it.stockItemId || null, unitId, (it.stockItemId && it.destinationWarehouseId) || null];
         if (it.id && kept.includes(String(it.id))) {
           await tx.exec(
             `UPDATE requisition_items SET item_description = $1, quantity = $2, frequency = $3, unit_price = $4, total_amount = $5,
-                    specifications = $6, budget_line_id = $7, budget_line_code = $8, stock_item_id = $9, unit_id = $10 WHERE id = $11`,
+                    specifications = $6, budget_line_id = $7, budget_line_code = $8, stock_item_id = $9, unit_id = $10,
+                    destination_warehouse_id = $11 WHERE id = $12`,
             [...values, it.id]
           );
         } else {
           await tx.exec(
-            `INSERT INTO requisition_items (item_description, quantity, frequency, unit_price, total_amount, specifications, budget_line_id, budget_line_code, stock_item_id, unit_id, requisition_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            `INSERT INTO requisition_items (item_description, quantity, frequency, unit_price, total_amount, specifications, budget_line_id, budget_line_code, stock_item_id, unit_id, destination_warehouse_id, requisition_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
             [...values, req.id]
           );
         }

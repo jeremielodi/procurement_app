@@ -982,7 +982,8 @@
     "PROJECT_MANAGER_CHANGED": "Chef de projet modifié",
     "PURCHASE_ORDER_REVIEWED": "Bon de commande révisé",
     "DELEGATION_CREATED": "Intérim déclaré",
-    "DELEGATION_ENDED": "Intérim terminé"
+    "DELEGATION_ENDED": "Intérim terminé",
+    "STOCK_PLANNING_CHANGED": "Paramètres de prévision du stock modifiés"
   },
   "auditExport": {
     "sheet": "Journal d'audit",
@@ -1291,5 +1292,28 @@
       "La ligne budgétaire ne figure pas dans le fichier : elle s'assigne dans le formulaire après l'import.",
       "500 articles au maximum, fichier de 2 Mo au maximum. Les lignes en erreur sont signalées et ignorées."
     ]
+  },
+  "stockPlanning": {
+    "sheet": "Prévision",
+    "status": "État",
+    "stock": "Stock",
+    "amc": "CMM",
+    "monthsOfStock": "Mois de stock",
+    "safetyStock": "Stock de sécurité",
+    "minStock": "Minimum",
+    "maxStock": "Maximum",
+    "onOrder": "En commande",
+    "requested": "Demandé",
+    "toOrder": "À commander",
+    "stockoutDays": "Jours de rupture",
+    "leadTimeDays": "Délai (jours)",
+    "statuses": {
+      "STOCKOUT": "En rupture",
+      "BELOW_SAFETY": "Sous le stock de sécurité",
+      "TO_ORDER": "À commander",
+      "OVERSTOCK": "Surstock",
+      "OK": "Suffisant",
+      "NO_CONSUMPTION": "Sans consommation"
+    }
   }
 }

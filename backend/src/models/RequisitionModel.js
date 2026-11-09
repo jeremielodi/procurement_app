@@ -113,7 +113,9 @@ class RequisitionModel {
           budget_line_id: item.budgetLineId || null,
           budget_line_code: budgetLineCode,
           // Article du catalogue (facultatif : texte libre sinon) — repris dans le PO puis la réception
-          stock_item_id: item.stockItemId || null
+          stock_item_id: item.stockItemId || null,
+          // Dépôt où arrivera l'article (réapprovisionnement, migration 55) : quantité en commande par dépôt
+          destination_warehouse_id: (item.stockItemId && item.destinationWarehouseId) || null
         });
       }
       
@@ -330,9 +332,11 @@ class RequisitionModel {
               b.entity_code as budget_line_code, 
               b.description as budget_line_description,
               si.code AS item_code, si.name AS item_name, si.unit, si.unit_id AS stock_unit_id, si.is_stockable,
-              un.abbr AS unit_abbr, ${localizedSql('un')} AS item_unit -- unité de mesure (référentiel, langue de la requête)
+              un.abbr AS unit_abbr, ${localizedSql('un')} AS item_unit, -- unité de mesure (référentiel, langue de la requête)
+              dw.code AS destination_warehouse_code, dw.name AS destination_warehouse_name
        FROM requisition_items ri
        LEFT JOIN units un ON un.id = ri.unit_id
+       LEFT JOIN warehouses dw ON dw.id = ri.destination_warehouse_id
        LEFT JOIN budget_allocations b ON ri.budget_line_id = b.id
        LEFT JOIN stock_items si ON si.id = ri.stock_item_id
        WHERE ri.requisition_id = $1

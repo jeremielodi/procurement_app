@@ -1,10 +1,12 @@
 // src/components/Stock/StockItemDetail.jsx
-// Fiche article : caractéristiques, stock par dépôt et par lot, lots (péremption), derniers mouvements.
+// Fiche article : caractéristiques, stock par dépôt et par lot, lots (péremption), prévision du réapprovisionnement,
+// derniers mouvements.
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Package, RefreshCw, AlertTriangle } from 'lucide-react';
 import { stockItemService, stockService } from '../../services/stockService';
 import { MovementTable } from './StockMovements';
+import StockItemPlanning from './StockItemPlanning';
 import { t, getLocale, useTranslation } from '../../i18n';
 
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
@@ -105,6 +107,8 @@ export default function StockItemDetail() {
           )}
         </div>
       )}
+
+      {item.is_stockable && item.is_active && <StockItemPlanning itemId={item.id} unit={item.unit} />}
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
         <div className="flex items-center justify-between px-4 py-3 border-b">

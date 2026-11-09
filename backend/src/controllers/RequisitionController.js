@@ -15,6 +15,7 @@ const revisionService = require('../services/RequisitionRevisionService');
 const { requisitionDelivery } = require('../utils/requisitionDelivery');
 const { resolveUnitId } = require('../utils/units');
 const projectManagers = require('../utils/projectManager');
+const stockPlanning = require('../services/StockPlanningService');
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -143,6 +144,14 @@ async create(req, res) {
     const userId = req.user?.id || 1;
     const io = req.io;
 
+    // Dépôt de destination d'une ligne (réapprovisionnement) : article du catalogue, dépôt actif de l'entreprise
+    try {
+      await stockPlanning.checkDestinations(items, req.enterpriseId);
+    } catch (error) {
+      if (!error.status) throw error;
+      return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
+    }
+
     // Projet obligatoire, avec un chef de projet actif qui n'est pas le demandeur : il valide seul la réquisition
     let projectManager;
     try {
@@ -190,7 +199,8 @@ async create(req, res) {
         budgetLineCode: budgetLineCode,
         budgetLineDescription: budgetLineDescription,
         specifications: item.specifications || null,
-        stockItemId: item.stockItemId || null
+        stockItemId: item.stockItemId || null,
+        destinationWarehouseId: item.destinationWarehouseId || null
       };
     }));
 

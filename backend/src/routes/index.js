@@ -146,6 +146,9 @@ router.get('/enterprises/current/daily-report', hasPermission('MANAGE_USERS'), e
 router.get('/enterprises/current/approval-policy', e.getApprovalPolicy.bind(e));
 router.put('/enterprises/current/approval-policy', hasPermission('MANAGE_USERS'), e.setApprovalPolicy.bind(e));
 router.put('/enterprises/current/daily-report', hasPermission('MANAGE_USERS'), e.setDailyReport.bind(e));
+// Paramètres de la prévision du réapprovisionnement (migration 55) : lecture avec le stock, modification par l'administrateur
+router.get('/enterprises/current/stock-planning', hasAnyPermission('VIEW_STOCK', 'MANAGE_USERS'), e.getStockPlanning.bind(e));
+router.put('/enterprises/current/stock-planning', hasPermission('MANAGE_USERS'), e.setStockPlanning.bind(e));
 router.post('/enterprises/current/daily-report/test', hasPermission('MANAGE_USERS'), e.sendDailyReportTest.bind(e));
 router.post('/enterprises/current/daily-report/send-now', hasPermission('MANAGE_USERS'), e.sendDailyReportNow.bind(e));
 // Liste : super admin = toutes ; utilisateur = la sienne
@@ -767,6 +770,10 @@ router.get('/stock/valuation/export', authenticate, hasPermission('VIEW_STOCK'),
 router.get('/stock/receipt-reconciliation', authenticate, hasPermission('VIEW_STOCK'), st.receiptReconciliation);
 router.get('/stock/receipt-reconciliation/export', authenticate, hasPermission('VIEW_STOCK'), st.exportReceiptReconciliation);
 router.get('/stock/balances', authenticate, hasPermission('VIEW_STOCK'), st.balances);
+// Prévision du réapprovisionnement (migration 55) : CMM hors ruptures, seuils, quantité à commander
+router.get('/stock/planning/export', authenticate, hasPermission('VIEW_STOCK'), st.exportPlanning);
+router.get('/stock/planning/items/:id', authenticate, hasPermission('VIEW_STOCK'), st.planningItem);
+router.get('/stock/planning', authenticate, hasPermission('VIEW_STOCK'), st.planning);
 router.get('/stock/movements', authenticate, hasPermission('VIEW_STOCK'), st.movements);
 // Opérations de stock (groupes de mouvements écrits d'un seul coup, migration 36) et leur export Excel
 router.get('/stock/movement-groups', authenticate, hasPermission('VIEW_STOCK'), st.movementGroups);

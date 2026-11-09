@@ -982,7 +982,8 @@
     "PROJECT_MANAGER_CHANGED": "Project manager changed",
     "PURCHASE_ORDER_REVIEWED": "Purchase order reviewed",
     "DELEGATION_CREATED": "Delegation declared",
-    "DELEGATION_ENDED": "Delegation ended"
+    "DELEGATION_ENDED": "Delegation ended",
+    "STOCK_PLANNING_CHANGED": "Stock forecast settings changed"
   },
   "auditExport": {
     "sheet": "Audit log",
@@ -1291,5 +1292,28 @@
       "The budget line is not in the file: assign it in the form after the import.",
       "At most 500 items, 2 MB file. Rows with errors are reported and skipped."
     ]
+  },
+  "stockPlanning": {
+    "sheet": "Forecast",
+    "status": "Status",
+    "stock": "Stock",
+    "amc": "AMC",
+    "monthsOfStock": "Months of stock",
+    "safetyStock": "Safety stock",
+    "minStock": "Minimum",
+    "maxStock": "Maximum",
+    "onOrder": "On order",
+    "requested": "Requested",
+    "toOrder": "To order",
+    "stockoutDays": "Stock-out days",
+    "leadTimeDays": "Lead time (days)",
+    "statuses": {
+      "STOCKOUT": "Out of stock",
+      "BELOW_SAFETY": "Below safety stock",
+      "TO_ORDER": "To order",
+      "OVERSTOCK": "Overstock",
+      "OK": "Sufficient",
+      "NO_CONSUMPTION": "No consumption"
+    }
   }
 }

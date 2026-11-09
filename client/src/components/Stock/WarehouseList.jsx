@@ -14,7 +14,7 @@ import { t } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
-const EMPTY = { code: '', name: '', locationId: '', address: '', description: '' };
+const EMPTY = { code: '', name: '', locationId: '', address: '', description: '', safetyStockMonths: '' };
 
 export default function WarehouseList() {
   const { hasPermission } = usePermissions();
@@ -60,7 +60,8 @@ export default function WarehouseList() {
     }
     setSaving(true);
     try {
-      const payload = { code: editing.code.trim(), name: editing.name.trim(), locationId: Number(editing.locationId), address: editing.address, description: editing.description };
+      const payload = { code: editing.code.trim(), name: editing.name.trim(), locationId: Number(editing.locationId), address: editing.address, description: editing.description,
+        safetyStockMonths: editing.safetyStockMonths === '' ? null : Number(editing.safetyStockMonths) };
       if (editing.id) await warehouseService.update(editing.id, payload);
       else await warehouseService.create(payload);
       toast.success(editing.id ? t('stock.wh.updated') : t('stock.wh.created'));
@@ -140,7 +141,7 @@ export default function WarehouseList() {
                     {canManage && (
                       <>
                         <button onClick={() => setAccess(w)} className="p-1.5 text-gray-600 hover:bg-gray-100 rounded" title={t('stock.wh.manageAccess')} aria-label={t('stock.wh.manageAccess')}><Users size={16} /></button>
-                        <button onClick={() => setEditing({ id: w.id, code: w.code, name: w.name, locationId: String(w.location_id), address: w.address || '', description: w.description || '' })}
+                        <button onClick={() => setEditing({ id: w.id, code: w.code, name: w.name, locationId: String(w.location_id), address: w.address || '', description: w.description || '', safetyStockMonths: w.safety_stock_months !== null && w.safety_stock_months !== undefined ? String(Number(w.safety_stock_months)) : '' })}
                           className="p-1.5 text-gray-600 hover:bg-gray-100 rounded" title={t('common.edit')} aria-label={t('common.edit')}><Pencil size={16} /></button>
                       </>
                     )}
@@ -184,6 +185,11 @@ export default function WarehouseList() {
             <label className="text-sm sm:col-span-2">
               <span className="mb-1 block font-medium text-gray-700">{t('common.description')}</span>
               <textarea rows={2} className={inputCls} value={editing.description} onChange={e => setEditing({ ...editing, description: e.target.value })} />
+            </label>
+            <label className="text-sm sm:col-span-2">
+              <span className="mb-1 block font-medium text-gray-700">{t('stock.wh.safetyStockMonths')}</span>
+              <input type="number" min="0" max="24" step="0.5" className={inputCls} value={editing.safetyStockMonths} data-testid="wh-safety-stock"
+                onChange={e => setEditing({ ...editing, safetyStockMonths: e.target.value })} placeholder={t('stock.wh.safetyStockHint')} />
             </label>
           </div>
         )}

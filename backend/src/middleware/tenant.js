@@ -107,6 +107,7 @@ const PATH_RESOURCES = [
   { re: new RegExp(`^/stock-counts/(${UUID})(/|$)`), table: 'stock_counts' },
   { re: new RegExp(`^/stock-adjustments/(${UUID})(/|$)`), table: 'stock_adjustments' },
   { re: new RegExp(`^/stock/movement-groups/(${UUID})(/|$)`), table: 'stock_movement_groups' },
+  { re: new RegExp(`^/stock/planning/items/(${UUID})(/|$)`), table: 'stock_items' },
   // Intérim du chef de projet (migration 53)
   { re: new RegExp(`^/delegations/(${UUID})(/|$)`), table: 'user_delegations' },
 ];

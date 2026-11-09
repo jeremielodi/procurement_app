@@ -42,7 +42,8 @@ import {
   Laptop,
   Undo2,
   ScrollText,
-  ShieldCheck
+  ShieldCheck,
+  TrendingUp
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -179,6 +180,7 @@ const menuGroups = [
     items: [
       { path: '/stock', icon: Package, label: 'nav.stock', permission: 'VIEW_STOCK' },
       { path: '/stock/items', icon: Boxes, label: 'nav.stockItems', permission: 'VIEW_STOCK' },
+      { path: '/stock/planning', icon: TrendingUp, label: 'nav.stockPlanning', permission: 'VIEW_STOCK' },
       { path: '/stock/entries', icon: PackagePlus, label: 'nav.stockEntries', permission: 'VIEW_STOCK' },
       { path: '/stock/issues', icon: PackageMinus, label: 'nav.stockIssues', permission: 'VIEW_STOCK' },
       { path: '/stock/returns', icon: Undo2, label: 'nav.stockReturns', permission: 'VIEW_STOCK' },

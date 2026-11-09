@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import EnterpriseInfoForm from './EnterpriseInfoForm';
 import DailyReportSettings from './DailyReportSettings';
 import ApprovalPolicySettings from './ApprovalPolicySettings';
+import StockPlanningSettings from './StockPlanningSettings';
 import { enterpriseService } from '../../services/enterpriseService';
 import { useEnterprise } from '../../contexts/EnterpriseContext';
 import { t } from '../../i18n';
@@ -35,6 +36,7 @@ export default function EnterpriseSettings() {
           : <p className="text-gray-500 text-sm">{t('common.loading')}</p>}
       </div>
       <ApprovalPolicySettings />
+      <StockPlanningSettings />
       <DailyReportSettings />
     </div>
   );

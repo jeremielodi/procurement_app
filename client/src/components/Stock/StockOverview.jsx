@@ -1,9 +1,9 @@
 // src/components/Stock/StockOverview.jsx
-// État du stock : synthèse (articles en stock, sous le minimum, lots qui expirent) et soldes
+// État du stock : synthèse (articles en stock, à commander selon la prévision, lots qui expirent) et soldes
 // par article × dépôt × lot × projet, filtres (dépôt, catégorie, projet de financement, recherche, péremption), export Excel.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Warehouse, Download, RefreshCw, Search, Package, AlertTriangle, CalendarClock, Boxes } from 'lucide-react';
+import { Warehouse, Download, RefreshCw, Search, Package, AlertTriangle, CalendarClock, Boxes, TrendingUp } from 'lucide-react';
 import { stockService, warehouseService } from '../../services/stockService';
 import { categoryService } from '../../services/referenceService';
 import { t, getLocale, useTranslation } from '../../i18n';
@@ -20,6 +20,7 @@ export default function StockOverview() {
   const { lang } = useTranslation();
   const [params, setParams] = useSearchParams();
   const [summary, setSummary] = useState(null);
+  const [planningCounts, setPlanningCounts] = useState(null);
   const [rows, setRows] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -45,6 +46,8 @@ export default function StockOverview() {
     warehouseService.list().then(r => setWarehouses(r.data || [])).catch(() => {});
     projectService.getAll().then(r => setProjects(r.data || [])).catch(() => {});
     stockService.summary().then(r => setSummary(r.data)).catch(() => {});
+    // Prévision (total de l'entreprise) : articles à commander, dont en rupture
+    stockService.planning({ level: 'enterprise' }).then(r => setPlanningCounts(r.data?.counts || null)).catch(() => {});
   }, []);
   useEffect(() => { categoryService.listPublic().then(r => setCategories(r.data || [])).catch(() => {}); }, [lang]);
 
@@ -89,7 +92,13 @@ export default function StockOverview() {
 
   const cards = summary ? [
     { icon: Boxes, label: t('stock.overview.itemsInStock'), value: summary.items_in_stock, sub: t('stock.overview.ofStockable', { count: summary.stockable_items }) },
-    { icon: AlertTriangle, label: t('stock.overview.belowMin'), value: summary.below_min, warn: summary.below_min > 0, to: '/stock/items?belowMin=1' },
+    planningCounts
+      ? (() => {
+        const toOrder = planningCounts.STOCKOUT + planningCounts.BELOW_SAFETY + planningCounts.TO_ORDER;
+        return { icon: TrendingUp, label: t('stock.overview.toOrder'), value: toOrder, warn: toOrder > 0, danger: planningCounts.STOCKOUT > 0,
+          sub: t('stock.overview.stockoutCount', { count: planningCounts.STOCKOUT }), to: '/stock/planning?view=enterprise', testId: 'overview-to-order' };
+      })()
+      : { icon: AlertTriangle, label: t('stock.overview.belowMin'), value: summary.below_min, warn: summary.below_min > 0, to: '/stock/items?belowMin=1' },
     { icon: CalendarClock, label: t('stock.overview.expiring90'), value: summary.lots_expiring_90d, warn: summary.lots_expiring_90d > 0, onClick: () => setFilter('expiring', '90') },
     { icon: AlertTriangle, label: t('stock.overview.expired'), value: summary.lots_expired, danger: summary.lots_expired > 0, onClick: () => setFilter('expiring', '0') },
   ] : [];
@@ -125,7 +134,7 @@ export default function StockOverview() {
               </>
             );
             const cls = 'block rounded-lg border border-gray-200 bg-white p-4 text-left hover:shadow-sm';
-            return c.to ? <Link key={c.label} to={c.to} className={cls}>{content}</Link>
+            return c.to ? <Link key={c.label} to={c.to} className={cls} data-testid={c.testId}>{content}</Link>
               : c.onClick ? <button key={c.label} onClick={c.onClick} className={cls}>{content}</button>
               : <div key={c.label} className={cls}>{content}</div>;
           })}

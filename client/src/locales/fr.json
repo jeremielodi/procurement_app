@@ -144,7 +144,8 @@
     "auditLog": "Journal d'audit",
     "collapse": "Réduire le menu",
     "expand": "Agrandir le menu",
-    "receiptRecon": "Rapprochement réceptions"
+    "receiptRecon": "Rapprochement réceptions",
+    "stockPlanning": "Prévision"
   },
   "header": {
     "toggleSidebar": "Afficher / masquer le menu",
@@ -522,6 +523,10 @@
         {
           "title": "Valorisation au coût moyen",
           "desc": "Valeur du stock au coût moyen pondéré (CMUP), par dépôt ou pour toute l'entreprise, à n'importe quelle date — idéal pour la clôture."
+        },
+        {
+          "title": "Prévision du réapprovisionnement",
+          "desc": "Consommation moyenne hors ruptures, stock de sécurité et quantité à commander par dépôt ; en un clic, la réquisition de réapprovisionnement est prête."
         }
       ]
     },
@@ -1294,7 +1299,9 @@
     "unitRequired": "Unité obligatoire",
     "unitChoose": "Choisir…",
     "validatedBy": "Validation : {{name}} (chef de projet)",
-    "projectNoManager": "Ce projet n'a pas de chef de projet : la réquisition ne peut pas être soumise tant que l'administrateur ne l'a pas désigné"
+    "projectNoManager": "Ce projet n'a pas de chef de projet : la réquisition ne peut pas être soumise tant que l'administrateur ne l'a pas désigné",
+    "destinationWarehouse": "→ Dépôt : {{name}}",
+    "removeDestination": "Retirer le dépôt de destination"
   },
   "reqDetail": {
     "cancelled": "Réquisition annulée avec succès",
@@ -3225,7 +3232,10 @@
       "expiredOnly": "Périmés",
       "within": "Sous {{days}} jours",
       "empty": "Aucun stock pour ces critères.",
-      "itemTotal": "Total article"
+      "itemTotal": "Total article",
+      "toOrder": "À commander (prévision)",
+      "stockoutCount_one": "dont {{count}} en rupture",
+      "stockoutCount_other": "dont {{count}} en rupture"
     },
     "items": {
       "title": "Catalogue d'articles",
@@ -3262,14 +3272,12 @@
       "allMovements": "Tous les mouvements",
       "serials": "N° de série",
       "trackSerialsLabel": "Équipement suivi par n° de série (affecté puis récupéré : ordinateur, téléphone, GPS…)",
-      "restock_one": "Réapprovisionner ({{count}} article)",
-      "restock_other": "Réapprovisionner ({{count}} articles)",
-      "nothingToRestock": "Aucun article sous le stock minimum",
-      "restockTitle": "Réapprovisionnement du stock — {{date}}",
-      "restockJustification": "Articles sous le stock minimum (stock / minimum) : {{list}}",
       "reorderQuantity": "Quantité de réapprovisionnement",
       "reorderHint": "Facultatif : quantité proposée sous le minimum",
-      "trackSerialsHint": "À chaque réception (bon de réception), un n° de série sera demandé pour chaque unité acceptée (un par ligne) ; le n° d'inventaire est attribué automatiquement (INVT-AAAA-NNNNN, ou le code initial inventaire du projet). Équipements déjà en stock : Équipements › « Enregistrer le parc existant »."
+      "trackSerialsHint": "À chaque réception (bon de réception), un n° de série sera demandé pour chaque unité acceptée (un par ligne) ; le n° d'inventaire est attribué automatiquement (INVT-AAAA-NNNNN, ou le code initial inventaire du projet). Équipements déjà en stock : Équipements › « Enregistrer le parc existant ».",
+      "restockPlanning": "Réapprovisionner (prévision)",
+      "leadTimeDays": "Délai de livraison (jours)",
+      "leadTimeHint": "Vide = délai de l'entreprise"
     },
     "mv": {
       "title": "Mouvements de stock",
@@ -3325,7 +3333,9 @@
       "selectedCount": "{{count}} utilisateur(s) sélectionné(s)",
       "required": "Code, nom et localisation sont obligatoires",
       "created": "Dépôt créé",
-      "updated": "Dépôt mis à jour"
+      "updated": "Dépôt mis à jour",
+      "safetyStockMonths": "Stock de sécurité (mois de consommation)",
+      "safetyStockHint": "Vide = valeur de l'entreprise"
     },
     "entry": {
       "title": "Bons d'entrée",
@@ -3978,6 +3988,61 @@
         "OTHER": "Opération de stock",
         "ENTRY": "Bon d'entrée"
       }
+    },
+    "planning": {
+      "title": "Prévision du réapprovisionnement",
+      "subtitle": "Consommation moyenne mensuelle hors ruptures, stock de sécurité et quantité à commander, par dépôt ou pour toute l'entreprise.",
+      "restockTitle": "Réapprovisionnement du stock — {{date}}",
+      "restockJustification": "Réapprovisionnement selon la prévision du stock : {{list}}.",
+      "restockLine": "stock {{stock}} {{unit}}, consommation {{amc}} / mois",
+      "nothingToOrder": "Aucun article à commander.",
+      "restockSelected_one": "Réapprovisionner ({{count}} ligne)",
+      "restockSelected_other": "Réapprovisionner ({{count}} lignes)",
+      "restockAll_one": "Réapprovisionner ({{count}} ligne à commander)",
+      "restockAll_other": "Réapprovisionner ({{count}} lignes à commander)",
+      "settings": {
+        "period_one": "Consommation calculée sur {{count}} mois",
+        "period_other": "Consommation calculée sur {{count}} mois",
+        "safety": "Stock de sécurité : {{value}} mois",
+        "lead": "Délai de livraison : {{value}} j",
+        "interval": "Fréquence des commandes : {{value}} mois",
+        "change": "Modifier les paramètres"
+      },
+      "view": "Vue",
+      "allWarehouses": "Tous les dépôts (détail)",
+      "enterpriseTotal": "Toute l'entreprise (total)",
+      "searchPlaceholder": "Rechercher un article (code, désignation)…",
+      "all": "Tous",
+      "selectAll": "Choisir toutes les lignes à commander",
+      "status": {
+        "STOCKOUT": "En rupture",
+        "BELOW_SAFETY": "Sous la sécurité",
+        "TO_ORDER": "À commander",
+        "OVERSTOCK": "Surstock",
+        "OK": "Suffisant",
+        "NO_CONSUMPTION": "Sans consommation"
+      },
+      "col": {
+        "status": "État",
+        "stock": "Stock",
+        "amc": "CMM",
+        "amcHint": "Consommation moyenne mensuelle : sorties vers un employé ou un département, moins les annulations et les retours, hors jours de rupture",
+        "months": "Mois de stock",
+        "thresholds": "Sécurité / Min / Max",
+        "thresholdsHint": "Sécurité = CMM × mois de sécurité ; minimum = sécurité + CMM × délai de livraison ; maximum = minimum + CMM × fréquence des commandes",
+        "onOrder": "En commande",
+        "requested": "Demandé",
+        "toOrder": "À commander"
+      },
+      "basisMin": "Selon le stock minimum de l'article (aucune consommation)",
+      "stockoutDays": "{{value}} j de rupture sur la période",
+      "none": "Aucun article à afficher.",
+      "method": "Consommation = sorties vers un employé ou un département, moins les annulations et les retours (transferts, pertes et ajustements exclus), divisée par les jours où l'article était disponible (au moins 30). En commande = reste à livrer des bons de commande actifs vers ce dépôt ; demandé = réquisitions en cours pas encore commandées. À commander = maximum − (stock + en commande + demandé), dès que ce total atteint le minimum.",
+      "itemTitle": "Prévision du réapprovisionnement",
+      "openScreen": "Voir la prévision",
+      "monthlyConsumption": "Consommation par mois ({{unit}})",
+      "noConsumption": "Aucune consommation sur les 12 derniers mois.",
+      "consumption": "Consommation"
     }
   },
   "help": {
@@ -5217,11 +5282,66 @@
           },
           {
             "type": "h",
-            "text": "Réapprovisionnement"
+            "text": "Prévision du réapprovisionnement"
           },
           {
             "type": "p",
-            "text": "Dans la liste des articles, le bouton « Réapprovisionner » apparaît quand des articles sont sous leur stock minimum : il ouvre une nouvelle réquisition pré-remplie avec ces articles (quantité de réapprovisionnement, sinon de quoi revenir au minimum) et une justification. Complétez le projet, les lignes budgétaires et les prix, puis soumettez."
+            "text": "Stock → Prévision calcule, pour chaque article et chaque dépôt, la consommation moyenne mensuelle (CMM) et la quantité à commander. La consommation = sorties vers un employé ou un département, moins les annulations et les retours ; les transferts entre dépôts, les pertes et les ajustements n'en font pas partie. Les jours où l'article était en rupture ne comptent pas : une rupture ne fait pas baisser la consommation."
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Valeur",
+                "Calcul"
+              ],
+              [
+                "Stock de sécurité",
+                "CMM × mois de sécurité (réglage de l'entreprise, ou du dépôt)"
+              ],
+              [
+                "Minimum",
+                "Stock de sécurité + CMM × délai de livraison (réglage de l'entreprise, ou de l'article)"
+              ],
+              [
+                "Maximum",
+                "Minimum + CMM × fréquence des commandes"
+              ],
+              [
+                "En commande",
+                "Reste à livrer des bons de commande actifs vers ce dépôt"
+              ],
+              [
+                "Demandé",
+                "Réquisitions en cours pas encore commandées"
+              ],
+              [
+                "À commander",
+                "Maximum − (stock + en commande + demandé), dès que ce total atteint le minimum"
+              ]
+            ]
+          },
+          {
+            "type": "list",
+            "items": [
+              "« En rupture » : plus de stock dans le dépôt alors que l'article est consommé.",
+              "« Sous la sécurité » : le stock est passé sous le stock de sécurité.",
+              "« À commander » : stock + en commande + demandé ont atteint le minimum.",
+              "« Surstock » : plus que le maximum. « Sans consommation » : aucune sortie sur la période (stock dormant)."
+            ]
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Choisissez la vue : tous les dépôts (une ligne par article et dépôt), un dépôt, ou toute l'entreprise (une ligne par article).",
+              "Cochez les lignes à commander (ou aucune : toutes les lignes à commander sont reprises) puis « Réapprovisionner ».",
+              "Une réquisition s'ouvre avec les quantités à commander et le dépôt de destination de chaque ligne (« → Dépôt : … »). Complétez le projet, les lignes budgétaires et les prix, puis soumettez.",
+              "Tant que la réquisition est en cours, la quantité compte comme « demandée » ; une fois le bon de commande créé, elle passe « en commande » dans ce dépôt, jusqu'à la réception."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Réglages : « Mon entreprise » → « Prévision du réapprovisionnement » (période de calcul, stock de sécurité, fréquence des commandes, délai de livraison). Un dépôt peut avoir son propre stock de sécurité (Stock → Dépôts), un article son propre délai (Stock → Articles). Un article sans consommation reprend son stock minimum dans la vue « toute l'entreprise »."
           },
           {
             "type": "h",
@@ -5253,6 +5373,10 @@
               {
                 "to": "/stock/items",
                 "label": "Articles"
+              },
+              {
+                "to": "/stock/planning",
+                "label": "Prévision"
               },
               {
                 "to": "/stock/movements",
@@ -6088,7 +6212,8 @@
       "PROJECT_MANAGER_CHANGED": "Chef de projet modifié",
       "PURCHASE_ORDER_REVIEWED": "Bon de commande révisé",
       "DELEGATION_CREATED": "Intérim déclaré",
-      "DELEGATION_ENDED": "Intérim terminé"
+      "DELEGATION_ENDED": "Intérim terminé",
+      "STOCK_PLANNING_CHANGED": "Paramètres de prévision du stock modifiés"
     },
     "groups": {
       "all": "Tous les événements",
@@ -6633,5 +6758,20 @@
       "ALREADY_ENDED": "Cet intérim est déjà terminé",
       "NOT_PROJECT_MANAGER": "L'intérim est réservé aux chefs de projet"
     }
+  },
+  "stockPlanningSettings": {
+    "title": "Prévision du réapprovisionnement",
+    "hint": "Valeurs utilisées pour calculer la consommation moyenne et la quantité à commander. Un dépôt peut avoir son propre stock de sécurité, un article son propre délai de livraison.",
+    "amcMonths": "Période de calcul de la consommation (mois)",
+    "amcMonthsHint": "Les jours où l'article était en rupture ne comptent pas.",
+    "safetyMonths": "Stock de sécurité (mois)",
+    "safetyMonthsHint": "Réserve à garder en plus du délai de livraison.",
+    "orderIntervalMonths": "Fréquence des commandes (mois)",
+    "orderIntervalMonthsHint": "Temps entre deux commandes du même article : fixe le stock maximum.",
+    "leadTimeDays": "Délai de livraison (jours)",
+    "leadTimeDaysHint": "De la commande à la réception, si l'article n'a pas le sien.",
+    "formula": "Minimum = consommation × (sécurité + délai) ; maximum = minimum + consommation × fréquence ; à commander = maximum − (stock + en commande + demandé) dès que ce total atteint le minimum.",
+    "saved": "Paramètres de prévision enregistrés",
+    "invalid": "{{field}} : valeur de {{min}} à {{max}}"
   }
 }

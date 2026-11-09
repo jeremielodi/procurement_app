@@ -34,6 +34,9 @@ export const enterpriseService = {
   // --- Seuils d'approbation N1 / N2 de l'entreprise (projets sans politique propre) ---
   getApprovalPolicy: async () => (await api.get('/enterprises/current/approval-policy')).data,
   setApprovalPolicy: async (policy) => (await api.put('/enterprises/current/approval-policy', policy)).data,
+  // Paramètres de la prévision du réapprovisionnement (période, sécurité, fréquence, délai)
+  getStockPlanning: async () => (await api.get('/enterprises/current/stock-planning')).data,
+  setStockPlanning: async (settings) => (await api.put('/enterprises/current/stock-planning', settings)).data,
   // --- Rapport quotidien des réquisitions (administrateur d'entreprise) ---
   getDailyReport: async () => {
     const response = await api.get('/enterprises/current/daily-report');

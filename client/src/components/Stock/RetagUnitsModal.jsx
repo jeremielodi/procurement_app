@@ -31,6 +31,18 @@ function downloadChanges(changes) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+async function downloadTemplate(format) {
+  try {
+    const blob = await equipmentService.retagTemplate(format);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${t('stock.retag.templateFile')}.${format}`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch { toast.error(t('stock.retag.templateFailed')); }
+}
+
 export default function RetagUnitsModal({ isOpen, onClose, onDone }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -79,6 +91,25 @@ export default function RetagUnitsModal({ isOpen, onClose, onDone }) {
           <p className="flex items-center gap-2 font-medium text-gray-800"><Tag size={14} /> {t('stock.retag.format')}</p>
           <p>{t('stock.retag.hint')}</p>
         </div>
+
+        {!result && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 p-3">
+            <div className="min-w-0 flex-1 text-sm text-green-900">
+              <div className="font-medium">{t('stock.retag.templateTitle')}</div>
+              <div className="text-xs text-green-800">{t('stock.retag.templateHint')}</div>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => downloadTemplate('xlsx')} data-testid="retag-template-xlsx"
+                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700">
+                <Download size={16} /> {t('stock.import.templateXlsx')}
+              </button>
+              <button type="button" onClick={() => downloadTemplate('csv')}
+                className="inline-flex items-center gap-2 rounded-lg border border-green-600 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100">
+                <Download size={16} /> {t('stock.import.templateCsv')}
+              </button>
+            </div>
+          </div>
+        )}
 
         {!result && (
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-blue-300 px-4 py-4 text-sm text-blue-700 hover:bg-blue-50">

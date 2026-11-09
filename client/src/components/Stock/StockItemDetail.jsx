@@ -41,14 +41,14 @@ export default function StockItemDetail() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-6xl min-w-0">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
         <ArrowLeft size={16} /> {t('common.back')}
       </button>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Package /> {item.name}</h1>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2 break-words"><Package className="shrink-0" /> {item.name}</h1>
           <p className="text-sm text-gray-500">
             <span className="font-mono font-semibold">{item.code}</span> · {item.unit}{item.category_name && ` · ${item.category_name}`}
             {!item.is_active && <span className="ml-2 rounded bg-gray-100 px-2 py-0.5 text-xs">{t('refs.inactive')}</span>}
@@ -66,24 +66,24 @@ export default function StockItemDetail() {
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">{t('stock.items.notStockableHint')}</div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="bg-white border border-gray-200 rounded-lg">
+          <div className="min-w-0 bg-white border border-gray-200 rounded-lg">
             <h2 className="px-4 py-3 border-b font-semibold text-gray-800">{t('stock.items.byWarehouse')}</h2>
             {byWarehouse.size === 0 ? <p className="p-4 text-sm text-gray-500">{t('stock.overview.empty')}</p> : (
               <ul className="divide-y text-sm">
                 {[...byWarehouse.entries()].map(([wid, w]) => (
-                  <li key={wid} className="flex justify-between px-4 py-2">
+                  <li key={wid} className="flex justify-between gap-3 px-4 py-2">
                     <Link to={`/stock?warehouseId=${wid}`} className="text-blue-600 hover:underline">{w.name} <span className="text-xs text-gray-400">({w.location})</span></Link>
-                    <span className="font-medium">{fmtQty(w.quantity)} {item.unit}</span>
+                    <span className="font-medium whitespace-nowrap">{fmtQty(w.quantity)} {item.unit}</span>
                   </li>
                 ))}
               </ul>
             )}
           </div>
           {item.track_lots && (
-            <div className="bg-white border border-gray-200 rounded-lg">
+            <div className="min-w-0 bg-white border border-gray-200 rounded-lg">
               <h2 className="px-4 py-3 border-b font-semibold text-gray-800">{t('stock.items.lotsTitle')}</h2>
               {(item.lots || []).length === 0 ? <p className="p-4 text-sm text-gray-500">{t('stock.items.noLots')}</p> : (
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto"><table className="w-full text-sm [&_th]:whitespace-nowrap">
                   <thead className="text-left text-xs text-gray-500"><tr>
                     <th className="px-4 py-2">{t('stock.lot')}</th><th className="px-4 py-2">{t('stock.expiry')}</th>
                     <th className="px-4 py-2">{t('common.supplier')}</th><th className="px-4 py-2 text-right">{t('stock.quantity')}</th>
@@ -93,15 +93,15 @@ export default function StockItemDetail() {
                       const expired = l.expiry_date && new Date(l.expiry_date) < new Date(new Date().toISOString().slice(0, 10));
                       return (
                         <tr key={l.id} className={Number(l.quantity) <= 0 ? 'text-gray-400' : ''}>
-                          <td className="px-4 py-2 font-mono">{l.lot_number}</td>
-                          <td className={`px-4 py-2 ${expired ? 'text-red-600 font-semibold' : ''}`}>{fmtDate(l.expiry_date)}{expired && ` (${t('stock.expired')})`}</td>
+                          <td className="px-4 py-2 font-mono whitespace-nowrap">{l.lot_number}</td>
+                          <td className={`px-4 py-2 whitespace-nowrap ${expired ? 'text-red-600 font-semibold' : ''}`}>{fmtDate(l.expiry_date)}{expired && ` (${t('stock.expired')})`}</td>
                           <td className="px-4 py-2">{l.supplier_name || '—'}</td>
-                          <td className="px-4 py-2 text-right">{fmtQty(l.quantity)}</td>
+                          <td className="px-4 py-2 text-right whitespace-nowrap">{fmtQty(l.quantity)}</td>
                         </tr>
                       );
                     })}
                   </tbody>
-                </table>
+                </table></div>
               )}
             </div>
           )}
@@ -110,12 +110,12 @@ export default function StockItemDetail() {
 
       {item.is_stockable && item.is_active && <StockItemPlanning itemId={item.id} unit={item.unit} />}
 
-      <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
-        <div className="flex items-center justify-between px-4 py-3 border-b">
+      <div className="min-w-0 bg-white border border-gray-200 rounded-lg">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b">
           <h2 className="font-semibold text-gray-800">{t('stock.items.lastMovements')}</h2>
           <Link to={`/stock/movements`} className="text-sm text-blue-600 hover:underline">{t('stock.items.allMovements')}</Link>
         </div>
-        {movements.length === 0 ? <p className="p-4 text-sm text-gray-500">{t('stock.mv.none')}</p> : <MovementTable rows={movements} showItem={false} />}
+        {movements.length === 0 ? <p className="p-4 text-sm text-gray-500">{t('stock.mv.none')}</p> : <div className="overflow-x-auto"><MovementTable rows={movements} showItem={false} /></div>}
       </div>
     </div>
   );

@@ -108,6 +108,9 @@ export const equipmentService = {
     if (confirm) fd.append('confirm', '1');
     return api.post('/stock-units/import', fd, { headers: { 'Content-Type': 'multipart/form-data' }, skipErrorToast: true }).then(data);
   },
+  // Modèle de recodification pré-rempli avec les équipements (xlsx | csv)
+  retagTemplate: (format = 'xlsx') =>
+    api.get('/stock-units/retag/template', { params: { format, lang: getLang() }, responseType: 'blob' }).then(data),
   // Recodification des n° d'inventaire (ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN) : aperçu puis confirmation
   retagFile: (file, { confirm = false } = {}) => {
     const fd = new FormData();

@@ -28,14 +28,14 @@ export default function StockItemPlanning({ itemId, unit }) {
   const hasConsumption = months.some(m => m.consumption > 0);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg" data-testid="item-planning">
+    <div className="min-w-0 bg-white border border-gray-200 rounded-lg" data-testid="item-planning">
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b">
         <h2 className="flex items-center gap-2 font-semibold text-gray-800"><TrendingUp size={16} /> {t('stock.planning.itemTitle')}</h2>
         <Link to="/stock/planning" className="text-sm text-blue-600 hover:underline">{t('stock.planning.openScreen')}</Link>
       </div>
       {rows.length === 0 ? <p className="p-4 text-sm text-gray-500">{t('stock.planning.none')}</p> : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_th]:whitespace-nowrap">
             <thead className="bg-gray-50 text-left text-xs text-gray-500">
               <tr>
                 <th className="px-4 py-2">{t('stock.warehouse')}</th>
@@ -51,8 +51,8 @@ export default function StockItemPlanning({ itemId, unit }) {
             <tbody className="divide-y">
               {rows.map(r => (
                 <tr key={r.warehouseId || 'total'} className={r.total ? 'bg-gray-50 font-semibold' : ''}>
-                  <td className="px-4 py-2">{r.total ? t('stock.planning.enterpriseTotal') : r.warehouseName}</td>
-                  <td className="px-4 py-2"><PlanningStatusBadge status={r.status} /></td>
+                  <td className="px-4 py-2 min-w-[10rem]">{r.total ? t('stock.planning.enterpriseTotal') : r.warehouseName}</td>
+                  <td className="px-4 py-2 whitespace-nowrap"><PlanningStatusBadge status={r.status} /></td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">{fmt(r.stock, 4)} <span className="text-xs text-gray-400">{unit}</span></td>
                   <td className="px-4 py-2 text-right">{r.amc > 0 ? fmt(r.amc) : '—'}</td>
                   <td className="px-4 py-2 text-right">{r.monthsOfStock !== null ? fmt(r.monthsOfStock, 1) : '—'}</td>

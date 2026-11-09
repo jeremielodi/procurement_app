@@ -500,4 +500,66 @@ async function retagApply(file) {
   return { units: changes.length, changes, totalLines, skipped: errors.length, errors };
 }
 
-module.exports = { preview, apply, template, retagPreview, retagApply, MAX_ROWS };
+/**
+ * Modèle de recodification : pré-rempli avec les équipements de l'entreprise (en stock, affectés, en transit), sinon des exemples.
+ * Colonnes lues : Code article, N° de série, Date d'acquisition, Segment projet (TAG) ; les autres (n° actuel, désignation,
+ * catégorie TAG, projet) sont informatives et ignorées à l'import (en-têtes absents des alias).
+ */
+async function retagTemplate({ lang, format = 'xlsx' }) {
+  const T = i18n.translator(lang);
+  const params = [];
+  const units = await db.select(
+    `SELECT it.code, un.serial_number, un.acquisition_date, un.tag_project_code, un.asset_tag, it.name, it.asset_category, p.code AS project_code
+     FROM stock_units un JOIN stock_items it ON it.id = un.stock_item_id LEFT JOIN projects p ON p.id = un.project_id
+     WHERE un.status NOT IN ('VOID', 'LOST', 'RETIRED')${tenant.filter('un.enterprise_id', params)}
+     ORDER BY it.asset_category NULLS LAST, COALESCE(un.tag_project_code, p.code), un.acquisition_date NULLS LAST, it.code, un.serial_number
+     LIMIT ${MAX_ROWS}`,
+    params
+  );
+  const keys = ['item', 'serial', 'acquisitionDate', 'tagProject', 'currentTag', 'name', 'category', 'project'];
+  const headers = keys.map(k => T(`stockUnitImport.retag.headers.${k}`));
+  const rows = units.length
+    ? units.map(u => [u.code, u.serial_number, u.acquisition_date || '', u.tag_project_code || '', u.asset_tag || '', u.name, u.asset_category || '', u.project_code || ''])
+    : [['EX-LAPTOP', '5CG1403NX4', '2022-03-15', 'MIHR', 'INV-0001', T('stockUnitImport.retag.exampleName'), 'LAP', ''],
+      ['EX-LAPTOP', '5CG1403P4M', '2021', '', '', T('stockUnitImport.retag.exampleName'), 'LAP', '']];
+  const fileName = T('stockUnitImport.retag.fileName');
+  if (format === 'csv') {
+    const esc = (v) => { const x = String(v ?? ''); return /[";\r\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; };
+    const csv = [headers, ...rows].map(r => r.map(esc).join(';')).join('\r\n');
+    return { buffer: Buffer.from(`﻿${csv}\r\n`, 'utf8'), filename: `${fileName}.csv`, contentType: 'text/csv; charset=utf-8' };
+  }
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'procureApp';
+  const ws = wb.addWorksheet(T('stockUnitImport.retag.sheet'), { views: [{ state: 'frozen', ySplit: 1 }] });
+  ws.columns = keys.map((k, i) => ({ header: headers[i], key: k, width: [24, 24, 16, 20, 24, 40, 12, 16][i] }));
+  const head = ws.getRow(1);
+  head.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  head.alignment = { vertical: 'middle', wrapText: true };
+  head.height = 32;
+  // Bleu = obligatoire, ardoise = facultatif, gris = information (ignorée à l'import)
+  keys.forEach((k, i) => {
+    head.getCell(i + 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i < 2 ? 'FF1D4ED8' : i < 4 ? 'FF475569' : 'FF9CA3AF' } };
+    head.getCell(i + 1).note = T(`stockUnitImport.retag.help.${k}`);
+  });
+  for (const r of rows) {
+    const row = ws.addRow(r);
+    if (!units.length) row.font = { italic: true, color: { argb: 'FF6B7280' } };
+    for (let c = 5; c <= keys.length; c++) row.getCell(c).font = { color: { argb: 'FF6B7280' } };
+  }
+  const help = wb.addWorksheet(T('stockUnitImport.retag.helpSheet'));
+  help.columns = [{ header: T('stockUnitImport.ref.column'), width: 30 }, { header: T('stockUnitImport.ref.required'), width: 18 }, { header: T('stockUnitImport.ref.description'), width: 100 }];
+  help.getRow(1).font = { bold: true };
+  keys.forEach((k, i) => {
+    const status = i < 2 ? 'stockUnitImport.required' : i < 4 ? 'stockUnitImport.optional' : 'stockUnitImport.retag.ignored';
+    help.addRow([headers[i], T(status), T(`stockUnitImport.retag.help.${k}`)]).alignment = { wrapText: true, vertical: 'top' };
+  });
+  help.addRow([]);
+  for (const key of ['rules1', 'rules2', 'rules3', 'rules4']) help.addRow([T(`stockUnitImport.retag.${key}`)]).font = { italic: true };
+  return {
+    buffer: Buffer.from(await wb.xlsx.writeBuffer()),
+    filename: `${fileName}.xlsx`,
+    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  };
+}
+
+module.exports = { preview, apply, template, retagPreview, retagApply, retagTemplate, MAX_ROWS };

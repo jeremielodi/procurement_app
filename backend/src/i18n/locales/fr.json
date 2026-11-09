@@ -1403,7 +1403,38 @@
     "rules1": "Une ligne par bien : un équipement à n° de série par ligne ; pour un article sans n° de série, la quantité (les lignes d'un même article et dépôt sont additionnées).",
     "rules2": "Rien n'est écrit tant que vous n'avez pas confirmé l'aperçu ; les lignes en erreur sont signalées et ignorées.",
     "rules3": "Les biens entrent « en stock » au dépôt indiqué (mouvement de stock initial). Un bien remis à une personne : faites ensuite un bon de sortie.",
-    "rules4": "Un article sans n° de série qui a déjà du stock dans le dépôt est refusé : un second import ne double pas le stock."
+    "rules4": "Un article sans n° de série qui a déjà du stock dans le dépôt est refusé : un second import ne double pas le stock.",
+    "retag": {
+      "fileName": "modele-recodification-numeros-inventaire",
+      "sheet": "Équipements",
+      "helpSheet": "Mode d'emploi",
+      "exampleName": "Ordinateur portable (exemple)",
+      "ignored": "Information (ignorée)",
+      "headers": {
+        "item": "Code article",
+        "serial": "N° de série",
+        "acquisitionDate": "Date d'acquisition",
+        "tagProject": "Segment projet (TAG)",
+        "currentTag": "N° d'inventaire actuel",
+        "name": "Désignation",
+        "category": "Catégorie TAG (article)",
+        "project": "Projet de financement"
+      },
+      "help": {
+        "item": "Code de l'article dans le catalogue (avec le n° de série, désigne l'équipement à recodifier).",
+        "serial": "N° de série de l'équipement, tel qu'enregistré dans l'application.",
+        "acquisitionDate": "Date (AAAA-MM-JJ ou JJ/MM/AAAA) ou année seule (ex. 2021) : donne le segment ANNÉE. Vide = date déjà enregistrée, sinon année d'enregistrement.",
+        "tagProject": "Segment PROJET du n° (ex. MIHR) : lettres et chiffres, tirets possibles. Vide = segment déjà enregistré, sinon code initial inventaire du projet de financement.",
+        "currentTag": "N° actuel, pour information : il sera remplacé et gardé dans les notes de l'équipement.",
+        "name": "Désignation de l'article, pour information.",
+        "category": "Segment CATÉGORIE, repris de la fiche article (à renseigner dans le catalogue si vide : sinon la ligne est refusée).",
+        "project": "Projet qui a financé l'équipement, pour information."
+      },
+      "rules1": "Une ligne par équipement à recodifier ; supprimez les lignes des équipements à ne pas changer.",
+      "rules2": "Forme du nouveau n° : ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN (ex. IMA-MIHR-LAP-2026-001).",
+      "rules3": "Les n° séquentiels sont attribués dans l'ordre des lignes du fichier : triez-les avant l'import (ex. par date d'acquisition).",
+      "rules4": "Les colonnes grises sont informatives : l'import ne lit que les 4 premières colonnes."
+    }
   },
   "equipmentExport": {
     "sheet": "Équipements",

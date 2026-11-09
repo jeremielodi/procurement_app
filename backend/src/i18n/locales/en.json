@@ -1403,7 +1403,38 @@
     "rules1": "One row per asset: one serial-tracked unit per row; for an item without serial numbers, the quantity (rows of the same item and warehouse are added up).",
     "rules2": "Nothing is written until you confirm the preview; rows with errors are reported and skipped.",
     "rules3": "Assets enter \"in stock\" at the given warehouse (opening stock movement). An asset handed to someone: then create an issue note.",
-    "rules4": "An item without serial numbers that already has stock in the warehouse is refused: a second import does not double the stock."
+    "rules4": "An item without serial numbers that already has stock in the warehouse is refused: a second import does not double the stock.",
+    "retag": {
+      "fileName": "asset-tag-recoding-template",
+      "sheet": "Equipment",
+      "helpSheet": "Instructions",
+      "exampleName": "Laptop (example)",
+      "ignored": "Information (ignored)",
+      "headers": {
+        "item": "Item code",
+        "serial": "Serial number",
+        "acquisitionDate": "Acquisition date",
+        "tagProject": "Tag project segment",
+        "currentTag": "Current asset tag",
+        "name": "Description",
+        "category": "Tag category (item)",
+        "project": "Funding project"
+      },
+      "help": {
+        "item": "Catalogue item code (with the serial number, identifies the equipment to re-tag).",
+        "serial": "Serial number of the equipment, as recorded in the application.",
+        "acquisitionDate": "Date (YYYY-MM-DD or DD/MM/YYYY) or year only (e.g. 2021): gives the YEAR segment. Empty = date already recorded, otherwise registration year.",
+        "tagProject": "PROJECT segment of the tag (e.g. MIHR): letters and digits, hyphens allowed. Empty = segment already recorded, otherwise the funding project's inventory prefix.",
+        "currentTag": "Current tag, for information: it will be replaced and kept in the equipment notes.",
+        "name": "Item description, for information.",
+        "category": "CATEGORY segment, taken from the item record (fill it in the catalogue if empty, otherwise the row is refused).",
+        "project": "Project that funded the equipment, for information."
+      },
+      "rules1": "One row per piece of equipment to re-tag; delete the rows of equipment that must not change.",
+      "rules2": "New tag format: ORGANISATION-PROJECT-CATEGORY-YEAR-NNN (e.g. IMA-MIHR-LAP-2026-001).",
+      "rules3": "Sequence numbers are assigned in file row order: sort the rows before importing (e.g. by acquisition date).",
+      "rules4": "Grey columns are for information: the import only reads the first 4 columns."
+    }
   },
   "equipmentExport": {
     "sheet": "Equipment",

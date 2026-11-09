@@ -64,25 +64,25 @@ export function MovementTable({ rows, showItem = true, showGroup = true }) {
       <tbody className="divide-y">
         {rows.map(m => (
           <tr key={m.id}>
-            <td className="px-4 py-2 font-mono text-xs">{m.movement_number}</td>
+            <td className="px-4 py-2 font-mono text-xs whitespace-nowrap">{m.movement_number}</td>
             {showGroup && (
-              <td className="px-4 py-2 font-mono text-xs" data-testid="movement-group">
+              <td className="px-4 py-2 font-mono text-xs whitespace-nowrap" data-testid="movement-group">
                 {m.group_id ? <Link to={`/stock/movement-groups/${m.group_id}`} className="text-blue-600 hover:underline">{m.group_number}</Link> : '—'}
               </td>
             )}
             <td className="px-4 py-2 whitespace-nowrap">{fmtDate(m.performed_at)}</td>
-            <td className="px-4 py-2">
+            <td className="px-4 py-2 whitespace-nowrap">
               <span className={`rounded px-2 py-0.5 text-xs ${Number(m.quantity) >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{t(`stock.mvType.${m.movement_type}`)}</span>
             </td>
             {showItem && (
               <td className="px-4 py-2"><Link to={`/stock/items/${m.stock_item_id}`} className="text-blue-600 hover:underline"><span className="font-mono">{m.item_code}</span> — {m.item_name}</Link></td>
             )}
-            <td className="px-4 py-2">{m.warehouse_name}</td>
-            <td className="px-4 py-2 font-mono text-xs">
+            <td className="px-4 py-2 whitespace-nowrap">{m.warehouse_name}</td>
+            <td className="px-4 py-2 font-mono text-xs whitespace-nowrap">
               {m.lot_number || m.serial_number || '—'}
               {m.asset_tag && <div className="text-gray-500" data-testid="movement-asset-tag">{m.asset_tag}</div>}
             </td>
-            <td className={`px-4 py-2 text-right font-medium ${Number(m.quantity) >= 0 ? 'text-green-700' : 'text-red-600'}`}>{fmtQty(m.quantity)} <span className="text-xs text-gray-400">{m.unit}</span></td>
+            <td className={`px-4 py-2 text-right font-medium whitespace-nowrap ${Number(m.quantity) >= 0 ? 'text-green-700' : 'text-red-600'}`}>{fmtQty(m.quantity)} <span className="text-xs text-gray-400">{m.unit}</span></td>
             <td className="px-4 py-2 text-xs">
               {m.source_type === 'ISSUE' && m.issue_number
                 ? <><SourceDocument m={m} />{m.recipient_name && <span className="text-gray-400"> {Number(m.quantity) > 0 && m.movement_type === 'TRANSFER_IN' ? '←' : '→'} {m.recipient_name}</span>}</>
@@ -91,10 +91,10 @@ export function MovementTable({ rows, showItem = true, showGroup = true }) {
                   : (m.comment || '—')}
             </td>
             {/* Projet qui a financé l'entrée en stock (réception : projet de la réquisition ; entrée manuelle : saisi) */}
-            <td className="px-4 py-2 text-xs" data-testid="movement-project">
+            <td className="px-4 py-2 text-xs whitespace-nowrap" data-testid="movement-project">
               {m.project_code ? <span title={m.project_name}>{m.project_code}</span> : <span className="text-gray-400">—</span>}
             </td>
-            <td className="px-4 py-2 text-xs text-gray-500">{m.performed_by_name || '—'}</td>
+            <td className="px-4 py-2 text-xs text-gray-500 whitespace-nowrap">{m.performed_by_name || '—'}</td>
           </tr>
         ))}
       </tbody>

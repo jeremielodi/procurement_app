@@ -849,7 +849,8 @@ router.post('/stock-units/register', authenticate, hasPermission('MANAGE_STOCK_I
 router.get('/stock-units/import/template', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), equipmentController.importTemplate);
 router.post('/stock-units/import', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.importUnits);
 // Recodification des n° d'inventaire (migration 57 : ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN)
-router.post('/stock-units/retag', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.retagUnits);
+router.get('/stock-units/retag/template', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), equipmentController.retagTemplate);
+router.post('/stock-units/retag',authenticate, hasPermission('MANAGE_STOCK_ITEMS'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.retagUnits);
 router.get('/stock-units/:id', authenticate, hasPermission('VIEW_STOCK'), equipmentController.getUnit);
 router.put('/stock-units/:id', authenticate, hasPermission('ISSUE_STOCK'), equipmentController.updateUnit);
 

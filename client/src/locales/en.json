@@ -4178,7 +4178,11 @@
         "oldTag": "Former asset tag",
         "newTag": "New asset tag",
         "file": "asset-tag-mapping"
-      }
+      },
+      "templateTitle": "Template to fill in",
+      "templateHint": "Pre-filled with your equipment: fill in the acquisition date and project segment, keep the rows to re-tag, then import the file.",
+      "templateFile": "asset-tag-recoding-template",
+      "templateFailed": "Could not download the template"
     }
   },
   "help": {
@@ -5714,7 +5718,7 @@
               "My company › \"Asset tag codification\": enter the organisation prefix (e.g. IMA). Without a prefix, the former codification still applies.",
               "On each serial-tracked item record, fill in the \"Tag category\" (VEH, MOT, TAB, LAP, MON, IMP, PRO, GEN, REF, CLM, COM, UPS, CAM, TEL, SCO…) — also via the \"Tag category\" column of the catalogue import.",
               "The PROJECT segment is the equipment's \"tag project segment\" when set, otherwise the funding project's inventory prefix. The YEAR is the acquisition year, otherwise the registration year.",
-              "Equipment already registered: Stock › Equipment › \"Re-tag (Excel / CSV)\" with Item code, Serial number, Acquisition date and Tag project segment. Check the preview, confirm, then download the old / new tag mapping to redo the labels."
+              "Equipment already registered: Stock › Equipment › \"Re-tag (Excel / CSV)\" with Item code, Serial number, Acquisition date and Tag project segment. Check the preview, confirm, then download the old / new tag mapping to redo the labels. The \"Excel template\" button of this window gives a file already filled with your equipment: complete the date and segment, keep the rows to re-tag."
             ]
           },
           {

@@ -171,6 +171,17 @@ module.exports = {
     } catch (error) { return sendError(res, error, "Erreur lors de l'export des équipements"); }
   },
 
+  /** GET /stock-units/retag/template?format=xlsx|csv&lang= — modèle de recodification, pré-rempli avec les équipements */
+  async retagTemplate(req, res) {
+    try {
+      const format = req.query.format === 'csv' ? 'csv' : 'xlsx';
+      const file = await unitImportService.retagTemplate({ lang: i18n.fromRequest(req), format });
+      res.set('Content-Type', file.contentType);
+      res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}"`);
+      res.end(file.buffer);
+    } catch (error) { return sendError(res, error, 'Erreur lors de la génération du modèle'); }
+  },
+
   /** GET /stock-units/import/template?format=xlsx|csv&lang= — modèle d'import du parc existant (articles, dépôts accessibles, projets) */
   async importTemplate(req, res) {
     try {

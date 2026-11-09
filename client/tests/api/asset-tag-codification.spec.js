@@ -107,6 +107,24 @@ test.describe.serial('API › Codification des n° d\'inventaire', () => {
     expect(noCat.body.data.errors[0].code).toBe('ITEM_CATEGORY_MISSING');
   });
 
+  test('Modèle de recodification : pré-rempli avec les équipements, réimportable tel quel', async ({ request }) => {
+    const xlsx = await request.get('/api/stock-units/retag/template', { headers: H(), params: { format: 'xlsx' } });
+    expect(xlsx.status()).toBe(200);
+    expect((await xlsx.body()).subarray(0, 2).toString()).toBe('PK');
+    const res = await request.get('/api/stock-units/retag/template', { headers: H(), params: { format: 'csv' } });
+    expect(res.status()).toBe(200);
+    const text = (await res.body()).toString('utf8').replace(/^﻿/, '');
+    const lines = text.split(/\r\n/).filter(Boolean);
+    expect(lines[0]).toBe('Code article;N° de série;Date d\'acquisition;Segment projet (TAG);N° d\'inventaire actuel;Désignation;Catégorie TAG (article);Projet de financement');
+    const mine = lines.find(l => l.startsWith(`${laptop.code};A6${stamp};`));
+    expect(mine).toContain(`;2019-01-01;R${stamp};IMA-R${stamp}-LAP-2019-001;`);
+    // Réimport du seul équipement du test : colonnes d'information ignorées
+    const preview = await request.post('/api/stock-units/retag', { headers: H(), multipart: { file: { name: 'modele.csv', mimeType: 'text/csv', buffer: Buffer.from(`﻿${lines[0]}\r\n${mine}\r\n`) } } }).then(json);
+    expect(preview.status, JSON.stringify(preview.body)).toBe(200);
+    expect(preview.body.data.summary).toMatchObject({ units: 1, errors: 0 });
+    expect(preview.body.data.units[0]).toMatchObject({ oldTag: `IMA-R${stamp}-LAP-2019-001`, pattern: `IMA-R${stamp}-LAP-2019-NNN` });
+  });
+
   test('Registre Excel : filtres de la liste, n° actuel et ancien n° relevé dans les notes', async ({ request }) => {
     const res = await request.get('/api/stock-units/export', { headers: H(), params: { stockItemId: laptop.id, search: `A6${stamp}` } });
     expect(res.status()).toBe(200);

@@ -4178,7 +4178,11 @@
         "oldTag": "Ancien n° d'inventaire",
         "newTag": "Nouveau n° d'inventaire",
         "file": "correspondance-numeros-inventaire"
-      }
+      },
+      "templateTitle": "Modèle à compléter",
+      "templateHint": "Pré-rempli avec vos équipements : complétez la date d'acquisition et le segment projet, gardez les lignes à recodifier, puis importez le fichier.",
+      "templateFile": "modele-recodification-numeros-inventaire",
+      "templateFailed": "Téléchargement du modèle impossible"
     }
   },
   "help": {
@@ -5714,7 +5718,7 @@
               "Mon entreprise › « Codification des n° d'inventaire » : saisissez le préfixe d'organisation (ex. IMA). Sans préfixe, l'ancienne codification reste appliquée.",
               "Fiche de chaque article suivi par n° de série : renseignez la « Catégorie TAG » (VEH, MOT, TAB, LAP, MON, IMP, PRO, GEN, REF, CLM, COM, UPS, CAM, TEL, SCO…) — aussi par la colonne « Catégorie TAG » de l'import du catalogue.",
               "Le segment PROJET est le « segment projet (TAG) » de l'équipement s'il est renseigné, sinon le code initial inventaire du projet de financement. L'ANNÉE est l'année d'acquisition, sinon l'année d'enregistrement.",
-              "Équipements déjà enregistrés : Stock › Équipements › « Recodifier (Excel / CSV) » avec Code article, N° de série, Date d'acquisition et Segment projet (TAG). Vérifiez l'aperçu, confirmez, puis téléchargez la correspondance ancien / nouveau n° pour refaire les étiquettes."
+              "Équipements déjà enregistrés : Stock › Équipements › « Recodifier (Excel / CSV) » avec Code article, N° de série, Date d'acquisition et Segment projet (TAG). Vérifiez l'aperçu, confirmez, puis téléchargez la correspondance ancien / nouveau n° pour refaire les étiquettes. Le bouton « Modèle Excel » de cette fenêtre fournit un fichier déjà rempli avec vos équipements : complétez la date et le segment, gardez les lignes à recodifier."
             ]
           },
           {

@@ -94,6 +94,8 @@ export const stockEntryService = {
 // Équipements suivis par n° de série (ordinateurs…), détentions et retours en stock
 export const equipmentService = {
   units: (params = {}) => api.get('/stock-units', { params }).then(data),
+  // Registre des équipements (Excel), mêmes filtres que la liste
+  exportUnits: (params = {}) => api.get('/stock-units/export', { params: { ...params, lang: getLang() }, responseType: 'blob' }).then(data),
   unit: (id) => api.get(`/stock-units/${id}`).then(data),
   // Parc existant : { stockItemId, warehouseId, units: [{ serialNumber, assetTag }] }
   register: (payload) => api.post('/stock-units/register', payload, { skipErrorToast: true }).then(data),

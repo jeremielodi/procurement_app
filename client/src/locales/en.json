@@ -3714,7 +3714,8 @@
       "regenerate": "Recalculate the asset tag",
       "regenerateConfirm": "Replace tag {{tag}} with a new one following the codification? Remember to change the label.",
       "regenerated": "Asset tag recalculated",
-      "tagHint": "The tag follows the \"My company\" codification; empty segment = funding project's inventory prefix."
+      "tagHint": "The tag follows the \"My company\" codification; empty segment = funding project's inventory prefix.",
+      "export": "Export (Excel)"
     },
     "count": {
       "title": "Stock counts",
@@ -5718,7 +5719,7 @@
           },
           {
             "type": "tip",
-            "text": "The former tag is kept in the equipment notes. For a single device: equipment record › \"Recalculate the asset tag\"."
+            "text": "The former tag is kept in the equipment notes. For a single device: equipment record › \"Recalculate the asset tag\". The \"Export (Excel)\" button of the Equipment screen gives the full register at any time, with each unit's former tag."
           },
           {
             "type": "h",

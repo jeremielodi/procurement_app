@@ -5,6 +5,7 @@ const notificationModel = require('../models/NotificationModel');
 const userModel = require('../models/UserModel');
 const stockModel = require('../models/StockModel');
 const i18n = require('../i18n');
+const ExcelJS = require('exceljs');
 const db = require('../config/database');
 const stockReturnPdfService = require('../services/StockReturnPdfService');
 const unitImportService = require('../services/StockUnitImportService');
@@ -127,6 +128,47 @@ module.exports = {
       const result = await equipmentModel.registerUnits({ stockItemId: b.stockItemId, warehouseId: b.warehouseId, units: b.units || [], projectId: b.projectId || null }, { userId: req.user.id });
       res.status(201).json({ success: true, data: result, message: 'Équipements enregistrés' });
     } catch (error) { return sendError(res, error, 'Erreur lors de l\'enregistrement des équipements'); }
+  },
+
+  /**
+   * GET /stock-units/export?status=&stockItemId=&search=&lang= — registre des équipements (Excel), mêmes filtres que la liste ;
+   * « Ancien n° d'inventaire » = dernier relevé dans les notes par la recodification
+   */
+  async exportUnits(req, res) {
+    try {
+      const lang = i18n.fromRequest(req);
+      const T = i18n.translator(lang);
+      const { rows } = await equipmentModel.units({ ...req.query, exportAll: true });
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'procureApp';
+      const ws = wb.addWorksheet(T('equipmentExport.sheet'));
+      const cols = [['assetTag', 24], ['oldTag', 24], ['itemCode', 22], ['item', 40], ['assetCategory', 12], ['serial', 24], ['status', 14],
+        ['condition', 12], ['warehouse', 24], ['holder', 28], ['since', 12], ['project', 30], ['acquisitionDate', 14], ['tagProject', 14],
+        ['unitCost', 12], ['currency', 9], ['registeredAt', 12], ['notes', 60]];
+      ws.columns = cols.map(([key, width]) => ({ header: T(`equipmentExport.${key}`), key, width }));
+      const dateOf = (v) => (v ? new Date(v) : null);
+      for (const u of rows) {
+        const old = [...String(u.notes || '').matchAll(/Ancien n° d'inventaire : ([^\s—;]+)/g)].pop();
+        ws.addRow({
+          assetTag: u.asset_tag || '', oldTag: old ? old[1] : '', itemCode: u.item_code, item: u.item_name, assetCategory: u.asset_category || '',
+          serial: u.serial_number, status: T(`equipmentExport.statuses.${u.status}`), condition: T(`equipmentExport.conditions.${u.condition}`),
+          warehouse: u.warehouse_name || '', holder: u.holder_name || u.department_name || '', since: dateOf(u.assigned_at),
+          project: u.project_id ? `${u.project_code} — ${u.project_name}` : '', acquisitionDate: dateOf(u.acquisition_date),
+          tagProject: u.tag_project_code || '', unitCost: u.unit_cost, currency: u.unit_cost !== null ? u.currency_code || '' : '',
+          registeredAt: dateOf(u.created_at), notes: u.notes || '',
+        });
+      }
+      for (const key of ['since', 'acquisitionDate', 'registeredAt']) ws.getColumn(key).numFmt = 'dd/mm/yyyy';
+      ws.getColumn('unitCost').numFmt = '#,##0.00';
+      ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
+      ws.views = [{ state: 'frozen', ySplit: 1 }];
+      ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols.length } };
+      const name = `${T('equipmentExport.file')}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      res.set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': `attachment; filename="${encodeURIComponent(name)}"` });
+      await wb.xlsx.write(res);
+      res.end();
+    } catch (error) { return sendError(res, error, "Erreur lors de l'export des équipements"); }
   },
 
   /** GET /stock-units/import/template?format=xlsx|csv&lang= — modèle d'import du parc existant (articles, dépôts accessibles, projets) */

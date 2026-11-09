@@ -1404,5 +1404,39 @@
     "rules2": "Rien n'est écrit tant que vous n'avez pas confirmé l'aperçu ; les lignes en erreur sont signalées et ignorées.",
     "rules3": "Les biens entrent « en stock » au dépôt indiqué (mouvement de stock initial). Un bien remis à une personne : faites ensuite un bon de sortie.",
     "rules4": "Un article sans n° de série qui a déjà du stock dans le dépôt est refusé : un second import ne double pas le stock."
+  },
+  "equipmentExport": {
+    "sheet": "Équipements",
+    "file": "registre_equipements",
+    "assetTag": "N° d'inventaire",
+    "oldTag": "Ancien n° d'inventaire",
+    "itemCode": "Code article",
+    "item": "Article",
+    "assetCategory": "Catégorie TAG",
+    "serial": "N° de série",
+    "status": "Statut",
+    "condition": "État",
+    "warehouse": "Dépôt",
+    "holder": "Détenteur / département",
+    "since": "Affecté le",
+    "project": "Projet (financement)",
+    "acquisitionDate": "Date d'acquisition",
+    "tagProject": "Segment projet (TAG)",
+    "unitCost": "Coût unitaire",
+    "currency": "Devise",
+    "registeredAt": "Enregistré le",
+    "notes": "Notes",
+    "statuses": {
+      "IN_STOCK": "En stock",
+      "ASSIGNED": "Affecté",
+      "IN_TRANSIT": "En transit",
+      "LOST": "Perdu",
+      "RETIRED": "Réformé",
+      "VOID": "Annulé"
+    },
+    "conditions": {
+      "GOOD": "Bon",
+      "DAMAGED": "Endommagé"
+    }
   }
 }

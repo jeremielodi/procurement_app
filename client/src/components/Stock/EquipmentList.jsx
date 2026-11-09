@@ -3,7 +3,7 @@
 // enregistrement du parc existant (saisie, ou import Excel / CSV : ImportStockUnitsModal), fiche (historique, état, réforme).
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Laptop, Plus, RefreshCw, Search, History, FileUp, Tag } from 'lucide-react';
+import { Laptop, Plus, RefreshCw, Search, History, FileUp, Tag, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
 import { equipmentService, stockItemService, warehouseService } from '../../services/stockService';
@@ -61,6 +61,7 @@ export default function EquipmentList() {
   const [register, setRegister] = useState(null);
   const [importing, setImporting] = useState(false);
   const [retagging, setRetagging] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [detail, setDetail] = useState(null);
 
@@ -81,6 +82,19 @@ export default function EquipmentList() {
   };
   useEffect(() => { load(); }, [debounced]);
   const set = (k) => (e) => setFilters(f => ({ ...f, [k]: e.target.value }));
+  // Registre Excel : mêmes filtres que la liste, sans limite de 500
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      const blob = await equipmentService.exportUnits(Object.fromEntries(Object.entries(debounced).filter(([, v]) => v)));
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `equipements_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch { /* toast api */ } finally { setExporting(false); }
+  };
 
   const saveRegister = async () => {
     const units = register.text.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
@@ -120,6 +134,9 @@ export default function EquipmentList() {
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="rounded-lg border border-gray-300 p-2 hover:bg-gray-50" title={t('common.refresh')} aria-label={t('common.refresh')}><RefreshCw size={16} /></button>
+          <button onClick={exportExcel} disabled={exporting} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50" data-testid="unit-export">
+            <Download size={16} /> {t('stock.equipment.export')}
+          </button>
           {hasPermission('MANAGE_STOCK_ITEMS') && (
             <button onClick={() => setRetagging(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" data-testid="unit-retag">
               <Tag size={16} /> {t('stock.retag.button')}

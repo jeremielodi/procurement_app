@@ -3714,7 +3714,8 @@
       "regenerate": "Recalculer le n° d'inventaire",
       "regenerateConfirm": "Remplacer le n° {{tag}} par un nouveau n° selon la codification ? Pensez à changer l'étiquette.",
       "regenerated": "N° d'inventaire recalculé",
-      "tagHint": "Le n° suit la codification de « Mon entreprise » ; segment vide = code initial inventaire du projet de financement."
+      "tagHint": "Le n° suit la codification de « Mon entreprise » ; segment vide = code initial inventaire du projet de financement.",
+      "export": "Exporter (Excel)"
     },
     "count": {
       "title": "Inventaires",
@@ -5718,7 +5719,7 @@
           },
           {
             "type": "tip",
-            "text": "L'ancien n° est conservé dans les notes de l'équipement. Pour un seul appareil : fiche de l'équipement › « Recalculer le n° d'inventaire »."
+            "text": "L'ancien n° est conservé dans les notes de l'équipement. Pour un seul appareil : fiche de l'équipement › « Recalculer le n° d'inventaire ». Le bouton « Exporter (Excel) » de l'écran Équipements donne à tout moment le registre complet, avec l'ancien n° de chaque équipement."
           },
           {
             "type": "h",

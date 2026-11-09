@@ -1404,5 +1404,39 @@
     "rules2": "Nothing is written until you confirm the preview; rows with errors are reported and skipped.",
     "rules3": "Assets enter \"in stock\" at the given warehouse (opening stock movement). An asset handed to someone: then create an issue note.",
     "rules4": "An item without serial numbers that already has stock in the warehouse is refused: a second import does not double the stock."
+  },
+  "equipmentExport": {
+    "sheet": "Equipment",
+    "file": "equipment_register",
+    "assetTag": "Asset tag",
+    "oldTag": "Former asset tag",
+    "itemCode": "Item code",
+    "item": "Item",
+    "assetCategory": "Tag category",
+    "serial": "Serial number",
+    "status": "Status",
+    "condition": "Condition",
+    "warehouse": "Warehouse",
+    "holder": "Holder / department",
+    "since": "Assigned on",
+    "project": "Project (funding)",
+    "acquisitionDate": "Acquisition date",
+    "tagProject": "Tag project segment",
+    "unitCost": "Unit cost",
+    "currency": "Currency",
+    "registeredAt": "Registered on",
+    "notes": "Notes",
+    "statuses": {
+      "IN_STOCK": "In stock",
+      "ASSIGNED": "Assigned",
+      "IN_TRANSIT": "In transit",
+      "LOST": "Lost",
+      "RETIRED": "Retired",
+      "VOID": "Void"
+    },
+    "conditions": {
+      "GOOD": "Good",
+      "DAMAGED": "Damaged"
+    }
   }
 }

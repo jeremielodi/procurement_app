@@ -203,7 +203,8 @@ class StockEquipmentModel {
   // ------------------------------------------------------------------
   // Unités (équipements)
   // ------------------------------------------------------------------
-  async units({ status, stockItemId, warehouseId, holderId, departmentId, projectId, search, limit = 100, offset = 0 } = {}) {
+  // exportAll : export Excel du registre (jusqu'à 20 000 équipements au lieu de 500 par page)
+  async units({ status, stockItemId, warehouseId, holderId, departmentId, projectId, search, limit = 100, offset = 0, exportAll = false } = {}) {
     const params = [];
     let where = `WHERE un.status <> 'VOID'${tenant.filter('un.enterprise_id', params)}`;
     if (status) { params.push(status); where += ` AND un.status = $${params.length}`; }
@@ -228,9 +229,14 @@ class StockEquipmentModel {
       LEFT JOIN projects fp ON fp.id = un.project_id
       ${where}`;
     const total = (await db.one(`SELECT COUNT(*)::int AS n ${from}`, params)).n;
-    params.push(Math.min(parseInt(limit) || 100, 500), parseInt(offset) || 0);
+    params.push(exportAll ? 20000 : Math.min(parseInt(limit) || 100, 500), exportAll ? 0 : parseInt(offset) || 0);
+    // Coût d'entrée : premier mouvement positif de l'unité (parc existant, réception, bon d'entrée)
+    const entry = `
+      LEFT JOIN LATERAL (SELECT m.unit_cost, c.format_key AS currency_code FROM stock_movements m LEFT JOIN currency c ON c.id = m.currency_id
+                          WHERE m.unit_id = un.id AND m.quantity > 0 ORDER BY m.performed_at, m.id LIMIT 1) entry ON true`;
     const rows = await db.select(
       `SELECT un.id, un.serial_number, un.asset_tag, un.status, un.condition, un.notes, un.updated_at, un.acquisition_date, un.tag_project_code,
+              un.created_at, it.asset_category, entry.unit_cost::float8 AS unit_cost, entry.currency_code,
               it.id AS stock_item_id, it.code AS item_code, it.name AS item_name,
               w.id AS warehouse_id, w.name AS warehouse_name,
               h.id AS holder_id, TRIM(COALESCE(h.first_name, '') || ' ' || COALESCE(h.last_name, '')) AS holder_name, h.email AS holder_email,
@@ -238,8 +244,8 @@ class StockEquipmentModel {
               fp.id AS project_id, fp.code AS project_code, fp.name AS project_name,
               (SELECT si.issued_at FROM stock_issue_lines il JOIN stock_issues si ON si.id = il.issue_id
                 WHERE il.unit_id = un.id AND si.status = 'ISSUED' AND il.returned_quantity < il.quantity ORDER BY si.issued_at DESC LIMIT 1) AS assigned_at
-       ${from}
-       ORDER BY it.name, un.serial_number LIMIT $${params.length - 1} OFFSET $${params.length}`,
+       ${from.replace(where, () => `${entry}\n      ${where}`)}
+       ORDER BY ${exportAll ? 'un.asset_tag NULLS LAST, it.name, un.serial_number' : 'it.name, un.serial_number'} LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );
     return { rows, total };

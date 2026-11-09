@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createRequire } from 'node:module';
 import { getToken, getApproverId, auth } from './helpers.js';
 
 // Codification des n° d'inventaire (migration 57) : ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN (ex. IMA-MIHR-LAP-2026-001)
@@ -104,6 +105,22 @@ test.describe.serial('API › Codification des n° d\'inventaire', () => {
     await importUnits(request, [[plain.code, `Z1${stamp}`, '', wh.code, '', '', '']]);
     const noCat = await retag(request, [[plain.code, `Z1${stamp}`, '', '']], false);
     expect(noCat.body.data.errors[0].code).toBe('ITEM_CATEGORY_MISSING');
+  });
+
+  test('Registre Excel : filtres de la liste, n° actuel et ancien n° relevé dans les notes', async ({ request }) => {
+    const res = await request.get('/api/stock-units/export', { headers: H(), params: { stockItemId: laptop.id, search: `A6${stamp}` } });
+    expect(res.status()).toBe(200);
+    expect(res.headers()['content-type']).toContain('spreadsheetml');
+    const ExcelJS = createRequire(new URL('../../../backend/package.json', import.meta.url))('exceljs');
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(await res.body());
+    const ws = wb.worksheets[0];
+    const head = ws.getRow(1).values.slice(1);
+    expect(head.slice(0, 3)).toEqual(['N° d\'inventaire', 'Ancien n° d\'inventaire', 'Code article']);
+    expect(ws.rowCount).toBe(2);
+    const row = Object.fromEntries(head.map((h, i) => [h, ws.getRow(2).getCell(i + 1).value]));
+    expect(row).toMatchObject({ 'N° d\'inventaire': `IMA-R${stamp}-LAP-2019-001`, 'Ancien n° d\'inventaire': `MON-TAG-${stamp}`,
+      'N° de série': `A6${stamp}`, 'Catégorie TAG': 'LAP', 'Statut': 'En stock', 'Segment projet (TAG)': `R${stamp}` });
   });
 
   test('Fiche de l\'équipement : année et segment modifiables, n° vidé = recalculé', async ({ request }) => {

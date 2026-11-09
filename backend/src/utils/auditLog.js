@@ -40,6 +40,9 @@ const AUDIT = {
   PROJECT_MEMBER_REMOVED: 'PROJECT_MEMBER_REMOVED',
   PROJECT_MEMBER_PROFILES_CHANGED: 'PROJECT_MEMBER_PROFILES_CHANGED',
   APPROVAL_POLICY_CHANGED: 'APPROVAL_POLICY_CHANGED', // seuils N1 / N2 d'un projet ou de l'entreprise (avant / après)
+  STOCK_REQUEST_VALIDATED: 'STOCK_REQUEST_VALIDATED', // demande au magasin validée (quantités validées)
+  STOCK_REQUEST_REJECTED: 'STOCK_REQUEST_REJECTED',
+  STOCK_REQUEST_CLOSED: 'STOCK_REQUEST_CLOSED', // reste d'une demande au magasin soldé par le magasinier
   STOCK_PLANNING_CHANGED: 'STOCK_PLANNING_CHANGED', // paramètres de la prévision du réapprovisionnement (avant / après)
   // Budget
   BUDGET_LINE_CREATED: 'BUDGET_LINE_CREATED',

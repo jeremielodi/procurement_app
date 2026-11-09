@@ -9,6 +9,7 @@ const userModel = require('../models/UserModel');
 const db = require('../config/database');
 const i18n = require('../i18n');
 const { audit, AUDIT } = require('../utils/auditLog');
+const stockRequestNotify = require('../services/StockRequestNotifications');
 
 function sendError(res, error, fallback) {
   if (error.status) {
@@ -112,7 +113,7 @@ module.exports = {
         {
           destinationType: b.destinationType || 'USER', warehouseId: b.warehouseId, recipientId: b.recipientId,
           destinationWarehouseId: b.destinationWarehouseId, departmentId: b.departmentId,
-          projectId: b.projectId, purpose: b.purpose, lines: b.lines,
+          projectId: b.projectId, purpose: b.purpose, stockRequestId: b.stockRequestId, lines: b.lines,
         },
         { userId: req.user.id }
       );
@@ -120,6 +121,7 @@ module.exports = {
       const key = issue.destination_type === 'WAREHOUSE' ? 'transfer'
         : issue.destination_type === 'DEPARTMENT' && !issue.recipient_id ? 'departmentIssued' : 'issued';
       await notifyReceivers(req, issue, key, issueLink(issue));
+      if (result.stockRequestId) await stockRequestNotify.served(req, result.stockRequestId, result.requestStatus);
       res.status(201).json({ success: true, data: result, message: 'Sortie enregistrée' });
     } catch (error) { return sendError(res, error, 'Erreur lors de la sortie de stock'); }
   },
@@ -160,6 +162,7 @@ module.exports = {
       });
       const issue = await stockIssueModel.getById(req.params.id);
       await notifyReceivers(req, issue, issue.destination_type === 'WAREHOUSE' ? 'transferCancelled' : 'cancelled', issueLink(issue));
+      if (result.stockRequestId) await stockRequestNotify.reopened(req, result.stockRequestId, issue.issue_number);
       res.json({ success: true, data: result, message: 'Sortie annulée' });
     } catch (error) { return sendError(res, error, 'Erreur lors de l\'annulation de la sortie'); }
   },

@@ -33,7 +33,16 @@ test('Réquisition créée depuis le formulaire : fiche ouverte avec le PDF affi
   await page.locator('input[name="title"]').fill(`[E2E PDF] Réquisition ${Date.now()}`);
   const project = page.getByTestId('requisition-project');
   await expect(project.locator('option:not([value=""])').first()).toBeAttached();
-  await project.selectOption(await project.locator('option:not([value=""])').first().getAttribute('value'));
+  // Premier projet qui a une ligne budgétaire (les autres tests créent des projets sans budget)
+  const token = await page.evaluate(() => localStorage.getItem('token'));
+  const values = await project.locator('option:not([value=""])').evaluateAll(opts => opts.map(o => o.value));
+  let chosen = null;
+  for (const value of values) {
+    const lines = (await (await page.request.get(`/api/budget?projectId=${value}`, { headers: { Authorization: `Bearer ${token}` } })).json()).data || [];
+    if (lines.length) { chosen = value; break; }
+  }
+  expect(chosen, 'aucun projet avec une ligne budgétaire').toBeTruthy();
+  await project.selectOption(chosen);
 
   await page.locator('input[name="items.0.description"]').fill('Location véhicule');
   // Unité obligatoire, « Pièce » par défaut ; choix dans le référentiel
@@ -50,6 +59,5 @@ test('Réquisition créée depuis le formulaire : fiche ouverte avec le PDF affi
 
   // Nettoyage
   const id = new URL(page.url()).pathname.split('/')[2];
-  const token = await page.evaluate(() => localStorage.getItem('token'));
   await page.request.delete(`/api/requisitions/${id}`, { headers: { Authorization: `Bearer ${token}` } });
 });

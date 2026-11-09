@@ -36,10 +36,14 @@ export default function StockOverview() {
     expiringWithinDays: params.get('expiring') || '',
     projectId: params.get('projectId') || '',
   };
+  // Mise à jour à partir des paramètres ACTUELS (pas ceux du rendu) : la recherche différée ne doit pas effacer un filtre
+  // choisi entre-temps
   const setFilter = (key, value) => {
-    const next = new URLSearchParams(params);
-    value ? next.set(key, value) : next.delete(key);
-    setParams(next, { replace: true });
+    setParams(prev => {
+      const next = new URLSearchParams(prev);
+      value ? next.set(key, value) : next.delete(key);
+      return next;
+    }, { replace: true });
   };
 
   useEffect(() => {
@@ -60,6 +64,7 @@ export default function StockOverview() {
   }), [params]);
 
   useEffect(() => {
+    if (search.trim() === (params.get('search') || '')) return undefined;
     const id = setTimeout(() => setFilter('search', search.trim()), 300);
     return () => clearTimeout(id);
   }, [search]);

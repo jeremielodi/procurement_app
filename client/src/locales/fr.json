@@ -145,7 +145,8 @@
     "collapse": "Réduire le menu",
     "expand": "Agrandir le menu",
     "receiptRecon": "Rapprochement réceptions",
-    "stockPlanning": "Prévision"
+    "stockPlanning": "Prévision",
+    "stockRequests": "Demandes au magasin"
   },
   "header": {
     "toggleSidebar": "Afficher / masquer le menu",
@@ -506,7 +507,7 @@
         },
         {
           "title": "Sorties et équipements",
-          "desc": "Sorties vers un employé ou un département avec accusé de réception ; ordinateurs et matériel suivis par n° de série et récupérés au départ."
+          "desc": "Sorties vers un employé ou un département avec accusé de réception ; ordinateurs et matériel suivis par n° de série et récupérés au départ. Les demandes au magasin des employés sont validées puis servies par un bon de sortie."
         },
         {
           "title": "Journal infalsifiable",
@@ -3548,7 +3549,12 @@
         "DESTINATION_INVALID": "Dépôt de destination invalide",
         "DEPARTMENT_REQUIRED": "Département requis",
         "DEPARTMENT_INVALID": "Département invalide",
-        "TRANSFER_USED": "Annulation impossible"
+        "TRANSFER_USED": "Annulation impossible",
+        "REQUEST_NOT_OPEN": "La demande n'est plus à servir",
+        "REQUEST_QUANTITY_EXCEEDED": "Quantité supérieure au reste à servir de la demande",
+        "REQUEST_DESTINATION_MISMATCH": "La sortie doit aller à la destination de la demande",
+        "REQUEST_WAREHOUSE_MISMATCH": "La demande est adressée à un autre dépôt",
+        "REQUEST_LINE_INVALID": "Article absent de la demande"
       },
       "projectLabel": "Projet",
       "noUnits": "Aucune unité en stock dans ce dépôt",
@@ -5282,6 +5288,27 @@
           },
           {
             "type": "h",
+            "text": "Demandes au magasin"
+          },
+          {
+            "type": "p",
+            "text": "Tout utilisateur peut demander des articles au magasin : menu « Demandes au magasin » → « Nouvelle demande ». Choisissez le dépôt, pour vous ou pour un département, un projet (facultatif), la date souhaitée, le motif et les articles (la quantité disponible au dépôt est indiquée)."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Si « Mon entreprise » exige une validation, la demande est d'abord validée par le chef du projet indiqué (ou son intérimaire), sinon le responsable du département, sinon un administrateur — jamais par le demandeur. Il peut réduire les quantités, ou rejeter la demande avec un motif.",
+              "Le magasinier du dépôt (onglet « À servir ») ouvre la demande et clique « Servir » : le bon de sortie est pré-rempli (bénéficiaire, dépôt, projet, articles) et limité au reste à servir de chaque ligne.",
+              "Il peut servir en plusieurs fois ; la demande passe « Servie en partie » puis « Servie ». Le demandeur confirme la réception dans « Mes articles reçus ».",
+              "Si le reste ne sera pas servi, le magasinier clique « Solder le reste » (motif obligatoire). Tant que rien n'est servi, le demandeur peut « Retirer » sa demande."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Annuler un bon de sortie fait revenir la quantité dans la demande, qui redevient « à servir ». Chaque décision est notifiée au demandeur."
+          },
+          {
+            "type": "h",
             "text": "Prévision du réapprovisionnement"
           },
           {
@@ -5377,6 +5404,10 @@
               {
                 "to": "/stock/planning",
                 "label": "Prévision"
+              },
+              {
+                "to": "/stock/requests",
+                "label": "Demandes au magasin"
               },
               {
                 "to": "/stock/movements",
@@ -6213,7 +6244,10 @@
       "PURCHASE_ORDER_REVIEWED": "Bon de commande révisé",
       "DELEGATION_CREATED": "Intérim déclaré",
       "DELEGATION_ENDED": "Intérim terminé",
-      "STOCK_PLANNING_CHANGED": "Paramètres de prévision du stock modifiés"
+      "STOCK_PLANNING_CHANGED": "Paramètres de prévision du stock modifiés",
+      "STOCK_REQUEST_VALIDATED": "Demande au magasin validée",
+      "STOCK_REQUEST_REJECTED": "Demande au magasin rejetée",
+      "STOCK_REQUEST_CLOSED": "Demande au magasin soldée"
     },
     "groups": {
       "all": "Tous les événements",
@@ -6773,5 +6807,133 @@
     "formula": "Minimum = consommation × (sécurité + délai) ; maximum = minimum + consommation × fréquence ; à commander = maximum − (stock + en commande + demandé) dès que ce total atteint le minimum.",
     "saved": "Paramètres de prévision enregistrés",
     "invalid": "{{field}} : valeur de {{min}} à {{max}}"
+  },
+  "stockRequests": {
+    "title": "Demandes au magasin",
+    "subtitle": "Demandez des articles au magasin ; suivez la validation et la sortie.",
+    "new": "Nouvelle demande",
+    "newTitle": "Nouvelle demande au magasin",
+    "newSubtitle": "Le magasinier du dépôt sert votre demande et vous remet les articles.",
+    "newSubtitleValidation": "Votre demande est d'abord validée (chef du projet, sinon responsable du département, sinon administrateur), puis servie par le magasinier du dépôt.",
+    "notFound": "Demande introuvable",
+    "open": "Ouvrir la demande",
+    "servingBanner": "Sortie pour la demande {{number}} de {{name}} : quantités limitées au reste à servir.",
+    "remainingOnRequest": "Reste à servir : {{qty}}",
+    "servedRequest": "Demande servie",
+    "bannerToValidate_one": "{{count}} demande à valider",
+    "bannerToValidate_other": "{{count}} demandes à valider",
+    "bannerToServe_one": "{{count}} demande à servir",
+    "bannerToServe_other": "{{count}} demandes à servir",
+    "tabs": {
+      "mine": "Mes demandes",
+      "toValidate": "À valider",
+      "toServe": "À servir",
+      "all": "Toutes"
+    },
+    "searchPlaceholder": "N°, motif, demandeur, article…",
+    "statusLabel": "Statut",
+    "allStatuses": "Tous les statuts",
+    "status": {
+      "PENDING_VALIDATION": "À valider",
+      "TO_SERVE": "À servir",
+      "PARTIALLY_SERVED": "Servie en partie",
+      "SERVED": "Servie",
+      "REJECTED": "Rejetée",
+      "CANCELLED": "Retirée",
+      "CLOSED": "Soldée"
+    },
+    "number": "N°",
+    "requester": "Demandeur",
+    "items": "Articles",
+    "served": "Servi",
+    "requested": "Demandé",
+    "validated": "Validé",
+    "remaining": "Reste",
+    "quantity": "Quantité",
+    "none": "Aucune demande.",
+    "itemSearch": "Rechercher un article du stock…",
+    "changeItem": "Changer",
+    "availableShort": "{{qty}} {{unit}} disponible(s)",
+    "availableHint": "Disponible au dépôt à titre indicatif : le magasinier sert selon le stock du moment.",
+    "moreThanAvailable": "Plus que le disponible : la demande pourra être servie en plusieurs fois.",
+    "forWhom": "Pour",
+    "destination": {
+      "USER": "Moi",
+      "DEPARTMENT": "Un département"
+    },
+    "validatorHint": "Avec un projet, c'est son chef de projet qui valide la demande.",
+    "neededBy": "Souhaité pour le",
+    "purpose": "Motif",
+    "purposePlaceholder": "Ex. : fournitures de bureau du mois, mission de terrain…",
+    "send": "Envoyer la demande",
+    "sent": "Demande {{number}} envoyée au magasin",
+    "sentForValidation": "Demande {{number}} envoyée pour validation",
+    "byOn": "Demandée par {{name}} le {{date}}",
+    "awaitingValidation": "Votre demande attend la validation (chef du projet, responsable du département ou administrateur).",
+    "rejectedBy": "Rejetée par {{name}} le {{date}} : {{reason}}",
+    "closedBy": "Soldée par {{name}} le {{date}} : {{reason}}",
+    "cancelledOn": "Retirée le {{date}}",
+    "validation": "Validation",
+    "validatedBy": "Validée par {{name}} le {{date}}",
+    "issuesTitle": "Bons de sortie",
+    "issueCancelled": "Annulé",
+    "issueAcknowledged": "Réception confirmée",
+    "issuePending": "En attente de confirmation",
+    "actions": {
+      "validate": "Valider",
+      "reject": "Rejeter",
+      "serve": "Servir",
+      "close": "Solder le reste",
+      "cancel": "Retirer"
+    },
+    "dialog": {
+      "validate": "Valider la demande",
+      "reject": "Rejeter la demande",
+      "close": "Solder le reste de la demande",
+      "cancel": "Retirer la demande"
+    },
+    "done": {
+      "validate": "Demande validée",
+      "reject": "Demande rejetée",
+      "close": "Demande soldée",
+      "cancel": "Demande retirée"
+    },
+    "validateHint": "Vous pouvez réduire les quantités (0 = article refusé).",
+    "requestedQty": "demandé : {{qty}} {{unit}}",
+    "closeHint": "Le reste de la demande ne sera pas servi ; le demandeur est prévenu.",
+    "cancelHint": "La demande est retirée ; personne ne la traitera.",
+    "reasonRequired": "Motif *",
+    "comment": "Commentaire (facultatif)",
+    "err": {
+      "overRemaining": "Au plus {{qty}} {{unit}} (reste à servir de la demande)",
+      "PURPOSE_REQUIRED": "Indiquez le motif de la demande",
+      "WAREHOUSE_REQUIRED": "Choisissez le dépôt",
+      "WAREHOUSE_INVALID": "Dépôt introuvable ou inactif",
+      "NO_LINES": "Ajoutez au moins un article",
+      "INVALID_QUANTITY": "Quantité invalide",
+      "ITEM_NOT_FOUND": "Article introuvable",
+      "ITEM_NOT_STOCKABLE": "Article non stocké",
+      "ITEM_TWICE": "Le même article est demandé deux fois",
+      "DEPARTMENT_REQUIRED": "Choisissez le département",
+      "DEPARTMENT_INVALID": "Département introuvable ou inactif",
+      "PROJECT_INVALID": "Projet introuvable",
+      "NEEDED_BY_INVALID": "Date souhaitée invalide",
+      "SELF_APPROVAL": "Séparation des tâches : vous ne pouvez pas valider votre propre demande",
+      "NOT_VALIDATOR": "Vous ne pouvez pas valider cette demande",
+      "NOT_PENDING": "La demande n'attend plus de validation",
+      "NOTHING_VALIDATED": "Validez au moins un article, ou rejetez la demande",
+      "REASON_REQUIRED": "Motif obligatoire",
+      "NOT_REQUESTER": "Seul le demandeur peut retirer sa demande",
+      "NOT_CANCELLABLE": "La demande a déjà été servie (en partie) ou est terminée",
+      "NOT_OPEN": "La demande n'est pas à servir",
+      "WAREHOUSE_FORBIDDEN": "Vous n'avez pas accès à ce dépôt"
+    }
+  },
+  "stockRequestSettings": {
+    "title": "Demandes au magasin",
+    "hint": "Tout utilisateur peut demander des articles au magasin ; le magasinier du dépôt les sert par un bon de sortie.",
+    "validation": "Faire valider chaque demande avant qu'elle soit servie",
+    "validationHint": "Validateur : chef du projet indiqué (ou son intérimaire), sinon responsable du département, sinon un administrateur — jamais le demandeur. Il peut réduire les quantités.",
+    "saved": "Option enregistrée"
   }
 }

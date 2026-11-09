@@ -149,6 +149,9 @@ router.put('/enterprises/current/daily-report', hasPermission('MANAGE_USERS'), e
 // Paramètres de la prévision du réapprovisionnement (migration 55) : lecture avec le stock, modification par l'administrateur
 router.get('/enterprises/current/stock-planning', hasAnyPermission('VIEW_STOCK', 'MANAGE_USERS'), e.getStockPlanning.bind(e));
 router.put('/enterprises/current/stock-planning', hasPermission('MANAGE_USERS'), e.setStockPlanning.bind(e));
+// Demandes au magasin (migration 56) : validation exigée ou non
+router.get('/enterprises/current/stock-requests', hasPermission('MANAGE_USERS'), require('../controllers/StockRequestController').getSettings);
+router.put('/enterprises/current/stock-requests', hasPermission('MANAGE_USERS'), require('../controllers/StockRequestController').setSettings);
 router.post('/enterprises/current/daily-report/test', hasPermission('MANAGE_USERS'), e.sendDailyReportTest.bind(e));
 router.post('/enterprises/current/daily-report/send-now', hasPermission('MANAGE_USERS'), e.sendDailyReportNow.bind(e));
 // Liste : super admin = toutes ; utilisateur = la sienne
@@ -801,6 +804,20 @@ router.post('/stock-entries', authenticate, hasPermission('RECORD_STOCK_ENTRIES'
 router.post('/stock-entries/:id/validate', authenticate, hasPermission('VALIDATE_STOCK_ENTRIES'), stockEntryController.validate);
 router.post('/stock-entries/:id/reject', authenticate, hasPermission('VALIDATE_STOCK_ENTRIES'), stockEntryController.reject);
 router.post('/stock-entries/:id/cancel', authenticate, hasAnyPermission('RECORD_STOCK_ENTRIES', 'VALIDATE_STOCK_ENTRIES'), stockEntryController.cancel);
+
+// Demandes internes au magasin (migration 56) : tout utilisateur de l'entreprise demande ; validation (option),
+// service par un bon de sortie (POST /stock-issues { stockRequestId }), solde du reste par le magasinier
+const stockRequestController = require('../controllers/StockRequestController');
+router.get('/stock-requests/options', authenticate, stockRequestController.options);
+router.get('/stock-requests/items', authenticate, stockRequestController.items);
+router.get('/stock-requests/counts', authenticate, stockRequestController.counts);
+router.get('/stock-requests', authenticate, stockRequestController.list);
+router.get('/stock-requests/:id', authenticate, stockRequestController.get);
+router.post('/stock-requests', authenticate, stockRequestController.create);
+router.post('/stock-requests/:id/validate', authenticate, stockRequestController.validate);
+router.post('/stock-requests/:id/reject', authenticate, stockRequestController.reject);
+router.post('/stock-requests/:id/cancel', authenticate, stockRequestController.cancel);
+router.post('/stock-requests/:id/close', authenticate, hasPermission('ISSUE_STOCK'), stockRequestController.close);
 
 // Équipements (n° de série), détentions et retours en stock
 router.get('/stock-holdings/mine', authenticate, equipmentController.myHoldings);

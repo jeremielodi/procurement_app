@@ -142,6 +142,7 @@ export default function StockIssueDetail() {
           [isTransfer ? t('stock.issue.sourceWarehouse') : t('stock.warehouse'), <><b>{issue.warehouse_name}</b><div className="text-xs text-gray-500">{issue.warehouse_location} · {issue.warehouse_code}</div></>],
           isTransfer && [`→ ${t('stock.issue.destinationWarehouse')}`, <><b>{issue.destination_warehouse_name}</b><div className="text-xs text-gray-500">{issue.destination_warehouse_location} · {issue.destination_warehouse_code}</div></>],
           !isTransfer && [t('stock.issue.projectLabel'), issue.project_name ? <><b>{issue.project_code}</b><div className="text-xs text-gray-500">{issue.project_name}</div></> : '—'],
+          issue.request_id && [t('stockRequests.servedRequest'), <Link to={`/stock/requests/${issue.request_id}`} className="font-mono font-semibold text-blue-600 hover:underline" data-testid="issue-request-link">{issue.request_number}</Link>],
         ].filter(Boolean).map(([label, value]) => (
           <div key={label} className="rounded-lg border border-gray-200 bg-white p-3 text-sm">
             <div className="mb-1 text-xs text-gray-500">{label}</div>{value}

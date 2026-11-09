@@ -5,6 +5,7 @@ import EnterpriseInfoForm from './EnterpriseInfoForm';
 import DailyReportSettings from './DailyReportSettings';
 import ApprovalPolicySettings from './ApprovalPolicySettings';
 import StockPlanningSettings from './StockPlanningSettings';
+import StockRequestSettings from './StockRequestSettings';
 import { enterpriseService } from '../../services/enterpriseService';
 import { useEnterprise } from '../../contexts/EnterpriseContext';
 import { t } from '../../i18n';
@@ -37,6 +38,7 @@ export default function EnterpriseSettings() {
       </div>
       <ApprovalPolicySettings />
       <StockPlanningSettings />
+      <StockRequestSettings />
       <DailyReportSettings />
     </div>
   );

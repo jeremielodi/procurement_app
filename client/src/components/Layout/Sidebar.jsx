@@ -89,6 +89,13 @@ const menuGroups = [
         label: 'nav.myItems',
         permission: null,
         hideForSupplier: true
+      },
+      {
+        path: '/stock/requests',
+        icon: ClipboardList,
+        label: 'nav.stockRequests',
+        permission: null,
+        hideForSupplier: true
       }
     ]
   },

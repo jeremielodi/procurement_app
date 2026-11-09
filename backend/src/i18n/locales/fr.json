@@ -433,6 +433,26 @@
     "delegation": {
       "title": "Intérim du chef de projet",
       "message": "Vous assurez l'intérim de {name} du {start} au {end} : vous validez les réquisitions de ses projets."
+    },
+    "stockRequest": {
+      "toValidateTitle": "Demande au magasin à valider",
+      "toValidateMessage": "{name} demande des articles au dépôt {warehouse} ({number}) : votre validation est attendue.",
+      "toServeTitle": "Demande au magasin à servir",
+      "toServeMessage": "Demande {number} de {name} à servir au dépôt {warehouse}.",
+      "validatedTitle": "Demande validée",
+      "validatedMessage": "Votre demande {number} est validée : le magasin {warehouse} va la servir.",
+      "rejectedTitle": "Demande rejetée",
+      "rejectedMessage": "Votre demande {number} a été rejetée : {reason}",
+      "servedTitle": "Demande servie",
+      "servedMessage": "Votre demande {number} a été servie par le dépôt {warehouse}. Confirmez la réception dans « Mes articles reçus ».",
+      "partiallyServedTitle": "Demande servie en partie",
+      "partiallyServedMessage": "Une partie de votre demande {number} a été servie par le dépôt {warehouse} ; le reste suivra.",
+      "reopenedTitle": "Demande de nouveau à servir",
+      "reopenedMessage": "Le bon de sortie {issue} a été annulé : la demande {number} est de nouveau à servir.",
+      "closedTitle": "Demande soldée",
+      "closedMessage": "Le reste de votre demande {number} ne sera pas servi : {reason}",
+      "cancelledTitle": "Demande retirée",
+      "cancelledMessage": "{name} a retiré sa demande {number}."
     }
   },
   "pdf": {
@@ -983,7 +1003,10 @@
     "PURCHASE_ORDER_REVIEWED": "Bon de commande révisé",
     "DELEGATION_CREATED": "Intérim déclaré",
     "DELEGATION_ENDED": "Intérim terminé",
-    "STOCK_PLANNING_CHANGED": "Paramètres de prévision du stock modifiés"
+    "STOCK_PLANNING_CHANGED": "Paramètres de prévision du stock modifiés",
+    "STOCK_REQUEST_VALIDATED": "Demande au magasin validée",
+    "STOCK_REQUEST_REJECTED": "Demande au magasin rejetée",
+    "STOCK_REQUEST_CLOSED": "Demande au magasin soldée"
   },
   "auditExport": {
     "sheet": "Journal d'audit",

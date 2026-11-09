@@ -145,7 +145,8 @@
     "collapse": "Collapse menu",
     "expand": "Expand menu",
     "receiptRecon": "Receipt reconciliation",
-    "stockPlanning": "Forecast"
+    "stockPlanning": "Forecast",
+    "stockRequests": "Store requests"
   },
   "header": {
     "toggleSidebar": "Show / hide menu",
@@ -506,7 +507,7 @@
         },
         {
           "title": "Issues and equipment",
-          "desc": "Issues to an employee or a department with acknowledgement of receipt; computers and equipment tracked by serial number and recovered on departure."
+          "desc": "Issues to an employee or a department with acknowledgement of receipt; computers and equipment tracked by serial number and recovered on departure. Employees' store requests are approved then fulfilled with an issue note."
         },
         {
           "title": "Tamper-proof ledger",
@@ -3548,7 +3549,12 @@
         "DESTINATION_INVALID": "Invalid destination warehouse",
         "DEPARTMENT_REQUIRED": "Department required",
         "DEPARTMENT_INVALID": "Invalid department",
-        "TRANSFER_USED": "Cannot cancel"
+        "TRANSFER_USED": "Cannot cancel",
+        "REQUEST_NOT_OPEN": "The request is no longer to be fulfilled",
+        "REQUEST_QUANTITY_EXCEEDED": "Quantity above what remains on the request",
+        "REQUEST_DESTINATION_MISMATCH": "The issue must go to the request's destination",
+        "REQUEST_WAREHOUSE_MISMATCH": "The request is addressed to another warehouse",
+        "REQUEST_LINE_INVALID": "Item not on the request"
       },
       "projectLabel": "Project",
       "noUnits": "No unit in stock in this warehouse",
@@ -5249,6 +5255,27 @@
           },
           {
             "type": "h",
+            "text": "Store requests"
+          },
+          {
+            "type": "p",
+            "text": "Any user can request items from the store: menu \"Store requests\" → \"New request\". Choose the warehouse, for yourself or for a department, a project (optional), the needed-by date, the purpose and the items (the quantity available in the warehouse is shown)."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "If \"My company\" requires approval, the request is first approved by the project manager (or acting manager), otherwise the department head, otherwise an administrator — never by the requester. They can reduce the quantities, or reject the request with a reason.",
+              "The warehouse storekeeper (\"To fulfil\" tab) opens the request and clicks \"Fulfil\": the issue note is pre-filled (recipient, warehouse, project, items) and limited to what remains on each line.",
+              "It can be fulfilled in several issues; the request becomes \"Partly fulfilled\" then \"Fulfilled\". The requester confirms receipt in \"My received items\".",
+              "If the rest will not be fulfilled, the storekeeper clicks \"Close the rest\" (reason required). As long as nothing has been issued, the requester can \"Withdraw\" the request."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Cancelling an issue note puts the quantity back on the request, which is to be fulfilled again. Each decision is notified to the requester."
+          },
+          {
+            "type": "h",
             "text": "Replenishment forecast"
           },
           {
@@ -5377,6 +5404,10 @@
               {
                 "to": "/stock/planning",
                 "label": "Forecast"
+              },
+              {
+                "to": "/stock/requests",
+                "label": "Store requests"
               },
               {
                 "to": "/stock/movements",
@@ -6213,7 +6244,10 @@
       "PURCHASE_ORDER_REVIEWED": "Purchase order reviewed",
       "DELEGATION_CREATED": "Delegation declared",
       "DELEGATION_ENDED": "Delegation ended",
-      "STOCK_PLANNING_CHANGED": "Stock forecast settings changed"
+      "STOCK_PLANNING_CHANGED": "Stock forecast settings changed",
+      "STOCK_REQUEST_VALIDATED": "Store request approved",
+      "STOCK_REQUEST_REJECTED": "Store request rejected",
+      "STOCK_REQUEST_CLOSED": "Store request closed"
     },
     "groups": {
       "all": "All events",
@@ -6773,5 +6807,133 @@
     "formula": "Minimum = consumption × (safety + lead time); maximum = minimum + consumption × frequency; to order = maximum − (stock + on order + requested) as soon as this total reaches the minimum.",
     "saved": "Forecast settings saved",
     "invalid": "{{field}}: value from {{min}} to {{max}}"
+  },
+  "stockRequests": {
+    "title": "Store requests",
+    "subtitle": "Request items from the store; follow the approval and the issue.",
+    "new": "New request",
+    "newTitle": "New store request",
+    "newSubtitle": "The warehouse storekeeper fulfils your request and hands you the items.",
+    "newSubtitleValidation": "Your request is first approved (project manager, otherwise department head, otherwise an administrator), then fulfilled by the warehouse storekeeper.",
+    "notFound": "Request not found",
+    "open": "Open the request",
+    "servingBanner": "Issue for request {{number}} from {{name}}: quantities limited to what remains to fulfil.",
+    "remainingOnRequest": "Remaining to fulfil: {{qty}}",
+    "servedRequest": "Request fulfilled",
+    "bannerToValidate_one": "{{count}} request to approve",
+    "bannerToValidate_other": "{{count}} requests to approve",
+    "bannerToServe_one": "{{count}} request to fulfil",
+    "bannerToServe_other": "{{count}} requests to fulfil",
+    "tabs": {
+      "mine": "My requests",
+      "toValidate": "To approve",
+      "toServe": "To fulfil",
+      "all": "All"
+    },
+    "searchPlaceholder": "No., purpose, requester, item…",
+    "statusLabel": "Status",
+    "allStatuses": "All statuses",
+    "status": {
+      "PENDING_VALIDATION": "To approve",
+      "TO_SERVE": "To fulfil",
+      "PARTIALLY_SERVED": "Partly fulfilled",
+      "SERVED": "Fulfilled",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Withdrawn",
+      "CLOSED": "Closed"
+    },
+    "number": "No.",
+    "requester": "Requester",
+    "items": "Items",
+    "served": "Issued",
+    "requested": "Requested",
+    "validated": "Approved",
+    "remaining": "Remaining",
+    "quantity": "Quantity",
+    "none": "No request.",
+    "itemSearch": "Search a stock item…",
+    "changeItem": "Change",
+    "availableShort": "{{qty}} {{unit}} available",
+    "availableHint": "Available in the warehouse for information: the storekeeper issues according to the stock at the time.",
+    "moreThanAvailable": "More than available: the request may be fulfilled in several issues.",
+    "forWhom": "For",
+    "destination": {
+      "USER": "Me",
+      "DEPARTMENT": "A department"
+    },
+    "validatorHint": "With a project, its project manager approves the request.",
+    "neededBy": "Needed by",
+    "purpose": "Purpose",
+    "purposePlaceholder": "E.g. monthly office supplies, field mission…",
+    "send": "Send the request",
+    "sent": "Request {{number}} sent to the store",
+    "sentForValidation": "Request {{number}} sent for approval",
+    "byOn": "Requested by {{name}} on {{date}}",
+    "awaitingValidation": "Your request is waiting for approval (project manager, department head or administrator).",
+    "rejectedBy": "Rejected by {{name}} on {{date}}: {{reason}}",
+    "closedBy": "Closed by {{name}} on {{date}}: {{reason}}",
+    "cancelledOn": "Withdrawn on {{date}}",
+    "validation": "Approval",
+    "validatedBy": "Approved by {{name}} on {{date}}",
+    "issuesTitle": "Issue notes",
+    "issueCancelled": "Cancelled",
+    "issueAcknowledged": "Receipt confirmed",
+    "issuePending": "Awaiting confirmation",
+    "actions": {
+      "validate": "Approve",
+      "reject": "Reject",
+      "serve": "Fulfil",
+      "close": "Close the rest",
+      "cancel": "Withdraw"
+    },
+    "dialog": {
+      "validate": "Approve the request",
+      "reject": "Reject the request",
+      "close": "Close the rest of the request",
+      "cancel": "Withdraw the request"
+    },
+    "done": {
+      "validate": "Request approved",
+      "reject": "Request rejected",
+      "close": "Request closed",
+      "cancel": "Request withdrawn"
+    },
+    "validateHint": "You can reduce the quantities (0 = item refused).",
+    "requestedQty": "requested: {{qty}} {{unit}}",
+    "closeHint": "The rest of the request will not be fulfilled; the requester is notified.",
+    "cancelHint": "The request is withdrawn; nobody will process it.",
+    "reasonRequired": "Reason *",
+    "comment": "Comment (optional)",
+    "err": {
+      "overRemaining": "At most {{qty}} {{unit}} (remaining on the request)",
+      "PURPOSE_REQUIRED": "Enter the purpose of the request",
+      "WAREHOUSE_REQUIRED": "Choose the warehouse",
+      "WAREHOUSE_INVALID": "Warehouse not found or inactive",
+      "NO_LINES": "Add at least one item",
+      "INVALID_QUANTITY": "Invalid quantity",
+      "ITEM_NOT_FOUND": "Item not found",
+      "ITEM_NOT_STOCKABLE": "Non-stock item",
+      "ITEM_TWICE": "The same item is requested twice",
+      "DEPARTMENT_REQUIRED": "Choose the department",
+      "DEPARTMENT_INVALID": "Department not found or inactive",
+      "PROJECT_INVALID": "Project not found",
+      "NEEDED_BY_INVALID": "Invalid needed-by date",
+      "SELF_APPROVAL": "Segregation of duties: you cannot approve your own request",
+      "NOT_VALIDATOR": "You cannot approve this request",
+      "NOT_PENDING": "The request is no longer waiting for approval",
+      "NOTHING_VALIDATED": "Approve at least one item, or reject the request",
+      "REASON_REQUIRED": "Reason required",
+      "NOT_REQUESTER": "Only the requester can withdraw the request",
+      "NOT_CANCELLABLE": "The request has already been (partly) fulfilled or is finished",
+      "NOT_OPEN": "The request is not to be fulfilled",
+      "WAREHOUSE_FORBIDDEN": "You do not have access to this warehouse"
+    }
+  },
+  "stockRequestSettings": {
+    "title": "Store requests",
+    "hint": "Any user can request items from the store; the warehouse storekeeper fulfils them with an issue note.",
+    "validation": "Have each request approved before it is fulfilled",
+    "validationHint": "Approver: the project manager (or acting manager), otherwise the department head, otherwise an administrator — never the requester. They can reduce the quantities.",
+    "saved": "Option saved"
   }
 }

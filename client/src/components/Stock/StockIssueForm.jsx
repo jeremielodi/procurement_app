@@ -4,13 +4,16 @@
 //   DEPARTMENT (département + personne qui retire, facultative). Projet (facultatif), motif, articles.
 // Lots : FEFO automatique (péremption la plus proche d'abord) ou lot imposé ; un transfert accepte un lot périmé
 // imposé et le matériel endommagé.
+// ?requestId= : sert une demande au magasin — destination, dépôt, projet et articles repris de la demande (verrouillés),
+// quantité plafonnée au reste à servir de chaque ligne (contrôlé aussi par le serveur).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, PackageMinus, Plus, Trash2, Save, User, X, Warehouse, ArrowRightLeft, Building2 } from 'lucide-react';
+import { ArrowLeft, PackageMinus, Plus, Trash2, Save, User, X, Warehouse, ArrowRightLeft, Building2, Inbox } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CatalogAutocomplete from './CatalogAutocomplete';
 import { warehouseService, stockService, stockIssueService, equipmentService } from '../../services/stockService';
 import { projectService } from '../../services/projectService';
+import { stockRequestService } from '../../services/stockRequestService';
 import { t, getLocale } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 
@@ -18,15 +21,16 @@ const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm foc
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(getLocale()) : '');
 const today = () => new Date().toISOString().slice(0, 10);
-const newLine = () => ({ key: Math.random().toString(36).slice(2), text: '', item: null, lotId: '', quantity: '', balances: null, units: null, unitIds: [] });
+const newLine = () => ({ key: Math.random().toString(36).slice(2), text: '', item: null, lotId: '', quantity: '', balances: null, units: null, unitIds: [], requestLineId: null, maxQuantity: null });
 const ERROR_CODES = ['STOCK_INSUFFICIENT', 'WAREHOUSE_FORBIDDEN', 'RECIPIENT_INVALID', 'LOT_EXPIRED', 'ITEM_NOT_STOCKABLE', 'NO_LINES', 'INVALID_QUANTITY', 'UNITS_REQUIRED', 'UNIT_UNAVAILABLE',
-  'INVALID_DESTINATION', 'RECIPIENT_REQUIRED', 'DESTINATION_REQUIRED', 'SAME_WAREHOUSE', 'DESTINATION_INVALID', 'DEPARTMENT_REQUIRED', 'DEPARTMENT_INVALID'];
+  'INVALID_DESTINATION', 'RECIPIENT_REQUIRED', 'DESTINATION_REQUIRED', 'SAME_WAREHOUSE', 'DESTINATION_INVALID', 'DEPARTMENT_REQUIRED', 'DEPARTMENT_INVALID',
+  'REQUEST_NOT_OPEN', 'REQUEST_QUANTITY_EXCEEDED', 'REQUEST_DESTINATION_MISMATCH', 'REQUEST_WAREHOUSE_MISMATCH', 'REQUEST_LINE_INVALID'];
 
 // Types de sortie (ordre d'affichage) et leurs icônes
 export const ISSUE_TYPES = [['USER', User], ['WAREHOUSE', ArrowRightLeft], ['DEPARTMENT', Building2]];
 
 /** Recherche d'un bénéficiaire (utilisateurs actifs de l'entreprise) */
-export function RecipientPicker({ value, onChange }) {
+export function RecipientPicker({ value, onChange, locked = false }) {
   const [q, setQ] = useState('');
   const [options, setOptions] = useState([]);
   const [open, setOpen] = useState(false);
@@ -43,7 +47,7 @@ export function RecipientPicker({ value, onChange }) {
     return (
       <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm">
         <span className="flex items-center gap-2"><User size={16} className="text-blue-600" /><b>{value.first_name} {value.last_name}</b> <span className="text-gray-500">{value.email}</span></span>
-        <button type="button" onClick={() => onChange(null)} className="rounded p-1 hover:bg-blue-100" aria-label={t('stock.issue.changeRecipient')}><X size={14} /></button>
+        {!locked && <button type="button" onClick={() => onChange(null)} className="rounded p-1 hover:bg-blue-100" aria-label={t('stock.issue.changeRecipient')}><X size={14} /></button>}
       </div>
     );
   }
@@ -82,6 +86,32 @@ export default function StockIssueForm() {
   const [lines, setLines] = useState([newLine()]);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const requestId = params.get('requestId');
+  const [request, setRequest] = useState(null);
+  const fromRequest = !!request;
+
+  // Demande au magasin à servir : tout est repris de la demande (reste à servir de chaque ligne)
+  useEffect(() => {
+    if (!requestId) return;
+    stockRequestService.get(requestId).then(r => {
+      const req = r.data;
+      setRequest(req);
+      setType(req.destination_type);
+      setWarehouseId(req.warehouse_id);
+      setRecipient({ id: req.requester_id, first_name: req.requester_name, last_name: '', email: req.requester_email });
+      setDepartmentId(req.department_id || '');
+      setProjectId(req.project_id || '');
+      setPurpose(`${req.request_number} — ${req.purpose}`);
+      const prefilled = req.lines.filter(l => l.remaining_quantity > 0).map(l => ({
+        ...newLine(), text: l.item_name, requestLineId: l.id, maxQuantity: l.remaining_quantity,
+        quantity: l.track_serials ? '' : String(Math.max(Math.min(l.remaining_quantity, l.available), 0)),
+        item: { id: l.stock_item_id, code: l.item_code, name: l.item_name, unit: l.unit, track_lots: l.track_lots, track_serials: l.track_serials, is_stockable: true },
+      }));
+      setLines(prefilled);
+      // Disponible de chaque ligne (sans attendre le changement de dépôt, qui n'a pas lieu si le dépôt était déjà celui-ci)
+      prefilled.forEach(l => loadBalances(l.key, l.item, req.warehouse_id));
+    }).catch(() => toast.error(t('stockRequests.notFound')));
+  }, [requestId]);
 
   useEffect(() => {
     warehouseService.mine().then(r => {
@@ -146,9 +176,10 @@ export default function StockIssueForm() {
       const already = requestedByItem.get(key) || 0;
       requestedByItem.set(key, already + qty);
       const errors = [];
-      if (l.item && !(qty > 0)) errors.push(l.item.track_serials ? t('stock.issue.err.units') : t('stock.issue.err.quantity'));
+      if (l.item && !(qty > 0) && !l.requestLineId) errors.push(l.item.track_serials ? t('stock.issue.err.units') : t('stock.issue.err.quantity'));
       if (l.item && l.balances && already + qty - available > 1e-9) errors.push(t('stock.issue.err.available', { qty: fmtQty(Math.max(available - already, 0)), unit: l.item.unit }));
       if (l.item && l.item.is_stockable === false) errors.push(t('stock.issue.err.notStockable'));
+      if (l.maxQuantity !== null && qty - l.maxQuantity > 1e-9) errors.push(t('stockRequests.err.overRemaining', { qty: fmtQty(l.maxQuantity), unit: l.item?.unit || '' }));
       // Lots proposés : un par lot (soldes des projets utilisables additionnés)
       const lots = [...rows.filter(b => b.lot_id).reduce((m, b) => {
         const lot = m.get(b.lot_id) || { ...b, quantity: 0 };
@@ -159,7 +190,8 @@ export default function StockIssueForm() {
     });
   }, [lines, issueProject]);
 
-  const filledLines = lines.filter(l => l.item);
+  // Ligne d'une demande sans quantité : pas servie cette fois
+  const filledLines = lines.filter((l, i) => l.item && (!l.requestLineId || computed[i].qty > 0));
   const hasErrors = computed.some((c, i) => lines[i].item && c.errors.length);
 
   const submit = async (e) => {
@@ -179,10 +211,14 @@ export default function StockIssueForm() {
         destinationWarehouseId: isTransfer ? destinationWarehouseId : undefined,
         departmentId: type === 'DEPARTMENT' ? departmentId : undefined,
         projectId: !isTransfer && projectId ? projectId : undefined, purpose,
-        lines: lines.map((l, i) => ({ l, c: computed[i] })).filter(({ l }) => l.item)
-          .map(({ l, c }) => (l.item.track_serials
-            ? { stockItemId: l.item.id, unitIds: l.unitIds }
-            : { stockItemId: l.item.id, lotId: l.lotId || undefined, quantity: c.qty })),
+        stockRequestId: request?.id,
+        lines: lines.map((l, i) => ({ l, c: computed[i] })).filter(({ l, c }) => l.item && (!l.requestLineId || c.qty > 0))
+          .map(({ l, c }) => ({
+            ...(l.item.track_serials
+              ? { stockItemId: l.item.id, unitIds: l.unitIds }
+              : { stockItemId: l.item.id, lotId: l.lotId || undefined, quantity: c.qty }),
+            requestLineId: l.requestLineId || undefined,
+          })),
       });
       toast.success(t('stock.issue.created', { number: res.data.issueNumber }));
       navigate(`/stock/issues/${res.data.id}`);
@@ -199,14 +235,20 @@ export default function StockIssueForm() {
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 text-sm"><ArrowLeft size={16} /> {t('common.back')}</button>
       <h1 className="mb-1 flex items-center gap-2 text-xl font-bold text-gray-900"><PackageMinus className="text-blue-600" /> {t('stock.issue.newTitle')}</h1>
       <p className="mb-6 text-sm text-gray-500">{t('stock.issue.newSubtitle')}</p>
+      {request && (
+        <div className="mb-6 flex flex-wrap items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900" data-testid="issue-from-request">
+          <Inbox size={16} /> {t('stockRequests.servingBanner', { number: request.request_number, name: request.requester_name })}
+          <button type="button" onClick={() => navigate(`/stock/requests/${request.id}`)} className="ml-auto font-medium text-blue-700 hover:underline">{t('stockRequests.open')}</button>
+        </div>
+      )}
 
       <form onSubmit={submit} className="space-y-6" noValidate>
         <fieldset>
           <legend className="mb-2 text-sm font-medium text-gray-700">{t('stock.issue.typeLabel')} *</legend>
           <div className="grid gap-3 sm:grid-cols-3" role="radiogroup">
             {ISSUE_TYPES.map(([key, Icon]) => (
-              <button key={key} type="button" role="radio" aria-checked={type === key} onClick={() => setType(key)} data-testid={`issue-type-${key}`}
-                className={`rounded-xl border-2 p-3 text-left transition ${type === key ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+              <button key={key} type="button" role="radio" aria-checked={type === key} onClick={() => setType(key)} data-testid={`issue-type-${key}`} disabled={fromRequest && type !== key}
+                className={`rounded-xl border-2 p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${type === key ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                 <span className={`flex items-center gap-2 text-sm font-semibold ${type === key ? 'text-blue-800' : 'text-gray-800'}`}><Icon size={18} /> {t(`stock.issue.types.${key}`)}</span>
                 <span className="mt-1 block text-xs text-gray-500">{t(`stock.issue.typeHelp.${key}`)}</span>
               </button>
@@ -220,7 +262,7 @@ export default function StockIssueForm() {
             {warehouses && warehouses.length === 0 ? (
               <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-red-700">{t('grn.err.NO_WAREHOUSE_ACCESS')}</p>
             ) : (
-              <SearchSelect value={warehouseId} onChange={e => setWarehouseId(e.target.value)} className={`${inputCls} ${submitted && !warehouseId ? 'border-red-400' : ''}`} data-testid="issue-warehouse">
+              <SearchSelect value={warehouseId} onChange={e => setWarehouseId(e.target.value)} className={`${inputCls} ${submitted && !warehouseId ? 'border-red-400' : ''}`} data-testid="issue-warehouse" disabled={fromRequest}>
                 {(warehouses || []).length !== 1 && <option value="">{t('grn.chooseWarehouse')}</option>}
                 {(warehouses || []).map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name} ({w.code})</option>)}
               </SearchSelect>
@@ -229,7 +271,7 @@ export default function StockIssueForm() {
           {type === 'USER' && (
             <div className="text-sm">
               <span className="mb-1 flex items-center gap-2 font-medium text-gray-700"><User size={15} /> {t('stock.issue.recipient')} *</span>
-              <RecipientPicker value={recipient} onChange={setRecipient} />
+              <RecipientPicker value={recipient} onChange={setRecipient} locked={fromRequest} />
             </div>
           )}
           {type === 'WAREHOUSE' && (
@@ -247,7 +289,7 @@ export default function StockIssueForm() {
           {type === 'DEPARTMENT' && (
             <label className="text-sm">
               <span className="mb-1 flex items-center gap-2 font-medium text-gray-700"><Building2 size={15} /> {t('stock.issue.department')} *</span>
-              <SearchSelect value={departmentId} onChange={e => setDepartmentId(e.target.value)} data-testid="issue-department"
+              <SearchSelect value={departmentId} onChange={e => setDepartmentId(e.target.value)} data-testid="issue-department" disabled={fromRequest}
                 className={`${inputCls} ${submitted && !departmentId ? 'border-red-400' : ''}`}>
                 <option value="">{t('stock.issue.chooseDepartment')}</option>
                 {destinations.departments.map(d => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
@@ -257,14 +299,14 @@ export default function StockIssueForm() {
           {type === 'DEPARTMENT' && (
             <div className="text-sm">
               <span className="mb-1 flex items-center gap-2 font-medium text-gray-700"><User size={15} /> {t('stock.issue.collectedBy')}</span>
-              <RecipientPicker value={recipient} onChange={setRecipient} />
+              <RecipientPicker value={recipient} onChange={setRecipient} locked={fromRequest} />
               {!recipient && <p className="mt-1 text-xs text-gray-500">{t('stock.issue.collectedByHint')}</p>}
             </div>
           )}
           {!isTransfer && (
             <label className="text-sm">
               <span className="mb-1 block font-medium text-gray-700">{t('stock.issue.project')}</span>
-              <SearchSelect value={projectId} onChange={e => setProjectId(e.target.value)} className={inputCls}>
+              <SearchSelect value={projectId} onChange={e => setProjectId(e.target.value)} className={inputCls} disabled={fromRequest}>
                 <option value="">—</option>
                 {projects.map(p => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
               </SearchSelect>
@@ -306,7 +348,7 @@ export default function StockIssueForm() {
                         placeholder={t('stock.issue.itemSearch')}
                         className={`${inputCls}`}
                         minChars={1}
-                        disabled={!warehouseId}
+                        disabled={!warehouseId || !!l.requestLineId}
                         inputProps={{ value: l.text, readOnly: !!l.item }}
                       />
                       {(submitted || c.errors.some(er => er !== t('stock.issue.err.quantity'))) && c.errors.map(er => <div key={er} className="mt-1 text-xs text-red-600">{er}</div>)}
@@ -350,9 +392,12 @@ export default function StockIssueForm() {
                         <input type="number" min="0" step="any" value={l.quantity} disabled={!l.item} aria-label={t('stock.quantity')}
                           onChange={e => updateLine(l.key, { quantity: e.target.value })} className={`${inputCls} w-28`} />
                       )}
+                      {l.maxQuantity !== null && (
+                        <div className="mt-1 text-xs text-gray-500" data-testid="issue-request-remaining">{t('stockRequests.remainingOnRequest', { qty: fmtQty(l.maxQuantity) })}</div>
+                      )}
                     </td>
                     <td className="px-2 py-2 align-top">
-                      {lines.length > 1 && <button type="button" onClick={() => setLines(prev => prev.filter(x => x.key !== l.key))} className="rounded p-2 text-red-600 hover:bg-red-50" aria-label={t('common.delete')}><Trash2 size={16} /></button>}
+                      {lines.length > 1 && !l.requestLineId && <button type="button" onClick={() => setLines(prev => prev.filter(x => x.key !== l.key))} className="rounded p-2 text-red-600 hover:bg-red-50" aria-label={t('common.delete')}><Trash2 size={16} /></button>}
                     </td>
                   </tr>
                 );
@@ -360,7 +405,7 @@ export default function StockIssueForm() {
             </tbody>
           </table>
           <div className="border-t border-gray-100 px-4 py-2">
-            <button type="button" onClick={() => setLines(prev => [...prev, newLine()])} disabled={!warehouseId} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-40">
+            <button type="button" onClick={() => setLines(prev => [...prev, newLine()])} disabled={!warehouseId || fromRequest} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-40">
               <Plus size={14} /> {t('stock.issue.addLine')}
             </button>
           </div>

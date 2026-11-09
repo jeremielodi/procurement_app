@@ -108,6 +108,7 @@ const PATH_RESOURCES = [
   { re: new RegExp(`^/stock-adjustments/(${UUID})(/|$)`), table: 'stock_adjustments' },
   { re: new RegExp(`^/stock/movement-groups/(${UUID})(/|$)`), table: 'stock_movement_groups' },
   { re: new RegExp(`^/stock/planning/items/(${UUID})(/|$)`), table: 'stock_items' },
+  { re: new RegExp(`^/stock-requests/(${UUID})(/|$)`), table: 'stock_requests' },
   // Intérim du chef de projet (migration 53)
   { re: new RegExp(`^/delegations/(${UUID})(/|$)`), table: 'user_delegations' },
 ];
@@ -127,6 +128,7 @@ const KEY_TABLES = {
   // Gestion de stock (UUID : pas de collision avec les identifiants entiers des autres tables)
   warehouseId: 'warehouses', warehouse_id: 'warehouses', destinationWarehouseId: 'warehouses',
   stockItemId: 'stock_items', stock_item_id: 'stock_items',
+  stockRequestId: 'stock_requests',
   lotId: 'stock_lots', lot_id: 'stock_lots',
   // Part d'une réquisition répartie entre plusieurs fournisseurs (migration 38)
   supplierLotId: 'requisition_supplier_lots', supplier_lot_id: 'requisition_supplier_lots',

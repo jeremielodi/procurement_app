@@ -433,6 +433,26 @@
     "delegation": {
       "title": "Acting project manager",
       "message": "You are acting for {name} from {start} to {end}: you approve the requisitions of their projects."
+    },
+    "stockRequest": {
+      "toValidateTitle": "Store request to approve",
+      "toValidateMessage": "{name} is requesting items from the {warehouse} warehouse ({number}): your approval is expected.",
+      "toServeTitle": "Store request to fulfil",
+      "toServeMessage": "Request {number} from {name} to fulfil at the {warehouse} warehouse.",
+      "validatedTitle": "Request approved",
+      "validatedMessage": "Your request {number} is approved: the {warehouse} store will fulfil it.",
+      "rejectedTitle": "Request rejected",
+      "rejectedMessage": "Your request {number} was rejected: {reason}",
+      "servedTitle": "Request fulfilled",
+      "servedMessage": "Your request {number} was fulfilled by the {warehouse} warehouse. Confirm receipt in \"My received items\".",
+      "partiallyServedTitle": "Request partly fulfilled",
+      "partiallyServedMessage": "Part of your request {number} was fulfilled by the {warehouse} warehouse; the rest will follow.",
+      "reopenedTitle": "Request to fulfil again",
+      "reopenedMessage": "Issue note {issue} was cancelled: request {number} is to be fulfilled again.",
+      "closedTitle": "Request closed",
+      "closedMessage": "The rest of your request {number} will not be fulfilled: {reason}",
+      "cancelledTitle": "Request withdrawn",
+      "cancelledMessage": "{name} withdrew request {number}."
     }
   },
   "pdf": {
@@ -983,7 +1003,10 @@
     "PURCHASE_ORDER_REVIEWED": "Purchase order reviewed",
     "DELEGATION_CREATED": "Delegation declared",
     "DELEGATION_ENDED": "Delegation ended",
-    "STOCK_PLANNING_CHANGED": "Stock forecast settings changed"
+    "STOCK_PLANNING_CHANGED": "Stock forecast settings changed",
+    "STOCK_REQUEST_VALIDATED": "Store request approved",
+    "STOCK_REQUEST_REJECTED": "Store request rejected",
+    "STOCK_REQUEST_CLOSED": "Store request closed"
   },
   "auditExport": {
     "sheet": "Audit log",

@@ -11,6 +11,7 @@ const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const stockModel = require('./StockModel');
 const warehouseModel = require('./WarehouseModel');
+const stockRequestModel = require('./StockRequestModel');
 
 const EPS = 1e-9;
 const DESTINATIONS = ['USER', 'WAREHOUSE', 'DEPARTMENT'];
@@ -34,8 +35,9 @@ const HEADER_SQL = `
          TRIM(COALESCE(ib.first_name, '') || ' ' || COALESCE(ib.last_name, '')) AS issued_by_name,
          TRIM(COALESCE(ab.first_name, '') || ' ' || COALESCE(ab.last_name, '')) AS acknowledged_by_name,
          TRIM(COALESCE(cb.first_name, '') || ' ' || COALESCE(cb.last_name, '')) AS cancelled_by_name,
-         p.code AS project_code, p.name AS project_name
+         p.code AS project_code, p.name AS project_name, sr.request_number
   FROM stock_issues si
+  LEFT JOIN stock_requests sr ON sr.id = si.request_id
   JOIN warehouses w ON w.id = si.warehouse_id
   JOIN locations l ON l.id = w.location_id
   LEFT JOIN users r ON r.id = si.recipient_id
@@ -64,7 +66,7 @@ class StockIssueModel {
    *                        projectId, purpose, lines: [{ stockItemId, lotId?, quantity, unitIds? }] }
    * @param {object} context  { userId } — doit avoir accès au dépôt source
    */
-  async create({ destinationType = 'USER', warehouseId, recipientId, destinationWarehouseId, departmentId, projectId, purpose, lines = [] }, { userId }) {
+  async create({ destinationType = 'USER', warehouseId, recipientId, destinationWarehouseId, departmentId, projectId, purpose, stockRequestId, lines = [] }, { userId }) {
     const type = String(destinationType || 'USER').toUpperCase();
     if (!DESTINATIONS.includes(type)) throw fail(400, 'INVALID_DESTINATION', 'Type de sortie invalide');
     if (!Array.isArray(lines) || !lines.length) throw fail(400, 'NO_LINES', 'Ajoutez au moins un article');
@@ -74,6 +76,20 @@ class StockIssueModel {
     const isTransfer = type === 'WAREHOUSE';
 
     return db.withTransaction(async (tx) => {
+      // ---- Demande au magasin servie par ce bon (migration 56) : verrouillée, même dépôt / destination, projet de la demande
+      let served = null;
+      if (stockRequestId) {
+        served = await stockRequestModel.lockForServe(tx, stockRequestId, { warehouseId: warehouse.id, destinationType: type, recipientId, departmentId });
+        projectId = served.request.project_id || null;
+        purpose = purpose || served.request.purpose;
+        for (const [index, raw] of lines.entries()) {
+          const target = served.lines.get(String(raw.requestLineId || ''));
+          if (!target || String(target.stockItemId) !== String(raw.stockItemId)) {
+            throw fail(400, 'REQUEST_LINE_INVALID', 'Ligne absente de la demande au magasin', { line: index });
+          }
+        }
+      }
+
       // ---- Destination
       let recipient = null;
       let destination = null;
@@ -129,7 +145,7 @@ class StockIssueModel {
               throw fail(400, 'UNIT_UNAVAILABLE', `${item.name} : équipement ${u?.serial_number || id} indisponible (pas en stock dans ce dépôt, endommagé ou déjà choisi)`, { line: index });
             }
             used.set(`unit:${id}`, 1);
-            allocations.push({ item, lotId: null, unitId: u.id, quantity: 1, projectId: u.project_id || null });
+            allocations.push({ item, lotId: null, unitId: u.id, quantity: 1, projectId: u.project_id || null, requestLineId: raw.requestLineId || null });
           }
           continue;
         }
@@ -173,7 +189,7 @@ class StockIssueModel {
           if (free <= EPS) continue;
           const take = Math.min(free, remaining);
           used.set(b.id, (used.get(b.id) || 0) + take);
-          allocations.push({ item, lotId: b.lot_id, quantity: take, projectId: b.project_id || null });
+          allocations.push({ item, lotId: b.lot_id, quantity: take, projectId: b.project_id || null, requestLineId: raw.requestLineId || null });
           remaining -= take;
           if (remaining <= EPS) break;
         }
@@ -185,18 +201,33 @@ class StockIssueModel {
         }
       }
 
+      // ---- Demande : jamais plus que le reste à servir de chaque ligne (quantité validée − déjà servie)
+      if (served) {
+        const byLine = new Map();
+        for (const a of allocations) byLine.set(a.requestLineId, (byLine.get(a.requestLineId) || 0) + a.quantity);
+        for (const [lineId, qty] of byLine) {
+          const remaining = served.lines.get(String(lineId)).remaining;
+          if (qty - remaining > EPS) {
+            const item = allocations.find(a => a.requestLineId === lineId).item;
+            throw fail(400, 'REQUEST_QUANTITY_EXCEEDED', `${item.name} : ${fmt(qty)} servi(s), ${fmt(Math.max(remaining, 0))} restant(s) sur la demande`,
+              { line: lines.findIndex(l => String(l.requestLineId) === String(lineId)), available: Math.max(remaining, 0) });
+          }
+        }
+      }
+
       // ---- Bon et mouvements
       const issue = await tx.one(
         `INSERT INTO stock_issues (enterprise_id, warehouse_id, destination_type, recipient_id, destination_warehouse_id, department_id,
-                                   project_id, purpose, issued_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, issue_number`,
+                                   project_id, purpose, issued_by, request_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, issue_number`,
         [warehouse.enterprise_id, warehouse.id, type, recipient?.id || null, destination?.id || null, department?.id || null,
-         projectId || null, purpose ? String(purpose).slice(0, 2000) : null, userId]
+         projectId || null, purpose ? String(purpose).slice(0, 2000) : null, userId, served?.request.id || null]
       );
       for (const a of allocations) {
         const line = await tx.one(
-          'INSERT INTO stock_issue_lines (issue_id, stock_item_id, lot_id, quantity, unit_id, project_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-          [issue.id, a.item.id, a.lotId, a.quantity, a.unitId || null, a.projectId]
+          `INSERT INTO stock_issue_lines (issue_id, stock_item_id, lot_id, quantity, unit_id, project_id, request_line_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+          [issue.id, a.item.id, a.lotId, a.quantity, a.unitId || null, a.projectId, served ? a.requestLineId : null]
         );
         const base = {
           enterpriseId: warehouse.enterprise_id, stockItemId: a.item.id, lotId: a.lotId, unitId: a.unitId, projectId: a.projectId,
@@ -225,9 +256,11 @@ class StockIssueModel {
         });
         await tx.exec('UPDATE stock_issue_lines SET stock_movement_id = $1 WHERE id = $2', [movement.id, line.id]);
       }
+      const requestStatus = served ? await stockRequestModel.refreshStatus(tx, served.request.id) : null;
       return {
         id: issue.id, issueNumber: issue.issue_number, lines: allocations.length, destinationType: type,
         recipientId: recipient?.id || null, destinationWarehouseId: destination?.id || null, departmentId: department?.id || null,
+        stockRequestId: served?.request.id || null, requestStatus,
       };
     });
   }
@@ -271,7 +304,7 @@ class StockIssueModel {
     if (destinationType && DESTINATIONS.includes(String(destinationType).toUpperCase())) {
       params.push(String(destinationType).toUpperCase()); where += ` AND si.destination_type = $${params.length}`;
     }
-    if (status) { params.push(status); where += ` AND si.status = ${params.length}`; }
+    if (status) { params.push(status); where += ` AND si.status = $${params.length}`; }
     // Transferts expédiés, pas encore réceptionnés
     if (['1', 'true', true].includes(inTransit)) where += ` AND si.destination_type = 'WAREHOUSE' AND si.status = 'ISSUED' AND si.acknowledged_at IS NULL`;
     if (fromDate) { params.push(fromDate); where += ` AND si.issued_at >= $${params.length}::date`; }
@@ -414,12 +447,17 @@ class StockIssueModel {
     return db.withTransaction(async (tx) => {
       const issue = await tx.one(
         `SELECT si.id, si.issue_number, si.status, si.enterprise_id, si.warehouse_id, si.recipient_id, si.destination_type,
-                si.destination_warehouse_id, si.department_id, si.acknowledged_at, w.name AS warehouse_name, dw.name AS destination_warehouse_name
+                si.destination_warehouse_id, si.department_id, si.acknowledged_at, si.request_id, w.name AS warehouse_name, dw.name AS destination_warehouse_name
          FROM stock_issues si JOIN warehouses w ON w.id = si.warehouse_id LEFT JOIN warehouses dw ON dw.id = si.destination_warehouse_id
          WHERE si.id = $1 FOR UPDATE OF si`,
         [id]
       );
       if (!issue) throw fail(404, 'NOT_FOUND', 'Bon de sortie introuvable');
+      // Demande au magasin servie par ce bon : la quantité servie baisse, la demande redevient à servir
+      const done = async (result) => {
+        if (issue.request_id) result.requestStatus = await stockRequestModel.refreshStatus(tx, issue.request_id);
+        return { ...result, stockRequestId: issue.request_id || null };
+      };
       if (issue.status === 'CANCELLED') throw fail(409, 'ALREADY_CANCELLED', 'Bon de sortie déjà annulé');
       if (!(await warehouseModel.canOperate(userId, issue.warehouse_id))) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès au dépôt de cette sortie');
       const lines = await tx.select(
@@ -447,7 +485,7 @@ class StockIssueModel {
           `UPDATE stock_issues SET status = 'CANCELLED', cancelled_by = $2, cancelled_at = CURRENT_TIMESTAMP, cancel_reason = $3 WHERE id = $1`,
           [id, userId, reason ? String(reason).slice(0, 1000) : null]
         );
-        return { id: issue.id, issueNumber: issue.issue_number, destinationType: issue.destination_type, recipientId: null, reversedMovements: lines.length };
+        return done({ id: issue.id, issueNumber: issue.issue_number, destinationType: issue.destination_type, recipientId: null, reversedMovements: lines.length });
       }
       if (issue.destination_type === 'WAREHOUSE') {
         for (const line of lines) {
@@ -487,7 +525,7 @@ class StockIssueModel {
           `UPDATE stock_issues SET status = 'CANCELLED', cancelled_by = $2, cancelled_at = CURRENT_TIMESTAMP, cancel_reason = $3 WHERE id = $1`,
           [id, userId, reason ? String(reason).slice(0, 1000) : null]
         );
-        return { id: issue.id, issueNumber: issue.issue_number, destinationType: issue.destination_type, recipientId: null, reversedMovements: lines.length * 2 };
+        return done({ id: issue.id, issueNumber: issue.issue_number, destinationType: issue.destination_type, recipientId: null, reversedMovements: lines.length * 2 });
       }
       for (const line of lines) {
         if (line.unit_id) {
@@ -508,7 +546,7 @@ class StockIssueModel {
         `UPDATE stock_issues SET status = 'CANCELLED', cancelled_by = $2, cancelled_at = CURRENT_TIMESTAMP, cancel_reason = $3 WHERE id = $1`,
         [id, userId, reason ? String(reason).slice(0, 1000) : null]
       );
-      return { id: issue.id, issueNumber: issue.issue_number, destinationType: issue.destination_type, recipientId: issue.recipient_id, reversedMovements: lines.length };
+      return done({ id: issue.id, issueNumber: issue.issue_number, destinationType: issue.destination_type, recipientId: issue.recipient_id, reversedMovements: lines.length });
     });
   }
 

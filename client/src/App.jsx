@@ -146,7 +146,7 @@ function App() {
         } />
 
         <Route path="/requisitions/new" element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="CREATE_REQUISITIONS">
             <Layout>
               <RequisitionForm />
             </Layout>

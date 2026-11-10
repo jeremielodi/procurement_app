@@ -134,6 +134,7 @@ class DashboardOverviewService {
             requisitionNumber: r.requisition_number,
             requisitionTitle: r.requisition_title,
             requesterId: r.requester_id,
+            procurementAgentId: r.procurement_agent_id || null,
             projectId: r.project_id,
             projectName: r.project_name,
             since: r.created_at,
@@ -153,6 +154,8 @@ class DashboardOverviewService {
     // Validation du chef de projet : lui seul (pas l'administrateur)
     if (task.group === PROJECT_MANAGER_GROUP) return groupsOnProject(scope, task.projectId).has(task.group);
     if (scope.isAdmin) return true;
+    // Étape achats : l'agent achats désigné à la validation (migration 58)
+    if (task.group === 'procurement' && task.procurementAgentId) return String(task.procurementAgentId) === scope.userId;
     return !!task.group && groupsOnProject(scope, task.projectId).has(task.group);
   }
 

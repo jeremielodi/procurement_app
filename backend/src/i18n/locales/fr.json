@@ -249,7 +249,14 @@
     },
     "poApprovalLevel": "{po} : niveau {level} ({role})",
     "reviewedBy": "Révisé par {name}",
-    "onBehalfOf": "Par intérim de {name} (chef de projet)"
+    "onBehalfOf": "Par intérim de {name} (chef de projet)",
+    "procurementAgent": {
+      "PROCUREMENT_AGENT_ASSIGNED": "Agent achats désigné : {name}",
+      "PROCUREMENT_AGENT_CHANGED": "Agent achats remplacé : {name}",
+      "previous": "Agent précédent : {name}"
+    },
+    "rfqPublished": "Demande de cotations publiée",
+    "rfqAwarded": "Demande de cotations attribuée"
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -366,6 +373,13 @@
       "credentials": "Vos identifiants de connexion :",
       "email": "Email :",
       "features": "Depuis le portail, vous pouvez confirmer les bons de commande reçus, répondre aux appels d'offres et tenir à jour votre profil et vos documents."
+    },
+    "procurementAgent": {
+      "subject": "[procureApp] Réquisition {number} à traiter — agent achats",
+      "title": "Vous êtes désigné agent achats",
+      "assignedBody": "<strong>{name}</strong> vous a désigné agent achats de la réquisition <strong>{number}</strong> en l'approuvant. Les étapes achats (méthode d'achat, sourcing, bon de commande, confirmation fournisseur) vous sont réservées.",
+      "changedBody": "<strong>{name}</strong> vous a désigné nouvel agent achats de la réquisition <strong>{number}</strong>. Les étapes achats (méthode d'achat, sourcing, bon de commande, confirmation fournisseur) vous sont désormais réservées.",
+      "open": "Ouvrir la réquisition"
     }
   },
   "notification": {
@@ -453,6 +467,18 @@
       "closedMessage": "Le reste de votre demande {number} ne sera pas servi : {reason}",
       "cancelledTitle": "Demande retirée",
       "cancelledMessage": "{name} a retiré sa demande {number}."
+    },
+    "procurementAgent": {
+      "assignedTitle": "Réquisition {number} à traiter",
+      "assignedMessage": "{name} vous a désigné agent achats de la réquisition {number} « {title} » : les étapes achats vous sont réservées.",
+      "changedTitle": "Réquisition {number} à traiter",
+      "changedMessage": "{name} vous a désigné nouvel agent achats de la réquisition {number} « {title} » : les étapes achats vous sont réservées."
+    },
+    "signature": {
+      "changedTitle": "Votre signature a été enregistrée",
+      "changedMessage": "{name} (administrateur) a enregistré votre signature. Vérifiez-la dans « Mon profil ».",
+      "removedTitle": "Votre signature a été retirée",
+      "removedMessage": "{name} (administrateur) a retiré votre signature. Vous pouvez en déposer une dans « Mon profil »."
     }
   },
   "pdf": {
@@ -1008,7 +1034,9 @@
     "STOCK_REQUEST_REJECTED": "Demande au magasin rejetée",
     "STOCK_REQUEST_CLOSED": "Demande au magasin soldée",
     "STOCK_UNITS_IMPORTED": "Parc existant importé (Excel / CSV)",
-    "STOCK_UNITS_RETAGGED": "N° d'inventaire recalculés (codification)"
+    "STOCK_UNITS_RETAGGED": "N° d'inventaire recalculés (codification)",
+    "PROCUREMENT_AGENT_ASSIGNED": "Agent achats désigné",
+    "PROCUREMENT_AGENT_CHANGED": "Agent achats remplacé"
   },
   "auditExport": {
     "sheet": "Journal d'audit",

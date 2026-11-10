@@ -15,6 +15,7 @@ const storage = require('../services/StorageService');
 const tenderQuestions = require('../utils/tenderQuestions');
 
 const { appLink } = require('../utils/appUrl');
+const { commentVariable } = require('../utils/workflowLabels');
 
 const EDITABLE = ['OPEN', 'UPCOMING'];
 
@@ -55,6 +56,18 @@ function validateTenderPayload(b, { requireNumber }) {
 const AUDIENCES = ['ALL', 'PREQUALIFIED'];
 // Mode d'attribution annoncé à la publication (migration 39) : un seul attributaire, ou article par article
 const AWARD_MODES = ['SINGLE', 'PER_ITEM'];
+// Appel d'offres (RFP, méthode « Appel d'offres ») ou demande de cotations (RFQ, méthode « Devis multiples ») :
+// même module, l'attribution termine l'étape de sourcing correspondante (migration 59)
+const TENDER_TASKS = { RFP: 'Activity_RFPProcess', RFQ: 'Activity_RequestQuotations' };
+const TENDER_TYPES = Object.keys(TENDER_TASKS);
+const published = (type, number) => (type === 'RFQ' ? `Demande de cotations ${number} publiée` : `Appel d'offres ${number} publié`);
+
+/** Étape de sourcing ouverte (appel d'offres ou devis multiples) du processus, sinon null */
+async function openSourcingTask(processInstanceId) {
+  if (!processInstanceId) return null;
+  const keys = Object.values(TENDER_TASKS);
+  return ((await camundaService.getProcessTasks(processInstanceId)) || []).find(t => keys.includes(t.taskDefinitionKey)) || null;
+}
 
 /**
  * AO réservé : fournisseurs sélectionnés, tous parmi les candidats (préqualifiés de la catégorie et de la
@@ -186,8 +199,7 @@ async function awardPerItem(req, res, tender, submissions) {
     // Étape BpmnGo « Appel d'offres » ouverte ; un processus démarré avant la répartition ne sait pas la traiter
     let rfpTask = null;
     if (tender.process_instance_id) {
-      rfpTask = ((await camundaService.getProcessTasks(tender.process_instance_id)) || [])
-        .find(t => t.taskDefinitionKey === 'Activity_RFPProcess') || null;
+      rfpTask = await openSourcingTask(tender.process_instance_id);
       if (split && rfpTask) {
         const vars = await camundaService.getProcessVariables(tender.process_instance_id);
         if (vars.supplierLots === undefined) {
@@ -222,7 +234,7 @@ async function awardPerItem(req, res, tender, submissions) {
             supplierId: s.supplier_id, supplierName: s.supplier_name, amount: parseFloat(s.total_amount), deliveryDays: s.delivery_days,
           }))),
           ...(lotIds ? { supplierLots: lotIds } : {}),
-          ...(req.body.comment ? { comment: req.body.comment } : {}),
+          ...(req.body.comment ? { [commentVariable(rfpTask.taskDefinitionKey)]: req.body.comment } : {}),
         };
         // BpmnGo en dernier : en cas de refus, l'attribution est annulée avec la transaction
         const done = await camundaService.completeTask(rfpTask.id, vars);
@@ -236,7 +248,7 @@ async function awardPerItem(req, res, tender, submissions) {
       entity_type: 'requisition',
       entity_id: tender.requisition_id,
       task_id: rfpTask?.id || tender.task_id || null,
-      task_name: 'Activity_RFPProcess',
+      task_name: TENDER_TASKS[tender.tender_type] || TENDER_TASKS.RFP,
       action: 'TENDER_AWARDED',
       comments: `${tender.tender_number} attribué par article : ${summary}${req.body.comment ? ' — ' + req.body.comment : ''}`,
       performed_by: req.user.id,
@@ -362,8 +374,14 @@ class TenderController {
       const errors = validateTenderPayload(b, { requireNumber: true });
       if (errors.length) return res.status(400).json({ success: false, message: errors.join(' · ') });
 
-      const requisition = await db.one('SELECT id, requisition_number FROM requisitions WHERE id = $1', [b.requisitionId]);
+      const requisition = await db.one('SELECT id, requisition_number, process_instance_id FROM requisitions WHERE id = $1', [b.requisitionId]);
       if (!requisition) return res.status(404).json({ success: false, message: 'Réquisition introuvable' });
+      // Type donné par l'étape ouverte de la réquisition (devis multiples → RFQ), à défaut celui demandé, sinon RFP
+      let sourcing = null;
+      try { sourcing = await openSourcingTask(requisition.process_instance_id); } catch (_) { /* BpmnGo injoignable */ }
+      const tenderType = sourcing
+        ? Object.keys(TENDER_TASKS).find(k => TENDER_TASKS[k] === sourcing.taskDefinitionKey)
+        : (TENDER_TYPES.includes(b.tenderType) ? b.tenderType : 'RFP');
 
       const items = await tenderModel.getItems(b.requisitionId);
       if (items.length === 0) {
@@ -397,6 +415,7 @@ class TenderController {
           endDate: new Date(b.endDate),
           maxDeliveryDays: parseInt(b.maxDeliveryDays),
           awardMode: AWARD_MODES.includes(b.awardMode) ? b.awardMode : 'SINGLE',
+          tenderType,
           createdBy: req.user.id
         }, tx);
         await tenderModel.replaceQuestions(tx, created.id, questions);
@@ -407,9 +426,9 @@ class TenderController {
         entity_type: 'requisition',
         entity_id: b.requisitionId,
         task_id: b.taskId || null,
-        task_name: 'Activity_RFPProcess',
+        task_name: TENDER_TASKS[tenderType],
         action: 'TENDER_PUBLISHED',
-        comments: `Appel d'offres ${tender.tender_number} publié${invited.length ? ` (${invited.length} fournisseur(s) invité(s))` : ''}`,
+        comments: `${published(tenderType, tender.tender_number)}${invited.length ? ` (${invited.length} fournisseur(s) invité(s))` : ''}`,
         performed_by: req.user.id,
         performed_at: new Date()
       });
@@ -584,15 +603,13 @@ class TenderController {
           amount: parseFloat(s.total_amount), deliveryDays: s.delivery_days
         })))
       };
-      if (comment) completionVars.comment = comment;
+      if (comment) completionVars[commentVariable(TENDER_TASKS[tender.tender_type] || TENDER_TASKS.RFP)] = comment;
 
       let camundaTaskCompleted = false;
       try {
         let taskId = tender.task_id;
         if (tender.process_instance_id) {
-          const tasks = await camundaService.getProcessTasks(tender.process_instance_id);
-          const rfpTask = (tasks || []).find(t => t.taskDefinitionKey === 'Activity_RFPProcess');
-          taskId = rfpTask?.id || null;
+          taskId = (await openSourcingTask(tender.process_instance_id))?.id || null;
         }
         if (taskId) {
           const result = await camundaService.completeTask(taskId, completionVars);
@@ -606,7 +623,7 @@ class TenderController {
         entity_type: 'requisition',
         entity_id: tender.requisition_id,
         task_id: tender.task_id || null,
-        task_name: 'Activity_RFPProcess',
+        task_name: TENDER_TASKS[tender.tender_type] || TENDER_TASKS.RFP,
         action: 'TENDER_AWARDED',
         comments: `${tender.tender_number} attribué à ${winner.supplier_name} (${winner.total_amount})${comment ? ' — ' + comment : ''}`,
         performed_by: req.user.id,

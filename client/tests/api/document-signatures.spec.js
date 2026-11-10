@@ -15,7 +15,7 @@
  */
 import { test, expect } from '@playwright/test';
 import zlib from 'node:zlib';
-import { getToken, getApproverToken, auth, directPurchaseVariables, passReview } from './helpers.js';
+import { getToken, getApproverToken, auth, directPurchaseVariables, passReview, getProcurementAgentId } from './helpers.js';
 
 const POLL_TIMEOUT = 60_000;
 
@@ -136,7 +136,7 @@ test.describe.serial('API › Signatures dans les PDF de réquisition et de bon 
 
     // Validation par le chef de projet (autre utilisateur), sans prise en charge préalable
     const n1 = await waitForTask(request, 'Activity_ProjectManagerApproval');
-    const res = await complete(request, n1, { approved: true, returnedForCorrection: false, comment: 'OK' }, approverToken);
+    const res = await complete(request, n1, { approved: true, procurementAgentId: await getProcurementAgentId(request), returnedForCorrection: false, comment: 'OK' }, approverToken);
     expect(res.status(), await res.text()).toBe(200);
 
     const after = imageCount(await pdf(request, `/api/requisitions/${req.id}/export/pdf`));

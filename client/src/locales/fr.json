@@ -443,7 +443,7 @@
         },
         {
           "title": "Budget et approbations",
-          "desc": "Budget vérifié automatiquement ; en cas de manque, ajustement puis nouvelle vérification sans ressaisie. Réquisition validée par le chef de projet (budget holder), avec renvoi pour correction et historique des versions ; bon de commande approuvé à trois niveaux selon son montant, avec des seuils propres à chaque projet."
+          "desc": "Budget vérifié automatiquement ; en cas de manque, ajustement puis nouvelle vérification sans ressaisie. Réquisition validée par le chef de projet (budget holder), qui désigne l'agent achats chargé de la traiter, avec renvoi pour correction et historique des versions ; bon de commande approuvé à trois niveaux selon son montant, avec des seuils propres à chaque projet."
         },
         {
           "title": "Appels d'offres",
@@ -800,9 +800,9 @@
     "approvePo": "✅ Approuver le bon de commande",
     "rejectPo": "❌ Rejeter le bon de commande",
     "method": "Méthode d'achat *",
-    "methodDirect": "Achat direct (< 5 000)",
-    "methodQuotes": "Multiples devis (5 000 – 25 000)",
-    "methodRfp": "Appel d'offres (> 25 000)",
+    "methodDirect": "Achat direct",
+    "methodQuotes": "Multiples devis (demande de cotations)",
+    "methodRfp": "Appel d'offres",
     "methodSole": "Source unique (justifiée)",
     "loginRequired": "Veuillez vous connecter pour voir vos tâches",
     "loading": "Chargement des tâches...",
@@ -843,7 +843,8 @@
     "claimedByMe": "Prise en charge par vous",
     "toClaim": "À prendre en charge",
     "notOnProject": "Vous avez ce profil, mais pas sur le projet de cette réquisition : demandez à l'administrateur de vous l'attribuer",
-    "notProjectManager": "Validation réservée au chef du projet de cette réquisition"
+    "notProjectManager": "Validation réservée au chef du projet de cette réquisition",
+    "notProcurementAgent": "Réservée à l'agent achats désigné pour cette réquisition"
   },
   "notifications": {
     "unknownDate": "Date inconnue",
@@ -1490,10 +1491,10 @@
     "by": "Par : {{user}}",
     "none": "Aucune tâche trouvée pour ce processus",
     "method": "Méthode d'achat *",
-    "directDesc": "Pour les achats < 5 000 USD",
-    "quotesDesc": "Entre 5 000 et 25 000 USD",
+    "directDesc": "Un fournisseur retenu, avec sa facture pro-forma",
+    "quotesDesc": "Demande de cotations publiée aux fournisseurs (comme un appel d'offres), attribuée après comparaison",
     "rfpLabel": "Appel d'offres (RFP)",
-    "rfpDesc": "Pour les achats > 25 000 USD",
+    "rfpDesc": "Appel d'offres publié sur le portail fournisseurs, attribué après clôture",
     "soleDesc": "Fournisseur unique — justification obligatoire",
     "justifyPlaceholder": "Justifiez votre choix...",
     "newAmount": "Nouveau montant proposé *",
@@ -1506,14 +1507,12 @@
       "poActive": "Aucun bon de commande approuvé pour cette réquisition : la réception, la SAN et la facture se rattachent à un bon de commande.",
       "invoice": "Aucune facture à payer pour cette réquisition : saisissez d'abord la facture (tâche « Saisir la facture »)."
     },
-    "methodBelowThreshold": "Non autorisé pour ce montant",
     "methodRequired": "Choisissez la méthode d'achat",
     "soleJustificationRequired": "Justification obligatoire pour une source unique",
     "err": {
-      "METHOD_BELOW_THRESHOLD": "Méthode d'achat insuffisante pour le montant de la réquisition",
       "PROCUREMENT_METHOD_REQUIRED": "Choisissez la méthode d'achat",
       "JUSTIFICATION_REQUIRED": "Justification obligatoire pour une source unique",
-      "SPLIT_NOT_AVAILABLE_FOR_RFP": "Appel d'offres : la répartition se fait à l'attribution (appel d'offres publié « par article »).",
+      "SPLIT_NOT_AVAILABLE_FOR_RFP": "Appel d'offres / demande de cotations : publiez-la avec l'attribution « par article » — la répartition se fait à l'attribution.",
       "SPLIT_NEEDS_TWO_ITEMS": "Une répartition demande au moins deux articles dans la réquisition."
     },
     "direct": {
@@ -1539,7 +1538,8 @@
         "PROFORMA_AMOUNT_INVALID": "Montant de la pro-forma invalide",
         "PROFORMA_DATE_INVALID": "Date de la pro-forma invalide"
       }
-    }
+    },
+    "methodHint": "Toutes les méthodes sont possibles quel que soit le montant : choisissez la plus adaptée."
   },
   "po": {
     "approved": "Commande approuvée avec succès",
@@ -2341,7 +2341,14 @@
         "QUESTION_NOT_FILE": "Cette question n'attend pas de document.",
         "TENDER_NOT_OPEN": "Les soumissions ne sont pas ouvertes."
       }
-    }
+    },
+    "type": {
+      "RFP": "Appel d'offres",
+      "RFQ": "Demande de cotations"
+    },
+    "newRfq": "Nouvelle demande de cotations",
+    "newRfqHint": "Même fonctionnement qu'un appel d'offres : fournisseurs ciblés ou tous, offres scellées jusqu'à la clôture, comparatif puis attribution.",
+    "rfqTaskHint": "Tâche « Devis multiples » : elle sera complétée lors de l'attribution, après la clôture des cotations."
   },
   "portal": {
     "result": {
@@ -2750,7 +2757,9 @@
     "total_other": "{{count}} utilisateurs",
     "positionLabel": "Poste (fonction)",
     "positionPlaceholder": "Ex : Supply Chain Officer",
-    "positionHint": "Imprimé comme fonction / titre de la personne sur les réquisitions et les bons de commande (demandeur, approbateurs, « Demandé par »)."
+    "positionHint": "Imprimé comme fonction / titre de la personne sur les réquisitions et les bons de commande (demandeur, approbateurs, « Demandé par »).",
+    "signatureTitle": "Signature de l'utilisateur",
+    "signatureHint": "Aidez l'utilisateur à déposer sa signature (dessin ou image scannée). Elle n'apparaît que sur les documents qu'il établit ou valide lui-même ; il est prévenu du changement et la retrouve dans « Mon profil »."
   },
   "profiles": {
     "deleted": "Profil supprimé",
@@ -4509,6 +4518,10 @@
             ]
           },
           {
+            "type": "tip",
+            "text": "Seuls les utilisateurs ayant le profil Demandeur (sur le projet) et l'administrateur créent des réquisitions : le bouton « Nouvelle réquisition » n'apparaît pas pour les autres profils (managers, achats, finance…). Un manager qui doit faire une demande reçoit aussi le profil Demandeur."
+          },
+          {
             "type": "h",
             "text": "Qui voit quelles réquisitions ?"
           },
@@ -4643,6 +4656,22 @@
           },
           {
             "type": "h",
+            "text": "Agent achats désigné"
+          },
+          {
+            "type": "p",
+            "text": "En approuvant la réquisition, le chef de projet choisit l'agent achats qui la traitera, parmi les utilisateurs ayant le profil Achats sur le projet (champ obligatoire pour approuver ; inutile pour rejeter ou renvoyer pour correction). Toutes les étapes achats de la réquisition lui sont alors réservées : méthode d'achat, achat direct, devis, source unique, répartition entre fournisseurs, appel d'offres, bon de commande et confirmation fournisseur. Lui seul les reçoit par email et dans « Mes tâches » ; les autres agents achats du projet voient « Réservée à l'agent achats désigné »."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Aucun agent achats sur le projet : attribuez le profil Achats à un membre (fiche du projet) avant d'approuver.",
+              "Absence ou surcharge : sur la fiche de la réquisition, carte « Agent achats » → « Changer » (chef du projet, son intérimaire ou administrateur), tant que la réquisition est en cours. Les étapes prises en charge par l'ancien agent sont libérées pour le nouveau, qui est notifié.",
+              "L'administrateur garde la main sur toutes les étapes. Chaque désignation et chaque remplacement apparaissent dans le suivi du workflow et le journal d'audit."
+            ]
+          },
+          {
+            "type": "h",
             "text": "Qui approuve le bon de commande ?"
           },
           {
@@ -4735,30 +4764,30 @@
         "blocks": [
           {
             "type": "p",
-            "text": "Après la validation par le chef de projet, l'équipe Achats choisit la méthode d'achat (tâche « Déterminer la méthode d'achat ») : l'étape suivante est celle de la méthode choisie (achat direct, devis multiples, appel d'offres ou justification de la source unique), puis la création du bon de commande. Une méthode moins exigeante que celle imposée par le montant n'est pas proposée."
+            "text": "Après la validation par le chef de projet, l'agent achats choisit la méthode d'achat (tâche « Déterminer la méthode d'achat ») : l'étape suivante est celle de la méthode choisie (achat direct, devis multiples, appel d'offres ou justification de la source unique), puis la création du bon de commande. Toutes les méthodes sont possibles quel que soit le montant : c'est l'agent achats qui décide."
           },
           {
             "type": "table",
             "rows": [
               [
-                "Montant",
-                "Méthode"
+                "Méthode",
+                "Déroulement"
               ],
               [
-                "jusqu'à 5 000",
-                "Achat direct auprès d'un fournisseur"
+                "Achat direct",
+                "Fournisseur retenu et sa facture pro-forma"
               ],
               [
-                "de 5 001 à 25 000",
-                "Devis multiples (comparaison de plusieurs offres)"
+                "Devis multiples",
+                "Demande de cotations publiée aux fournisseurs avec le module des appels d'offres, attribuée après comparaison"
               ],
               [
-                "plus de 25 000",
-                "Appel d'offres (RFP) sur le portail fournisseurs"
+                "Appel d'offres",
+                "Appel d'offres (RFP) sur le portail fournisseurs, attribué après clôture"
               ],
               [
-                "quel que soit le montant",
-                "Source unique, avec une justification obligatoire"
+                "Source unique",
+                "Justification obligatoire"
               ]
             ]
           },
@@ -4769,6 +4798,10 @@
           {
             "type": "p",
             "text": "Pour un appel d'offres, la tâche « Appel d'offres » ouvre directement la création de l'appel d'offres lié à la réquisition. Elle se termine quand l'appel d'offres est attribué : l'offre retenue est transmise à l'analyse des offres, puis à la création du bon de commande."
+          },
+          {
+            "type": "p",
+            "text": "Devis multiples : la tâche « Devis multiples » ouvre la création d'une demande de cotations liée à la réquisition — même écran et mêmes règles qu'un appel d'offres (fournisseurs ciblés ou tous, questions, offres scellées jusqu'à la clôture, comparatif Excel, attribution unique ou par article). Elle se termine à l'attribution : l'offre retenue est transmise à l'analyse des offres, puis à la création du bon de commande. Pour répartir entre plusieurs fournisseurs, publiez-la avec l'attribution « par article »."
           },
           {
             "type": "h",
@@ -6231,6 +6264,10 @@
           {
             "type": "p",
             "text": "Dans « Mon profil », rubrique « Ma signature » : « Dessiner » (souris, stylet ou doigt) ou « Importer une image » (PNG, JPG ou WEBP, de préférence sur fond blanc ou transparent). Votre signature est reprise automatiquement sur les PDF des documents que vous avez vous-même établis ou validés : bon de commande que vous avez approuvé, bon de réception que vous avez enregistré, facture que vous avez saisie, bons de sortie et de retour (magasinier, et bénéficiaire après sa confirmation de réception). Elle est personnelle : personne d'autre, même l'administrateur, ne peut la déposer ou la modifier. « Retirer » la supprime des prochains PDF."
+          },
+          {
+            "type": "tip",
+            "text": "Signature : si un utilisateur ne sait pas la déposer, l'administrateur peut l'ajouter (ou la retirer) depuis sa fiche (Administration → Utilisateurs → modifier → « Signature de l'utilisateur »). L'utilisateur est prévenu et la retrouve dans « Mon profil » ; le changement est tracé dans le journal d'audit."
           }
         ]
       },
@@ -6494,7 +6531,9 @@
       "STOCK_REQUEST_REJECTED": "Demande au magasin rejetée",
       "STOCK_REQUEST_CLOSED": "Demande au magasin soldée",
       "STOCK_UNITS_IMPORTED": "Parc existant importé (Excel / CSV)",
-      "STOCK_UNITS_RETAGGED": "N° d'inventaire recalculés (codification)"
+      "STOCK_UNITS_RETAGGED": "N° d'inventaire recalculés (codification)",
+      "PROCUREMENT_AGENT_ASSIGNED": "Agent achats désigné",
+      "PROCUREMENT_AGENT_CHANGED": "Agent achats remplacé"
     },
     "groups": {
       "all": "Tous les événements",
@@ -6899,7 +6938,7 @@
   "split": {
     "methodOption": "Répartir entre plusieurs fournisseurs",
     "methodOptionHelp": "Chaque article ira à un seul fournisseur ; un bon de commande, une facture et un paiement par fournisseur. La méthode reste celle exigée par le montant total.",
-    "notForRfp": "Appel d'offres : publiez-le avec l'attribution « par article » — la répartition se fait à l'attribution.",
+    "notForRfp": "Appel d'offres / demande de cotations : publiez-la avec l'attribution « par article » — la répartition se fait à l'attribution.",
     "lotLabel": "Part {{number}} — {{supplier}}",
     "lotColumn": "Fournisseur",
     "title": "Répartition par fournisseur",
@@ -7234,6 +7273,28 @@
         "label": "N° séquentiel",
         "text": "3 chiffres, repart à 001 pour chaque projet, catégorie et année"
       }
+    }
+  },
+  "procurementAgent": {
+    "chooseLabel": "Agent achats qui traitera la réquisition",
+    "choosePlaceholder": "Choisir un agent achats…",
+    "chooseHint": "Les étapes achats (méthode d'achat, sourcing, bon de commande, confirmation fournisseur) lui seront réservées.",
+    "noCandidate": "Personne n'a le profil Achats sur ce projet : attribuez-le à un membre (fiche du projet) avant d'approuver.",
+    "required": "Choisissez l'agent achats qui traitera la réquisition",
+    "panelTitle": "Agent achats",
+    "assignedBy": "Désigné par {{name}} le {{date}}",
+    "notEligible": "Cet agent n'a plus le profil Achats sur le projet (ou son compte est désactivé) : remplacez-le.",
+    "change": "Changer",
+    "changeTitle": "Changer l'agent achats",
+    "changeHint": "Les étapes achats en cours prises en charge par l'agent actuel seront libérées pour le nouvel agent.",
+    "save": "Enregistrer",
+    "changed": "Agent achats modifié",
+    "err": {
+      "PROCUREMENT_AGENT_REQUIRED": "Choisissez l'agent achats qui traitera la réquisition",
+      "PROCUREMENT_AGENT_INVALID": "Cet utilisateur n'a pas le profil Achats sur le projet de la réquisition (ou son compte est désactivé)",
+      "PROCUREMENT_AGENT_LOCKED": "L'agent achats ne peut être changé que sur une réquisition approuvée et en cours",
+      "NOT_ALLOWED": "Seuls le chef du projet et l'administrateur peuvent changer l'agent achats",
+      "NOT_PROCUREMENT_AGENT": "Cette réquisition est traitée par l'agent achats désigné à sa validation"
     }
   }
 }

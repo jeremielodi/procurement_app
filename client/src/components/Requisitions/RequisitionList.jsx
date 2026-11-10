@@ -40,6 +40,7 @@ import toast from 'react-hot-toast'
 import { t, withLabel } from '../../i18n'
 import SearchSelect from '../Common/SearchSelect'
 import { Table } from 'antd'
+import { usePermissions } from '../../hooks/usePermissions'
 
 
 
@@ -60,6 +61,9 @@ const PROGRESS = withLabel('progress', {
 
 export default function RequisitionList() {
   const navigate = useNavigate()
+  // Nouvelle réquisition : demandeurs et administrateur seulement (CREATE_REQUISITIONS, migration 60)
+  const { hasPermission } = usePermissions()
+  const canCreate = hasPermission('CREATE_REQUISITIONS')
   const queryClient = useQueryClient()
 
   // États pour les filtres
@@ -429,15 +433,18 @@ export default function RequisitionList() {
             {t('requisitions.subtitle')}
           </p>
         </div>
+        {canCreate && (
         <div className="flex gap-2">
           <Link
             to="/requisitions/new"
+            data-testid="requisition-new"
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus size={18} />
             {t('requisitions.new')}
           </Link>
         </div>
+        )}
       </div>
 
       {/* Barre de recherche et filtres */}
@@ -628,10 +635,12 @@ export default function RequisitionList() {
               <div className="py-8 text-center text-gray-500">
                 <FileText className="mx-auto h-12 w-12 text-gray-300 mb-3" />
                 <p>{t('requisitions.none')}</p>
+                {canCreate && (
                 <Link to="/requisitions/new" className="mt-2 inline-flex items-center text-blue-600 hover:text-blue-800">
                   <Plus size={16} className="mr-1" />
                   {t('requisitions.create')}
                 </Link>
+                )}
               </div>
             ),
           }}

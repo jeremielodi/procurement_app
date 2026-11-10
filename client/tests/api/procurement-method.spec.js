@@ -12,7 +12,7 @@
  * Requiert BpmnGo (sinon les tests s'ignorent).
  */
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth, passReview } from './helpers.js';
+import { getToken, getApproverToken, auth, passReview, getProcurementAgentId } from './helpers.js';
 
 const POLL_TIMEOUT = 60_000;
 const SOURCING_TASKS = ['Activity_DirectPurchase', 'Activity_RequestQuotations', 'Activity_RFPProcess', 'Activity_SoleSource'];
@@ -41,9 +41,9 @@ const complete = (request, task, variables, tk = token) =>
 
 /**
  * method : méthode choisie ; sourcingTask : étape attendue ensuite ; amount : montant de la réquisition
- * refused : méthode moins exigeante que le montant (refusée) + méthode exigée, ou null
+ * Toutes les méthodes sont ouvertes quel que soit le montant (migration 59) : les achats décident
  */
-function scenario({ method, sourcingTask, amount, justification, refused }) {
+function scenario({ method, sourcingTask, amount, justification }) {
   test.describe.serial(`${method} (${amount}) → cycle complet BpmnGo`, () => {
     let req, po, grn;
     let directSupplier = null; // achat direct : fournisseur désigné avec la pro-forma
@@ -74,7 +74,7 @@ function scenario({ method, sourcingTask, amount, justification, refused }) {
       }, { timeout: 15_000 }).toBeTruthy();
 
       const n1 = await waitForTask(request, req, 'Activity_ProjectManagerApproval');
-      expect((await complete(request, n1, { approved: true, comment: 'OK' }, approverToken)).status()).toBe(200);
+      expect((await complete(request, n1, { approved: true, procurementAgentId: await getProcurementAgentId(request), comment: 'OK' }, approverToken)).status()).toBe(200);
       await waitForTask(request, req, 'Activity_DetermineType');
     });
 
@@ -84,13 +84,6 @@ function scenario({ method, sourcingTask, amount, justification, refused }) {
       expect(noMethod.status()).toBe(400);
       expect((await noMethod.json()).code).toBe('PROCUREMENT_METHOD_REQUIRED');
 
-      if (refused) {
-        const res = await complete(request, task, { procurementMethod: refused.method });
-        expect(res.status()).toBe(400);
-        const body = await res.json();
-        expect(body.code).toBe('METHOD_BELOW_THRESHOLD');
-        expect(body.requiredMethod).toBe(refused.required);
-      }
       const noJustif = await complete(request, task, { procurementMethod: 'SOLE_SOURCE', justification: '  ' });
       expect((await noJustif.json()).code).toBe('JUSTIFICATION_REQUIRED');
 
@@ -209,12 +202,11 @@ function scenario({ method, sourcingTask, amount, justification, refused }) {
   });
 }
 
-// Montant > 5 000 : l'achat direct est refusé, la source unique (justifiée) reste possible
+// Source unique (justifiée)
 scenario({
   method: 'SOLE_SOURCE', sourcingTask: 'Activity_SoleSource', amount: 10000,
   justification: 'Seul distributeur agréé du constructeur',
-  refused: { method: 'DIRECT_PURCHASE', required: 'MULTIPLE_QUOTATIONS' },
 });
 
-// Montant ≤ 5 000 : achat direct
-scenario({ method: 'DIRECT_PURCHASE', sourcingTask: 'Activity_DirectPurchase', amount: 4000 });
+// Achat direct au-delà des anciens seuils (avant : refusé au-dessus de 5 000 ; 20 000 reste au niveau N1 du bon) — les achats décident
+scenario({ method: 'DIRECT_PURCHASE', sourcingTask: 'Activity_DirectPurchase', amount: 20000 });

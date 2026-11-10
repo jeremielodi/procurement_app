@@ -7,6 +7,7 @@
 // Acteurs : le demandeur, un administrateur d'entreprise ou un gestionnaire du budget (MANAGE_BUDGET).
 const db = require('../config/database');
 const camundaService = require('./CamundaService');
+const { commentVariable } = require('../utils/workflowLabels');
 const userModel = require('../models/UserModel');
 const projectAccess = require('../utils/projectAccess');
 
@@ -121,7 +122,7 @@ class BudgetAdjustmentService {
     try { task = await openTask(req.process_instance_id); } catch { /* BpmnGo injoignable */ }
     if (!task && d === 'RETRY') throw fail(409, 'TASK_NOT_FOUND', 'Étape « Ajustement budgétaire » introuvable dans BpmnGo (moteur injoignable ou processus terminé)');
     if (task) {
-      const result = await camundaService.completeTask(task.id, { budgetAdjusted: d === 'RETRY', comment: String(comment || '').slice(0, 1000) });
+      const result = await camundaService.completeTask(task.id, { budgetAdjusted: d === 'RETRY', [commentVariable('Activity_BudgetAdjustment')]: String(comment || '').slice(0, 1000) });
       if (!result.success) throw fail(502, 'BPMNGO_ERROR', result.error || 'BpmnGo n\'a pas accepté la décision');
     }
 

@@ -11,7 +11,7 @@
  * Requiert BpmnGo (BPMN redéployé).
  */
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth, directPurchaseVariables, passReview } from './helpers.js';
+import { getToken, getApproverToken, auth, directPurchaseVariables, passReview, getProcurementAgentId } from './helpers.js';
 
 const POLL_TIMEOUT = 60_000;
 const PRICE = 100; // 10 × 100 = 1 000 → N1, achat direct
@@ -54,7 +54,7 @@ async function orderConfirmed(request, label) {
   }, { timeout: 15_000 }).toBeTruthy();
   const pid = req.process_instance_id;
 
-  expect((await complete(request, await waitForTask(request, pid, 'Activity_ProjectManagerApproval'), { approved: true }, approverToken)).status()).toBe(200);
+  expect((await complete(request, await waitForTask(request, pid, 'Activity_ProjectManagerApproval'), { approved: true, procurementAgentId: await getProcurementAgentId(request) }, approverToken)).status()).toBe(200);
   expect((await complete(request, await waitForTask(request, pid, 'Activity_DetermineType'), { procurementMethod: 'DIRECT_PURCHASE' })).status()).toBe(200);
   expect((await complete(request, await waitForTask(request, pid, 'Activity_DirectPurchase'), await directPurchaseVariables(request, token, req.id, refs.supplier.id))).status()).toBe(200);
   await waitForTask(request, pid, 'Activity_CreatePO');

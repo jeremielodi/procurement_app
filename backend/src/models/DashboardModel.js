@@ -876,11 +876,12 @@ class DashboardModel {
       )
       SELECT c.task_id, c.task_definition_id, c.task_name, c.created_at,
              r.id AS requisition_id, r.requisition_number, r.title AS requisition_title, r.requester_id,
-             r.project_id, p.name AS project_name,
+             r.project_id, p.name AS project_name, r.procurement_agent_id, pa.is_active AS procurement_agent_active,
              cl.comments AS claim, cl.performed_by AS claimed_by
       FROM created c
       JOIN requisitions r ON r.id = c.entity_id
       LEFT JOIN projects p ON p.id = r.project_id
+      LEFT JOIN users pa ON pa.id = r.procurement_agent_id
       LEFT JOIN claimed cl ON cl.task_id = c.task_id
       WHERE c.task_id NOT IN (SELECT task_id FROM done)
         AND r.status NOT IN ('CANCELLED', 'REJECTED', 'COMPLETED')
@@ -977,7 +978,9 @@ class DashboardModel {
       const g = groups.get(group);
       const assignee = this.taskAssignee(row, names);
       g.count++;
+      // Étape achats avec un agent achats désigné (migration 58) : lui seul, s'il est actif
       const handlerCount = group === 'project_manager' ? (managerOf.has(String(row.project_id)) ? 1 : 0)
+        : group === 'procurement' && row.procurement_agent_id ? (row.procurement_agent_active ? 1 : 0)
         : profileId ? handlersOn.get(`${row.project_id}|${profileId}`) ?? null : null;
       if (handlerCount === 0) g.unhandled++;
       if (assignee) { g.claimed++; g.assignees[assignee] = (g.assignees[assignee] || 0) + 1; }

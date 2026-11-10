@@ -164,11 +164,12 @@ test.describe.serial('API › Profils liés au projet', () => {
     // Visible aussi sur la fiche du projet
     expect((await members(request, projectA.id)).find(m => m.id === id).profiles.filter(p => p.assigned).map(p => p.id)).toEqual(['prof_manager']);
 
-    // Réquisition possible sur les deux projets (Demandeur sur B ; le profil Manager porte aussi CREATE_REQUISITIONS sur A)
+    // Réquisition possible seulement là où il est Demandeur (B) : le profil Manager ne crée plus de réquisition
+    // (migration 60 — demandeurs et administrateur seulement)
     const token = await tokenOf(request, { email, password: 'Secret123' });
     const offered = (await (await request.get('/api/projects?forRequisition=1', { headers: auth(token) })).json()).data.map(p => p.id);
     expect(offered).toContain(projectB.id);
-    expect(offered).toContain(projectA.id);
+    expect(offered).not.toContain(projectA.id);
 
     // Modification : projet B retiré (membre retiré), Demandeur ajouté sur A ; même projet cité deux fois → refusé
     const twice = await json(await request.put(`/api/users/${id}`, { headers: H(), data: {

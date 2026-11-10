@@ -14,7 +14,7 @@
  * Requiert BpmnGo.
  */
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth, PDF_BUFFER, passReview } from './helpers.js';
+import { getToken, getApproverToken, auth, PDF_BUFFER, passReview, getProcurementAgentId } from './helpers.js';
 
 const POLL_TIMEOUT = 60_000;
 const future = (days) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
@@ -82,7 +82,7 @@ test.describe.serial('Réquisition répartie entre plusieurs fournisseurs (BpmnG
     test.skip(!req.process_instance_id, 'BpmnGo indisponible');
 
     const [n1] = await waitForTasks(request, 'Activity_ProjectManagerApproval');
-    expect((await complete(request, n1, { approved: true, comment: 'OK' }, approverToken)).status()).toBe(200);
+    expect((await complete(request, n1, { approved: true, procurementAgentId: await getProcurementAgentId(request), comment: 'OK' }, approverToken)).status()).toBe(200);
     await waitForTasks(request, 'Activity_DetermineType');
   });
 

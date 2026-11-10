@@ -56,6 +56,47 @@ export async function getApproverId(request) {
 }
 
 /**
+ * Agent achats des tests (profil Achats sur tous les projets) : le chef de projet le désigne en approuvant une
+ * réquisition (migration 58, obligatoire). Les étapes achats des tests restent faites par l'admin principal, qui
+ * garde la main. Créé au premier appel, puis réutilisé.
+ */
+export const PROCUREMENT_AGENT_CREDS = {
+  email: 'procurement.tests@procurement.com',
+  password: 'Procure123!',
+};
+export async function getProcurementAgentToken(request) {
+  const login = async () => (await (await request.post('/api/auth/login', { data: PROCUREMENT_AGENT_CREDS })).json()).data;
+  let data = await login();
+  if (!data?.token) {
+    const admin = await getToken(request);
+    const res = await request.post('/api/users', {
+      headers: auth(admin),
+      data: {
+        username: 'procurement_tests', email: PROCUREMENT_AGENT_CREDS.email, password: PROCUREMENT_AGENT_CREDS.password,
+        firstName: 'Agent', lastName: 'Achats Tests', profileIds: ['prof_procurement'], allProjectsProfileIds: ['prof_procurement'],
+      },
+    });
+    if (![200, 201, 409].includes(res.status())) throw new Error(`Création de l'agent achats : ${res.status()} ${await res.text()}`);
+    data = await login();
+    if (!data?.token) throw new Error('Connexion de l\'agent achats impossible');
+  }
+  return data.token;
+}
+let procurementAgentId = null;
+/** Identifiant de l'agent achats des tests (créé au besoin) */
+export async function getProcurementAgentId(request) {
+  if (!procurementAgentId) {
+    await getProcurementAgentToken(request);
+    procurementAgentId = (await (await request.post('/api/auth/login', { data: PROCUREMENT_AGENT_CREDS })).json()).data?.user?.id;
+  }
+  return procurementAgentId;
+}
+/** Variables d'approbation par le chef de projet : décision + agent achats désigné */
+export async function pmApproval(request, variables = {}) {
+  return { approved: true, procurementAgentId: await getProcurementAgentId(request), ...variables };
+}
+
+/**
  * Validation des réquisitions par le chef du projet (BPMN du 2026-11-06) : projet et chef de projet obligatoires,
  * chef de projet ≠ demandeur. Les tests créent leurs réquisitions avec l'admin principal : l'approbateur des tests
  * devient chef de projet de tout projet qui n'en a pas (ou dont le chef est l'admin principal). Une fois par processus.
@@ -180,7 +221,7 @@ export async function reviewPurchaseOrder(request, token, requisitionId, poId, {
 export async function requisitionToPurchaseOrder(request, { admin, approver, requisitionId, amount, review = true }) {
   const pm = await waitForProcessTask(request, admin, requisitionId, PM_APPROVAL);
   if (!pm) return null;
-  const ok = await request.post(`/api/tasks/${pm.task.id}/complete`, { headers: auth(approver), data: { variables: { approved: true, comment: 'OK' } } });
+  const ok = await request.post(`/api/tasks/${pm.task.id}/complete`, { headers: auth(approver), data: { variables: await pmApproval(request, { comment: 'OK' }) } });
   if (!ok.ok()) throw new Error(`Validation du chef de projet : ${ok.status()} ${await ok.text()}`);
   const method = await waitForProcessTask(request, admin, requisitionId, 'Activity_DetermineType');
   await request.post(`/api/tasks/${method.task.id}/complete`, { headers: auth(admin), data: { variables: { procurementMethod: 'SOLE_SOURCE', justification: 'Fournisseur unique (test)' } } });

@@ -5,7 +5,7 @@ const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const segregation = require('../utils/segregation');
-const { taskLabel, PERSONAL_TASKS, PM_APPROVAL_TASK, REQUISITION_APPROVAL_TASKS, PO_APPROVAL_TASKS } = require('../utils/workflowLabels');
+const { taskLabel, commentVariable, PERSONAL_TASKS, PM_APPROVAL_TASK, REQUISITION_APPROVAL_TASKS, PO_APPROVAL_TASKS } = require('../utils/workflowLabels');
 const revisionService = require('../services/RequisitionRevisionService');
 const approvalPolicy = require('../utils/approvalPolicy');
 const supplierBankService = require('../services/SupplierBankService');
@@ -17,7 +17,7 @@ async function requisitionsOfEnterprise(processIds) {
   if (!processIds.length) return new Map();
   const params = [processIds];
   const rows = await db.select(
-    `SELECT id, requisition_number, title, project_id, requester_id, process_instance_id FROM requisitions
+    `SELECT id, requisition_number, title, project_id, requester_id, process_instance_id, procurement_agent_id FROM requisitions
      WHERE process_instance_id = ANY($1)${tenant.filter('enterprise_id', params)}`,
     params
   );
@@ -29,7 +29,10 @@ async function findEnterpriseTask(taskId) {
   const task = ((await camundaService.getProcessTasks()) || []).find(t => t.id === taskId);
   if (!task) return null;
   const requisition = (await requisitionsOfEnterprise([task.processInstanceId].filter(Boolean))).get(task.processInstanceId);
-  return requisition ? { ...task, projectId: requisition.project_id || null, requesterId: requisition.requester_id || null } : null;
+  return requisition ? {
+    ...task, projectId: requisition.project_id || null, requesterId: requisition.requester_id || null,
+    procurementAgentId: requisition.procurement_agent_id || null,
+  } : null;
 }
 const supplierConfirmationService = require('../services/SupplierConfirmationService');
 const invoiceModel = require('../models/InvoiceModel');
@@ -37,6 +40,7 @@ const paymentModel = require('../models/PaymentModel');
 const directPurchaseService = require('../services/DirectPurchaseService');
 const allocationService = require('../services/SupplierAllocationService');
 const orderTasks = require('../services/OrderTaskService');
+const procurementAgents = require('../services/ProcurementAgentService');
 
 // Validation de la réquisition (REQUISITION_APPROVAL_TASKS) : chef de projet ; N1 / N2 / N3 = processus démarrés avant.
 // Approbation du bon de commande (PO_APPROVAL_TASKS) : N1 / N2 / N3 selon son montant ; Direction = processus d'avant.
@@ -66,12 +70,18 @@ async function getCurrentUserContext(userId) {
 /**
  * L'utilisateur a le groupe de la tâche sur le projet de sa réquisition. Étape du groupe « requester » (SAN…) d'une
  * réquisition d'un autre : seulement s'il voit les réquisitions du projet (migration 30 — un simple demandeur ne voit
- * que les siennes)
+ * que les siennes). Étape achats d'une réquisition dont l'agent achats est désigné (migration 58) : lui seul.
  */
-const inGroupOnProject = (task, currentUser, projectId, requesterId = null) =>
+const inGroupOnProject = (task, currentUser, projectId, requesterId = null, agentId = null) =>
   projectAccess.groupsOnProject(currentUser.scope, projectId).has(task.candidateGroup)
   && (task.candidateGroup !== 'requester' || !requesterId || String(requesterId) === String(currentUser.id)
-    || projectAccess.seesProjectRequisitions(currentUser.scope, projectId));
+    || projectAccess.seesProjectRequisitions(currentUser.scope, projectId))
+  && (!procurementAgents.isProcurementTask(task) || !agentId || String(agentId) === String(currentUser.id));
+
+/** Étape achats réservée à un autre agent achats (l'utilisateur a pourtant le profil Achats sur le projet) */
+const reservedForAgent = (task, currentUser, projectId, agentId) =>
+  !!agentId && procurementAgents.isProcurementTask(task) && String(agentId) !== String(currentUser.id)
+  && projectAccess.groupsOnProject(currentUser.scope, projectId).has(task.candidateGroup);
 
 // Tâches attribuées par le processus à une personne (assignee ${requester}) : elle les traite sans le profil
 // (PERSONAL_TASKS : ajustement budgétaire, correction de la réquisition)
@@ -85,9 +95,9 @@ function isMine(task, currentUser) {
  * Droits d'un utilisateur sur une tâche. conflict = code de séparation des tâches (utils/segregation, ex. SELF_APPROVAL :
  * approuver sa propre réquisition) → ni prise en charge ni complétion, raison renvoyée dans blockedReason.
  */
-function getTaskPermissions(task, currentUser, conflict = null, projectId = null, requesterId = null) {
+function getTaskPermissions(task, currentUser, conflict = null, projectId = null, requesterId = null, agentId = null) {
   const isCompleted = task.status === 'completed';
-  const onProject = inGroupOnProject(task, currentUser, projectId, requesterId);
+  const onProject = inGroupOnProject(task, currentUser, projectId, requesterId, agentId);
   // Validation du chef de projet : lui seul, jamais l'administrateur (qui peut seulement libérer la tâche)
   const pmTask = task.taskDefinitionKey === PM_APPROVAL_TASK;
   const inGroup = (currentUser.isAdmin && !pmTask) || onProject;
@@ -106,8 +116,10 @@ function getTaskPermissions(task, currentUser, conflict = null, projectId = null
   const groupHere = projectAccess.groupsOnProject(currentUser.scope, projectId).has(task.candidateGroup);
   // Profil détenu, mais pas sur le projet de cette réquisition (profils BPMN liés au projet)
   const notOnProject = !isCompleted && !currentUser.isAdmin && !onProject && !groupHere && currentUser.groups.includes(task.candidateGroup);
+  // Étape achats réservée à l'agent achats désigné à la validation (migration 58)
+  const notAgent = !isCompleted && !currentUser.isAdmin && reservedForAgent(task, currentUser, projectId, agentId);
   // Demandeur sur le projet, mais réquisition d'un autre (il ne voit que les siennes)
-  const notRequester = !isCompleted && !currentUser.isAdmin && !onProject && groupHere;
+  const notRequester = !isCompleted && !currentUser.isAdmin && !onProject && groupHere && !notAgent;
   const mine = isMine(task, currentUser);
   return {
     isMine: mine,
@@ -115,7 +127,7 @@ function getTaskPermissions(task, currentUser, conflict = null, projectId = null
     // Libérer : la personne qui l'a prise, ou un admin (ex. collègue absent)
     canUnclaim: !isCompleted && !!task.assignee && (mine || currentUser.isAdmin),
     canComplete: !isCompleted && mine && !conflict && (inGroup || PERSONAL_TASKS.includes(task.taskDefinitionKey)),
-    blockedReason: conflict || (notOnProject ? 'NOT_ON_PROJECT' : notRequester ? 'NOT_REQUESTER' : null),
+    blockedReason: conflict || (notOnProject ? 'NOT_ON_PROJECT' : notAgent ? 'NOT_PROCUREMENT_AGENT' : notRequester ? 'NOT_REQUESTER' : null),
   };
 }
 
@@ -143,11 +155,12 @@ async function getUserTasks(req, res) {
     );
     const projectOfTask = (t) => reqByProcess.get(t.processInstanceId)?.project_id || null;
     const requesterOfTask = (t) => reqByProcess.get(t.processInstanceId)?.requester_id || null;
+    const agentOfTask = (t) => reqByProcess.get(t.processInstanceId)?.procurement_agent_id || null;
 
     // Tâches actives visibles : celles de ses groupes SUR LE PROJET de la réquisition (ou toutes pour l'admin) ;
     // tâches terminées : uniquement celles qu'il a lui-même traitées
     const userTasks = [
-      ...(activeTasks || []).filter(t => currentUser.isAdmin || isMine(t, currentUser) || inGroupOnProject(t, currentUser, projectOfTask(t), requesterOfTask(t))),
+      ...(activeTasks || []).filter(t => currentUser.isAdmin || isMine(t, currentUser) || inGroupOnProject(t, currentUser, projectOfTask(t), requesterOfTask(t), agentOfTask(t))),
       ...(completedTasks || [])
     ].filter(t => reqByProcess.has(t.processInstanceId));
 
@@ -183,7 +196,7 @@ async function getUserTasks(req, res) {
           requisitionNumber: reqByProcess.get(task.processInstanceId)?.requisition_number || null,
           requisitionTitle: reqByProcess.get(task.processInstanceId)?.title || null,
           lot: task.lot || null,
-          ...getTaskPermissions(task, currentUser, conflictOf(conflicts, task), projectOfTask(task), requesterOfTask(task))
+          ...getTaskPermissions(task, currentUser, conflictOf(conflicts, task), projectOfTask(task), requesterOfTask(task), agentOfTask(task))
         };
       })
     );
@@ -217,7 +230,8 @@ async function getGroupTasks(req, res) {
     const reqByProcess = await requisitionsOfEnterprise([...new Set((all || []).map(t => t.processInstanceId).filter(Boolean))]);
     // Entreprise courante, et groupe de l'utilisateur sur le projet de chaque réquisition (admin : tout)
     const tasks = (all || []).filter(t => reqByProcess.has(t.processInstanceId)
-      && (currentUser.isAdmin || inGroupOnProject(t, currentUser, reqByProcess.get(t.processInstanceId).project_id, reqByProcess.get(t.processInstanceId).requester_id)));
+      && (currentUser.isAdmin || inGroupOnProject(t, currentUser, reqByProcess.get(t.processInstanceId).project_id, reqByProcess.get(t.processInstanceId).requester_id,
+        reqByProcess.get(t.processInstanceId).procurement_agent_id)));
     res.json({ success: true, data: tasks, count: tasks.length });
   } catch (error) {
     console.error('Error getting group tasks:', error);
@@ -273,7 +287,7 @@ async function claimTask(req, res) {
       });
       return res.status(error.status).json({ success: false, code: error.code, message: error.message });
     }
-    const permissions = getTaskPermissions(task, currentUser, null, task.projectId, task.requesterId);
+    const permissions = getTaskPermissions(task, currentUser, null, task.projectId, task.requesterId, task.procurementAgentId);
     if (permissions.blockedReason === 'NOT_ON_PROJECT') {
       const error = await projectAccess.deny(req, { projectId: task.projectId, candidateGroup: task.candidateGroup, taskId });
       return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
@@ -283,6 +297,9 @@ async function claimTask(req, res) {
     }
     if (permissions.blockedReason === 'NOT_PROJECT_MANAGER') {
       return res.status(403).json({ success: false, code: 'NOT_PROJECT_MANAGER', message: 'Cette réquisition est validée par le chef de son projet uniquement' });
+    }
+    if (permissions.blockedReason === 'NOT_PROCUREMENT_AGENT') {
+      return res.status(403).json({ success: false, code: 'NOT_PROCUREMENT_AGENT', message: "Cette réquisition est traitée par l'agent achats désigné à sa validation" });
     }
     if (!permissions.canClaim) {
       return res.status(403).json({
@@ -319,7 +336,7 @@ async function unclaimTask(req, res) {
     if (!task.assignee) {
       return res.status(409).json({ success: false, message: 'Cette tâche n\'est prise en charge par personne' });
     }
-    if (!getTaskPermissions(task, currentUser, null, task.projectId, task.requesterId).canUnclaim) {
+    if (!getTaskPermissions(task, currentUser, null, task.projectId, task.requesterId, task.procurementAgentId).canUnclaim) {
       return res.status(403).json({ success: false, message: `Seul(e) ${task.assignee} ou un administrateur peut libérer cette tâche` });
     }
 
@@ -388,7 +405,7 @@ async function completeTask(req, res) {
     const currentUser = await getCurrentUserContext(userId);
     // Groupe de la tâche SUR LE PROJET de la réquisition (profils BPMN liés au projet) ; tâche personnelle
     // (ajustement budgétaire du demandeur) : la personne désignée
-    const onProject = inGroupOnProject(task, currentUser, task.projectId, task.requesterId);
+    const onProject = inGroupOnProject(task, currentUser, task.projectId, task.requesterId, task.procurementAgentId);
     const personal = PERSONAL_TASKS.includes(taskDefinitionKey) && isMine(task, currentUser);
     // Validation de la réquisition : le chef du projet ACTUEL, lui seul (ni l'administrateur, ni un ancien chef de
     // projet qui aurait pris la tâche en charge)
@@ -398,6 +415,14 @@ async function completeTask(req, res) {
         details: { taskId, reason: 'NOT_PROJECT_MANAGER' },
       });
       return res.status(403).json({ success: false, code: 'NOT_PROJECT_MANAGER', message: 'Cette réquisition est validée par le chef de son projet uniquement' });
+    }
+    // Étape achats : l'agent achats désigné à la validation de la réquisition (migration 58), ou l'administrateur
+    if (!currentUser.isAdmin && reservedForAgent(task, currentUser, task.projectId, task.procurementAgentId)) {
+      await audit(req, AUDIT.TASK_COMPLETION_DENIED, {
+        entity: { type: 'task', id: taskDefinitionKey, label: taskLabel(taskDefinitionKey) || task.taskName || task.name },
+        details: { taskId, reason: 'NOT_PROCUREMENT_AGENT' },
+      });
+      return res.status(403).json({ success: false, code: 'NOT_PROCUREMENT_AGENT', message: "Cette réquisition est traitée par l'agent achats désigné à sa validation" });
     }
     // Demandeur sur le projet, mais étape « demandeur » de la réquisition d'un autre
     if (!currentUser.isAdmin && !onProject && !personal && projectAccess.groupsOnProject(currentUser.scope, task.projectId).has(task.candidateGroup)) {
@@ -441,32 +466,22 @@ async function completeTask(req, res) {
       : null;
     const requisitionId = linkedRequisition?.id || bodyRequisitionId;
 
-    // Méthode d'achat : choix obligatoire, au moins aussi exigeant que le montant l'impose
-    // (sauf source unique, avec justification) — la classification suivante reprend ce choix
+    // Méthode d'achat : choix obligatoire, toutes les méthodes ouvertes quel que soit le montant (les achats décident) ;
+    // source unique avec justification — la classification suivante reprend ce choix
     if (taskDefinitionKey === 'Activity_DetermineType') {
-      const requisition = requisitionId
-        ? await db.one('SELECT estimated_amount FROM requisitions WHERE id = $1', [requisitionId])
-        : null;
       const method = variables.procurementMethod;
-      const methodError = requisitionModel.checkChosenMethod(method, requisition?.estimated_amount);
-      if (methodError === 'PROCUREMENT_METHOD_REQUIRED') {
-        return res.status(400).json({ success: false, code: methodError, message: "Choisissez la méthode d'achat" });
-      }
-      if (methodError === 'METHOD_BELOW_THRESHOLD') {
-        return res.status(400).json({
-          success: false, code: methodError,
-          requiredMethod: requisitionModel.requiredProcurementMethod(requisition?.estimated_amount),
-          message: "Méthode d'achat insuffisante pour le montant de la réquisition"
-        });
+      if (requisitionModel.checkChosenMethod(method)) {
+        return res.status(400).json({ success: false, code: 'PROCUREMENT_METHOD_REQUIRED', message: "Choisissez la méthode d'achat" });
       }
       if (method === 'SOLE_SOURCE' && !String(variables.justification || '').trim()) {
         return res.status(400).json({ success: false, code: 'JUSTIFICATION_REQUIRED', message: 'Justification obligatoire pour une source unique' });
       }
       // Répartition entre plusieurs fournisseurs : même méthode (calculée sur le total), au moins deux articles ;
-      // appel d'offres : la répartition se décide à l'attribution (AO publié « par article », TenderController)
+      // appel d'offres et devis multiples (demande de cotations, migration 59) : la répartition se décide à
+      // l'attribution (publiée « par article », TenderController)
       if (variables.multiSupplier === true || variables.multiSupplier === 'true') {
-        if (method === 'RFP') {
-          return res.status(400).json({ success: false, code: 'SPLIT_NOT_AVAILABLE_FOR_RFP', message: 'Appel d\'offres : la répartition se fait à l\'attribution (appel d\'offres publié « par article »)' });
+        if (method === 'RFP' || method === 'MULTIPLE_QUOTATIONS') {
+          return res.status(400).json({ success: false, code: 'SPLIT_NOT_AVAILABLE_FOR_RFP', message: 'Appel d\'offres / demande de cotations : la répartition se fait à l\'attribution (publiée « par article »)' });
         }
         const count = await db.one('SELECT COUNT(*)::int AS n FROM requisition_items WHERE requisition_id = $1', [requisitionId]);
         if ((count?.n || 0) < 2) {
@@ -512,6 +527,12 @@ async function completeTask(req, res) {
       }
     }
 
+    // Validation du chef de projet approuvée : il désigne l'agent achats qui traitera la réquisition (profil Achats sur
+    // le projet, migration 58) — renvoi pour correction et rejet n'en demandent pas
+    const procurementAgent = taskDefinitionKey === PM_APPROVAL_TASK && !returnedForCorrection && variables.approved === true
+      ? await procurementAgents.checkCandidate(requisitionId, variables.procurementAgentId)
+      : null;
+
     // Réception et acceptation de service : uniquement par leurs formulaires (le document est créé et le BPMN reçoit
     // grnCompliant / serviceAccepted / deliveryComplete) — jamais d'étape terminée sans son document ; correction de
     // la réquisition : depuis le formulaire de modification (nouvelle version, resubmitted)
@@ -530,7 +551,10 @@ async function completeTask(req, res) {
 
     // Build Camunda variables
     const taskVariables = { ...variables };
-    if (comment) taskVariables.comment = comment;
+    // Commentaire sous un nom propre à l'étape (pmApprovalComment, poApprovalComment…) : distinct dans BpmnGo
+    const note = comment || variables.comment;
+    delete taskVariables.comment;
+    if (note) taskVariables[commentVariable(taskDefinitionKey)] = note;
     if (REQUISITION_APPROVAL_TASKS.includes(taskDefinitionKey)) {
       taskVariables.returnedForCorrection = returnedForCorrection;
       if (returnedForCorrection) taskVariables.approved = false;
@@ -547,6 +571,7 @@ async function completeTask(req, res) {
       taskVariables.supplierLots = [orderTasks.MAIN_LOT];
     }
     if (allocation) delete taskVariables.lots;
+    if (procurementAgent) Object.assign(taskVariables, { procurementAgentId: procurementAgent.id, procurementAgent: procurementAgent.email });
 
     if (directPurchase) {
       Object.assign(taskVariables, {
@@ -558,8 +583,13 @@ async function completeTask(req, res) {
       });
     }
 
+    // Agent achats enregistré AVANT de terminer la validation : la notification de l'étape suivante (méthode d'achat)
+    // lui est réservée ; remis comme avant si BpmnGo refuse
+    const previousAgent = procurementAgent ? await procurementAgents.assign(requisitionId, procurementAgent.id, userId) : null;
+    const restoreAgent = () => (procurementAgent ? procurementAgents.restore(requisitionId, previousAgent) : null);
+
     // 1. Complete the Camunda user task (achat direct / répartition : enregistrés dans la même transaction)
-    const result = directPurchase
+    const result = await (async () => directPurchase
       ? await directPurchaseService.recordAndComplete(
         { requisitionId, selection: directPurchase, userId, taskId },
         () => camundaService.completeTask(taskId, taskVariables)
@@ -569,8 +599,9 @@ async function completeTask(req, res) {
           { requisitionId, allocation, userId, taskId },
           (lotIds) => camundaService.completeTask(taskId, { ...taskVariables, supplierLots: lotIds })
         )
-        : await camundaService.completeTask(taskId, taskVariables);
+        : await camundaService.completeTask(taskId, taskVariables))().catch(async (error) => { await restoreAgent(); throw error; });
     if (!result.success) {
+      await restoreAgent();
       return res.status(500).json({
         success: false,
         message: result.error || 'Erreur lors de la complétion'
@@ -586,6 +617,20 @@ async function completeTask(req, res) {
           lots: allocation.lots.map((l, i) => ({ lot: i + 1, supplier: l.supplier.name, items: l.itemIds.length })),
         },
       });
+    }
+
+    if (procurementAgent) {
+      const reqRow = await db.one('SELECT requisition_number, process_instance_id FROM requisitions WHERE id = $1', [requisitionId]);
+      await db.insert('workflow_history', {
+        entity_type: 'requisition', entity_id: requisitionId, process_instance_id: reqRow?.process_instance_id || null,
+        action: 'PROCUREMENT_AGENT_ASSIGNED', comments: JSON.stringify({ to: procurementAgent.name }),
+        performed_by: userId, performed_at: new Date(),
+      }).catch(error => console.error('Historique agent achats :', error.message));
+      await audit(req, AUDIT.PROCUREMENT_AGENT_ASSIGNED, {
+        entity: { type: 'requisition', id: requisitionId, label: reqRow?.requisition_number },
+        details: { procurementAgent: `${procurementAgent.name} <${procurementAgent.email}>` },
+      });
+      await procurementAgents.notifyAgent(req, requisitionId, procurementAgent.id);
     }
 
     // 2. Sync DB state based on task type
@@ -782,7 +827,7 @@ async function getTasksByProcess(req, res) {
       getCurrentUserContext(req.user.id),
       camundaService.getProcessTasks(processInstanceId),
       camundaService.getCompletedTasks({ processInstanceId }),
-      db.one('SELECT project_id, requester_id FROM requisitions WHERE process_instance_id = $1', [processInstanceId])
+      db.one('SELECT project_id, requester_id, procurement_agent_id FROM requisitions WHERE process_instance_id = $1', [processInstanceId])
     ]);
     const projectId = requisition?.project_id || null;
 
@@ -802,7 +847,7 @@ async function getTasksByProcess(req, res) {
       completedAt: task.completedAt,
       status: task.status === 'completed' ? 'COMPLETED' : 'PENDING',
       lot: task.lot || null,
-      ...getTaskPermissions(task, currentUser, task.status === 'completed' ? null : conflictOf(conflicts, task), projectId, requisition?.requester_id)
+      ...getTaskPermissions(task, currentUser, task.status === 'completed' ? null : conflictOf(conflicts, task), projectId, requisition?.requester_id, requisition?.procurement_agent_id)
     }));
 
     res.json({ success: true, data: allTasks, count: allTasks.length, processInstanceId });

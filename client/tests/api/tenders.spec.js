@@ -97,6 +97,7 @@ test.describe.serial('API › Portail fournisseur & appels d\'offres', () => {
     const body = await res.json();
     expect(res.status()).toBe(201);
     expect(body.data.requisition_id).toBe(requisitionId);
+    expect(body.data.tender_type).toBe('RFP'); // appel d'offres par défaut
     tenderId = body.data.id;
 
     const dup = await request.post('/api/tenders', {
@@ -105,10 +106,36 @@ test.describe.serial('API › Portail fournisseur & appels d\'offres', () => {
     expect(dup.status()).toBe(409); // un seul AO actif par réquisition
   });
 
+  test('Demande de cotations (devis multiples, migration 59) : même module, type RFQ', async ({ request }) => {
+    // Sans étape BpmnGo ouverte, le type demandé est retenu ; avec l'étape « Devis multiples » ouverte, il est imposé
+    const list = await (await request.get('/api/requisitions?limit=100', { headers: auth(adminToken) })).json();
+    let other = null;
+    for (const r of list.data) {
+      if (r.id === requisitionId) continue;
+      const existing = await (await request.get(`/api/tenders/by-requisition/${r.id}`, { headers: auth(adminToken) })).json();
+      if (existing.data) continue;
+      const detail = await (await request.get(`/api/requisitions/${r.id}`, { headers: auth(adminToken) })).json();
+      if (detail.data.items?.length) { other = r.id; break; }
+    }
+    test.skip(!other, 'Aucune autre réquisition libre avec des items');
+    const res = await request.post('/api/tenders', { headers: auth(adminToken), data: {
+      requisitionId: other, title: 'Cotations de test', tenderNumber: `RFQ-TEST-${stamp}`, tenderType: 'RFQ',
+      startDate: new Date(Date.now() - 60_000).toISOString(), endDate: new Date(Date.now() + 3_600_000).toISOString(), maxDeliveryDays: 15,
+    } });
+    const body = await res.json();
+    expect(res.status(), JSON.stringify(body)).toBe(201);
+    expect(body.data.tender_type).toBe('RFQ');
+    expect((await (await request.get(`/api/tenders/${body.data.id}`, { headers: auth(adminToken) })).json()).data.tender_type).toBe('RFQ');
+    const forSupplier = (await (await request.get('/api/supplier-portal/tenders', { headers: auth(supplierToken) })).json()).data;
+    expect(forSupplier.find(tn => tn.id === body.data.id)?.tender_type).toBe('RFQ');
+    expect((await request.post(`/api/tenders/${body.data.id}/cancel`, { headers: auth(adminToken), data: { reason: 'Test' } })).status()).toBe(200);
+  });
+
   test('Fournisseur — voit l\'AO, soumet puis modifie son offre', async ({ request }) => {
     test.skip(!tenderId);
     const list = await (await request.get('/api/supplier-portal/tenders', { headers: auth(supplierToken) })).json();
     expect(list.data.some(t => t.id === tenderId)).toBe(true);
+    expect(list.data.find(t => t.id === tenderId)?.tender_type).toBe('RFP');
 
     const tooSlow = await request.put(`/api/supplier-portal/tenders/${tenderId}/submission`, {
       headers: auth(supplierToken),

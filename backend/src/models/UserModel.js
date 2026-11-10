@@ -74,7 +74,7 @@ class UserModel {
     let sql = `
       SELECT u.id, u.username, u.email, u.first_name, u.last_name, 
              u.department, u.position, u.is_active, u.language,
-             u.enterprise_id, u.avatar_updated_at,
+             u.enterprise_id, u.avatar_updated_at, u.signature_updated_at,
              u.last_login, u.created_at,
              array_agg(DISTINCT p.id) as profile_ids,
              array_agg(DISTINCT p.name) as profile_names,

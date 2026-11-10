@@ -10,6 +10,7 @@ import { enterpriseLogoUrl } from '../../contexts/EnterpriseContext';
 import { t } from '../../i18n';
 import TenderQuestionsForm from './TenderQuestionsForm';
 import { questionErrorMessage } from '../../utils/tenderQuestions';
+import TenderTypeBadge from '../Tenders/TenderTypeBadge';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50';
 
@@ -112,6 +113,7 @@ export default function SupplierTenderDetail() {
           <button onClick={() => navigate('/supplier/tenders')} className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft size={20} /></button>
           <div>
             <span className="font-mono text-sm text-blue-700">{tender.tender_number}</span>
+            <TenderTypeBadge type={tender.tender_type} className="ml-2" />
             <h1 className="text-2xl font-bold text-gray-900">{tender.title}</h1>
             {tender.enterprise_name && (
           <div className="flex items-center gap-2 mt-1 text-sm text-gray-700" data-testid="buyer">

@@ -6,6 +6,7 @@ import { supplierPortalService } from '../../services/supplierPortalService';
 import { TENDER_STATUS, fmtDateTime, fmtMoney, timeLeft } from '../../utils/tenderStatus';
 import { enterpriseLogoUrl } from '../../contexts/EnterpriseContext';
 import { t } from '../../i18n';
+import TenderTypeBadge from '../Tenders/TenderTypeBadge';
 
 const SUPPLIER_LABEL = { ...TENDER_STATUS, AWARDED: { get label() { return t('portal.awarded'); }, cls: 'bg-gray-100 text-gray-700' } };
 
@@ -39,6 +40,7 @@ export default function SupplierTenderList() {
         className="text-left bg-white rounded-xl border border-gray-200 p-5 hover:border-blue-400 hover:shadow-sm transition">
         <div className="flex justify-between items-start gap-2">
           <span className="font-mono text-sm text-blue-700">{tn.tender_number}</span>
+          <TenderTypeBadge type={tn.tender_type} className="ml-2" />
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.cls}`}>
             {tn.is_awarded_to_me && <Award size={12} className="inline mr-1" />}{st.label}
           </span>

@@ -21,6 +21,8 @@ export default function TenderForm() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const taskId = params.get('taskId') || '';
+  // Demande de cotations (devis multiples) : même formulaire, type fixé par le serveur d'après l'étape ouverte
+  const rfq = params.get('type') === 'RFQ';
   const [requisitionId, setRequisitionId] = useState(params.get('requisitionId') || '');
   const [requisition, setRequisition] = useState(null);
   const [choices, setChoices] = useState([]);
@@ -92,6 +94,7 @@ export default function TenderForm() {
         ...form,
         requisitionId,
         taskId: taskId || undefined,
+        tenderType: rfq ? 'RFQ' : 'RFP',
         startDate: new Date(form.startDate).toISOString(),
         endDate: new Date(form.endDate).toISOString(),
         maxDeliveryDays: parseInt(form.maxDeliveryDays),
@@ -117,15 +120,15 @@ export default function TenderForm() {
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft size={20} /></button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Gavel size={22} /> {t('tenders.new')}</h1>
-          <p className="text-gray-500 text-sm">{t('tenders.newHint')}</p>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Gavel size={22} /> {t(rfq ? 'tenders.newRfq' : 'tenders.new')}</h1>
+          <p className="text-gray-500 text-sm">{t(rfq ? 'tenders.newRfqHint' : 'tenders.newHint')}</p>
         </div>
       </div>
 
       {taskId && (
         <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800 flex gap-2">
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
-          {t('tenders.rfpTaskHint')}
+          {t(rfq ? 'tenders.rfqTaskHint' : 'tenders.rfpTaskHint')}
         </div>
       )}
 

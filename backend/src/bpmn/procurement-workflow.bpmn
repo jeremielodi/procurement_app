@@ -187,6 +187,9 @@
           <zeebe:input source="=null" target="poApprovalLevel" />
           <zeebe:input source="=null" target="poApproved" />
           <zeebe:input source="=null" target="poApprovalComment" />
+          <zeebe:input source="=null" target="supplierConfirmationComment" />
+          <zeebe:input source="=null" target="invoiceComment" />
+          <zeebe:input source="=null" target="paymentComment" />
           <zeebe:input source="=null" target="supplierConfirmed" />
           <zeebe:input source="=null" target="confirmedDeliveryDate" />
           <zeebe:input source="=null" target="supplierReference" />

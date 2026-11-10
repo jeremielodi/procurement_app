@@ -11,7 +11,7 @@ const camundaService = require('./CamundaService');
 const i18n = require('../i18n');
 const {
   TASK_CANDIDATE_GROUPS, taskKey, taskLabel: rawTaskLabel, groupLabel, methodLabel, reasonLabel, matchLabel,
-  REQUISITION_APPROVAL_TASKS, PO_APPROVAL_TASKS, PO_LEVEL_TASKS,
+  REQUISITION_APPROVAL_TASKS, PO_APPROVAL_TASKS, PO_LEVEL_TASKS, commentOf,
 } = require('../utils/workflowLabels');
 
 const approvalPolicy = require('../utils/approvalPolicy');
@@ -81,7 +81,7 @@ function describeVars(vars = {}, links, T, lang) {
   if (vars.paymentNumber) details.push(T('timeline.payment', { value: vars.paymentNumber }));
   if (vars.paymentAmount) details.push(T('timeline.paymentAmount', { value: fmtNum(vars.paymentAmount, lang) }));
   if (vars.tenderNumber) details.push(T('timeline.tender', { value: vars.tenderNumber }));
-  const comment = vars.comment || vars.comments || vars.rejectionReason || vars.poReviewComment;
+  const comment = commentOf(vars);
   if (comment) details.push(T('timeline.comment', { value: comment }));
   return { details, decision };
 }
@@ -361,10 +361,22 @@ class RequisitionTimelineService {
           details: info.comment ? [T('timeline.reason', { reason: info.comment })] : [],
           links: info.poId ? [{ label: info.poNumber, to: `/purchase-orders/${info.poId}` }] : [],
         });
+      } else if (action === 'PROCUREMENT_AGENT_ASSIGNED' || action === 'PROCUREMENT_AGENT_CHANGED') {
+        // Agent achats désigné à la validation, puis remplacé (migration 58)
+        const info = json || {};
+        events.push({
+          date: row.performed_at, kind: 'info',
+          title: T(`timeline.procurementAgent.${action}`, { name: info.to || '' }), actor: who(row) || T('timeline.system'),
+          details: action === 'PROCUREMENT_AGENT_CHANGED' && info.from ? [T('timeline.procurementAgent.previous', { name: info.from })] : [],
+          links: [],
+        });
       } else if (action === 'TENDER_PUBLISHED' || action === 'TENDER_AWARDED') {
+        // Demande de cotations (devis multiples, migration 59) : même module que l'appel d'offres
+        const rfq = row.task_name === 'Activity_RequestQuotations';
         events.push({
           date: row.performed_at, kind: action === 'TENDER_AWARDED' ? 'success' : 'info',
-          title: action === 'TENDER_AWARDED' ? T('timeline.awarded') : T('timeline.tenderPublished'), actor: who(row) || T('timeline.system'),
+          title: action === 'TENDER_AWARDED' ? T(rfq ? 'timeline.rfqAwarded' : 'timeline.awarded') : T(rfq ? 'timeline.rfqPublished' : 'timeline.tenderPublished'),
+          actor: who(row) || T('timeline.system'),
           details: row.comments ? [row.comments] : [], links: tender ? [{ label: tender.tender_number, to: `/tenders/${tender.id}` }] : [],
         });
       } else {

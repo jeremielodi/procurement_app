@@ -47,6 +47,9 @@ const { authenticate, hasPermission, hasAnyPermission } = require('../middleware
 const { tenantContext, tenantGuard } = require('../middleware/tenant');
 // Profils BPMN liés au projet : la permission doit venir d'un profil de l'utilisateur SUR LE PROJET du document
 const { requireProjectPermission: onProject, from, requisitionVisible } = require('../utils/projectAccess');
+// Agent achats désigné à la validation de la réquisition (migration 58) : lui seul (ou l'administrateur)
+const procurementAgentService = require('../services/ProcurementAgentService');
+const procurementAgent = procurementAgentService.requireProcurementAgent;
 const { logoMiddleware } = require('../utils/logoUpload');
 const avatar = require('../utils/userAvatar');
 const signature = require('../utils/userSignature');
@@ -67,12 +70,19 @@ function avatarRoute(pickUserId, change) {
   };
 }
 
-/** Signature image de l'utilisateur connecté (lui seul) : enregistrement / retrait + trace USER_UPDATED (champ signature) */
-function signatureRoute(change) {
+/**
+ * Signature image : l'utilisateur connecté (/auth/signature) ou, pour aider un utilisateur qui ne sait pas la déposer,
+ * l'administrateur depuis sa fiche (/users/:id/signature, MANAGE_USERS, même entreprise — 2026-11-10). Trace
+ * USER_UPDATED (champ signature, byAdmin) ; l'utilisateur est prévenu quand un autre change sa signature.
+ */
+function signatureRoute(pickUserId, change) {
   return async (req, res) => {
     try {
-      const data = change === 'REMOVED' ? await signature.removeSignature(req.user.id) : await signature.setSignature(req.user.id, req.file);
-      await auditAvatar(req, AVATAR_AUDIT.USER_UPDATED, { target: { id: req.user.id }, details: { signature: change } });
+      const userId = pickUserId(req);
+      const byAdmin = String(userId) !== String(req.user.id);
+      const data = change === 'REMOVED' ? await signature.removeSignature(userId) : await signature.setSignature(userId, req.file);
+      await auditAvatar(req, AVATAR_AUDIT.USER_UPDATED, { target: { id: userId }, details: { signature: change, ...(byAdmin ? { byAdmin: true } : {}) } });
+      if (byAdmin) await signature.notifyChangedByAdmin(req, userId, change);
       res.json({ success: true, data });
     } catch (error) {
       if (!error.status) console.error('Signature :', error);
@@ -107,8 +117,8 @@ router.put('/auth/avatar', authenticate, avatar.avatarMiddleware, avatarRoute((r
 router.delete('/auth/avatar', authenticate, avatarRoute((req) => req.user.id, 'REMOVED'));
 // Signature image (migration 41) : personnelle — seul l'utilisateur la dépose, la consulte ou la retire ; reprise dans les PDF
 router.get('/auth/signature', authenticate, (req, res) => signature.sendSignature(res, req.user.id));
-router.put('/auth/signature', authenticate, signature.signatureMiddleware, signatureRoute('CHANGED'));
-router.delete('/auth/signature', authenticate, signatureRoute('REMOVED'));
+router.put('/auth/signature', authenticate, signature.signatureMiddleware, signatureRoute((req) => req.user.id, 'CHANGED'));
+router.delete('/auth/signature', authenticate, signatureRoute((req) => req.user.id, 'REMOVED'));
 
 // Inscription fournisseur + logo (publics)
 router.post('/auth/register-supplier',
@@ -268,6 +278,12 @@ router.get('/requisitions/:id/supplier-lots', hasPermission('VIEW_REQUISITIONS')
     res.status(500).json({ success: false, message: 'Erreur lors de la lecture de la répartition' });
   }
 });
+// Agent achats de la réquisition : candidats (profil Achats sur le projet) et remplacement par le chef de projet ou
+// l'administrateur
+router.get('/requisitions/:id/procurement-agent', hasPermission('VIEW_REQUISITIONS'),
+  revisionRoute((req) => procurementAgentService.state(req.params.id, req.user.id)));
+router.put('/requisitions/:id/procurement-agent', hasPermission('VIEW_REQUISITIONS'),
+  revisionRoute((req) => procurementAgentService.change(req, req.params.id, req.body?.agentId)));
 router.put('/requisitions/:id',
   hasPermission('CREATE_REQUISITIONS'),
   onProject('CREATE_REQUISITIONS', 'project', from.body('projectId')),
@@ -442,6 +458,7 @@ router.post('/purchase-orders',
   authenticate,
   hasPermission('CREATE_PURCHASE_ORDERS'),
   onProject('CREATE_PURCHASE_ORDERS', 'requisition', from.body('requisitionId')),
+  procurementAgent('requisition', from.body('requisitionId')),
   purchaseOrderController.create
 );
 
@@ -477,6 +494,7 @@ router.post('/purchase-orders/:id/send',
   authenticate,
   hasPermission('CREATE_PURCHASE_ORDERS'),
   onProject('CREATE_PURCHASE_ORDERS', 'purchaseOrder', from.param('id')),
+  procurementAgent('purchaseOrder', from.param('id')),
   purchaseOrderController.send
 );
 
@@ -493,6 +511,7 @@ router.post('/purchase-orders/:id/supplier-response',
   authenticate,
   hasPermission('CREATE_PURCHASE_ORDERS'),
   onProject('CREATE_PURCHASE_ORDERS', 'purchaseOrder', from.param('id')),
+  procurementAgent('purchaseOrder', from.param('id')),
   supplierOrderController.recordResponse
 );
 
@@ -649,6 +668,10 @@ router.delete('/users/:id',authenticate, hasPermission('MANAGE_USERS'), userCont
 router.get('/users/:id/avatar', (req, res) => avatar.sendAvatar(res, req.params.id));
 router.put('/users/:id/avatar', hasPermission('MANAGE_USERS'), avatar.avatarMiddleware, avatarRoute((req) => req.params.id, 'CHANGED'));
 router.delete('/users/:id/avatar', hasPermission('MANAGE_USERS'), avatarRoute((req) => req.params.id, 'REMOVED'));
+// Signature d'un utilisateur : l'administrateur l'aide à la déposer (dessin ou image) depuis sa fiche ; jamais publique
+router.get('/users/:id/signature', hasPermission('MANAGE_USERS'), (req, res) => signature.sendSignature(res, req.params.id));
+router.put('/users/:id/signature', hasPermission('MANAGE_USERS'), signature.signatureMiddleware, signatureRoute((req) => req.params.id, 'CHANGED'));
+router.delete('/users/:id/signature', hasPermission('MANAGE_USERS'), signatureRoute((req) => req.params.id, 'REMOVED'));
 
 
 // Profils (rôles) partagés par toutes les entreprises : lecture admin, modification super admin
@@ -952,11 +975,11 @@ router.get('/tender-question-templates', hasPermission('MANAGE_TENDERS'), tender
 router.post('/tender-question-templates', hasPermission('MANAGE_TENDERS'), tenderQuestionController.createTemplate.bind(tenderQuestionController));
 router.put('/tender-question-templates/:id', hasPermission('MANAGE_TENDERS'), tenderQuestionController.updateTemplate.bind(tenderQuestionController));
 router.delete('/tender-question-templates/:id', hasPermission('MANAGE_TENDERS'), tenderQuestionController.deleteTemplate.bind(tenderQuestionController));
-router.post('/tenders', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'requisition', from.body('requisitionId')), tenderController.create.bind(tenderController));
-router.put('/tenders/:id', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), tenderController.update.bind(tenderController));
-router.post('/tenders/:id/close', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), tenderController.close.bind(tenderController));
-router.post('/tenders/:id/cancel', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), tenderController.cancel.bind(tenderController));
-router.post('/tenders/:id/award', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), tenderController.award.bind(tenderController));
+router.post('/tenders', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'requisition', from.body('requisitionId')), procurementAgent('requisition', from.body('requisitionId')), tenderController.create.bind(tenderController));
+router.put('/tenders/:id', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), procurementAgent('tender', from.param('id')), tenderController.update.bind(tenderController));
+router.post('/tenders/:id/close', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), procurementAgent('tender', from.param('id')), tenderController.close.bind(tenderController));
+router.post('/tenders/:id/cancel', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), procurementAgent('tender', from.param('id')), tenderController.cancel.bind(tenderController));
+router.post('/tenders/:id/award', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), procurementAgent('tender', from.param('id')), tenderController.award.bind(tenderController));
 
 // ============================================
 // PORTAIL FOURNISSEUR

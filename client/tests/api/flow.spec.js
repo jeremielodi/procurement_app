@@ -14,7 +14,7 @@
  *   npx playwright test tests/api/flow.spec.js --project=api --reporter=line
  */
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth, passReview } from './helpers.js';
+import { getToken, getApproverToken, auth, passReview, getProcurementAgentId } from './helpers.js';
 
 // ── Shared state ──────────────────────────────────────────────────────────────
 let token      = null;
@@ -215,7 +215,7 @@ test.describe.serial('🔄 BPMN Procurement Flow — end to end', () => {
     const res  = await request.post(`/api/tasks/${approvalTask.id}/complete`, {
       headers: auth(approverToken),
       data: {
-        variables: { approved: true },
+        variables: { approved: true, procurementAgentId: await getProcurementAgentId(request) },
         taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     requisition.id,
         estimatedAmount:   FLOW_AMOUNT,

@@ -63,20 +63,16 @@ const TASK_FORMS = {
 // Achat direct : pro-forma du fournisseur (PDF / JPG / PNG, 10 Mo comme les autres pièces jointes)
 const PROFORMA_ACCEPT = '.pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png';
 const PROFORMA_MAX = 10 * 1024 * 1024;
+// Validation du chef de projet : il désigne l'agent achats qui traitera la réquisition (profil Achats sur le projet)
+const PM_APPROVAL_TASK = 'Activity_ProjectManagerApproval';
+const AGENT_ERRORS = ['PROCUREMENT_AGENT_REQUIRED', 'PROCUREMENT_AGENT_INVALID', 'NOT_PROCUREMENT_AGENT'];
 const DIRECT_PURCHASE_ERRORS = ['SUPPLIER_REQUIRED', 'SUPPLIER_NOT_FOUND', 'SUPPLIER_INACTIVE', 'PROFORMA_REQUIRED', 'PROFORMA_NOT_FOUND', 'PROFORMA_TYPE', 'PROFORMA_AMOUNT_INVALID', 'PROFORMA_DATE_INVALID'];
 
-// Méthode d'achat minimale selon le montant (même règle que RequisitionModel.requiredProcurementMethod) ;
-// la source unique (justifiée) reste toujours possible
-const METHOD_RIGOR = { DIRECT_PURCHASE: 1, MULTIPLE_QUOTATIONS: 2, RFP: 3 };
 // Processus démarré avec le BPMN « Corriger la réquisition » (variable posée au démarrage)
 const revisionSupported = (task) => task?.variables?.revisionSupported === true || task?.variables?.revisionSupported === 'true';
 
-const methodBelowThreshold = (method, amount) => {
-  if (!METHOD_RIGOR[method]) return false;
-  const value = parseFloat(amount) || 0;
-  const required = value <= 5000 ? 1 : value <= 25000 ? 2 : 3;
-  return METHOD_RIGOR[method] < required;
-};
+// Appel d'offres et devis multiples (demande de cotations) : la répartition entre fournisseurs se fait à l'attribution
+const SPLIT_AT_AWARD = ['RFP', 'MULTIPLE_QUOTATIONS'];
 
 export default function RequisitionTasks() {
   const { id } = useParams();
@@ -89,6 +85,7 @@ export default function RequisitionTasks() {
   const userEmail = user?.email;
   const { formatAmount, currency } = useCurrency();
   const [suppliers, setSuppliers] = useState([]); // achat direct : fournisseurs actifs, préqualifiés en tête
+  const [agentCandidates, setAgentCandidates] = useState(null); // validation du chef de projet : agents achats du projet
 
   const [tasks, setTasks] = useState([]);
   const [requisition, setRequisition] = useState(null);
@@ -114,7 +111,8 @@ export default function RequisitionTasks() {
     proformaFile: null,
     proformaNumber: '',
     proformaDate: '',
-    proformaAmount: ''
+    proformaAmount: '',
+    procurementAgentId: ''
   });
 
   useEffect(() => {
@@ -198,6 +196,8 @@ export default function RequisitionTasks() {
     if (key === 'Activity_CreatePO') return { url: `/purchase-orders/${id}/${task.id}${task.lot ? `?supplierLotId=${task.lot.id}` : ''}` };
     if (key === 'Activity_AllocateSuppliers') return { url: q(`/requisitions/${id}/allocation`) };
     if (key === 'Activity_RFPProcess') return { url: `/tenders/new?taskId=${encodeURIComponent(task.id)}&requisitionId=${id}` };
+    // Devis multiples : demande de cotations, avec le module des appels d'offres (terminée à l'attribution)
+    if (key === 'Activity_RequestQuotations') return { url: `/tenders/new?taskId=${encodeURIComponent(task.id)}&requisitionId=${id}&type=RFQ` };
     if (key === 'Activity_BudgetAdjustment') return { url: `/requisitions/${id}` };
     // Correction demandée par l'approbateur (ou retrait) : formulaire de modification, puis nouvelle soumission
     if (key === 'Activity_ReviseRequisition') return { url: `/requisitions/${id}/edit` };
@@ -262,8 +262,15 @@ export default function RequisitionTasks() {
       justification: '',
       multiSupplier: false,
       newBudgetAmount: '',
-      adjustmentJustification: ''
+      adjustmentJustification: '',
+      procurementAgentId: ''
     });
+    setAgentCandidates(null);
+    if (task.taskDefinitionKey === PM_APPROVAL_TASK) {
+      requisitionService.getProcurementAgent(id)
+        .then(r => setAgentCandidates(r.data?.candidates || []))
+        .catch(() => setAgentCandidates([]));
+    }
     if (TASK_FORMS[task.taskDefinitionKey] === 'directPurchase') {
       supplierService.getForPurchaseOrder(id)
         .then(r => setSuppliers(r.data || r || []))
@@ -285,6 +292,7 @@ export default function RequisitionTasks() {
     if (taskForm(selectedTask) === 'approval') {
       if (!formData.approved) { toast.error(t('revision.decisionRequired')); return; }
       if (formData.approved === 'return' && !formData.comment.trim()) { toast.error(t('revision.returnReasonRequired')); return; }
+      if (needsAgent(selectedTask) && !formData.procurementAgentId) { toast.error(t('procurementAgent.required')); return; }
     }
     // Achat direct : fournisseur retenu + pro-forma obligatoires (contrôlés aussi par le serveur)
     if (taskForm(selectedTask) === 'directPurchase') {
@@ -313,9 +321,10 @@ export default function RequisitionTasks() {
         variables.returnedForCorrection = true;
       } else if (formData.approved !== '') variables.approved = formData.approved === 'true';
       if (formData.comment) variables.comment = formData.comment;
+      if (needsAgent(selectedTask)) variables.procurementAgentId = formData.procurementAgentId;
       if (formData.procurementMethod) variables.procurementMethod = formData.procurementMethod;
       if (formData.justification) variables.justification = formData.justification;
-      if (isMethodTask(selectedTask)) variables.multiSupplier = !!formData.multiSupplier && formData.procurementMethod !== 'RFP';
+      if (isMethodTask(selectedTask)) variables.multiSupplier = !!formData.multiSupplier && !SPLIT_AT_AWARD.includes(formData.procurementMethod);
       if (formData.newBudgetAmount) variables.newBudgetAmount = parseFloat(formData.newBudgetAmount);
       if (formData.adjustmentJustification) variables.adjustmentJustification = formData.adjustmentJustification;
 
@@ -329,7 +338,8 @@ export default function RequisitionTasks() {
       if (proformaId) uploadService.deleteFile(proformaId).catch(() => {});
       const code = error.response?.data?.code;
       if (code && DIRECT_PURCHASE_ERRORS.includes(code)) { toast.error(t(`reqTasks.direct.err.${code}`)); return; }
-      toast.error(code && ['METHOD_BELOW_THRESHOLD', 'PROCUREMENT_METHOD_REQUIRED', 'JUSTIFICATION_REQUIRED', 'SPLIT_NOT_AVAILABLE_FOR_RFP', 'SPLIT_NEEDS_TWO_ITEMS'].includes(code)
+      if (code && AGENT_ERRORS.includes(code)) { toast.error(t(`procurementAgent.err.${code}`)); return; }
+      toast.error(code && ['PROCUREMENT_METHOD_REQUIRED', 'JUSTIFICATION_REQUIRED', 'SPLIT_NOT_AVAILABLE_FOR_RFP', 'SPLIT_NEEDS_TWO_ITEMS'].includes(code)
         ? t(`reqTasks.err.${code}`)
         : code && ['RETURN_REASON_REQUIRED', 'DECISION_REQUIRED', 'RETURN_NOT_SUPPORTED'].includes(code)
           ? t(`revision.err.${code}`)
@@ -381,6 +391,8 @@ export default function RequisitionTasks() {
     return 'comment';
   };
   const isMethodTask = (task) => taskForm(task) === 'method';
+  // Approbation par le chef de projet : agent achats obligatoire (pas pour un rejet ni un renvoi)
+  const needsAgent = (task) => task?.taskDefinitionKey === PM_APPROVAL_TASK && formData.approved === 'true';
   const displayName = (task) => TASK_LABELS[task.taskDefinitionKey] || getTaskName(task);
 
   const formatCurrency = (amount) => formatAmount(amount || 0);
@@ -540,6 +552,13 @@ export default function RequisitionTasks() {
                             <span className="inline-flex items-center gap-1 text-amber-700 ml-3" data-testid="task-not-project-manager">
                               <AlertCircle size={14} />
                               {t('taskList.notProjectManager')}
+                            </span>
+                          )}
+                          {/* Étape achats : réservée à l'agent achats désigné à la validation */}
+                          {task.blockedReason === 'NOT_PROCUREMENT_AGENT' && (
+                            <span className="inline-flex items-center gap-1 text-amber-700 ml-3" data-testid="task-not-procurement-agent">
+                              <AlertCircle size={14} />
+                              {t('taskList.notProcurementAgent')}
                             </span>
                           )}
                           {isUnassigned && !canClaim && !task.blockedReason && task.candidateGroup && (
@@ -742,6 +761,35 @@ export default function RequisitionTasks() {
                       <p className="mt-2 text-xs text-amber-700">{t('revision.returnDecisionHint')}</p>
                     )}
                   </div>
+                  {needsAgent(selectedTask) && (
+                    <div data-testid="approval-procurement-agent">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t('procurementAgent.chooseLabel')} <span className="text-red-500">*</span>
+                      </label>
+                      {agentCandidates === null ? (
+                        <p className="text-sm text-gray-500">{t('common.loading')}</p>
+                      ) : agentCandidates.length === 0 ? (
+                        <p className="text-sm text-amber-800 bg-amber-50 rounded-lg p-2" data-testid="procurement-agent-none">{t('procurementAgent.noCandidate')}</p>
+                      ) : (
+                        <>
+                          <SearchSelect
+                            value={formData.procurementAgentId}
+                            onChange={(e) => handleInputChange('procurementAgentId', e.target.value)}
+                            className="w-full"
+                            data-testid="procurement-agent-select"
+                          >
+                            <option value="">{t('procurementAgent.choosePlaceholder')}</option>
+                            {agentCandidates.map(c => (
+                              <option key={c.id} value={c.id} data-search={c.email}>
+                                {`${c.first_name || ''} ${c.last_name || ''}`.trim() || c.email}{c.position ? ` — ${c.position}` : ''}
+                              </option>
+                            ))}
+                          </SearchSelect>
+                          <p className="mt-1 text-xs text-gray-500">{t('procurementAgent.chooseHint')}</p>
+                        </>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {formData.approved === 'return' ? t('revision.returnReasonLabel') : t('common.comment')}
@@ -765,6 +813,7 @@ export default function RequisitionTasks() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t('reqTasks.method')}
                     </label>
+                    <p className="text-xs text-gray-500 mb-2">{t('reqTasks.methodHint')}</p>
                     <div className="space-y-2">
                       {[
                         { value: 'DIRECT_PURCHASE', label: t('procurementMethod.DIRECT_PURCHASE'), desc: t('reqTasks.directDesc') },
@@ -772,14 +821,14 @@ export default function RequisitionTasks() {
                         { value: 'RFP', label: t('reqTasks.rfpLabel'), desc: t('reqTasks.rfpDesc') },
                         { value: 'SOLE_SOURCE', label: t('procurementMethod.SOLE_SOURCE'), desc: t('reqTasks.soleDesc') }
                       ].map(option => {
-                        const notAllowed = methodBelowThreshold(option.value, requisition?.estimated_amount ?? selectedTask.variables?.estimatedAmount);
+                        // Toutes les méthodes sont ouvertes quel que soit le montant : les achats décident
                         return (
-                          <label key={option.value} className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${notAllowed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}>
+                          <label key={option.value} className="flex items-start gap-3 p-3 border rounded-lg transition-colors cursor-pointer hover:bg-gray-50">
                             <input
                               type="radio"
                               name="procurementMethod"
                               value={option.value}
-                              disabled={notAllowed}
+                              data-testid={`method-${option.value}`}
                               checked={formData.procurementMethod === option.value}
                               onChange={(e) => handleInputChange('procurementMethod', e.target.value)}
                               className="w-4 h-4 text-blue-600 mt-0.5"
@@ -787,7 +836,6 @@ export default function RequisitionTasks() {
                             <div>
                               <span className="font-medium">{option.label}</span>
                               <p className="text-xs text-gray-500">{option.desc}</p>
-                              {notAllowed && <p className="text-xs text-orange-600">{t('reqTasks.methodBelowThreshold')}</p>}
                             </div>
                           </label>
                         );
@@ -795,19 +843,19 @@ export default function RequisitionTasks() {
                     </div>
                   </div>
                   {/* Répartition entre plusieurs fournisseurs : même méthode (calculée sur le total), une commande par fournisseur */}
-                  <label className={`flex items-start gap-3 p-3 border rounded-lg ${formData.procurementMethod === 'RFP' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}>
+                  <label className={`flex items-start gap-3 p-3 border rounded-lg ${SPLIT_AT_AWARD.includes(formData.procurementMethod) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}>
                     <input
                       type="checkbox"
                       data-testid="method-multi-supplier"
-                      disabled={formData.procurementMethod === 'RFP'}
-                      checked={!!formData.multiSupplier && formData.procurementMethod !== 'RFP'}
+                      disabled={SPLIT_AT_AWARD.includes(formData.procurementMethod)}
+                      checked={!!formData.multiSupplier && !SPLIT_AT_AWARD.includes(formData.procurementMethod)}
                       onChange={(e) => handleInputChange('multiSupplier', e.target.checked)}
                       className="w-4 h-4 text-blue-600 mt-0.5"
                     />
                     <div>
                       <span className="font-medium">{t('split.methodOption')}</span>
                       <p className="text-xs text-gray-500">
-                        {formData.procurementMethod === 'RFP' ? t('split.notForRfp') : t('split.methodOptionHelp')}
+                        {SPLIT_AT_AWARD.includes(formData.procurementMethod) ? t('split.notForRfp') : t('split.methodOptionHelp')}
                       </p>
                     </div>
                   </label>

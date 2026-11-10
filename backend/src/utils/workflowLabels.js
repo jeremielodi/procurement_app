@@ -115,7 +115,35 @@ const MATCH_LABELS = Object.fromEntries(['MATCHED', 'MISMATCH', 'PARTIAL', 'PEND
 // par lui sans dépendre de son profil
 const PERSONAL_TASKS = ['Activity_BudgetAdjustment', 'Activity_ReviseRequisition'];
 
+// Commentaire d'une étape : variable BpmnGo propre à l'étape (2026-11-10), pour distinguer dans BpmnGo le commentaire
+// d'une validation, d'un rejet, d'une attribution… (avant : « comment », écrasé à chaque étape). Variables du cycle de
+// commande (confirmation, facture, paiement, approbation / révision du bon) : déclarées locales à la part dans le
+// zeebe:ioMapping de SubProcess_SupplierOrder (BPMN EN + FR)
+const COMMENT_VARIABLES = {
+  [PM_APPROVAL_TASK]: 'pmApprovalComment',
+  ...Object.fromEntries(LEGACY_REQUISITION_APPROVAL_TASKS.map(k => [k, 'requisitionApprovalComment'])),
+  Activity_BudgetAdjustment: 'budgetAdjustmentComment',
+  Activity_ReviseRequisition: 'revisionComment',
+  Activity_DetermineType: 'methodComment',
+  Activity_DirectPurchase: 'directPurchaseComment',
+  Activity_SoleSource: 'soleSourceComment',
+  Activity_RequestQuotations: 'awardComment',
+  Activity_RFPProcess: 'awardComment',
+  Activity_AllocateSuppliers: 'allocationComment',
+  [PO_REVIEW_TASK]: 'poReviewComment',
+  ...Object.fromEntries(PO_APPROVAL_TASKS.map(k => [k, 'poApprovalComment'])),
+  Activity_SupplierConfirmation: 'supplierConfirmationComment',
+  Activity_EnterInvoice: 'invoiceComment',
+  Activity_ProcessPayment: 'paymentComment',
+};
+/** Nom de la variable BpmnGo du commentaire de cette étape (étape inconnue : « comment ») */
+const commentVariable = (key) => COMMENT_VARIABLES[key] || 'comment';
+const COMMENT_NAMES = [...new Set(Object.values(COMMENT_VARIABLES)), 'resubmitComment', 'comment', 'comments', 'rejectionReason'];
+/** Commentaire d'une étape terminée (variables BpmnGo) : nom propre à l'étape, sinon anciens noms */
+const commentOf = (vars = {}) => COMMENT_NAMES.map(n => vars[n]).find(v => v != null && String(v).trim() !== '') || null;
+
 module.exports = {
+  COMMENT_VARIABLES, commentVariable, commentOf,
   PERSONAL_TASKS, PM_APPROVAL_TASK, LEGACY_REQUISITION_APPROVAL_TASKS, REQUISITION_APPROVAL_TASKS, PO_REVIEW_TASK, PO_LEVEL_TASKS, PO_APPROVAL_TASKS,
   TASK_LABELS, TASK_NAME_EN, TASK_GROUPS, TASK_CANDIDATE_GROUPS, METHOD_LABELS, MATCH_LABELS,
   taskKey, taskLabel, groupLabel, methodLabel, reasonLabel, matchLabel,

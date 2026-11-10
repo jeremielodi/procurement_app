@@ -36,11 +36,8 @@ const PROGRESS_STATUS_SQL = `
     ELSE 'IN_PROGRESS'
   END`;
 
-// Méthodes d'achat (Gateway_MethodDecision) et seuils de montant
+// Méthodes d'achat (Gateway_MethodDecision) — toutes ouvertes quel que soit le montant (migration 59)
 const PROCUREMENT_METHODS = ['DIRECT_PURCHASE', 'MULTIPLE_QUOTATIONS', 'RFP', 'SOLE_SOURCE'];
-const METHOD_RIGOR = { DIRECT_PURCHASE: 1, MULTIPLE_QUOTATIONS: 2, RFP: 3 };
-const DIRECT_PURCHASE_THRESHOLD = 5000;
-const QUOTATION_THRESHOLD = 25000;
 
 class RequisitionModel {
 
@@ -595,25 +592,12 @@ class RequisitionModel {
   }
 
   /**
-   * Méthode minimale imposée par le montant : ≤ 5 000 achat direct, ≤ 25 000 devis multiples, au-delà appel d'offres
+   * Méthode choisie par les achats (Activity_DetermineType) : toutes les méthodes sont ouvertes quel que soit le
+   * montant, les achats décident (2026-11-10, migration 59 — avant : refus METHOD_BELOW_THRESHOLD) ; la source unique
+   * demande une justification (contrôlée par TaskController). Renvoie null si le choix est valide, sinon un code.
    */
-  requiredProcurementMethod(estimatedAmount) {
-    const amount = parseFloat(estimatedAmount) || 0;
-    if (amount <= DIRECT_PURCHASE_THRESHOLD) return 'DIRECT_PURCHASE';
-    if (amount <= QUOTATION_THRESHOLD) return 'MULTIPLE_QUOTATIONS';
-    return 'RFP';
-  }
-
-  /**
-   * Méthode choisie par les achats (Activity_DetermineType) : refusée si elle est moins exigeante que celle
-   * imposée par le montant ; la source unique (justification obligatoire) reste toujours possible.
-   * Renvoie null si le choix est valide, sinon un code d'erreur.
-   */
-  checkChosenMethod(method, estimatedAmount) {
-    if (!PROCUREMENT_METHODS.includes(method)) return 'PROCUREMENT_METHOD_REQUIRED';
-    if (method === 'SOLE_SOURCE') return null;
-    const required = this.requiredProcurementMethod(estimatedAmount);
-    return METHOD_RIGOR[method] < METHOD_RIGOR[required] ? 'METHOD_BELOW_THRESHOLD' : null;
+  checkChosenMethod(method) {
+    return PROCUREMENT_METHODS.includes(method) ? null : 'PROCUREMENT_METHOD_REQUIRED';
   }
 
   /**

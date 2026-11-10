@@ -12,7 +12,7 @@
  * Requiert BpmnGo.
  */
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth, supplierRegistration, firstReferenceIds, passReview } from './helpers.js';
+import { getToken, getApproverToken, auth, supplierRegistration, firstReferenceIds, passReview, getProcurementAgentId } from './helpers.js';
 
 const POLL_TIMEOUT = 60_000;
 const APPROVALS = ['Activity_ProjectManagerApproval']; // validation de la réquisition par le chef de projet
@@ -74,7 +74,7 @@ test.describe.serial('Appel d\'offres attribué par article (BpmnGo)', () => {
     }, { timeout: 15_000 }).toBeTruthy();
 
     const [approval] = await waitForTasks(request, APPROVALS);
-    expect((await complete(request, approval, { approved: true, returnedForCorrection: false }, approverToken)).status()).toBe(200);
+    expect((await complete(request, approval, { approved: true, procurementAgentId: await getProcurementAgentId(request), returnedForCorrection: false }, approverToken)).status()).toBe(200);
 
     const [method] = await waitForTasks(request, 'Activity_DetermineType');
     // Répartition d'un AO : elle se décide à l'attribution, pas au choix de la méthode

@@ -16,7 +16,7 @@ const { requisitionDelivery } = require('../utils/requisitionDelivery');
 const { resolveUnitId } = require('../utils/units');
 const projectManagers = require('../utils/projectManager');
 const stockPlanning = require('./StockPlanningService');
-const { REQUISITION_APPROVAL_TASKS } = require('../utils/workflowLabels');
+const { REQUISITION_APPROVAL_TASKS, commentVariable } = require('../utils/workflowLabels');
 
 // Validation de la réquisition : chef de projet (anciens processus : N1 / N2 / N3)
 const APPROVAL_TASKS = REQUISITION_APPROVAL_TASKS;
@@ -230,7 +230,7 @@ class RequisitionRevisionService {
     if (!(await supportsRevision(req.process_instance_id))) throw notSupported();
     if (task.assignee) throw fail(409, 'APPROVAL_IN_PROGRESS', `Approbation déjà prise en charge par ${task.assignee} : demandez-lui de la renvoyer pour correction`, { assignee: task.assignee });
     const result = await camundaService.completeTask(task.id, {
-      approved: false, returnedForCorrection: true, withdrawnByRequester: true, comment: text(reason, 1000),
+      approved: false, returnedForCorrection: true, withdrawnByRequester: true, [commentVariable(task.taskDefinitionKey)]: text(reason, 1000),
     });
     if (!result.success) throw fail(502, 'BPMNGO_ERROR', result.error || 'BpmnGo n\'a pas accepté le retrait');
     await this.markReturned(req.id, { kind: 'WITHDRAWN', reason, userId, taskKey: task.taskDefinitionKey, io });
@@ -408,7 +408,7 @@ class RequisitionRevisionService {
     let task = null;
     try { task = (await openTasks(req.process_instance_id)).find(t => t.taskDefinitionKey === REVISE_TASK); } catch { /* BpmnGo injoignable */ }
     if (task) {
-      const result = await camundaService.completeTask(task.id, { resubmitted: false, comment: text(reason, 1000) });
+      const result = await camundaService.completeTask(task.id, { resubmitted: false, [commentVariable(REVISE_TASK)]: text(reason, 1000) });
       if (!result.success) throw fail(502, 'BPMNGO_ERROR', result.error || 'BpmnGo n\'a pas accepté l\'abandon');
     }
     await db.withTransaction(async (tx) => {

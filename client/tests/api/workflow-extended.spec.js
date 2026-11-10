@@ -24,7 +24,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth, passReview } from './helpers.js';
+import { getToken, getApproverToken, auth, passReview, getProcurementAgentId } from './helpers.js';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -360,7 +360,7 @@ test.describe.serial('Scénario 1 — Validation par le chef de projet (50 000 X
     const res  = await request.post(`/api/tasks/${approvalTask.id}/complete`, {
       headers: auth(approverToken),
       data: {
-        variables:         { approved: true },
+        variables:         { approved: true, procurementAgentId: await getProcurementAgentId(request) },
         taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     req.id,
         estimatedAmount:   AMOUNT,
@@ -454,7 +454,7 @@ test.describe.serial('Scénario 2 — Validation par le chef de projet (150 000 
     const res  = await request.post(`/api/tasks/${approvalTask.id}/complete`, {
       headers: auth(approverToken),
       data: {
-        variables:         { approved: true },
+        variables:         { approved: true, procurementAgentId: await getProcurementAgentId(request) },
         taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     req.id,
         estimatedAmount:   AMOUNT,
@@ -609,7 +609,7 @@ test.describe.serial('Scénario 4 — Rejet PO (PO_PENDING → PO_REJECTED)', ()
     const completeRes = await request.post(`/api/tasks/${task.id}/complete`, {
       headers: auth(approverToken),
       data: {
-        variables:         { approved: true },
+        variables:         { approved: true, procurementAgentId: await getProcurementAgentId(request) },
         taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     req.id,
         estimatedAmount:   AMOUNT,
@@ -804,7 +804,7 @@ test.describe.serial('Scénario 6 — GRN partielle (5 sur 10 articles reçus)',
     const completeRes = await request.post(`/api/tasks/${task.id}/complete`, {
       headers: auth(approverToken),
       data: {
-        variables:         { approved: true },
+        variables:         { approved: true, procurementAgentId: await getProcurementAgentId(request) },
         taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     req.id,
         estimatedAmount:   AMOUNT,
@@ -952,7 +952,7 @@ test.describe.serial('Scénario 7 — Invoice mismatch 3-way (montant +5% > PO �
         const completeRes = await request.post(`/api/tasks/${taskN2.id}/complete`, {
           headers: auth(approverToken),
           data: {
-            variables:         { approved: true },
+            variables:         { approved: true, procurementAgentId: await getProcurementAgentId(request) },
             taskDefinitionKey: 'Activity_ProjectManagerApproval',
             requisitionId:     req.id,
             estimatedAmount:   PO_AMOUNT,
@@ -970,7 +970,7 @@ test.describe.serial('Scénario 7 — Invoice mismatch 3-way (montant +5% > PO �
     const completeRes = await request.post(`/api/tasks/${task.id}/complete`, {
       headers: auth(approverToken),
       data: {
-        variables:         { approved: true },
+        variables:         { approved: true, procurementAgentId: await getProcurementAgentId(request) },
         taskDefinitionKey: 'Activity_ProjectManagerApproval',
         requisitionId:     req.id,
         estimatedAmount:   PO_AMOUNT,

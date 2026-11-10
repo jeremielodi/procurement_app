@@ -249,7 +249,14 @@
     },
     "poApprovalLevel": "{po}: level {level} ({role})",
     "reviewedBy": "Reviewed by {name}",
-    "onBehalfOf": "Acting for {name} (project manager)"
+    "onBehalfOf": "Acting for {name} (project manager)",
+    "procurementAgent": {
+      "PROCUREMENT_AGENT_ASSIGNED": "Procurement agent assigned: {name}",
+      "PROCUREMENT_AGENT_CHANGED": "Procurement agent replaced: {name}",
+      "previous": "Previous agent: {name}"
+    },
+    "rfqPublished": "Request for quotations published",
+    "rfqAwarded": "Request for quotations awarded"
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -366,6 +373,13 @@
       "credentials": "Your sign-in details:",
       "email": "Email:",
       "features": "From the portal you can confirm the purchase orders you receive, respond to calls for tenders and keep your profile and documents up to date."
+    },
+    "procurementAgent": {
+      "subject": "[procureApp] Requisition {number} to process — procurement agent",
+      "title": "You have been assigned as procurement agent",
+      "assignedBody": "<strong>{name}</strong> assigned you as procurement agent for requisition <strong>{number}</strong> when approving it. The procurement steps (procurement method, sourcing, purchase order, supplier confirmation) are reserved for you.",
+      "changedBody": "<strong>{name}</strong> assigned you as the new procurement agent for requisition <strong>{number}</strong>. The procurement steps (procurement method, sourcing, purchase order, supplier confirmation) are now reserved for you.",
+      "open": "Open the requisition"
     }
   },
   "notification": {
@@ -453,6 +467,18 @@
       "closedMessage": "The rest of your request {number} will not be fulfilled: {reason}",
       "cancelledTitle": "Request withdrawn",
       "cancelledMessage": "{name} withdrew request {number}."
+    },
+    "procurementAgent": {
+      "assignedTitle": "Requisition {number} to process",
+      "assignedMessage": "{name} has assigned you as procurement agent for requisition {number} \"{title}\": its procurement steps are reserved for you.",
+      "changedTitle": "Requisition {number} to process",
+      "changedMessage": "{name} has assigned you as the new procurement agent for requisition {number} \"{title}\": its procurement steps are reserved for you."
+    },
+    "signature": {
+      "changedTitle": "Your signature has been saved",
+      "changedMessage": "{name} (administrator) saved your signature. Check it in \"My profile\".",
+      "removedTitle": "Your signature has been removed",
+      "removedMessage": "{name} (administrator) removed your signature. You can add one in \"My profile\"."
     }
   },
   "pdf": {
@@ -1008,7 +1034,9 @@
     "STOCK_REQUEST_REJECTED": "Store request rejected",
     "STOCK_REQUEST_CLOSED": "Store request closed",
     "STOCK_UNITS_IMPORTED": "Existing assets imported (Excel / CSV)",
-    "STOCK_UNITS_RETAGGED": "Asset tags recalculated (codification)"
+    "STOCK_UNITS_RETAGGED": "Asset tags recalculated (codification)",
+    "PROCUREMENT_AGENT_ASSIGNED": "Procurement agent assigned",
+    "PROCUREMENT_AGENT_CHANGED": "Procurement agent replaced"
   },
   "auditExport": {
     "sheet": "Audit log",

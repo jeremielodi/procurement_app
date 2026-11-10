@@ -185,6 +185,15 @@ async function getTaskRecipients(candidateGroup, requisitionId, taskDefinitionKe
     );
   }
   const group = String(candidateGroup).replace(/^prof_/, '');
+  // Étape achats : l'agent achats désigné à la validation (migration 58) ; compte désactivé → tout le groupe du projet
+  if (group === 'procurement') {
+    const agent = await db.select(
+      `SELECT u.id, u.email, u.first_name, u.language FROM requisitions r JOIN users u ON u.id = r.procurement_agent_id
+       WHERE r.id = $1 AND u.is_active = true`,
+      [requisitionId]
+    );
+    if (agent.length) return agent;
+  }
   return db.select(
     `SELECT u.id, u.email, u.first_name, u.language
      FROM users u

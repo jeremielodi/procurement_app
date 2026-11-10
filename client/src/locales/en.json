@@ -443,7 +443,7 @@
         },
         {
           "title": "Budget and approvals",
-          "desc": "Budget checked automatically; if it falls short, adjust and re-check without re-entering anything. Requisitions approved by the project manager (budget holder), with return for correction and version history; purchase orders approved at three levels based on their amount, with thresholds specific to each project."
+          "desc": "Budget checked automatically; if it falls short, adjust and re-check without re-entering anything. Requisitions approved by the project manager (budget holder), who assigns the procurement agent in charge, with return for correction and version history; purchase orders approved at three levels based on their amount, with thresholds specific to each project."
         },
         {
           "title": "Tenders",
@@ -800,9 +800,9 @@
     "approvePo": "✅ Approve the purchase order",
     "rejectPo": "❌ Reject the purchase order",
     "method": "Procurement method *",
-    "methodDirect": "Direct purchase (< 5,000)",
-    "methodQuotes": "Multiple quotations (5,000 – 25,000)",
-    "methodRfp": "Tender (> 25,000)",
+    "methodDirect": "Direct purchase",
+    "methodQuotes": "Multiple quotations (request for quotations)",
+    "methodRfp": "Call for tenders",
     "methodSole": "Sole source (justified)",
     "loginRequired": "Please sign in to see your tasks",
     "loading": "Loading tasks...",
@@ -843,7 +843,8 @@
     "claimedByMe": "Claimed by you",
     "toClaim": "To be claimed",
     "notOnProject": "You have this profile, but not on this requisition's project: ask your administrator to assign it to you",
-    "notProjectManager": "Approval reserved for the project manager of this requisition"
+    "notProjectManager": "Approval reserved for the project manager of this requisition",
+    "notProcurementAgent": "Reserved for the procurement agent assigned to this requisition"
   },
   "notifications": {
     "unknownDate": "Unknown date",
@@ -1490,10 +1491,10 @@
     "by": "By: {{user}}",
     "none": "No tasks found for this process",
     "method": "Procurement method *",
-    "directDesc": "For purchases < 5,000 USD",
-    "quotesDesc": "Between 5,000 and 25,000 USD",
+    "directDesc": "One chosen supplier, with their pro forma invoice",
+    "quotesDesc": "Request for quotations published to suppliers (like a call for tenders), awarded after comparison",
     "rfpLabel": "Call for tenders (RFP)",
-    "rfpDesc": "For purchases > 25,000 USD",
+    "rfpDesc": "Call for tenders published on the supplier portal, awarded after closing",
     "soleDesc": "Single supplier — justification required",
     "justifyPlaceholder": "Justify your choice...",
     "newAmount": "New proposed amount *",
@@ -1506,14 +1507,12 @@
       "poActive": "No approved purchase order for this requisition: receipts, service acceptances and invoices are linked to a purchase order.",
       "invoice": "No invoice to pay for this requisition: enter the invoice first (\"Enter invoice\" task)."
     },
-    "methodBelowThreshold": "Not allowed for this amount",
     "methodRequired": "Select the procurement method",
     "soleJustificationRequired": "Justification required for a sole source",
     "err": {
-      "METHOD_BELOW_THRESHOLD": "Procurement method not sufficient for the requisition amount",
       "PROCUREMENT_METHOD_REQUIRED": "Select the procurement method",
       "JUSTIFICATION_REQUIRED": "Justification required for a sole source",
-      "SPLIT_NOT_AVAILABLE_FOR_RFP": "Call for tenders: the split happens at the award (tender published \"per item\").",
+      "SPLIT_NOT_AVAILABLE_FOR_RFP": "Call for tenders / request for quotations: publish it with the \"per item\" award — the split happens at the award.",
       "SPLIT_NEEDS_TWO_ITEMS": "A split requires at least two items in the requisition."
     },
     "direct": {
@@ -1539,7 +1538,8 @@
         "PROFORMA_AMOUNT_INVALID": "Invalid pro forma amount",
         "PROFORMA_DATE_INVALID": "Invalid pro forma date"
       }
-    }
+    },
+    "methodHint": "All methods are available whatever the amount: choose the most suitable one."
   },
   "po": {
     "approved": "Order approved successfully",
@@ -2341,7 +2341,14 @@
         "QUESTION_NOT_FILE": "This question does not expect a document.",
         "TENDER_NOT_OPEN": "Submissions are not open."
       }
-    }
+    },
+    "type": {
+      "RFP": "Call for tenders",
+      "RFQ": "Request for quotations"
+    },
+    "newRfq": "New request for quotations",
+    "newRfqHint": "Works like a call for tenders: targeted or all suppliers, offers sealed until closing, comparison then award.",
+    "rfqTaskHint": "\"Multiple quotations\" task: it will be completed at the award, after quotations close."
   },
   "portal": {
     "result": {
@@ -2750,7 +2757,9 @@
     "total_other": "{{count}} users",
     "positionLabel": "Position (job title)",
     "positionPlaceholder": "E.g. Supply Chain Officer",
-    "positionHint": "Printed as the person's title on requisitions and purchase orders (requester, approvers, “Requested by”)."
+    "positionHint": "Printed as the person's title on requisitions and purchase orders (requester, approvers, “Requested by”).",
+    "signatureTitle": "User's signature",
+    "signatureHint": "Help the user add their signature (drawing or scanned image). It only appears on documents they issue or approve themselves; they are notified of the change and can see it in \"My profile\"."
   },
   "profiles": {
     "deleted": "Profile deleted",
@@ -4509,6 +4518,10 @@
             ]
           },
           {
+            "type": "tip",
+            "text": "Only users with the Requester profile (on the project) and the administrator create requisitions: the \"New requisition\" button does not appear for other profiles (managers, procurement, finance…). A manager who needs to make a request is also given the Requester profile."
+          },
+          {
             "type": "h",
             "text": "Who sees which requisitions?"
           },
@@ -4643,6 +4656,22 @@
           },
           {
             "type": "h",
+            "text": "Assigned procurement agent"
+          },
+          {
+            "type": "p",
+            "text": "When approving the requisition, the project manager chooses the procurement agent who will process it, among the users with the Procurement profile on the project (required to approve; not needed to reject or return for correction). All the procurement steps of the requisition are then reserved for that agent: procurement method, direct purchase, quotations, sole source, supplier split, call for tenders, purchase order and supplier confirmation. Only that agent receives them by email and in \"My tasks\"; the other procurement agents of the project see \"Reserved for the procurement agent assigned to this requisition\"."
+          },
+          {
+            "type": "list",
+            "items": [
+              "No procurement agent on the project: assign the Procurement profile to a member (project page) before approving.",
+              "Absence or workload: on the requisition page, \"Procurement agent\" card → \"Change\" (project manager, their acting manager or administrator), while the requisition is ongoing. Steps taken by the previous agent are released for the new one, who is notified.",
+              "The administrator keeps access to every step. Each assignment and replacement appears in the workflow tracking and the audit log."
+            ]
+          },
+          {
+            "type": "h",
             "text": "Who approves the purchase order?"
           },
           {
@@ -4735,30 +4764,30 @@
         "blocks": [
           {
             "type": "p",
-            "text": "After the project manager's approval, the Procurement team selects the procurement method (\"Determine procurement method\" task): the next step is the one for the chosen method (direct purchase, multiple quotations, call for tenders or sole source justification), then the purchase order is created. A method less demanding than the one required by the amount is not offered."
+            "text": "After the project manager's approval, the procurement agent selects the procurement method (\"Determine procurement method\" task): the next step is the one for the chosen method (direct purchase, multiple quotations, call for tenders or sole source justification), then the purchase order is created. All methods are available whatever the amount: the procurement agent decides."
           },
           {
             "type": "table",
             "rows": [
               [
-                "Amount",
-                "Method"
+                "Method",
+                "How it works"
               ],
               [
-                "up to 5,000",
-                "Direct purchase from a supplier"
+                "Direct purchase",
+                "Chosen supplier and their pro forma invoice"
               ],
               [
-                "5,001 to 25,000",
-                "Multiple quotations (comparison of several offers)"
+                "Multiple quotations",
+                "Request for quotations published to suppliers with the tenders module, awarded after comparison"
               ],
               [
-                "above 25,000",
-                "Call for tenders (RFP) on the supplier portal"
+                "Call for tenders",
+                "Call for tenders (RFP) on the supplier portal, awarded after closing"
               ],
               [
-                "any amount",
-                "Sole source, with a mandatory justification"
+                "Sole source",
+                "Justification required"
               ]
             ]
           },
@@ -4769,6 +4798,10 @@
           {
             "type": "p",
             "text": "For a call for tenders, the \"Call for tenders\" task opens the creation of the call linked to the requisition directly. It ends when the call is awarded: the selected bid is passed on to the offer analysis, then to the creation of the purchase order."
+          },
+          {
+            "type": "p",
+            "text": "Multiple quotations: the \"Multiple quotations\" task opens the creation of a request for quotations linked to the requisition — same screen and same rules as a call for tenders (targeted or all suppliers, questions, offers sealed until closing, Excel comparison, single or per-item award). It ends at the award: the selected offer goes to the offer analysis, then to the purchase order creation. To split between several suppliers, publish it with the \"per item\" award."
           },
           {
             "type": "h",
@@ -6231,6 +6264,10 @@
           {
             "type": "p",
             "text": "In \"My profile\", \"My signature\" section: \"Draw\" (mouse, stylus or finger) or \"Import an image\" (PNG, JPG or WEBP, ideally on a white or transparent background). Your signature is added automatically to the PDFs of documents you issued or approved yourself: a purchase order you approved, a goods receipt note you recorded, an invoice you entered, stock issue and return slips (storekeeper, and recipient after confirming receipt). It is personal: nobody else, not even the administrator, can upload or change it. \"Remove\" takes it off future PDFs."
+          },
+          {
+            "type": "tip",
+            "text": "Signature: if a user does not know how to add it, the administrator can add (or remove) it from their page (Administration → Users → edit → \"User's signature\"). The user is notified and finds it in \"My profile\"; the change is recorded in the audit log."
           }
         ]
       },
@@ -6494,7 +6531,9 @@
       "STOCK_REQUEST_REJECTED": "Store request rejected",
       "STOCK_REQUEST_CLOSED": "Store request closed",
       "STOCK_UNITS_IMPORTED": "Existing assets imported (Excel / CSV)",
-      "STOCK_UNITS_RETAGGED": "Asset tags recalculated (codification)"
+      "STOCK_UNITS_RETAGGED": "Asset tags recalculated (codification)",
+      "PROCUREMENT_AGENT_ASSIGNED": "Procurement agent assigned",
+      "PROCUREMENT_AGENT_CHANGED": "Procurement agent replaced"
     },
     "groups": {
       "all": "All events",
@@ -6899,7 +6938,7 @@
   "split": {
     "methodOption": "Split between several suppliers",
     "methodOptionHelp": "Each item goes to a single supplier; one purchase order, one invoice and one payment per supplier. The method stays the one required by the total amount.",
-    "notForRfp": "Call for tenders: publish it with the \"per item\" award — the split happens at the award.",
+    "notForRfp": "Call for tenders / request for quotations: publish it with the \"per item\" award — the split happens at the award.",
     "lotLabel": "Lot {{number}} — {{supplier}}",
     "lotColumn": "Supplier",
     "title": "Allocate items to suppliers",
@@ -7234,6 +7273,28 @@
         "label": "Sequence number",
         "text": "3 digits, restarts at 001 for each project, category and year"
       }
+    }
+  },
+  "procurementAgent": {
+    "chooseLabel": "Procurement agent who will process the requisition",
+    "choosePlaceholder": "Choose a procurement agent…",
+    "chooseHint": "The procurement steps (procurement method, sourcing, purchase order, supplier confirmation) will be reserved for them.",
+    "noCandidate": "Nobody has the Procurement profile on this project: assign it to a member (project page) before approving.",
+    "required": "Choose the procurement agent who will process the requisition",
+    "panelTitle": "Procurement agent",
+    "assignedBy": "Assigned by {{name}} on {{date}}",
+    "notEligible": "This agent no longer has the Procurement profile on the project (or their account is deactivated): replace them.",
+    "change": "Change",
+    "changeTitle": "Change the procurement agent",
+    "changeHint": "Ongoing procurement steps taken by the current agent will be released for the new agent.",
+    "save": "Save",
+    "changed": "Procurement agent changed",
+    "err": {
+      "PROCUREMENT_AGENT_REQUIRED": "Choose the procurement agent who will process the requisition",
+      "PROCUREMENT_AGENT_INVALID": "This user does not have the Procurement profile on the requisition project (or their account is deactivated)",
+      "PROCUREMENT_AGENT_LOCKED": "The procurement agent can only be changed on an approved, ongoing requisition",
+      "NOT_ALLOWED": "Only the project manager and the administrator can change the procurement agent",
+      "NOT_PROCUREMENT_AGENT": "This requisition is processed by the procurement agent assigned when it was approved"
     }
   }
 }

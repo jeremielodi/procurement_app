@@ -156,6 +156,9 @@ class RequisitionService {
   getVersions = async (id) => (await api.get(`/requisitions/${id}/versions`)).data
   // Répartition entre plusieurs fournisseurs : parts (fournisseur, articles, bon de commande), [] sinon
   getSupplierLots = async (id) => (await api.get(`/requisitions/${id}/supplier-lots`)).data
+  // Agent achats désigné à la validation : { agent, eligible, assignedAt, assignedBy, canChange, candidates }
+  getProcurementAgent = async (id) => (await api.get(`/requisitions/${id}/procurement-agent`)).data
+  changeProcurementAgent = async (id, agentId) => (await api.put(`/requisitions/${id}/procurement-agent`, { agentId }, { skipErrorToast: true })).data
   withdraw = async (id, reason) => (await api.post(`/requisitions/${id}/withdraw`, { reason }, { skipErrorToast: true })).data
   resubmit = async (id, comment) => (await api.post(`/requisitions/${id}/resubmit`, { comment }, { skipErrorToast: true })).data
   abandon = async (id, reason) => (await api.post(`/requisitions/${id}/abandon`, { reason }, { skipErrorToast: true })).data

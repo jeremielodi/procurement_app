@@ -87,4 +87,25 @@ async function signatureDataUris(userIds) {
   return Object.fromEntries(ids.map((id, i) => [id, uris[i]]));
 }
 
-module.exports = { signatureMiddleware, setSignature, removeSignature, sendSignature, signatureDataUri, signatureDataUris };
+/**
+ * Signature déposée / retirée par l'administrateur (aide à un utilisateur) : l'utilisateur est prévenu dans sa langue
+ * (in-app + temps réel), pour qu'il la vérifie dans « Mon profil ». N'interrompt jamais la requête.
+ */
+async function notifyChangedByAdmin(req, userId, change) {
+  try {
+    const i18n = require('../i18n');
+    const notificationModel = require('../models/NotificationModel');
+    const user = await db.one('SELECT language FROM users WHERE id = $1', [userId]);
+    const by = await db.one(`SELECT TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) AS name FROM users WHERE id = $1`, [req.user.id]);
+    const T = i18n.translator(user?.language);
+    const key = change === 'REMOVED' ? 'removed' : 'changed';
+    const title = T(`notification.signature.${key}Title`);
+    const message = T(`notification.signature.${key}Message`, { name: by?.name || '' });
+    await notificationModel.create({ userId, title, message, type: 'INFO', link: '/profile' });
+    req.io?.to(`user-${userId}`).emit('notification', { title, message, type: 'INFO', link: '/profile', timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('Notification signature :', error.message);
+  }
+}
+
+module.exports = { signatureMiddleware, setSignature, removeSignature, sendSignature, signatureDataUri, signatureDataUris, notifyChangedByAdmin };

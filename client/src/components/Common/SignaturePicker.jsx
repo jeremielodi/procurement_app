@@ -1,5 +1,6 @@
 // src/components/Common/SignaturePicker.jsx
-// Signature image de l'utilisateur connecté (GET / PUT / DELETE /auth/signature) : dessinée à la souris / au doigt
+// Signature image de l'utilisateur connecté (GET / PUT / DELETE /auth/signature), ou d'un utilisateur aidé par
+// l'administrateur depuis sa fiche (userId → /users/:id/signature) : dessinée à la souris / au doigt
 // ou importée (PNG / JPG / WEBP). L'image est rognée autour du tracé, réduite (600 px de large au plus) et envoyée en
 // PNG (fond transparent conservé). Reprise dans les PDF des documents que l'utilisateur établit ou valide.
 import React, { useEffect, useRef, useState } from 'react'
@@ -125,9 +126,11 @@ function SignaturePad({ onCancel, onSave, busy }) {
 
 /**
  * @param version   signatureVersion actuelle (null : pas de signature)
- * @param onChange  (newVersion | null) → mise à jour de l'appelant (AuthContext)
+ * @param onChange  (newVersion | null) → mise à jour de l'appelant (AuthContext, fiche utilisateur)
+ * @param userId    utilisateur dont l'administrateur gère la signature (absent : soi-même)
  */
-export default function SignaturePicker({ version, onChange }) {
+export default function SignaturePicker({ version, onChange, userId = null }) {
+  const url = userId ? `/users/${userId}/signature` : '/auth/signature'
   const input = useRef(null)
   const [busy, setBusy] = useState(false)
   const [drawOpen, setDrawOpen] = useState(false)
@@ -138,11 +141,11 @@ export default function SignaturePicker({ version, onChange }) {
     if (!version) { setPreview(null); return undefined }
     let url = null
     let cancelled = false
-    api.get('/auth/signature', { params: { v: version }, responseType: 'blob', skipErrorToast: true })
+    api.get(url, { params: { v: version }, responseType: 'blob', skipErrorToast: true })
       .then(res => { if (!cancelled) { url = URL.createObjectURL(res.data); setPreview(url) } })
       .catch(() => { if (!cancelled) setPreview(null) })
     return () => { cancelled = true; if (url) URL.revokeObjectURL(url) }
-  }, [version])
+  }, [version, url])
 
   const send = async (blob) => {
     if (!blob) { toast.error(t('signature.err.SIGNATURE_REQUIRED')); return false }
@@ -150,7 +153,7 @@ export default function SignaturePicker({ version, onChange }) {
     try {
       const form = new FormData()
       form.append('signature', blob, 'signature.png')
-      const res = await api.put('/auth/signature', form, { headers: { 'Content-Type': 'multipart/form-data' }, skipErrorToast: true })
+      const res = await api.put(url, form, { headers: { 'Content-Type': 'multipart/form-data' }, skipErrorToast: true })
       onChange?.(res.data.data.signatureVersion)
       toast.success(t('signature.saved'))
       return true
@@ -183,7 +186,7 @@ export default function SignaturePicker({ version, onChange }) {
   const remove = async () => {
     setBusy(true)
     try {
-      await api.delete('/auth/signature')
+      await api.delete(url)
       onChange?.(null)
       toast.success(t('signature.removed'))
     } catch { /* toast api */ } finally { setBusy(false) }

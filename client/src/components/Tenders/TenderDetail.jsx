@@ -16,6 +16,7 @@ import TenderQuestionsEditor from './TenderQuestionsEditor';
 import TenderAnswers from './TenderAnswers';
 import { toEditable, questionErrorMessage, maxScore } from '../../utils/tenderQuestions';
 import { t } from '../../i18n';
+import TenderTypeBadge from './TenderTypeBadge';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -192,6 +193,7 @@ export default function TenderDetail() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Gavel size={22} /> {tender.tender_number}</h1>
+              <TenderTypeBadge type={tender.tender_type} />
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${st.cls}`} data-testid="tender-status">{st.label}</span>
             </div>
             <p className="text-gray-600">{tender.title}</p>

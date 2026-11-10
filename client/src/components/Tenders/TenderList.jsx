@@ -6,6 +6,7 @@ import { tenderService } from '../../services/tenderService';
 import { TENDER_STATUS, fmtDateTime, timeLeft } from '../../utils/tenderStatus';
 import { t } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
+import TenderTypeBadge from './TenderTypeBadge';
 
 export default function TenderList() {
   const navigate = useNavigate();
@@ -99,7 +100,7 @@ export default function TenderList() {
                 const left = tn.effective_status === 'OPEN' ? timeLeft(tn.end_date) : null;
                 return (
                   <tr key={tn.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/tenders/${tn.id}`)}>
-                    <td className="px-4 py-3 font-mono font-medium text-gray-900">{tn.tender_number}</td>
+                    <td className="px-4 py-3 font-mono font-medium text-gray-900">{tn.tender_number} <TenderTypeBadge type={tn.tender_type} className="ml-1 font-sans" /></td>
                     <td className="px-4 py-3 text-gray-700">
                       {tn.title}
                       {(tn.category_name || tn.audience === 'PREQUALIFIED') && (

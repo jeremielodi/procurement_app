@@ -5,7 +5,7 @@
 //  - centre d'aide : rubrique « Méthode d'achat » › « Répartir entre plusieurs fournisseurs »
 // Requiert BpmnGo (sinon le test s'ignore).
 import { test, expect } from '@playwright/test';
-import { getApproverToken, auth, PDF_BUFFER } from '../api/helpers.js';
+import { getApproverToken, auth, PDF_BUFFER, getProcurementAgentId } from '../api/helpers.js';
 
 const ITEMS = ['Ramettes A4', 'Classeurs', 'Stylos', 'Cartouches', 'Agrafeuses'];
 
@@ -56,7 +56,7 @@ test('Répartition de 5 articles entre 3 fournisseurs depuis l\'onglet tâches',
 
   const approver = auth(await getApproverToken(page.request));
   const [n1] = await waitForTask(page, H, req.process_instance_id, 'Activity_ProjectManagerApproval');
-  expect((await page.request.post(`/api/tasks/${n1.id}/complete`, { headers: approver, data: { variables: { approved: true } } })).status()).toBe(200);
+  expect((await page.request.post(`/api/tasks/${n1.id}/complete`, { headers: approver, data: { variables: { approved: true, procurementAgentId: await getProcurementAgentId(page.request) } } })).status()).toBe(200);
   await waitForTask(page, H, req.process_instance_id, 'Activity_DetermineType');
 
   // Fenêtre de la méthode : case de répartition, désactivée pour un appel d'offres

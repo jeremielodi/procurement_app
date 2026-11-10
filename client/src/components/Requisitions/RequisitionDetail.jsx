@@ -53,6 +53,7 @@ import { t } from '../../i18n'
 import BudgetAdjustmentPanel from './BudgetAdjustmentPanel'
 import RevisionPanel from './RevisionPanel'
 import SupplierLotsPanel from './SupplierLotsPanel'
+import ProcurementAgentPanel from './ProcurementAgentPanel'
 import RequisitionVersions from './RequisitionVersions'
 import { levelLabel, policySummary } from '../../utils/approvalPolicy'
 
@@ -428,6 +429,9 @@ const handleGeneratePDF = async () => {
 
       {/* Correction : renvoyée / retirée (« À corriger »), ou retrait possible avant prise en charge de l'approbation */}
       <RevisionPanel requisition={requisition} onChanged={() => { refetch(); queryClient.invalidateQueries(['requisitions']) }} />
+
+      {/* Agent achats désigné à la validation par le chef de projet : remplaçable par lui ou l'administrateur */}
+      <ProcurementAgentPanel requisitionId={requisition.id} onChanged={() => refetch()} />
 
       {/* Réquisition répartie entre plusieurs fournisseurs : une part (et un bon de commande) par fournisseur */}
       <SupplierLotsPanel requisitionId={requisition.id} />

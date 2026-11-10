@@ -7,7 +7,7 @@
  * si BpmnGo est indisponible.
  */
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth, PM_APPROVAL, waitForProcessTask, openProcessTasks } from './helpers.js';
+import { getToken, getApproverToken, auth, PM_APPROVAL, waitForProcessTask, openProcessTasks, getProcurementAgentId } from './helpers.js';
 
 const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
 
@@ -90,7 +90,7 @@ test.describe.serial('API › Intérim du chef de projet', () => {
     const third = await json(await request.post(`/api/tasks/${task.id}/complete`, { headers: auth(other.token), data: { variables: { approved: true } } }));
     expect(third.status).toBe(403);
 
-    const done = await json(await request.post(`/api/tasks/${task.id}/complete`, { headers: auth(interim.token), data: { variables: { approved: true, comment: 'OK en intérim' } } }));
+    const done = await json(await request.post(`/api/tasks/${task.id}/complete`, { headers: auth(interim.token), data: { variables: { approved: true, procurementAgentId: await getProcurementAgentId(request), comment: 'OK en intérim' } } }));
     expect(done.status, JSON.stringify(done.body)).toBe(200);
     expect((await (await request.get(`/api/requisitions/${req.id}`, { headers: H() })).json()).data.status).toBe('APPROVED');
     const timeline = (await (await request.get(`/api/requisitions/${req.id}/timeline?lang=fr`, { headers: H() })).json()).data;

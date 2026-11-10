@@ -102,12 +102,12 @@ class TenderModel {
     return tx.one(
       `INSERT INTO tenders
          (tender_number, requisition_id, task_id, title, description,
-          start_date, end_date, max_delivery_days, status, created_by, audience, category_id, location_id, award_mode)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'OPEN', $9, $10, $11, $12, $13)
+          start_date, end_date, max_delivery_days, status, created_by, audience, category_id, location_id, award_mode, tender_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'OPEN', $9, $10, $11, $12, $13, $14)
        RETURNING *`,
       [data.tenderNumber, data.requisitionId, data.taskId || null, data.title, data.description || null,
        data.startDate, data.endDate, data.maxDeliveryDays, data.createdBy,
-       data.audience, data.categoryId, data.locationId, data.awardMode || 'SINGLE']
+       data.audience, data.categoryId, data.locationId, data.awardMode || 'SINGLE', data.tenderType || 'RFP']
     );
   }
 
@@ -306,7 +306,7 @@ class TenderModel {
                 t.max_delivery_days, ${EFFECTIVE_STATUS_SQL} AS effective_status,
                 t.audience, ${localizedSql('mc')} AS category_name, loc.name AS location_name,
                 (t.awarded_supplier_id = $1 OR EXISTS (SELECT 1 FROM tender_awards ta WHERE ta.tender_id = t.id AND ta.supplier_id = $1)) AS is_awarded_to_me,
-                t.award_mode,
+                t.award_mode, t.tender_type,
                 c.format_key AS currency_code,
                 e.id AS enterprise_id, e.name AS enterprise_name, e.logo_path AS enterprise_logo_path,
                 ts.id AS my_submission_id, ts.total_amount AS my_total, ts.updated_at AS my_submitted_at

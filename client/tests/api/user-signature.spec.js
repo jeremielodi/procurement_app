@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { getToken, auth } from './helpers.js';
 
-// Signature image (migration 41_user_signatures.sql) : GET / PUT / DELETE /auth/signature — l'utilisateur seul
-// (aucune route pour la signature d'un autre) ; version renvoyée par le profil (signatureVersion) ; trace USER_UPDATED.
+// Signature image (migration 41_user_signatures.sql) : GET / PUT / DELETE /auth/signature (soi-même) et, pour aider un
+// utilisateur, /users/:id/signature (administrateur, MANAGE_USERS — 2026-11-10) ; version renvoyée par le profil
+// (signatureVersion) ; trace USER_UPDATED (byAdmin), utilisateur prévenu.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 const file = (buffer, name = 'signature.png', mimeType = 'image/png') => ({ signature: { name, mimeType, buffer } });
 
@@ -54,15 +55,32 @@ test.describe.serial('API › Signature des utilisateurs', () => {
     expect((await request.get('/api/auth/signature', { headers: auth(userToken) })).status()).toBe(404);
   });
 
-  test('Personnelle : aucun accès à la signature d\'un autre, même pour l\'administrateur', async ({ request }) => {
-    expect((await request.put('/api/auth/signature', { headers: auth(userToken), multipart: file(PNG) })).status()).toBe(200);
-    // La signature lue avec le jeton de l'administrateur est la sienne, jamais celle de l'utilisateur
-    for (const method of ['get', 'put', 'delete']) {
-      const res = await request[method](`/api/users/${user.id}/signature`, { headers: auth(admin), ...(method === 'put' ? { multipart: file(PNG) } : {}) });
-      // Route inexistante (le serveur renvoie alors la page de l'application) : jamais l'image de l'utilisateur
-      expect(res.headers()['content-type'] || '', `${method} /users/:id/signature`).not.toContain('image/');
-    }
-    // Signature toujours en place après les tentatives de l'administrateur
-    expect((await request.get('/api/auth/signature', { headers: auth(userToken) })).status()).toBe(200);
+  test('Administrateur : dépose et retire la signature d\'un utilisateur, qui est prévenu ; un simple utilisateur ne le peut pas', async ({ request }) => {
+    const url = `/api/users/${user.id}/signature`;
+    // Un utilisateur sans MANAGE_USERS ne gère pas la signature d'un autre
+    expect((await request.put(url, { headers: auth(userToken), multipart: file(PNG) })).status()).toBe(403);
+
+    const saved = await json(await request.put(url, { headers: auth(admin), multipart: file(PNG) }));
+    expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+    expect(saved.body.data.signatureVersion).toBeTruthy();
+    const fake = await json(await request.put(url, { headers: auth(admin), multipart: file(Buffer.from('pas une image')) }));
+    expect([fake.status, fake.body.code]).toEqual([400, 'SIGNATURE_TYPE']);
+
+    // Aperçu pour l'administrateur ; l'utilisateur retrouve la même signature dans son profil
+    const img = await request.get(url, { headers: auth(admin) });
+    expect([img.status(), (await img.body()).equals(PNG)]).toEqual([200, true]);
+    expect((await (await request.get('/api/auth/profile', { headers: auth(userToken) })).json()).data.signatureVersion).toBeTruthy();
+    const listed = (await (await request.get('/api/users', { headers: auth(admin) })).json()).data.find(u => u.id === user.id);
+    expect(listed.signature_updated_at).toBeTruthy();
+
+    // Trace « par l'administrateur » et utilisateur prévenu
+    const logs = await (await request.get(`/api/audit-logs?action=USER_UPDATED&limit=20`, { headers: auth(admin) })).json();
+    expect(logs.data.some(l => l.entity_id === user.id && l.new_value?.signature === 'CHANGED' && l.new_value?.byAdmin === true)).toBe(true);
+    const notes = (await (await request.get(`/api/notifications/${user.id}`, { headers: auth(userToken) })).json()).data || [];
+    expect((notes.notifications || notes).some(n => n.title === 'Votre signature a été enregistrée')).toBe(true);
+
+    const removed = await json(await request.delete(url, { headers: auth(admin) }));
+    expect([removed.status, removed.body.data.signatureVersion]).toEqual([200, null]);
+    expect((await request.get('/api/auth/signature', { headers: auth(userToken) })).status()).toBe(404);
   });
 });

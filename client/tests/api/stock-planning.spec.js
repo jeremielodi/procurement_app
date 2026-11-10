@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getToken, getApproverToken, auth, waitForProcessTask, PM_APPROVAL } from './helpers.js';
+import { getToken, getApproverToken, auth, waitForProcessTask, PM_APPROVAL, getProcurementAgentId } from './helpers.js';
 import rules from '../../../backend/src/utils/stockPlanning.js';
 
 // Prévision du réapprovisionnement (migration 55_stock_planning.sql) :
@@ -177,7 +177,7 @@ test.describe.serial('API › Stock — prévision du réapprovisionnement', () 
       const r = await request.post(`/api/tasks/${t.task.id}/complete`, { headers: auth(token), data: { variables } });
       expect(r.ok(), await r.text()).toBeTruthy();
     };
-    await step(PM_APPROVAL, approver, { approved: true, comment: 'OK' });
+    await step(PM_APPROVAL, approver, { approved: true, procurementAgentId: await getProcurementAgentId(request), comment: 'OK' });
     await step('Activity_DetermineType', admin, { procurementMethod: 'SOLE_SOURCE', justification: 'Fournisseur unique (test)' });
     await step('Activity_SoleSource', admin, { comment: 'Justifiée' });
     await waitForProcessTask(request, admin, requisitionId, 'Activity_CreatePO');

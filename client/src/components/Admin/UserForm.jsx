@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, FolderKanban } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AvatarPicker from '../Common/AvatarPicker';
+import SignaturePicker from '../Common/SignaturePicker';
 import DelegationCard from '../Common/DelegationCard';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -13,6 +14,7 @@ import { projectService } from '../../services/projectService';
 export default function UserForm({ user, onClose }) {
   const queryClient = useQueryClient();
   const [avatarVersion, setAvatarVersion] = useState(user?.avatar_updated_at || null);
+  const [signatureVersion, setSignatureVersion] = useState(user?.signature_updated_at || null);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -152,6 +154,16 @@ export default function UserForm({ user, onClose }) {
       )}
       {/* Intérim de cet utilisateur pendant son absence (chef de projet) — enregistré tout de suite */}
       {user && <DelegationCard userId={user.id} />}
+      {/* Signature : l'administrateur aide l'utilisateur à la déposer (dessin ou image) — enregistrée tout de suite,
+          l'utilisateur est prévenu */}
+      {user && (
+        <div className="rounded-lg border border-gray-200 p-4 space-y-2" data-testid="user-signature-admin">
+          <h3 className="font-medium text-gray-800">{t('users.signatureTitle')}</h3>
+          <p className="text-xs text-gray-500">{t('users.signatureHint')}</p>
+          <SignaturePicker userId={user.id} version={signatureVersion}
+            onChange={(v) => { setSignatureVersion(v); queryClient.invalidateQueries({ queryKey: ['users'] }); }} />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">{t('users.username')}</label>

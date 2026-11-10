@@ -4261,6 +4261,14 @@
     "back": "Contents",
     "close": "Close",
     "footer": "A question not covered here? Contact your company administrator.",
+    "cases": {
+      "title": "Real-life examples",
+      "intro": "A real example step by step, with screenshots for each profile (in French). Opens in a new tab.",
+      "workflow": "Full procurement cycle",
+      "workflowDesc": "From requisition to payment: requester, project manager, procurement agent, reviewer, manager, supplier, logistics, finance, CEO.",
+      "stock": "Stock management",
+      "stockDesc": "Stock entry, store request, issue, equipment assignment and return, transfer, stock count, forecast and valuation."
+    },
     "sections": {
       "overview": {
         "title": "How procureApp works",

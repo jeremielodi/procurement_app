@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cycle d'achat complet, de la réquisition au paiement — procureApp</title>
+<link rel="icon" href="/images/procureapp-logo.svg">
+<link rel="stylesheet" href="cas-concret.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-inner">
+    <a class="brand" href="/"><img src="/images/procureapp-logo.svg" alt="">procureApp</a>
+    <nav><a href="workflow.html" aria-current="page">Cycle d'achat complet</a><a href="stock.html">Gestion de stock</a></nav>
+  </div>
+</header>
+<main class="wrap">
+  <div class="hero">
+    <p class="kicker">Cas concret</p>
+    <h1>Cycle d'achat complet, de la réquisition au paiement</h1>
+    <p class="subtitle">Une demande de fournitures de bureau de <strong>1 200 USD</strong> suivie de bout en bout : chaque personne, son profil, l'écran qu'elle utilise et l'action qu'elle fait.</p>
+  </div>
+  <div class="layout">
+    <aside class="toc">
+      <div class="toc-title">Sommaire</div>
+      <ol>
+        <li><a href="#scenario">Le scénario</a></li>
+        <li><a href="#phase-1">La demande (réquisition)</a></li><li><a href="#phase-2">La validation par le chef de projet</a></li><li><a href="#phase-3">Les achats : méthode, fournisseur, bon de commande</a></li><li><a href="#phase-4">Révision et approbation du bon de commande</a></li><li><a href="#phase-5">Confirmation par le fournisseur</a></li><li><a href="#phase-6">Livraison : acceptation (SAN) puis réception (GRN)</a></li><li><a href="#phase-7">Facture, rapprochement et paiement</a></li><li><a href="#phase-8">Suivre et piloter</a></li>
+        <li><a href="#regles">Règles à retenir</a></li>
+      </ol>
+      <a class="toc-other" href="stock.html">Voir le cas concret « Gestion de stock » →</a>
+    </aside>
+    <div class="content">
+      <section id="scenario" class="scenario">
+        <h2>Le scénario</h2>
+        <p>Marie Bahati travaille sur le projet <strong>Eau potable Goma (EAU-GOMA)</strong>. Le bureau du projet manque de papier et de toner : elle demande <strong>50 rames de papier A4</strong> (6 USD la rame) et <strong>10 cartouches de toner</strong> (90 USD l'une), soit <strong>1 200 USD</strong> imputés sur la ligne budgétaire <strong>EAU-01</strong>.</p><p>La demande traverse tout le cycle : réquisition → validation du chef de projet → méthode d'achat → bon de commande → révision → approbation → confirmation du fournisseur → acceptation de la livraison (SAN) → réception (GRN) → facture et rapprochement → paiement. Le moteur de workflow <strong>BpmnGo</strong> crée chaque tâche au bon moment et prévient la bonne personne (notification et email).</p><p>Principe à retenir : <strong>une tâche se traite depuis l'onglet « Tâches » de sa réquisition</strong>. « Mes tâches » donne la vue d'ensemble et y renvoie ; les formulaires (SAN, réception, facture, paiement) ne s'ouvrent que depuis la tâche correspondante.</p>
+        <table class="cast">
+          <thead><tr><th>Personne</th><th>Profil</th><th>Ce qu'elle fait dans ce cas</th></tr></thead>
+          <tbody><tr><td><strong>Marie Bahati</strong></td><td><span class="badge p-req">Demandeur</span></td><td>Crée la réquisition, puis accepte la livraison (SAN).</td></tr><tr><td><strong>Jean Mukendi</strong></td><td><span class="badge p-pm">Chef de projet</span></td><td>Chef du projet EAU-GOMA (budget holder) : valide la réquisition et <strong>désigne l'agent achats</strong>.</td></tr><tr><td><strong>Paul Kasongo</strong></td><td><span class="badge p-proc">Agent achats</span></td><td>Choisit la méthode d'achat, retient le fournisseur, crée le bon de commande.</td></tr><tr><td><strong>Grace Nsimba</strong></td><td><span class="badge p-rev">Réviseur des bons de commande</span></td><td>Vérifie le bon de commande avant son approbation.</td></tr><tr><td><strong>David Lukusa</strong></td><td><span class="badge p-mgr">Manager niveau 1</span></td><td>Approuve le bon de commande (montant &lt; 25 000).</td></tr><tr><td><strong>Bureautique Kivu SARL</strong></td><td><span class="badge p-sup">Fournisseur</span></td><td>Confirme la commande sur son portail.</td></tr><tr><td><strong>Sarah Amani</strong></td><td><span class="badge p-log">Logistique</span></td><td>Enregistre la réception (GRN) et l'entrée en stock.</td></tr><tr><td><strong>Esther Ilunga</strong></td><td><span class="badge p-fin">Finance</span></td><td>Saisit la facture et l'ordre de paiement.</td></tr><tr><td><strong>Patrick Tshibanda</strong></td><td><span class="badge p-dg">Directeur général</span></td><td>Approuve le paiement.</td></tr><tr><td><strong>Alice Admin</strong></td><td><span class="badge p-admin">Administrateur</span></td><td>Suit l'activité (tableau de bord, liste des réquisitions).</td></tr></tbody>
+        </table>
+        <p class="hint">Cliquez sur une capture pour l'ouvrir en grand. Données de démonstration (entreprise « Démo procureApp »).</p>
+      </section>
+      
+  <section class="phase" id="phase-1">
+    <h2><span class="phase-num">1</span>La demande (réquisition)</h2>
+    
+    
+    <article class="step" id="etape-1">
+      <header>
+        <span class="step-num">1</span>
+        <div>
+          <h3>Se connecter</h3>
+          <div class="who"><span class="badge p-doc">Tous</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Chaque personne se connecte avec son email et son mot de passe. La langue (FR / EN) se choisit en haut de la carte et reste mémorisée sur le compte.</p>
+          <ul><li>Après 5 échecs en 15 minutes, la connexion est bloquée temporairement.</li><li>Après 1 h sans activité, la session se ferme automatiquement (avertissement 2 minutes avant).</li></ul>
+          
+        </div>
+        <a class="shot" href="img/workflow/01_connexion.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/01_connexion.webp" alt="Se connecter" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-2">
+      <header>
+        <span class="step-num">2</span>
+        <div>
+          <h3>Tableau de bord du demandeur</h3>
+          <div class="who"><span class="badge p-req">Demandeur</span><span class="user">Marie Bahati</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le tableau de bord montre à chacun ce qui le concerne : ses tâches en attente, ses réquisitions et leur avancement. Le menu de gauche n'affiche que les modules autorisés par ses profils (encadré « Mes profils BPMN »).</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/02_demandeur_tableau-de-bord.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/02_demandeur_tableau-de-bord.webp" alt="Tableau de bord du demandeur" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-3">
+      <header>
+        <span class="step-num">3</span>
+        <div>
+          <h3>Remplir la réquisition</h3>
+          <div class="who"><span class="badge p-req">Demandeur</span><span class="user">Marie Bahati</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Menu <strong>Réquisitions → Nouvelle réquisition</strong>. Marie saisit le titre, choisit le <strong>projet</strong> (obligatoire) et, si elle le souhaite, le département, la description, la justification et l'adresse de livraison.</p><p>Dans <strong>Articles</strong>, chaque ligne porte une désignation (le catalogue est proposé pendant la saisie), une <strong>unité</strong> (Rame, Pièce…), une quantité, une fréquence, un prix unitaire et une <strong>ligne budgétaire</strong> du projet (EAU-01).</p>
+          <ul><li>En haut à droite : <strong>« Validation : Jean Mukendi (chef de projet) »</strong> — dès le choix du projet, on sait qui validera.</li><li>« Formulaire complet 2/2 articles complets » : le bouton « Créer la réquisition » s'active quand tout est renseigné.</li><li>Les articles peuvent aussi être importés depuis Excel / CSV (bouton « Importer »).</li></ul>
+          <p class="note">Seuls les profils Demandeur et Administrateur voient le bouton « Nouvelle réquisition ». Le chef de projet ne peut pas valider sa propre demande.</p>
+        </div>
+        <a class="shot" href="img/workflow/03_demandeur_formulaire-requisition.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/03_demandeur_formulaire-requisition.webp" alt="Remplir la réquisition" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-4">
+      <header>
+        <span class="step-num">4</span>
+        <div>
+          <h3>Réquisition soumise : vérification du budget</h3>
+          <div class="who"><span class="badge p-req">Demandeur</span><span class="user">Marie Bahati</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>À la création, BpmnGo démarre le circuit. Une étape automatique <strong>vérifie le budget</strong> (disponible sur la ligne EAU-01) puis crée la tâche « Validation du chef de projet ». La fiche affiche le statut, les articles, l'historique et les boutons <strong>Tâches</strong>, <strong>PDF</strong> et <strong>Voir le workflow</strong>.</p>
+          <ul><li>Tant que personne n'a pris la tâche en charge, Marie peut <strong>« Retirer pour corriger »</strong> sa demande.</li><li>Budget insuffisant → tâche « Ajustement budgétaire » pour le demandeur.</li></ul>
+          
+        </div>
+        <a class="shot" href="img/workflow/04_demandeur_fiche-requisition.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/04_demandeur_fiche-requisition.webp" alt="Réquisition soumise : vérification du budget" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-5">
+      <header>
+        <span class="step-num">5</span>
+        <div>
+          <h3>PDF : formulaire de demande d'achat</h3>
+          <div class="who"><span class="badge p-doc">Document</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le bouton <strong>PDF</strong> produit le formulaire de demande d'achat officiel : identité de l'entreprise, demandeur et sa fonction, <strong>approbateur (Jean Mukendi, chef de projet)</strong>, livraison, articles, codage budgétaire (code d'entité, source de financement, projet, fonction, activité) et justification. Les valeurs saisies apparaissent en bleu, comme écrites au stylo ; les signatures enregistrées sont reprises.</p>
+          
+          
+        </div>
+        <a class="shot doc" href="img/workflow/P1_pdf_formulaire-demande-achat.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/P1_pdf_formulaire-demande-achat.webp" alt="PDF : formulaire de demande d'achat" loading="lazy">
+        </a>
+      </div>
+    </article>
+  </section>
+  <section class="phase" id="phase-2">
+    <h2><span class="phase-num">2</span>La validation par le chef de projet</h2>
+    <p class="phase-intro">La réquisition est validée par <strong>le seul chef du projet</strong> (budget holder), quel que soit le montant. En cas d'absence, il peut déclarer un intérimaire.</p>
+    
+    <article class="step" id="etape-6">
+      <header>
+        <span class="step-num">6</span>
+        <div>
+          <h3>« Mes tâches » : une validation en attente</h3>
+          <div class="who"><span class="badge p-pm">Chef de projet</span><span class="user">Jean Mukendi</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Jean reçoit une notification et un email. Dans <strong>Mes tâches</strong>, la carte indique la réquisition concernée ; un clic l'emmène à l'onglet <strong>Tâches</strong> de cette réquisition, là où la tâche se traite.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/06_chef-projet_mes-taches.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/06_chef-projet_mes-taches.webp" alt="« Mes tâches » : une validation en attente" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-7">
+      <header>
+        <span class="step-num">7</span>
+        <div>
+          <h3>Onglet « Tâches » de la réquisition</h3>
+          <div class="who"><span class="badge p-pm">Chef de projet</span><span class="user">Jean Mukendi</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>L'onglet montre la progression du workflow, le montant et les tâches en attente. La tâche « Validation du chef de projet » est <strong>non assignée</strong> : Jean clique sur <strong>« Prendre en charge »</strong>.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/07_chef-projet_onglet-taches.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/07_chef-projet_onglet-taches.webp" alt="Onglet « Tâches » de la réquisition" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-8">
+      <header>
+        <span class="step-num">8</span>
+        <div>
+          <h3>Prendre la tâche en charge</h3>
+          <div class="who"><span class="badge p-pm">Chef de projet</span><span class="user">Jean Mukendi</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Une confirmation explique l'effet : la tâche lui est assignée, il est seul à pouvoir la traiter et elle disparaît de la liste des autres membres du groupe. Il pourra la <strong>« Libérer »</strong> s'il ne peut pas la traiter.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/07b_chef-projet_prendre-en-charge.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/07b_chef-projet_prendre-en-charge.webp" alt="Prendre la tâche en charge" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-9">
+      <header>
+        <span class="step-num">9</span>
+        <div>
+          <h3>Approuver et désigner l'agent achats</h3>
+          <div class="who"><span class="badge p-pm">Chef de projet</span><span class="user">Jean Mukendi</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Après « Prendre en charge », le bouton <strong>« Traiter »</strong> ouvre la fenêtre de décision. Jean coche <strong>Approuver</strong>, puis choisit dans la liste <strong>« Agent achats qui traitera la réquisition »</strong> la personne des achats qui s'en occupera : <strong>Paul Kasongo</strong>. Il ajoute un commentaire et clique <strong>Valider</strong>.</p>
+          <ul><li>Le choix de l'agent achats est <strong>obligatoire</strong> pour approuver. La liste ne propose que les utilisateurs actifs ayant le profil Achats <strong>sur ce projet</strong>.</li><li>Toutes les étapes achats de cette réquisition (méthode, achat direct, devis, appel d'offres, bon de commande, confirmation fournisseur) sont ensuite <strong>réservées à Paul</strong> ; l'administrateur garde la main.</li><li>Paul est prévenu par notification et par email. Le chef de projet peut changer d'agent plus tard depuis la fiche (carte « Agent achats »).</li><li><strong>Rejeter</strong> demande un motif ; <strong>Renvoyer pour correction</strong> rend la réquisition modifiable au demandeur.</li></ul>
+          
+        </div>
+        <a class="shot" href="img/workflow/08_chef-projet_validation-agent-achats.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/08_chef-projet_validation-agent-achats.webp" alt="Approuver et désigner l'agent achats" loading="lazy">
+        </a>
+      </div>
+    </article>
+  </section>
+  <section class="phase" id="phase-3">
+    <h2><span class="phase-num">3</span>Les achats : méthode, fournisseur, bon de commande</h2>
+    
+    
+    <article class="step" id="etape-10">
+      <header>
+        <span class="step-num">10</span>
+        <div>
+          <h3>L'agent achats reçoit la réquisition</h3>
+          <div class="who"><span class="badge p-proc">Agent achats</span><span class="user">Paul Kasongo</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Paul voit dans <strong>Mes tâches</strong> l'étape « Déterminer la méthode d'achat ». Un autre agent achats ne la voit pas : elle lui est réservée.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/09_agent-achats_mes-taches.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/09_agent-achats_mes-taches.webp" alt="L'agent achats reçoit la réquisition" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-11">
+      <header>
+        <span class="step-num">11</span>
+        <div>
+          <h3>Choisir la méthode d'achat</h3>
+          <div class="who"><span class="badge p-proc">Agent achats</span><span class="user">Paul Kasongo</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Après prise en charge, Paul choisit la méthode adaptée. <strong>Toutes les méthodes sont possibles quel que soit le montant</strong> : achat direct, multiples devis (demande de cotations publiée aux fournisseurs), appel d'offres (RFP) ou source unique (justification obligatoire). Ici : <strong>Achat direct</strong>.</p>
+          <ul><li>La case « Répartir entre plusieurs fournisseurs » permet d'attribuer chaque article à un fournisseur différent (un bon de commande par fournisseur).</li></ul>
+          
+        </div>
+        <a class="shot" href="img/workflow/10_agent-achats_methode-achat.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/10_agent-achats_methode-achat.webp" alt="Choisir la méthode d'achat" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-12">
+      <header>
+        <span class="step-num">12</span>
+        <div>
+          <h3>Achat direct : fournisseur retenu + pro-forma</h3>
+          <div class="who"><span class="badge p-proc">Agent achats</span><span class="user">Paul Kasongo</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Pour un achat direct, Paul désigne le <strong>fournisseur retenu</strong> (Bureautique Kivu SARL) et joint obligatoirement sa <strong>facture pro-forma</strong> (PDF, JPG ou PNG). Numéro, date et montant de la pro-forma sont facultatifs.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/11_agent-achats_achat-direct-proforma.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/11_agent-achats_achat-direct-proforma.webp" alt="Achat direct : fournisseur retenu + pro-forma" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-13">
+      <header>
+        <span class="step-num">13</span>
+        <div>
+          <h3>Créer le bon de commande</h3>
+          <div class="who"><span class="badge p-proc">Agent achats</span><span class="user">Paul Kasongo</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>L'étape « Créer le bon de commande » ouvre le formulaire pré-rempli : le <strong>fournisseur désigné à l'étape « Achat direct »</strong> est choisi d'office et les articles de la réquisition sont repris (quantité × fréquence, même prix). Paul complète la date de livraison prévue, les <strong>conditions de paiement</strong>, les <strong>conditions de livraison</strong> et les instructions spéciales.</p>
+          <ul><li>Un avertissement signale un fournisseur pas encore préqualifié par l'entreprise (lien vers sa préqualification).</li><li>On ne peut pas commander plus que la quantité demandée.</li></ul>
+          
+        </div>
+        <a class="shot" href="img/workflow/12_agent-achats_formulaire-bon-commande.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/12_agent-achats_formulaire-bon-commande.webp" alt="Créer le bon de commande" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-14">
+      <header>
+        <span class="step-num">14</span>
+        <div>
+          <h3>PDF : bon de commande</h3>
+          <div class="who"><span class="badge p-doc">Document</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le bon de commande PDF reprend l'en-tête de l'entreprise, le fournisseur et son contact, la livraison, les articles avec unités, les conditions, « Demandé par » (créateur) et « Approuvé par » avec signatures, ainsi que les conditions générales d'achat de l'entreprise si elles sont renseignées dans « Mon entreprise ».</p>
+          
+          
+        </div>
+        <a class="shot doc" href="img/workflow/P2_pdf_bon-de-commande.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/P2_pdf_bon-de-commande.webp" alt="PDF : bon de commande" loading="lazy">
+        </a>
+      </div>
+    </article>
+  </section>
+  <section class="phase" id="phase-4">
+    <h2><span class="phase-num">4</span>Révision et approbation du bon de commande</h2>
+    <p class="phase-intro">Chaque bon de commande est d'abord <strong>révisé</strong>, puis <strong>approuvé à un seul niveau selon son montant</strong> : &lt; 25 000 → Manager niveau 1, 25 000 à 99 999 → Manager niveau 2, ≥ 100 000 → Manager niveau 3 (seuils réglables par projet).</p>
+    
+    <article class="step" id="etape-15">
+      <header>
+        <span class="step-num">15</span>
+        <div>
+          <h3>Bon de commande à réviser</h3>
+          <div class="who"><span class="badge p-rev">Réviseur des bons de commande</span><span class="user">Grace Nsimba</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Grace ouvre la fiche du bon : articles, fournisseur, livraison, conditions et suivi des livraisons. La pastille indique déjà le niveau d'approbation qui suivra : <strong>N1 (Manager niveau 1)</strong>.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/14_reviseur_fiche-bon-commande.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/14_reviseur_fiche-bon-commande.webp" alt="Bon de commande à réviser" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-16">
+      <header>
+        <span class="step-num">16</span>
+        <div>
+          <h3>Approuver la révision</h3>
+          <div class="who"><span class="badge p-rev">Réviseur des bons de commande</span><span class="user">Grace Nsimba</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Elle clique <strong>« Approuver la révision »</strong> et laisse un commentaire (prix conformes à la pro-forma). Un <strong>rejet</strong> exige un motif et arrête ce bon de commande.</p>
+          
+          <p class="note">Séparation des tâches : ni le créateur du bon ni le demandeur ne peuvent le réviser ou l'approuver.</p>
+        </div>
+        <a class="shot" href="img/workflow/15_reviseur_approuver-revision.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/15_reviseur_approuver-revision.webp" alt="Approuver la révision" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-17">
+      <header>
+        <span class="step-num">17</span>
+        <div>
+          <h3>Le manager N1 reçoit l'approbation</h3>
+          <div class="who"><span class="badge p-mgr">Manager niveau 1</span><span class="user">David Lukusa</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le montant (1 200 USD) étant inférieur à 25 000, c'est le <strong>Manager niveau 1</strong> du projet qui reçoit la tâche « Approbation du bon de commande ».</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/16_manager-n1_mes-taches.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/16_manager-n1_mes-taches.webp" alt="Le manager N1 reçoit l'approbation" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-18">
+      <header>
+        <span class="step-num">18</span>
+        <div>
+          <h3>Approuver le bon de commande</h3>
+          <div class="who"><span class="badge p-mgr">Manager niveau 1</span><span class="user">David Lukusa</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Depuis la fiche du bon, David clique <strong>Approuver</strong> (commentaire facultatif) ou <strong>Rejeter</strong>. Une fois approuvé, le bon est envoyé automatiquement par email au fournisseur.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/17_manager-n1_approbation-bon-commande.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/17_manager-n1_approbation-bon-commande.webp" alt="Approuver le bon de commande" loading="lazy">
+        </a>
+      </div>
+    </article>
+  </section>
+  <section class="phase" id="phase-5">
+    <h2><span class="phase-num">5</span>Confirmation par le fournisseur</h2>
+    
+    
+    <article class="step" id="etape-19">
+      <header>
+        <span class="step-num">19</span>
+        <div>
+          <h3>Portail fournisseur : « Mes commandes »</h3>
+          <div class="who"><span class="badge p-sup">Fournisseur</span><span class="user">Claude Habimana — Bureautique Kivu SARL</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le fournisseur inscrit sur le portail reçoit l'email avec un lien. Dans <strong>Mes commandes</strong>, la commande apparaît « À confirmer ». Il peut ouvrir le bon de commande en PDF.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/18_fournisseur_mes-commandes.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/18_fournisseur_mes-commandes.webp" alt="Portail fournisseur : « Mes commandes »" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-20">
+      <header>
+        <span class="step-num">20</span>
+        <div>
+          <h3>Confirmer la commande</h3>
+          <div class="who"><span class="badge p-sup">Fournisseur</span><span class="user">Claude Habimana — Bureautique Kivu SARL</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Il indique la <strong>date de livraison prévue</strong>, sa référence et un commentaire, puis <strong>« Confirmer la commande »</strong>. Il peut aussi la refuser en donnant un motif (les achats sont prévenus).</p>
+          
+          <p class="note">Si le fournisseur n'utilise pas le portail, l'agent achats saisit sa réponse depuis la fiche du bon de commande.</p>
+        </div>
+        <a class="shot" href="img/workflow/19_fournisseur_confirmation-commande.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/19_fournisseur_confirmation-commande.webp" alt="Confirmer la commande" loading="lazy">
+        </a>
+      </div>
+    </article>
+  </section>
+  <section class="phase" id="phase-6">
+    <h2><span class="phase-num">6</span>Livraison : acceptation (SAN) puis réception (GRN)</h2>
+    <p class="phase-intro">À <strong>chaque livraison</strong>, le demandeur accepte d'abord la livraison (SAN), puis la logistique enregistre la réception (GRN). S'il reste à livrer, le cycle SAN → GRN recommence ; si le fournisseur ne livrera pas le reste, on <strong>solde le reliquat</strong> avec un motif.</p>
+    
+    <article class="step" id="etape-21">
+      <header>
+        <span class="step-num">21</span>
+        <div>
+          <h3>Tâche : acceptation de la livraison</h3>
+          <div class="who"><span class="badge p-req">Demandeur</span><span class="user">Marie Bahati</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Dans l'onglet <strong>Tâches</strong> de sa réquisition, Marie trouve « Acceptation de service (SAN) ». Le bouton <strong>Traiter</strong> ouvre directement le formulaire, rattaché à ce bon de commande.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/20_demandeur_tache-san.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/20_demandeur_tache-san.webp" alt="Tâche : acceptation de la livraison" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-22">
+      <header>
+        <span class="step-num">22</span>
+        <div>
+          <h3>Bon d'acceptation (SAN)</h3>
+          <div class="who"><span class="badge p-req">Demandeur</span><span class="user">Marie Bahati</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Marie confirme que la livraison correspond à ce qui a été demandé (ou la refuse en expliquant pourquoi) et ajoute ses observations.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/21_demandeur_formulaire-san.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/21_demandeur_formulaire-san.webp" alt="Bon d'acceptation (SAN)" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-23">
+      <header>
+        <span class="step-num">23</span>
+        <div>
+          <h3>Bon de réception (GRN)</h3>
+          <div class="who"><span class="badge p-log">Logistique</span><span class="user">Sarah Amani</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Sarah enregistre la réception physique : quantités <strong>reçues, rejetées et acceptées</strong> par ligne (le formulaire propose le reste à livrer) et le <strong>dépôt de destination</strong> (obligatoire quand elle a accès à plusieurs dépôts).</p>
+          <ul><li>Les articles du catalogue marqués stockables <strong>entrent automatiquement en stock</strong> (« → entrée en stock : 50 rame »), au prix du bon de commande et pour le projet de la réquisition.</li><li>Livraison partielle : seule la quantité reçue est enregistrée ; une nouvelle SAN puis un nouveau GRN seront demandés pour le reste.</li><li>Case « Le fournisseur ne livrera pas le reste » : solde le reliquat (motif obligatoire).</li></ul>
+          
+        </div>
+        <a class="shot" href="img/workflow/22_logistique_formulaire-reception.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/22_logistique_formulaire-reception.webp" alt="Bon de réception (GRN)" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-24">
+      <header>
+        <span class="step-num">24</span>
+        <div>
+          <h3>Réception enregistrée</h3>
+          <div class="who"><span class="badge p-log">Logistique</span><span class="user">Sarah Amani</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>La fiche du GRN indique le dépôt, les quantités et le <strong>numéro de mouvement de stock</strong> de chaque ligne. Une réception peut être annulée tant que le stock reçu n'a pas été consommé (écritures inverses).</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/23_logistique_fiche-reception.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/23_logistique_fiche-reception.webp" alt="Réception enregistrée" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-25">
+      <header>
+        <span class="step-num">25</span>
+        <div>
+          <h3>PDF : bon de réception</h3>
+          <div class="who"><span class="badge p-doc">Document</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le bon de réception PDF (dépôt, codes articles, quantités, signature de la personne qui a réceptionné) sert de pièce justificative.</p>
+          
+          
+        </div>
+        <a class="shot doc" href="img/workflow/P3_pdf_bon-de-reception.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/P3_pdf_bon-de-reception.webp" alt="PDF : bon de réception" loading="lazy">
+        </a>
+      </div>
+    </article>
+  </section>
+  <section class="phase" id="phase-7">
+    <h2><span class="phase-num">7</span>Facture, rapprochement et paiement</h2>
+    
+    
+    <article class="step" id="etape-26">
+      <header>
+        <span class="step-num">26</span>
+        <div>
+          <h3>Saisir la facture du fournisseur</h3>
+          <div class="who"><span class="badge p-fin">Finance</span><span class="user">Esther Ilunga</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Depuis la tâche « Saisie de la facture », Esther enregistre la facture : <strong>n° de facture du fournisseur</strong> (obligatoire), dates, montants HT / taxes / TTC. procureApp attribue son propre numéro INV-….</p>
+          
+          <p class="note">Une même facture d'un fournisseur ne peut pas être saisie deux fois (doublon refusé et tracé dans l'audit).</p>
+        </div>
+        <a class="shot" href="img/workflow/24_finance_formulaire-facture.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/24_finance_formulaire-facture.webp" alt="Saisir la facture du fournisseur" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-27">
+      <header>
+        <span class="step-num">27</span>
+        <div>
+          <h3>Rapprochement à 3 voies</h3>
+          <div class="who"><span class="badge p-fin">Finance</span><span class="user">Esther Ilunga</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le <strong>rapprochement à 3 voies</strong> est automatique : montant facturé ≤ bon de commande (+ tolérance de 2 %), <strong>commande approuvée</strong>, <strong>réception complète sans rejet</strong>. Ici : « Rapprochement réussi ». Le paiement se saisit ensuite uniquement depuis la tâche de la réquisition.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/25_finance_fiche-facture-rapprochement.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/25_finance_fiche-facture-rapprochement.webp" alt="Rapprochement à 3 voies" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-28">
+      <header>
+        <span class="step-num">28</span>
+        <div>
+          <h3>PDF : facture et rapprochement</h3>
+          <div class="who"><span class="badge p-doc">Document</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le PDF de la facture reprend les références (bon de commande, réception, réquisition, projet), les lignes avec quantités acceptées, l'écart avec le bon de commande et le résultat de chaque contrôle du rapprochement.</p>
+          
+          
+        </div>
+        <a class="shot doc" href="img/workflow/P4_pdf_facture.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/P4_pdf_facture.webp" alt="PDF : facture et rapprochement" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-29">
+      <header>
+        <span class="step-num">29</span>
+        <div>
+          <h3>Ordre de paiement</h3>
+          <div class="who"><span class="badge p-fin">Finance</span><span class="user">Esther Ilunga</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Depuis la tâche « Traitement du paiement », Esther saisit le paiement : montant, mode (virement), date, référence et compte. Le paiement reste <strong>en attente d'approbation</strong>.</p>
+          
+          <p class="note">Si les coordonnées bancaires du fournisseur ont changé et n'ont pas encore été vérifiées par l'entreprise, le paiement est bloqué.</p>
+        </div>
+        <a class="shot" href="img/workflow/26_finance_formulaire-paiement.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/26_finance_formulaire-paiement.webp" alt="Ordre de paiement" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-30">
+      <header>
+        <span class="step-num">30</span>
+        <div>
+          <h3>Approuver le paiement</h3>
+          <div class="who"><span class="badge p-dg">Directeur général</span><span class="user">Patrick Tshibanda</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Patrick ouvre le paiement et l'<strong>approuve</strong>. La personne qui a saisi le paiement ne peut jamais l'approuver elle-même (séparation des tâches).</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/27_dg_approbation-paiement.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/27_dg_approbation-paiement.webp" alt="Approuver le paiement" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-31">
+      <header>
+        <span class="step-num">31</span>
+        <div>
+          <h3>Paiement effectué</h3>
+          <div class="who"><span class="badge p-dg">Directeur général</span><span class="user">Patrick Tshibanda</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le paiement passe à <strong>Payé</strong>, la facture aussi. La dernière étape automatique clôture la réquisition : statut <strong>Terminée</strong>.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/28_dg_paiement-paye.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/28_dg_paiement-paye.webp" alt="Paiement effectué" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-32">
+      <header>
+        <span class="step-num">32</span>
+        <div>
+          <h3>PDF : ordre de paiement</h3>
+          <div class="who"><span class="badge p-doc">Document</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>L'ordre de paiement PDF récapitule le bénéficiaire, la facture, le montant et les références bancaires.</p>
+          
+          
+        </div>
+        <a class="shot doc" href="img/workflow/P5_pdf_paiement.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/P5_pdf_paiement.webp" alt="PDF : ordre de paiement" loading="lazy">
+        </a>
+      </div>
+    </article>
+  </section>
+  <section class="phase" id="phase-8">
+    <h2><span class="phase-num">8</span>Suivre et piloter</h2>
+    
+    
+    <article class="step" id="etape-33">
+      <header>
+        <span class="step-num">33</span>
+        <div>
+          <h3>Suivi du workflow</h3>
+          <div class="who"><span class="badge p-req">Demandeur</span><span class="user">Marie Bahati</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>L'onglet <strong>Suivi du workflow</strong> de la réquisition raconte tout le parcours : à gauche les <strong>13 étapes</strong> (toutes « Terminé »), à droite chaque action réelle avec la personne, sa photo, son commentaire, le délai de traitement et les liens vers les documents (PO, SAN, GRN, facture, paiement).</p>
+          <ul><li>On y voit notamment « Agent achats désigné : Paul Kasongo » par Jean Mukendi.</li><li>Le même suivi s'ouvre par le bouton « Voir le workflow ».</li></ul>
+          
+        </div>
+        <a class="shot" href="img/workflow/29_demandeur_suivi-workflow.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/29_demandeur_suivi-workflow.webp" alt="Suivi du workflow" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-34">
+      <header>
+        <span class="step-num">34</span>
+        <div>
+          <h3>Tableau de bord de pilotage</h3>
+          <div class="who"><span class="badge p-admin">Administrateur</span><span class="user">Alice Admin</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>L'administrateur (et la direction) voit les indicateurs de la période : réquisitions, retards (≥ 2 jours dans une étape), durée du cycle, budget consommé, et <strong>« Qui bloque ? »</strong> : les tâches en attente regroupées par profil.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/30_admin_tableau-de-bord.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/30_admin_tableau-de-bord.webp" alt="Tableau de bord de pilotage" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-35">
+      <header>
+        <span class="step-num">35</span>
+        <div>
+          <h3>Liste des réquisitions</h3>
+          <div class="who"><span class="badge p-admin">Administrateur</span><span class="user">Alice Admin</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>La liste montre le demandeur, l'étape et l'<strong>avancement</strong> (Brouillon / En cours / Terminé / Rejeté / Annulé), avec filtres, exports PDF / Excel et accès direct au workflow de chaque ligne.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/workflow/31_admin_liste-requisitions.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/workflow/31_admin_liste-requisitions.webp" alt="Liste des réquisitions" loading="lazy">
+        </a>
+      </div>
+    </article>
+  </section>
+      <section id="regles" class="phase rules"><h2>Règles à retenir</h2>
+        <table class="cast"><thead><tr><th>Règle</th><th>Ce que fait procureApp</th></tr></thead>
+        <tbody><tr><td><strong>Où traiter une tâche ?</strong></td><td>Toujours dans l'onglet <strong>Tâches</strong> de la réquisition (« Mes tâches » y renvoie). D'abord <strong>Prendre en charge</strong>, puis <strong>Traiter</strong>. <strong>Libérer</strong> la rend aux autres.</td></tr><tr><td><strong>Qui valide la réquisition ?</strong></td><td>Le <strong>chef du projet</strong> seul (ou son intérimaire déclaré). Il ne valide jamais sa propre demande.</td></tr><tr><td><strong>Qui traite les achats ?</strong></td><td>L'<strong>agent achats désigné</strong> par le chef de projet à la validation ; l'administrateur peut aussi intervenir.</td></tr><tr><td><strong>Qui approuve le bon de commande ?</strong></td><td>Après révision : <strong>N1</strong> (&lt; 25 000), <strong>N2</strong> (25 000 – 99 999) ou <strong>N3</strong> (≥ 100 000), seuils du projet ou de l'entreprise.</td></tr><tr><td><strong>Séparation des tâches</strong></td><td>Personne n'approuve ce qu'il a demandé, créé ou saisi : bon de commande, facture, paiement. Toute tentative est bloquée et tracée dans le journal d'audit.</td></tr><tr><td><strong>Documents rattachés</strong></td><td>Une SAN, un GRN, une facture ou un paiement ne peut exister que rattaché à son bon de commande et à sa réquisition, et seulement à l'étape prévue.</td></tr><tr><td><strong>Livraisons partielles</strong></td><td>SAN puis GRN à <strong>chaque</strong> livraison, jusqu'à livraison complète ou reliquat soldé.</td></tr></tbody></table></section>
+      <footer class="end">procureApp — documentation « cas concret ». Pour l'aide détaillée de chaque écran, utilisez le bouton « ? » de l'application.</footer>
+    </div>
+  </div>
+</main>
+</body>
+</html>

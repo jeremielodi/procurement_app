@@ -3,3 +3,6 @@
 **/yarn.lock
 **/dist
 **/deploy/backup.env
+
+# Captures brutes de la documentation « cas concret » (scripts/doc-cas-concret)
+client/scripts/doc-cas-concret/.captures/

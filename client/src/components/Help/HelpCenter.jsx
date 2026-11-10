@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  HelpCircle, X, Search, ChevronLeft, ChevronRight, Lightbulb, AlertTriangle, ArrowRight, BookOpen,
+  HelpCircle, X, Search, ChevronLeft, ChevronRight, Lightbulb, AlertTriangle, ArrowRight, BookOpen, ExternalLink,
 } from 'lucide-react'
 import { useTranslation } from '../../i18n'
 import { useAuth } from '../../hooks/useAuth'
@@ -52,6 +52,12 @@ const ROUTE_SECTIONS = [
   ['/admin/audit', 'control'], ['/users', 'admin'], ['/projects', 'admin'], ['/departments', 'admin'], ['/settings', 'admin'], ['/admin', 'admin'],
   ['/profile', 'account'], ['/notifications', 'account'],
   ['/supplier', 'supplierPortal'],
+]
+
+// Cas concrets : pages HTML statiques (client/public/docs/cas-concret, générées par scripts/doc-cas-concret), nouvel onglet
+const CASES = [
+  { id: 'workflow', href: '/docs/cas-concret/workflow.html' },
+  { id: 'stock', href: '/docs/cas-concret/stock.html' },
 ]
 
 const normalize = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -154,7 +160,7 @@ function Block({ block, t, onNavigate, linkFilter }) {
   }
 }
 
-function HelpPanel({ onClose, initialSection, availableIds, highlighted, currentSection, linkFilter }) {
+function HelpPanel({ onClose, initialSection, availableIds, highlighted, currentSection, linkFilter, showCases }) {
   const { t } = useTranslation()
   const sections = t('help.sections', { returnObjects: true }) || {}
   const [activeId, setActiveId] = useState(initialSection)
@@ -277,6 +283,24 @@ function HelpPanel({ onClose, initialSection, availableIds, highlighted, current
                   <div className="space-y-1">{others.map(id => <SectionButton key={id} id={id} />)}</div>
                 </>
               )}
+              {showCases && (
+                <div className="mt-6 pt-4 border-t border-gray-200" data-testid="help-cases">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">{t('help.cases.title')}</div>
+                  <p className="text-xs text-gray-500 mb-2">{t('help.cases.intro')}</p>
+                  <div className="space-y-1">
+                    {CASES.map(c => (
+                      <a key={c.id} href={c.href} target="_blank" rel="noopener noreferrer" data-testid={`help-case-${c.id}`}
+                        className="block px-3 py-2.5 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200 group">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium text-gray-900 group-hover:text-blue-700">{t(`help.cases.${c.id}`)}</span>
+                          <ExternalLink size={15} className="text-gray-400" />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">{t(`help.cases.${c.id}Desc`)}</div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -327,7 +351,7 @@ export default function HelpCenter() {
       {isOpen && createPortal(
         <HelpPanel onClose={() => setIsOpen(false)} initialSection={initialSection} availableIds={availableIds}
           highlighted={highlighted} currentSection={initialSection}
-          linkFilter={isSupplier ? SUPPLIER_LINK : () => true} />,
+          linkFilter={isSupplier ? SUPPLIER_LINK : () => true} showCases={!isSupplier} />,
         document.body)}
     </>
   )

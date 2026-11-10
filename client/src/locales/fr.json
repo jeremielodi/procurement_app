@@ -4261,6 +4261,14 @@
     "back": "Sommaire",
     "close": "Fermer",
     "footer": "Une question non couverte ? Contactez l'administrateur de votre entreprise.",
+    "cases": {
+      "title": "Cas concrets",
+      "intro": "Un exemple réel pas à pas, avec les captures d'écran de chaque profil. S'ouvre dans un nouvel onglet.",
+      "workflow": "Cycle d'achat complet",
+      "workflowDesc": "De la réquisition au paiement : demandeur, chef de projet, agent achats, réviseur, manager, fournisseur, logistique, finance, DG.",
+      "stock": "Gestion de stock",
+      "stockDesc": "Bon d'entrée, demande au magasin, sortie, affectation et retour de matériel, transfert, inventaire, prévision et valorisation."
+    },
     "sections": {
       "overview": {
         "title": "Comment fonctionne procureApp",

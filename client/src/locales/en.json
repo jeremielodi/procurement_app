@@ -1667,6 +1667,7 @@
     },
     "selfApproval": "You created this order (or requested the purchase): another approver must validate it",
     "awardedSupplier": "tender award winner",
+    "awardedPricesApplied": "Unit prices taken from the winning offer (editable).",
     "suppliersPrequalified": "Prequalified by your company",
     "suppliersNotPrequalified": "Not prequalified",
     "notPrequalifiedWarning": "This supplier is not yet prequalified by your company (registered on the portal, file to be checked).",

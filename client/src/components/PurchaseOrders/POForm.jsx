@@ -34,6 +34,7 @@ export default function POForm() {
   const [deliveryTerms, setDeliveryTerms] = useState('');
   const [termsEdited, setTermsEdited] = useState(false);
   const [items, setItems] = useState([]);
+  const [itemsVersion, setItemsVersion] = useState(0); // incrémenté à chaque chargement des articles de la réquisition
 
   useEffect(() => {
     // Tous les fournisseurs actifs, préqualifiés en tête ; l'attributaire de l'appel d'offres de la réquisition
@@ -56,6 +57,17 @@ export default function POForm() {
     setPaymentTerms(selectedSupplier?.payment_terms || '');
     setDeliveryTerms(selectedSupplier?.delivery_terms || '');
   }, [selectedSupplier?.id]);
+  // Attributaire d'un appel d'offres (attribution à un seul fournisseur) : prix de son offre repris à chaque
+  // chargement des articles de la réquisition (itemsVersion) — une saisie de l'utilisateur n'est pas écrasée
+  const [awardedPricesKey, setAwardedPricesKey] = useState(null);
+  useEffect(() => {
+    const prices = selectedSupplier?.awarded_prices;
+    const key = `${selectedSupplier?.id}:${itemsVersion}`;
+    if (!prices || !itemsVersion || lot || awardedPricesKey === key) return;
+    setItems(prev => prev.map(it => (prices[it.requisitionItemId] != null ? { ...it, unitPrice: Number(prices[it.requisitionItemId]) } : it)));
+    setAwardedPricesKey(key);
+  }, [selectedSupplier?.id, itemsVersion, lot]);
+  const awardedPricesFor = awardedPricesKey?.split(':')[0];
   const supplierOption = (s) => (
     <option key={s.id} value={s.id}>{s.name}{s.awarded ? ` — ${t('po.awardedSupplier')}` : s.direct_purchase ? ` — ${t('po.directPurchaseSupplier')}` : ''}</option>
   );
@@ -87,6 +99,7 @@ export default function POForm() {
           stockItem: it.stock_item_id ? { id: it.stock_item_id, code: it.item_code, name: it.item_name, unit: it.unit, is_stockable: it.is_stockable } : null
         }));
         setItems(reqItems.length ? reqItems : [emptyItem()]);
+        setItemsVersion(v => v + 1);
       })
       .catch(() => toast.error(t('po.loadRequisitionError')))
       .finally(() => setLoadingReq(false));
@@ -187,7 +200,7 @@ export default function POForm() {
             </div>
             <div>
               <span className="font-medium text-blue-700">{t('po.requester')}</span>
-              <p>{requisition.requester_username || requisition.requester_name || '—'}</p>
+              <p data-testid="po-form-requester">{[requisition.first_name, requisition.last_name].filter(Boolean).join(' ') || requisition.email || '—'}</p>
             </div>
             <div>
               <span className="font-medium text-blue-700">{t('po.department')}</span>
@@ -233,6 +246,9 @@ export default function POForm() {
                   <optgroup label={t('po.suppliersNotPrequalified')}>{otherSuppliers.map(supplierOption)}</optgroup>
                 )}
               </SearchSelect>
+              {awardedPricesFor && String(awardedPricesFor) === String(supplierId) && (
+                <p className="mt-1 text-xs text-green-700" data-testid="po-awarded-prices">{t('po.awardedPricesApplied')}</p>
+              )}
               {selectedSupplier && !selectedSupplier.is_prequalified && (
                 <p className="mt-1 flex items-start gap-1 text-xs text-amber-700" data-testid="po-supplier-not-prequalified">
                   <AlertTriangle size={14} className="mt-0.5 shrink-0" />

@@ -400,7 +400,7 @@ page({
     ] },
     { title: 'Bon de commande et approbation N2', steps: [
       { img: '13_agent-achats_bon-commande-attributaire', profile: 'Agent achats', user: 'Paul Kasongo', title: 'Bon de commande pré-rempli', text: [
-        "L'étape « Créer le bon de commande » ouvre le formulaire avec **l'attributaire de l'appel d'offres choisi d'office** et les articles de la réquisition. Paul reporte les prix de l'offre retenue (27 900 USD au total) et complète les conditions.",
+        "L'étape « Créer le bon de commande » ouvre le formulaire avec **l'attributaire de l'appel d'offres choisi d'office**, les articles de la réquisition et **les prix unitaires de son offre** (27 900 USD au total, au lieu des 28 800 USD estimés). Paul complète les conditions de paiement et de livraison.",
       ] },
       { img: '14_manager-n2_mes-taches', profile: 'Manager niveau 2', user: 'Ruth Kahindo', title: 'Approbation au niveau N2', text: [
         "Après la révision par Grace Nsimba, le montant (27 900 USD, entre 25 000 et 99 999) envoie l'approbation au **Manager niveau 2** : Ruth Kahindo reçoit la tâche.",

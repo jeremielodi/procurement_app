@@ -215,6 +215,9 @@ test.describe.serial('API › Portail fournisseur & appels d\'offres', () => {
     const list = (await (await request.get(`/api/suppliers?forPurchaseOrder=1&requisitionId=${requisitionId}`, { headers: auth(adminToken) })).json()).data;
     expect(list.filter(s => s.awarded).map(s => s.id)).toEqual([winnerId]);
     expect(list.find(s => s.id === winnerId)).toMatchObject({ is_prequalified: false, self_registered: true });
+    // Prix de l'offre retenue (dernière version : 8 par article), repris par le formulaire du bon de commande
+    expect(list.find(s => s.id === winnerId).awarded_prices).toEqual(Object.fromEntries(items.map(i => [String(i.id), 8])));
+    expect(list.filter(s => s.awarded_prices).map(s => s.id)).toEqual([winnerId]);
   });
 
   test.afterAll(async ({ request }) => {

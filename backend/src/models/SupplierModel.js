@@ -158,6 +158,12 @@ class SupplierModel {
                  WHERE sp.supplier_id = s.id AND sp.status = 'APPROVED'${preqFilter})) AS is_prequalified,
               EXISTS (SELECT 1 FROM tenders td WHERE td.requisition_id = ${reqParam} AND td.status = 'AWARDED'
                         AND td.awarded_supplier_id = s.id) AS awarded,
+              -- Prix de son offre (attribution à un seul fournisseur) : { ligne de réquisition → prix unitaire }
+              (SELECT json_object_agg(tsi.requisition_item_id, tsi.unit_price::float8)
+               FROM tenders td
+               JOIN tender_submissions ts ON ts.tender_id = td.id AND ts.supplier_id = s.id
+               JOIN tender_submission_items tsi ON tsi.submission_id = ts.id
+               WHERE td.requisition_id = ${reqParam} AND td.status = 'AWARDED' AND td.awarded_supplier_id = s.id) AS awarded_prices,
               -- Fournisseur désigné (avec sa pro-forma) à l'étape « Achat direct » : la plus récente fait foi
               COALESCE((SELECT dp.supplier_id FROM direct_purchase_selections dp WHERE dp.requisition_id = ${reqParam}
                         ORDER BY dp.created_at DESC LIMIT 1) = s.id, false) AS direct_purchase,

@@ -5,7 +5,29 @@ const orderTasks = require('../services/OrderTaskService');
 const db             = require('../config/database');
 const i18n           = require('../i18n');
 const grnExportService = require('../services/GoodsReceiptExportService');
+const notificationModel = require('../models/NotificationModel');
+const userModel = require('../models/UserModel');
+const warehouseModel = require('../models/WarehouseModel');
 const { audit, AUDIT } = require('../utils/auditLog');
+const { block, same } = require('../utils/segregation');
+
+/** Notification in-app (+ temps réel) dans la langue du destinataire ; n'interrompt jamais la requête */
+async function notify(req, userId, key, vars, link) {
+  try {
+    const user = await userModel.findById(userId);
+    const T = i18n.translator(user?.language);
+    const title = T(`notification.grnStore.${key}Title`, vars);
+    const message = T(`notification.grnStore.${key}Message`, vars);
+    await notificationModel.create({ userId, title, message, type: 'INFO', link });
+    req.io?.to(`user-${userId}`).emit('notification', { title, message, type: 'INFO', link, timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('Notification confirmation du magasin :', error.message);
+  }
+}
+const userName = async (req) => {
+  const u = await userModel.findById(req.user.id).catch(() => null);
+  return `${u?.firstName || ''} ${u?.lastName || ''}`.trim() || req.user.email;
+};
 
 /** Annulation d'un GRN tracée dans le journal d'audit */
 const auditCancel = (req, result) => audit(req, AUDIT.GOODS_RECEIPT_CANCELLED, {
@@ -86,6 +108,17 @@ class GoodsReceiptController {
         req.io.emit('grn-created', { grnId: result.id, poId, grnCompliant: result.grnCompliant });
       }
 
+      // Entrée en magasin à confirmer : les personnes du dépôt (sauf l'auteur) sont prévenues
+      try {
+        const grn = await grnModel.findById(result.id);
+        if (grn?.warehouse_id) {
+          const vars = { number: grn.grn_number, warehouse: grn.warehouse_name, name: grn.received_by_name || '' };
+          for (const userId of await grnModel.storeConfirmers(grn)) await notify(req, userId, 'toConfirm', vars, `/goods-receipts/${grn.id}`);
+        }
+      } catch (e) {
+        console.error('[GRN] notification du magasin (non-fatal):', e.message);
+      }
+
       res.status(201).json({
         success: true,
         data: result,
@@ -121,6 +154,11 @@ class GoodsReceiptController {
     try {
       const grn = await grnModel.findById(req.params.id);
       if (!grn) return res.status(404).json({ success: false, message: 'GRN non trouvé' });
+      // Confirmation de l'entrée en magasin : accès au dépôt, réception active et non confirmée, pas son propre GRN
+      const pending = grn.status !== 'CANCELLED' && !!grn.warehouse_id && !grn.store_confirmed_at;
+      const onWarehouse = pending && await warehouseModel.canOperate(req.user.id, grn.warehouse_id);
+      grn.store_self_confirmation = onWarehouse && same(grn.received_by, req.user.id);
+      grn.can_store_confirm = onWarehouse && !grn.store_self_confirmation;
       res.json({ success: true, data: grn });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Erreur récupération GRN', error: error.message });
@@ -196,6 +234,38 @@ class GoodsReceiptController {
       res.json({ success: true, data: result, message: 'Ligne entrée en stock' });
     } catch (error) {
       return sendError(res, error, 'Erreur lors de l\'entrée en stock');
+    }
+  }
+
+  /**
+   * POST /goods-receipts/:id/store-confirm { comment } — le magasin confirme l'entrée des articles reçus (migration 61) :
+   * nom, fonction, date et signature imprimés dans le cadre « Dépôt » du bon de réception. Personne ayant accès au dépôt,
+   * jamais celle qui a enregistré la réception (403 SELF_VALIDATION, tracé SOD_VIOLATION_BLOCKED).
+   */
+  async confirmStore(req, res) {
+    try {
+      const current = await grnModel.findById(req.params.id);
+      if (!current) return res.status(404).json({ success: false, code: 'GRN_NOT_FOUND', message: 'GRN introuvable' });
+      if (same(current.received_by, req.user.id)) {
+        throw await block(req, {
+          code: 'SELF_VALIDATION',
+          message: 'Séparation des tâches : l\'entrée en magasin doit être confirmée par une autre personne que celle qui a enregistré la réception',
+          entity: { type: 'goods_receipt', id: current.id, label: current.grn_number },
+          details: { document: 'goods_receipt' },
+        });
+      }
+      const result = await grnModel.confirmStore(req.params.id, { userId: req.user.id, comment: req.body?.comment });
+      await audit(req, AUDIT.GOODS_RECEIPT_STORE_CONFIRMED, {
+        entity: { type: 'goods_receipt', id: result.id, label: result.grnNumber },
+        details: { warehouse: current.warehouse_name, comment: result.comment },
+      });
+      if (current.received_by) {
+        await notify(req, current.received_by, 'confirmed', { number: current.grn_number, warehouse: current.warehouse_name, name: await userName(req) },
+          `/goods-receipts/${current.id}`);
+      }
+      res.json({ success: true, data: await grnModel.findById(req.params.id), message: 'Entrée en magasin confirmée' });
+    } catch (error) {
+      return sendError(res, error, 'Erreur lors de la confirmation de l\'entrée en magasin');
     }
   }
 

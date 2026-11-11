@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Package, PackagePlus, CheckCircle, AlertTriangle, Clock, Eye, Download, Ban, Warehouse } from 'lucide-react';
+import { ArrowLeft, Package, PackagePlus, CheckCircle, AlertTriangle, Clock, Eye, Download, Ban } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { grnService } from '../../services/grnService';
 import BlobPdfViewer from '../Common/BlobPdfViewer';
 import Modal from '../Common/Modal';
 import GRNStockEntryModal from './GRNStockEntryModal';
+import GRNStoreConfirmation from './GRNStoreConfirmation';
 import { usePermissions } from '../../hooks/usePermissions';
 import { t, withLabel, getLocale } from '../../i18n';
 
@@ -169,13 +170,7 @@ export default function GRNDetail() {
         ))}
       </div>
 
-      {grn.warehouse_name && (
-        <div className="mb-6 flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-3 text-sm">
-          <Warehouse size={16} className="text-gray-500" />
-          <span className="text-gray-500">{t('grn.warehouse')} :</span>
-          <b>{grn.warehouse_name}</b> <span className="text-gray-500">({grn.warehouse_location})</span>
-        </div>
-      )}
+      <GRNStoreConfirmation grn={grn} onDone={load} />
 
       {/* Items */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">

@@ -1,5 +1,6 @@
 // Étape 1 — jeu de données de démonstration : entreprise, utilisateurs (un par profil), projet, budget, dépôts,
 // articles, fournisseur inscrit sur le portail. Réutilisable : ce qui existe déjà est repris, le reste est créé.
+import { chromium } from 'playwright';
 import { CFG, call, tokenFor, superAdminCreds, saveState, loadState, pdfBlob } from './lib.mjs';
 
 const D = CFG.domain;
@@ -20,6 +21,33 @@ const PEOPLE = [
 const SUPPLIER = { name: 'Bureautique Kivu SARL', email: `ventes@bureautique-kivu.${D}` };
 
 const list = (x) => (Array.isArray(x) ? x : x?.rows || x?.data || x?.items || []);
+
+/** Signature « manuscrite » (nom écrit en cursive, encre bleue, fond transparent) déposée pour chaque compte sans signature */
+async function demoSignatures(users) {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    for (const u of Object.values(users)) {
+      const token = await tokenFor(u.email);
+      const has = await fetch(`${CFG.api}/auth/signature`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok);
+      if (has) continue;
+      const b64 = await page.evaluate((name) => {
+        const c = document.createElement('canvas'); c.width = 420; c.height = 120;
+        const g = c.getContext('2d');
+        g.fillStyle = '#1E3FA8';
+        g.font = 'italic 54px "Segoe Script", "Brush Script MT", "Lucida Handwriting", cursive';
+        g.translate(18, 82); g.rotate(-0.04);
+        g.fillText(name, 0, 0);
+        g.lineWidth = 2.2; g.strokeStyle = '#1E3FA8';
+        g.beginPath(); g.moveTo(0, 16); g.bezierCurveTo(120, 30, 250, 2, 360, 14); g.stroke();
+        return c.toDataURL('image/png').split(',')[1];
+      }, u.name);
+      const fd = new FormData();
+      fd.append('signature', new Blob([Buffer.from(b64, 'base64')], { type: 'image/png' }), 'signature.png');
+      await call('PUT', '/auth/signature', token, fd).catch(e => console.log('  signature', u.email, e.message));
+    }
+  } finally { await browser.close(); }
+}
 
 export async function dataset() {
   const state = loadState();
@@ -59,6 +87,9 @@ export async function dataset() {
     }
     users[key] = { id, email, name: `${first} ${last}`, position };
   }
+
+  // Signature manuscrite de démonstration pour chaque compte (imprimée sur les PDF des documents qu'il a traités)
+  await demoSignatures(users);
 
   // Projet (chef de projet = Jean) et ligne budgétaire
   const projects = list(await call('GET', '/projects', admin));

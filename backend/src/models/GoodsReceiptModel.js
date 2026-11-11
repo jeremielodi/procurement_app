@@ -404,11 +404,13 @@ class GoodsReceiptModel {
               po.po_number, po.total_amount AS po_amount, po.requisition_id,
               s.name AS supplier_name,
               u.first_name || ' ' || u.last_name AS received_by_name,
+              sc.first_name || ' ' || sc.last_name AS store_confirmed_by_name,
               w.code AS warehouse_code, w.name AS warehouse_name, l.name AS warehouse_location
        FROM goods_receipt_notes grn
        LEFT JOIN purchase_orders po ON grn.po_id = po.id
        LEFT JOIN suppliers       s  ON po.supplier_id = s.id
        LEFT JOIN users           u  ON grn.received_by = u.id
+       LEFT JOIN users           sc ON grn.store_confirmed_by = sc.id
        LEFT JOIN warehouses      w  ON w.id = grn.warehouse_id
        LEFT JOIN locations       l  ON l.id = w.location_id
        WHERE grn.id = $1`,
@@ -509,6 +511,43 @@ class GoodsReceiptModel {
    * Refusée si le stock correspondant a déjà été consommé (solde insuffisant) — rien n'est modifié.
    * Le GRN annulé ne compte plus dans le suivi des livraisons (v_po_item_delivery).
    */
+  /**
+   * Confirmation de l'entrée en magasin (migration 61) par une personne ayant accès au dépôt de la réception.
+   * La séparation des tâches (≠ personne qui a enregistré le GRN) est contrôlée par le contrôleur (audit du refus).
+   */
+  async confirmStore(id, { userId, comment } = {}) {
+    return db.withTransaction(async (tx) => {
+      const grn = await tx.one(
+        'SELECT id, grn_number, status, warehouse_id, received_by, store_confirmed_at FROM goods_receipt_notes WHERE id = $1 FOR UPDATE', [id]);
+      if (!grn) throw fail(404, 'GRN_NOT_FOUND', 'GRN introuvable');
+      if (grn.status === 'CANCELLED') throw fail(409, 'GRN_CANCELLED', 'Réception annulée : confirmation impossible');
+      if (!grn.warehouse_id) throw fail(409, 'NO_WAREHOUSE', 'Aucun article de cette réception n\'est entré dans un dépôt');
+      if (grn.store_confirmed_at) throw fail(409, 'ALREADY_CONFIRMED', 'Entrée en magasin déjà confirmée');
+      if (!(await warehouseModel.canOperate(userId, grn.warehouse_id))) {
+        throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès au dépôt de cette réception');
+      }
+      const note = String(comment || '').trim().slice(0, 1000) || null;
+      await tx.exec(
+        `UPDATE goods_receipt_notes SET store_confirmed_by = $2, store_confirmed_at = NOW(), store_confirmation_comment = $3
+         WHERE id = $1`,
+        [id, userId, note]
+      );
+      return { id: grn.id, grnNumber: grn.grn_number, warehouseId: grn.warehouse_id, receivedBy: grn.received_by, comment: note };
+    });
+  }
+
+  /** Personnes prévenues qu'une réception attend la confirmation du magasin : accès au dépôt, sauf l'auteur du GRN */
+  async storeConfirmers(grn) {
+    if (!grn?.warehouse_id) return [];
+    const rows = await db.select(
+      `SELECT DISTINCT u.id FROM users u
+       JOIN warehouse_users wu ON wu.user_id = u.id AND wu.warehouse_id = $1
+       WHERE u.is_active AND u.id IS DISTINCT FROM $2::uuid`,
+      [grn.warehouse_id, grn.received_by]
+    );
+    return rows.map(r => r.id);
+  }
+
   async cancel(id, { userId, reason } = {}) {
     return db.withTransaction(async (tx) => {
       const grn = await tx.one('SELECT id, grn_number, status, enterprise_id FROM goods_receipt_notes WHERE id = $1 FOR UPDATE', [id]);

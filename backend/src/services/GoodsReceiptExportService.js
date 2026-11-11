@@ -39,6 +39,7 @@ class GoodsReceiptExportService {
               s.name AS supplier_name, s.supplier_code, s.phone AS supplier_phone,
               s.email AS supplier_email, s.address AS supplier_address,
               u.first_name || ' ' || u.last_name AS received_by_name,
+              sc.first_name || ' ' || sc.last_name AS store_confirmed_by_name,
               w.name AS warehouse_name, wl.name AS warehouse_location,
               COALESCE(e.name, (SELECT name FROM enterprise ORDER BY created_at LIMIT 1)) AS enterprise_name
        FROM goods_receipt_notes grn
@@ -46,6 +47,7 @@ class GoodsReceiptExportService {
        LEFT JOIN requisitions r     ON r.id = po.requisition_id
        LEFT JOIN suppliers s        ON s.id = po.supplier_id
        LEFT JOIN users u            ON u.id = grn.received_by
+       LEFT JOIN users sc           ON sc.id = grn.store_confirmed_by
        LEFT JOIN warehouses w       ON w.id = grn.warehouse_id
        LEFT JOIN locations wl       ON wl.id = w.location_id
        LEFT JOIN enterprise e       ON e.id = u.enterprise_id
@@ -97,8 +99,9 @@ class GoodsReceiptExportService {
   tfoot td { font-weight: bold; background: #E0E7FF !important; }
   .obs { margin-top: 12px; white-space: pre-line; }
   .signatures { display: flex; gap: 12px; margin-top: 28px; page-break-inside: avoid; }
-  .sig { flex: 1; border: 1px dashed #9CA3AF; border-radius: 6px; height: 110px; padding: 8px; color: #6B7280; font-size: 10px; }
+  .sig { flex: 1; border: 1px dashed #9CA3AF; border-radius: 6px; min-height: 110px; padding: 8px; color: #6B7280; font-size: 10px; }
   .sig b { color: #111827; display: block; margin-top: 4px; }
+  .sig i { display: block; font-style: normal; color: #4B5563; }
   .sig img { display: block; max-height: 48px; max-width: 170px; object-fit: contain; margin-top: 6px; }
 </style></head>
 <body>
@@ -165,7 +168,12 @@ class GoodsReceiptExportService {
   <div class="signatures">
     <div class="sig">{{L.receivedBy}}<b>{{grn.received_by_name}}</b>{{#if receiverSignature}}<img src="{{receiverSignature}}" alt="">{{else}}<br>{{/if}}{{L.signature}}</div>
     <div class="sig">{{L.deliverer}}<br><br>{{L.nameSignature}}</div>
-    <div class="sig">{{L.warehouse}}<br><br>{{L.signatureStamp}}</div>
+    <div class="sig">{{L.warehouse}} <b>{{#if grn.warehouse_name}}{{grn.warehouse_name}}{{else}}&nbsp;{{/if}}</b>
+      {{#if grn.store_confirmed_at}}
+        <b>{{grn.store_confirmed_by_name}}</b>{{#if grn.store_confirmed_by_position}}<i>{{grn.store_confirmed_by_position}}</i>{{/if}}
+        <i>{{L.storeConfirmedOn}} {{grn_formatDate grn.store_confirmed_at}}</i>
+        {{#if storeSignature}}<img src="{{storeSignature}}" alt="">{{/if}}
+      {{else}}<br>{{/if}}{{L.signatureStamp}}</div>
   </div>
 </body></html>`;
   }
@@ -177,7 +185,9 @@ class GoodsReceiptExportService {
     const ctx = pdfContext(lang, 'grn');
     // Signature image de la personne qui a enregistré la réception
     const receiverSignature = await signatureDataUri(grn.received_by);
-    const html = Handlebars.compile(this.getTemplate())({ grn, items: grn.items, totals: grn.totals, receiverSignature, ...ctx });
+    // … et celle du magasin, seulement une fois l'entrée en magasin confirmée (migration 61)
+    const storeSignature = grn.store_confirmed_at ? await signatureDataUri(grn.store_confirmed_by) : null;
+    const html = Handlebars.compile(this.getTemplate())({ grn, items: grn.items, totals: grn.totals, receiverSignature, storeSignature, ...ctx });
 
     const pdf = await renderPdf(html, {
       format: 'A4',

@@ -189,13 +189,20 @@ export async function workflow() {
     });
     run.grnId = grn.id || grn.grnId; saveState({ ...loadState(), workflow: run });
     await shot('logistic', `/goods-receipts/${run.grnId}`, '23_logistique_fiche-reception', { tall: 1100 });
+    // Le magasinier (autre personne ayant accès au dépôt) confirme l'entrée en magasin : sa signature sur le GRN
+    await shot('storekeeper', `/goods-receipts/${run.grnId}`, '23b_magasinier_confirmer-entree-magasin', { tall: 1100, before: async (p) => {
+      await p.locator('[data-testid="grn-store-confirm"]').click();
+      await p.waitForTimeout(600);
+      await p.locator('[data-testid="grn-store-comment"]').fill('50 rames et 10 toners rangés, étagère B2');
+    } });
+    await call('POST', `/goods-receipts/${run.grnId}/store-confirm`, await tok('storekeeper'), { comment: '50 rames et 10 toners rangés, étagère B2' });
     await pdf(`/goods-receipts/${run.grnId}/pdf?lang=fr`, 'P3_pdf_bon-de-reception', 1);
 
     console.log('• Facture et paiement');
     t = await waitTask(pid, 'Activity_EnterInvoice');
     await shot('finance', `/invoices/new?taskId=${t.id}&poId=${po.id}`, '24_finance_formulaire-facture', { tall: 1100 });
     const inv = await call('POST', '/invoices', await tok('finance'), {
-      poId: po.id, grnId: run.grnId, taskId: t.id, supplierInvoiceNumber: 'FV-BK-2026-0931', invoiceDate: today(), dueDate: future(30),
+      poId: po.id, grnId: run.grnId, taskId: t.id, supplierInvoiceNumber: `FV-BK-${Date.now().toString(36).toUpperCase()}`, invoiceDate: today(), dueDate: future(30),
       subtotal: 1200, taxAmount: 0, totalAmount: 1200, currency: 'USD', notes: 'Facture reçue par email',
     });
     run.invoiceId = inv.id; saveState({ ...loadState(), workflow: run });

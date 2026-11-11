@@ -434,6 +434,12 @@
       "returnedTitle": "Requisition {number} to be corrected",
       "returnedMessage": "Your requisition {number} has been returned for correction: \"{reason}\". Correct it, then resubmit it."
     },
+    "grnStore": {
+      "toConfirmTitle": "Receipt to confirm: {number}",
+      "toConfirmMessage": "{name} recorded receipt {number} in warehouse {warehouse}. Check the items and confirm they are in the store: your name and signature will appear on the goods receipt note.",
+      "confirmedTitle": "Store entry confirmed: {number}",
+      "confirmedMessage": "{name} confirmed the store entry of receipt {number} (warehouse {warehouse})."
+    },
     "stockEntry": {
       "toValidateTitle": "Stock entry to validate: {number}",
       "toValidateMessage": "{name} recorded stock entry {number} (warehouse {warehouse}). Check it and validate it to put the items in stock.",
@@ -588,6 +594,7 @@
       "nameSignature": "Name and signature:",
       "warehouse": "Warehouse:",
       "signatureStamp": "Signature and stamp:",
+      "storeConfirmedOn": "Store entry confirmed on",
       "status": {
         "DRAFT": "Draft",
         "PENDING": "Pending",
@@ -1002,6 +1009,7 @@
     "PURCHASE_ORDER_DELETED": "Purchase order deleted",
     "GOODS_RECEIPT_CANCELLED": "Goods receipt cancelled",
     "GOODS_RECEIPT_STOCK_ENTRY": "Receipt line put into stock afterwards",
+    "GOODS_RECEIPT_STORE_CONFIRMED": "Store entry of a goods receipt confirmed",
     "INVOICE_REJECTED": "Invoice rejected",
     "INVOICE_DUPLICATE_BLOCKED": "Duplicate invoice refused",
     "PAYMENT_APPROVED": "Payment approved",

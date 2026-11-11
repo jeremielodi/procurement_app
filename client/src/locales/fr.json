@@ -1868,6 +1868,23 @@
     "cancelled_one": "Réception annulée ({{count}} écriture de stock inversée)",
     "cancelled_other": "Réception annulée ({{count}} écritures de stock inversées)",
     "cancelStockUsed": "Annulation impossible : une partie du stock reçu a déjà été sortie du dépôt.",
+    "store": {
+      "pending": "Entrée en magasin à confirmer",
+      "confirm": "Confirmer l'entrée en magasin",
+      "confirmedBy": "Entrée en magasin confirmée par {{name}} le {{date}}",
+      "selfHint": "Vous avez enregistré cette réception : une autre personne ayant accès au dépôt doit confirmer l'entrée en magasin.",
+      "title": "Entrée en magasin — {{number}}",
+      "text": "Confirmez que les articles acceptés sont bien rangés dans le dépôt « {{warehouse}} ». Votre nom, votre fonction, la date et votre signature (si elle est enregistrée dans « Mon profil ») figureront dans le cadre « Dépôt » du bon de réception.",
+      "comment": "Commentaire (facultatif)",
+      "done": "Entrée en magasin confirmée",
+      "err": {
+        "SELF_VALIDATION": "Séparation des tâches : la personne qui a enregistré la réception ne peut pas confirmer l'entrée en magasin.",
+        "WAREHOUSE_FORBIDDEN": "Vous n'avez pas accès au dépôt de cette réception.",
+        "ALREADY_CONFIRMED": "L'entrée en magasin a déjà été confirmée.",
+        "GRN_CANCELLED": "Réception annulée : confirmation impossible.",
+        "NO_WAREHOUSE": "Aucun article de cette réception n'est entré dans un dépôt."
+      }
+    },
     "stockCol": "Stock",
     "lotLabel": "Lot {{lot}}",
     "expiryLabel": "péremption {{date}}",
@@ -5174,6 +5191,26 @@
           },
           {
             "type": "h",
+            "text": "Confirmation de l'entrée en magasin (signature du magasin)"
+          },
+          {
+            "type": "p",
+            "text": "Quand la réception est enregistrée dans un dépôt, les personnes ayant accès à ce dépôt sont prévenues. L'une d'elles — pas celle qui a enregistré la réception — ouvre le bon de réception et clique « Confirmer l'entrée en magasin » (commentaire facultatif)."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Son nom, sa fonction, la date et sa signature (si elle est enregistrée dans « Mon profil ») sont imprimés dans le cadre « Dépôt » du bon de réception PDF.",
+              "La personne qui a enregistré la réception est prévenue ; la confirmation figure dans le journal d'audit.",
+              "Contrôle supplémentaire : la confirmation ne bloque ni le workflow ni la saisie de la facture."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Séparation des tâches : la personne qui a enregistré la réception ne peut pas confirmer elle-même l'entrée en magasin."
+          },
+          {
+            "type": "h",
             "text": "Après la réception"
           },
           {
@@ -6507,6 +6544,7 @@
       "PURCHASE_ORDER_DELETED": "Bon de commande supprimé",
       "GOODS_RECEIPT_CANCELLED": "Réception annulée",
       "GOODS_RECEIPT_STOCK_ENTRY": "Ligne de réception entrée en stock après coup",
+      "GOODS_RECEIPT_STORE_CONFIRMED": "Entrée en magasin d'une réception confirmée",
       "INVOICE_REJECTED": "Facture rejetée",
       "INVOICE_DUPLICATE_BLOCKED": "Facture en double refusée",
       "PAYMENT_APPROVED": "Paiement approuvé",

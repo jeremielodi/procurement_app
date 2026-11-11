@@ -157,6 +157,7 @@ page({
     ['David Lukusa', 'Manager niveau 1', 'Approuve le bon de commande (montant < 25 000).'],
     ['Bureautique Kivu SARL', 'Fournisseur', 'Confirme la commande sur son portail.'],
     ['Sarah Amani', 'Logistique', 'Enregistre la réception (GRN) et l\'entrée en stock.'],
+    ['Joseph Mbala', 'Magasinier', 'Confirme l\'entrée en magasin : il signe le bon de réception.'],
     ['Esther Ilunga', 'Finance', 'Saisit la facture et l\'ordre de paiement.'],
     ['Patrick Tshibanda', 'Directeur général', 'Approuve le paiement.'],
     ['Alice Admin', 'Administrateur', 'Suit l\'activité (tableau de bord, liste des réquisitions).'],
@@ -258,9 +259,13 @@ page({
       ] },
       { img: '23_logistique_fiche-reception', profile: 'Logistique', user: 'Sarah Amani', title: 'Réception enregistrée', text: [
         'La fiche du GRN indique le dépôt, les quantités et le **numéro de mouvement de stock** de chaque ligne. Une réception peut être annulée tant que le stock reçu n\'a pas été consommé (écritures inverses).',
+        'Le bandeau du dépôt affiche **« Entrée en magasin à confirmer »** : les personnes ayant accès au Magasin central sont prévenues.',
       ] },
+      { img: '23b_magasinier_confirmer-entree-magasin', profile: 'Magasinier', user: 'Joseph Mbala', title: 'Le magasinier confirme l\'entrée en magasin', text: [
+        'Joseph, magasinier du dépôt, vérifie que les articles sont rangés et clique **« Confirmer l\'entrée en magasin »** (commentaire facultatif). Son nom, sa fonction, la date et sa signature figureront dans le cadre « Dépôt » du bon de réception ; Sarah est prévenue.',
+      ], note: 'Séparation des tâches : la personne qui a enregistré la réception ne peut pas confirmer elle-même l\'entrée en magasin. La confirmation ne bloque ni le workflow ni la facture.' },
       { img: 'P3_pdf_bon-de-reception', doc: true, profile: 'Document', title: 'PDF : bon de réception', text: [
-        'Le bon de réception PDF (dépôt, codes articles, quantités, signature de la personne qui a réceptionné) sert de pièce justificative.',
+        'Le bon de réception PDF sert de pièce justificative : dépôt, codes articles, quantités, puis trois cadres de signature — **réceptionné par** (Sarah, signature reprise de son profil), **livreur** (à la main) et **dépôt** (Joseph, magasinier : nom, fonction, date et signature après sa confirmation).',
       ] },
     ] },
     { title: 'Facture, rapprochement et paiement', steps: [
@@ -303,7 +308,7 @@ page({
     ['Qui valide la réquisition ?', 'Le **chef du projet** seul (ou son intérimaire déclaré). Il ne valide jamais sa propre demande.'],
     ['Qui traite les achats ?', 'L\'**agent achats désigné** par le chef de projet à la validation ; l\'administrateur peut aussi intervenir.'],
     ['Qui approuve le bon de commande ?', 'Après révision : **N1** (< 25 000), **N2** (25 000 – 99 999) ou **N3** (≥ 100 000), seuils du projet ou de l\'entreprise.'],
-    ['Séparation des tâches', 'Personne n\'approuve ce qu\'il a demandé, créé ou saisi : bon de commande, facture, paiement. Toute tentative est bloquée et tracée dans le journal d\'audit.'],
+    ['Séparation des tâches', 'Personne n\'approuve ce qu\'il a demandé, créé ou saisi : bon de commande, facture, paiement ; l\'entrée en magasin est confirmée par une autre personne que celle qui a enregistré la réception. Toute tentative est bloquée et tracée dans le journal d\'audit.'],
     ['Documents rattachés', 'Une SAN, un GRN, une facture ou un paiement ne peut exister que rattaché à son bon de commande et à sa réquisition, et seulement à l\'étape prévue.'],
     ['Livraisons partielles', 'SAN puis GRN à **chaque** livraison, jusqu\'à livraison complète ou reliquat soldé.'],
   ],

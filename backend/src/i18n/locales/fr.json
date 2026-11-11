@@ -434,6 +434,12 @@
       "returnedTitle": "Réquisition {number} à corriger",
       "returnedMessage": "Votre réquisition {number} vous est renvoyée pour correction : « {reason} ». Corrigez-la puis soumettez-la à nouveau."
     },
+    "grnStore": {
+      "toConfirmTitle": "Réception à confirmer : {number}",
+      "toConfirmMessage": "{name} a enregistré la réception {number} dans le dépôt {warehouse}. Vérifiez les articles et confirmez leur entrée en magasin : votre nom et votre signature figureront sur le bon de réception.",
+      "confirmedTitle": "Entrée en magasin confirmée : {number}",
+      "confirmedMessage": "{name} a confirmé l'entrée en magasin de la réception {number} (dépôt {warehouse})."
+    },
     "stockEntry": {
       "toValidateTitle": "Bon d'entrée à valider : {number}",
       "toValidateMessage": "{name} a saisi le bon d'entrée {number} (dépôt {warehouse}). Vérifiez-le et validez-le pour faire entrer les articles en stock.",
@@ -588,6 +594,7 @@
       "nameSignature": "Nom et signature :",
       "warehouse": "Dépôt :",
       "signatureStamp": "Signature et cachet :",
+      "storeConfirmedOn": "Entrée en magasin confirmée le",
       "status": {
         "DRAFT": "Brouillon",
         "PENDING": "En attente",
@@ -1002,6 +1009,7 @@
     "PURCHASE_ORDER_DELETED": "Bon de commande supprimé",
     "GOODS_RECEIPT_CANCELLED": "Réception annulée",
     "GOODS_RECEIPT_STOCK_ENTRY": "Ligne de réception entrée en stock après coup",
+    "GOODS_RECEIPT_STORE_CONFIRMED": "Entrée en magasin d'une réception confirmée",
     "INVOICE_REJECTED": "Facture rejetée",
     "INVOICE_DUPLICATE_BLOCKED": "Facture en double refusée",
     "PAYMENT_APPROVED": "Paiement approuvé",

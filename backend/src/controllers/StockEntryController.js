@@ -38,7 +38,7 @@ async function notify(req, userId, key, vars, link) {
 async function notifyAuthor(req, entry, key) {
   if (entry.created_by && !same(entry.created_by, req.user.id)) {
     const actor = await userModel.findById(req.user.id).catch(() => null);
-    const name = `${actor?.first_name || ''} ${actor?.last_name || ''}`.trim() || req.user.email;
+    const name = `${actor?.firstName || ''} ${actor?.lastName || ''}`.trim() || req.user.email;
     await notify(req, entry.created_by, key, { number: entry.entry_number, name }, `/stock/entries/${entry.id}`);
   }
 }

@@ -1868,6 +1868,23 @@
     "cancelled_one": "Receipt cancelled ({{count}} stock entry reversed)",
     "cancelled_other": "Receipt cancelled ({{count}} stock entries reversed)",
     "cancelStockUsed": "Cannot cancel: part of the received stock has already left the warehouse.",
+    "store": {
+      "pending": "Store entry to confirm",
+      "confirm": "Confirm store entry",
+      "confirmedBy": "Store entry confirmed by {{name}} on {{date}}",
+      "selfHint": "You recorded this receipt: another person with access to the warehouse must confirm the store entry.",
+      "title": "Store entry — {{number}}",
+      "text": "Confirm that the accepted items are stored in warehouse \"{{warehouse}}\". Your name, title, the date and your signature (if saved in \"My profile\") will appear in the \"Warehouse\" box of the goods receipt note.",
+      "comment": "Comment (optional)",
+      "done": "Store entry confirmed",
+      "err": {
+        "SELF_VALIDATION": "Segregation of duties: the person who recorded the receipt cannot confirm the store entry.",
+        "WAREHOUSE_FORBIDDEN": "You do not have access to this receipt's warehouse.",
+        "ALREADY_CONFIRMED": "The store entry has already been confirmed.",
+        "GRN_CANCELLED": "Receipt cancelled: confirmation not possible.",
+        "NO_WAREHOUSE": "No item of this receipt went into a warehouse."
+      }
+    },
     "stockCol": "Stock",
     "lotLabel": "Lot {{lot}}",
     "expiryLabel": "expiry {{date}}",
@@ -5174,6 +5191,26 @@
           },
           {
             "type": "h",
+            "text": "Store entry confirmation (store signature)"
+          },
+          {
+            "type": "p",
+            "text": "When a receipt is recorded in a warehouse, the people with access to that warehouse are notified. One of them — not the person who recorded the receipt — opens the goods receipt note and clicks \"Confirm store entry\" (optional comment)."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Their name, title, the date and their signature (if saved in \"My profile\") are printed in the \"Warehouse\" box of the goods receipt PDF.",
+              "The person who recorded the receipt is notified; the confirmation is recorded in the audit log.",
+              "Additional check: the confirmation blocks neither the workflow nor the invoice entry."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Segregation of duties: the person who recorded the receipt cannot confirm the store entry themselves."
+          },
+          {
+            "type": "h",
             "text": "After the receipt"
           },
           {
@@ -6507,6 +6544,7 @@
       "PURCHASE_ORDER_DELETED": "Purchase order deleted",
       "GOODS_RECEIPT_CANCELLED": "Goods receipt cancelled",
       "GOODS_RECEIPT_STOCK_ENTRY": "Receipt line put into stock afterwards",
+      "GOODS_RECEIPT_STORE_CONFIRMED": "Store entry of a goods receipt confirmed",
       "INVOICE_REJECTED": "Invoice rejected",
       "INVOICE_DUPLICATE_BLOCKED": "Duplicate invoice refused",
       "PAYMENT_APPROVED": "Payment approved",

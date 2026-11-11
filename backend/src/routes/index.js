@@ -762,6 +762,11 @@ router.post('/goods-receipts/:id/cancel',
   authenticate, hasPermission('APPROVE_PURCHASE_ORDERS'), onProject('APPROVE_PURCHASE_ORDERS', 'goodsReceipt', from.param('id')),
   grnController.cancel.bind(grnController)
 );
+// Confirmation de l'entrée en magasin (signature du magasin sur le bon de réception) : accès au dépôt contrôlé par le modèle
+router.post('/goods-receipts/:id/store-confirm',
+  authenticate, hasAnyPermission('RECORD_GOODS_RECEIPT', 'VIEW_STOCK'),
+  grnController.confirmStore.bind(grnController)
+);
 // Entrée en stock après la réception d'une ligne restée hors stock (texte libre rattaché ensuite au catalogue)
 router.post('/goods-receipts/:id/items/:itemId/stock-entry',
   authenticate, hasPermission('RECORD_GOODS_RECEIPT'), onProject('RECORD_GOODS_RECEIPT', 'goodsReceipt', from.param('id')),

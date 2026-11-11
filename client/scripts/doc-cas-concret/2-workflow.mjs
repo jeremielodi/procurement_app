@@ -126,7 +126,7 @@ export async function workflow() {
 
     t = await waitTask(pid, 'Activity_DirectPurchase');
     await shot('procurement', null, '11_agent-achats_achat-direct-proforma', { before: () => openTask('procurement', req.id, t) });
-    const supplier = (await call('GET', `/suppliers?forPurchaseOrder=1&requisitionId=${req.id}`, admin)).find(s => s.name === D.supplier.name);
+    const supplier = (await call('GET', `/suppliers?forPurchaseOrder=1&requisitionId=${req.id}`, admin)).find(s => s.email === D.supplier.email);
     const up = new FormData();
     up.append('file', pdfBlob(), 'proforma-BK-2026-118.pdf'); up.append('entity_type', 'requisition'); up.append('entity_id', req.id);
     const att = await call('POST', '/upload', await tok('procurement'), up);

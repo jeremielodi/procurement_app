@@ -12,6 +12,7 @@ const PEOPLE = [
   ['procurement', 'Paul', 'Kasongo', 'Agent achats', ['prof_procurement'], ['prof_procurement']],
   ['reviewer', 'Grace', 'Nsimba', 'Réviseuse des bons de commande', ['prof_po_reviewer'], ['prof_po_reviewer']],
   ['manager', 'David', 'Lukusa', 'Responsable des opérations (N1)', ['prof_manager'], ['prof_manager']],
+  ['manager2', 'Ruth', 'Kahindo', 'Directrice des programmes (N2)', ['prof_manager_n2'], ['prof_manager_n2']],
   ['logistic', 'Sarah', 'Amani', 'Logisticienne', ['prof_logistic'], ['prof_logistic']],
   // Le profil Magasinier seul ne donne ni la consultation du stock ni les sorties : Logistique en plus
   ['storekeeper', 'Joseph', 'Mbala', 'Magasinier', ['prof_store_keeper', 'prof_logistic'], ['prof_logistic']],
@@ -19,6 +20,12 @@ const PEOPLE = [
   ['dg', 'Patrick', 'Tshibanda', 'Directeur général', ['prof_dg'], ['prof_dg']],
 ];
 const SUPPLIER = { name: 'Bureautique Kivu SARL', email: `ventes@bureautique-kivu.${D}` };
+// Fournisseurs inscrits sur le portail : le premier sert au cas « cycle d'achat », les trois répondent à l'appel d'offres
+const SUPPLIERS = [
+  { ...SUPPLIER, contact: 'Claude Habimana', title: 'Directeur commercial', rccm: 'CD/GOM/RCCM/22-B-0457', tax: 'A2233445K', idNat: '01-93-N55555K', phone: '+243 990 000 777', address: 'Boulevard Kanyamuhanga 45, Goma' },
+  { name: 'Kivu Tech Solutions SARL', email: `offres@kivu-tech.${D}`, contact: 'Aline Mapendo', title: 'Gérante', rccm: 'CD/GOM/RCCM/19-B-0213', tax: 'A3344556L', idNat: '01-93-N66666L', phone: '+243 990 000 888', address: 'Avenue du Lac 8, Goma' },
+  { name: 'Grands Lacs Informatique SARL', email: `commercial@gl-informatique.${D}`, contact: 'Eric Bisimwa', title: 'Responsable des ventes', rccm: 'CD/BKV/RCCM/21-B-0890', tax: 'A4455667M', idNat: '01-94-N77777M', phone: '+243 990 000 999', address: 'Avenue Kabila 120, Bukavu' },
+];
 
 const list = (x) => (Array.isArray(x) ? x : x?.rows || x?.data || x?.items || []);
 
@@ -103,6 +110,17 @@ export async function dataset() {
     fundingSource: 'Bailleur A', functionCode: 'F100', activityCode: 'A1.2',
   });
 
+  // Chaque passage consomme la ligne (bons de commande des cas) : réalimentée quand il ne reste plus de quoi dérouler les cas
+  const line = lines.find(l => l.entity_code === 'EAU-01');
+  if (line && Number(line.allocated_amount) - Number(line.utilized_amount) < 60000) {
+    await call('PUT', `/budget/${line.id}`, admin, {
+      loc: line.loc, fundingSource: line.funding_source, subProject: line.sub_project, functionCode: line.function_code,
+      activityCode: line.activity_code, description: line.description, projectId: line.project_id, isActive: true,
+      allocatedAmount: Math.ceil((Number(line.utilized_amount) + 100000) / 50000) * 50000,
+    });
+    console.log('• Ligne budgétaire EAU-01 réalimentée');
+  }
+
   // Dépôts et accès
   const locations = await call('GET', '/public/locations');
   const goma = locations.find(l => l.code === 'GOMA') || locations[0];
@@ -129,22 +147,25 @@ export async function dataset() {
   }
   items.units = { REAM: unit('REAM'), PIECE: unit('PIECE') };
 
-  // Fournisseur inscrit sur le portail (il confirme la commande lui-même)
-  try {
-    await call('POST', '/auth/login', null, { email: SUPPLIER.email, password: CFG.password });
-  } catch {
-    const reg = new FormData();
-    Object.entries({
-      supplierType: 'COMPANY', name: SUPPLIER.name, email: SUPPLIER.email, password: CFG.password,
-      address: 'Boulevard Kanyamuhanga 45, Goma', bankName: 'Banque Démo', bankAccount: '00011-22233-44', contactName: 'Claude Habimana',
-      contactTitle: 'Directeur commercial', phone: '+243 990 000 777', registrationNumber: 'CD/GOM/RCCM/22-B-0457', taxId: 'A2233445K', idNat: '01-93-N55555K',
-      locationIds: JSON.stringify([goma.id]), categoryIds: JSON.stringify([office.id]), language: 'fr',
-    }).forEach(([k, v]) => reg.append(k, v));
-    for (const d of ['ID_CARD', 'RIB', 'RCCM', 'TAX', 'ID_NAT']) reg.append(`doc_${d}`, pdfBlob(), `${d}.pdf`);
-    await call('POST', '/auth/register-supplier', null, reg);
+  // Fournisseurs inscrits sur le portail (ils confirment leurs commandes et répondent aux appels d'offres eux-mêmes)
+  const it = cats.find(c => c.code === 'IT_EQUIPMENT');
+  for (const s of SUPPLIERS) {
+    try {
+      await call('POST', '/auth/login', null, { email: s.email, password: CFG.password });
+    } catch {
+      const reg = new FormData();
+      Object.entries({
+        supplierType: 'COMPANY', name: s.name, email: s.email, password: CFG.password,
+        address: s.address, bankName: 'Banque Démo', bankAccount: '00011-22233-44', contactName: s.contact,
+        contactTitle: s.title, phone: s.phone, registrationNumber: s.rccm, taxId: s.tax, idNat: s.idNat,
+        locationIds: JSON.stringify([goma.id]), categoryIds: JSON.stringify([office.id, it?.id].filter(Boolean)), language: 'fr',
+      }).forEach(([k, v]) => reg.append(k, v));
+      for (const d of ['ID_CARD', 'RIB', 'RCCM', 'TAX', 'ID_NAT']) reg.append(`doc_${d}`, pdfBlob(), `${d}.pdf`);
+      await call('POST', '/auth/register-supplier', null, reg);
+    }
   }
 
-  const data = { users, supplier: SUPPLIER, dept: { id: dept.id }, project: { id: project.id, code: project.code }, budget: { id: budget.id },
+  const data = { users, supplier: SUPPLIER, suppliers: SUPPLIERS.map(s => ({ name: s.name, email: s.email, contact: s.contact })), dept: { id: dept.id }, project: { id: project.id, code: project.code }, budget: { id: budget.id },
     wh: { id: wh.id }, wh2: { id: wh2.id }, items: Object.fromEntries(Object.entries(items).map(([k, v]) => [k, k === 'units' ? v : { id: v.id, name: v.name, code: v.code }])) };
   saveState({ ...state, dataset: data });
   console.log('✅ Jeu de données prêt :', Object.keys(users).length, 'comptes, projet', project.code);

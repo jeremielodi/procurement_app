@@ -4283,6 +4283,8 @@
       "intro": "Un exemple réel pas à pas, avec les captures d'écran de chaque profil. S'ouvre dans un nouvel onglet.",
       "workflow": "Cycle d'achat complet",
       "workflowDesc": "De la réquisition au paiement : demandeur, chef de projet, agent achats, réviseur, manager, fournisseur, logistique, finance, DG.",
+      "tender": "Appel d'offres",
+      "tenderDesc": "Publication sur le portail fournisseurs, offres scellées, comparatif des prix et de la note technique, attribution, bon de commande approuvé au niveau N2.",
       "stock": "Gestion de stock",
       "stockDesc": "Bon d'entrée, demande au magasin, sortie, affectation et retour de matériel, transfert, inventaire, prévision et valorisation."
     },

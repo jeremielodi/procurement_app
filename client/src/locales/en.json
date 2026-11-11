@@ -4283,6 +4283,8 @@
       "intro": "A real example step by step, with screenshots for each profile (in French). Opens in a new tab.",
       "workflow": "Full procurement cycle",
       "workflowDesc": "From requisition to payment: requester, project manager, procurement agent, reviewer, manager, supplier, logistics, finance, CEO.",
+      "tender": "Call for tenders",
+      "tenderDesc": "Publication on the supplier portal, sealed bids, comparison of prices and technical score, award, purchase order approved at level N2.",
       "stock": "Stock management",
       "stockDesc": "Stock entry, store request, issue, equipment assignment and return, transfer, stock count, forecast and valuation."
     },

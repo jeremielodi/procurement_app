@@ -114,6 +114,8 @@ export async function openBrowser() {
       const page = url ? await go(email, url, { tall }) : await pageFor(email);
       if (!url) await page.setViewportSize({ width: 1440, height: tall });
       if (before) await before(page);
+      // before() peut avoir navigué (« Traiter » → formulaire) : la hauteur demandée est rétablie
+      await page.setViewportSize({ width: 1440, height: tall });
       await page.waitForTimeout(500);
       const file = path.join(CFG.captures, dir, `${name}.png`);
       fs.mkdirSync(path.dirname(file), { recursive: true });

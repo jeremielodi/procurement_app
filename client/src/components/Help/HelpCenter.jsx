@@ -57,6 +57,7 @@ const ROUTE_SECTIONS = [
 // Cas concrets : pages HTML statiques (client/public/docs/cas-concret, générées par scripts/doc-cas-concret), nouvel onglet
 const CASES = [
   { id: 'workflow', href: '/docs/cas-concret/workflow.html' },
+  { id: 'tender', href: '/docs/cas-concret/appel-offres.html' },
   { id: 'stock', href: '/docs/cas-concret/stock.html' },
 ]
 

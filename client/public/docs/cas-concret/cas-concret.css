@@ -47,7 +47,8 @@ a { color: var(--brand); }
 .toc li { margin: 4px 0; }
 .toc a { color: var(--text); text-decoration: none; }
 .toc a:hover { color: var(--brand); }
-.toc-other { display: block; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; font-weight: 600; text-decoration: none; }
+.toc-other { display: block; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.toc-other a { display: block; margin-top: 6px; font-size: 13px; font-weight: 600; text-decoration: none; }
 
 /* Scénario */
 .scenario, .phase { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 24px; margin-bottom: 24px; }

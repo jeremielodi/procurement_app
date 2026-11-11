@@ -12,7 +12,7 @@ async function convertCaptures() {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   let total = 0, count = 0;
-  for (const dir of ['workflow', 'stock']) {
+  for (const dir of ['workflow', 'tender', 'stock']) {
     const src = path.join(CFG.captures, dir);
     if (!fs.existsSync(src)) { console.log('  (pas de captures', dir, ': images existantes conservées)'); continue; }
     const dst = path.join(DIR, 'img', dir);
@@ -35,13 +35,19 @@ async function convertCaptures() {
 }
 await convertCaptures();
 const missing = [];
+// Les cas concrets (ordre de la navigation)
+const PAGES = [
+  { file: 'workflow.html', label: "Cycle d'achat complet" },
+  { file: 'appel-offres.html', label: "Appel d'offres" },
+  { file: 'stock.html', label: 'Gestion de stock' },
+];
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // **gras** dans les textes
 const rich = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
 const PROFILES = {
   'Demandeur': 'p-req', 'Chef de projet': 'p-pm', 'Agent achats': 'p-proc', 'Réviseur des bons de commande': 'p-rev',
-  'Manager niveau 1': 'p-mgr', 'Fournisseur': 'p-sup', 'Logistique': 'p-log', 'Magasinier': 'p-store', 'Finance': 'p-fin',
+  'Manager niveau 1': 'p-mgr', 'Manager niveau 2': 'p-mgr', 'Fournisseur': 'p-sup', 'Logistique': 'p-log', 'Magasinier': 'p-store', 'Finance': 'p-fin',
   'Directeur général': 'p-dg', 'Administrateur': 'p-admin', 'Document': 'p-doc', 'Tous': 'p-doc',
 };
 
@@ -92,7 +98,7 @@ function page({ file, imgDir = 'workflow', title, subtitle, intro, cast, phases,
 <header class="top">
   <div class="wrap top-inner">
     <a class="brand" href="/"><img src="/images/procureapp-logo.svg" alt="">procureApp</a>
-    <nav><a href="workflow.html"${file === 'workflow.html' ? ' aria-current="page"' : ''}>Cycle d'achat complet</a><a href="stock.html"${file === 'stock.html' ? ' aria-current="page"' : ''}>Gestion de stock</a></nav>
+    <nav>${PAGES.map(p => `<a href="${p.file}"${p.file === file ? ' aria-current="page"' : ''}>${esc(p.label)}</a>`).join('')}</nav>
   </div>
 </header>
 <main class="wrap">
@@ -109,7 +115,7 @@ function page({ file, imgDir = 'workflow', title, subtitle, intro, cast, phases,
         ${toc}
         ${rules ? '<li><a href="#regles">Règles à retenir</a></li>' : ''}
       </ol>
-      <a class="toc-other" href="${other.href}">${esc(other.label)} →</a>
+      <div class="toc-other">Autres cas concrets :${PAGES.filter(p => p.file !== file).map(p => `<a href="${p.file}">${esc(p.label)} →</a>`).join('')}</div>
     </aside>
     <div class="content">
       <section id="scenario" class="scenario">
@@ -311,6 +317,111 @@ page({
     ['Séparation des tâches', 'Personne n\'approuve ce qu\'il a demandé, créé ou saisi : bon de commande, facture, paiement ; l\'entrée en magasin est confirmée par une autre personne que celle qui a enregistré la réception. Toute tentative est bloquée et tracée dans le journal d\'audit.'],
     ['Documents rattachés', 'Une SAN, un GRN, une facture ou un paiement ne peut exister que rattaché à son bon de commande et à sa réquisition, et seulement à l\'étape prévue.'],
     ['Livraisons partielles', 'SAN puis GRN à **chaque** livraison, jusqu\'à livraison complète ou reliquat soldé.'],
+  ],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Appel d'offres
+// ─────────────────────────────────────────────────────────────────────────────
+page({
+  file: 'appel-offres.html',
+  imgDir: 'tender',
+  title: "Appel d'offres : mise en concurrence des fournisseurs",
+  subtitle: "Un achat de **27 900 USD** (15 ordinateurs portables et leurs licences) attribué par appel d'offres : publication sur le portail, offres scellées, comparatif des prix et de la note technique, attribution, puis bon de commande approuvé au niveau **N2**.",
+  intro: [
+    "Le projet **Eau potable Goma** renouvelle les ordinateurs de son équipe de terrain : Marie Bahati demande **15 ordinateurs portables** et **15 licences bureautiques**. Après la validation du chef de projet (comme dans le cas « Cycle d'achat complet »), l'agent achats choisit la méthode **Appel d'offres (RFP)**.",
+    "L'appel d'offres est publié sur le **portail fournisseurs** avec un questionnaire. Trois fournisseurs répondent ; leurs prix restent **scellés** jusqu'à la clôture. L'agent achats compare ensuite les prix et la **note technique** calculée à partir des réponses, puis attribue le marché. Le fournisseur retenu et ses prix sont repris dans le bon de commande.",
+    "La suite — confirmation du fournisseur, acceptation de la livraison (SAN), réception (GRN), facture et paiement — est identique au cas « Cycle d'achat complet ».",
+  ],
+  cast: [
+    ['Marie Bahati', 'Demandeur', "Demande les ordinateurs."],
+    ['Jean Mukendi', 'Chef de projet', "Valide la réquisition et désigne l'agent achats."],
+    ['Paul Kasongo', 'Agent achats', "Choisit l'appel d'offres, le publie, le clôture, compare les offres, attribue le marché, crée le bon de commande."],
+    ['Kivu Tech Solutions SARL', 'Fournisseur', "Répond à l'appel d'offres et remporte le marché."],
+    ['Bureautique Kivu SARL, Grands Lacs Informatique SARL', 'Fournisseur', "Répondent aussi à l'appel d'offres."],
+    ['Grace Nsimba', 'Réviseur des bons de commande', "Révise le bon de commande."],
+    ['Ruth Kahindo', 'Manager niveau 2', "Approuve le bon de commande (montant entre 25 000 et 99 999)."],
+  ],
+  phases: [
+    { title: "Le choix de l'appel d'offres", steps: [
+      { img: '01_demandeur_requisition-ordinateurs', profile: 'Demandeur', user: 'Marie Bahati', title: 'La réquisition', text: [
+        "Marie crée la réquisition comme dans le cas « Cycle d'achat complet » : 15 ordinateurs (article du catalogue) et 15 licences, estimés à 28 800 USD sur la ligne budgétaire EAU-01. Jean Mukendi, chef de projet, la valide et désigne **Paul Kasongo** comme agent achats.",
+      ] },
+      { img: '02_agent-achats_methode-appel-offres', profile: 'Agent achats', user: 'Paul Kasongo', title: "Choisir « Appel d'offres (RFP) »", text: [
+        "Dans l'onglet **Tâches** de la réquisition, Paul prend en charge « Déterminer la méthode d'achat », choisit **Appel d'offres (RFP)** et justifie son choix. Toutes les méthodes sont possibles quel que soit le montant ; ici, la mise en concurrence ouverte s'impose.",
+      ], note: "Avec « Multiples devis », le même module sert à une demande de cotations (RFQ) : les étapes sont identiques." },
+    ] },
+    { title: 'Publication sur le portail fournisseurs', steps: [
+      { img: '03_agent-achats_formulaire-appel-offres', profile: 'Agent achats', user: 'Paul Kasongo', title: "Préparer l'appel d'offres", text: [
+        "L'étape « Appel d'offres » ouvre directement le formulaire, lié à la réquisition : les articles à chiffrer sont repris. Paul saisit le **n° d'appel d'offres**, l'objet, la description, l'**ouverture**, la **date limite** et le **délai de livraison maximal** (30 jours).",
+      ], points: [
+        "**Diffusion** : à tous les fournisseurs inscrits, ou réservée à des fournisseurs préqualifiés invités (par catégorie et localisation).",
+        "**Attribution** : à un seul fournisseur, ou par article (un fournisseur différent par article).",
+        "**Questionnaire** : ici « Garantie proposée » (36 mois = 10 points, 24 mois = 6, 12 mois = 2), « Service après-vente à Goma ? » (Oui = 5 points) et « Références de marchés similaires ». Seules les listes de choix sont notées ; la bibliothèque de questions de l'entreprise évite de les ressaisir.",
+      ] },
+      { img: '04_agent-achats_appel-offres-publie', profile: 'Agent achats', user: 'Paul Kasongo', title: "Appel d'offres publié", text: [
+        "À la publication, les fournisseurs concernés reçoivent une notification et un email. La fiche montre l'état (ouvert), les dates, les articles et le questionnaire.",
+      ] },
+    ] },
+    { title: 'Les offres des fournisseurs', steps: [
+      { img: '05_fournisseur_appels-offres-ouverts', profile: 'Fournisseur', user: 'Aline Mapendo — Kivu Tech Solutions SARL', title: "Le fournisseur voit l'appel d'offres", text: [
+        "Sur son portail, le fournisseur voit les appels d'offres ouverts, avec le nom de l'acheteur et la date limite.",
+      ] },
+      { img: '06_fournisseur_formulaire-offre', profile: 'Fournisseur', user: 'Aline Mapendo — Kivu Tech Solutions SARL', title: 'Soumettre son offre', text: [
+        "Il saisit un **prix unitaire par article**, son **délai de livraison** (au plus le délai maximal) et répond au **questionnaire** (il ne voit jamais les points). Il peut modifier son offre tant que l'appel d'offres est ouvert, et télécharger son offre en PDF.",
+      ], points: [
+        "Kivu Tech Solutions : 1 750 USD l'ordinateur, 110 USD la licence, 14 jours, garantie 36 mois, SAV à Goma.",
+        "Bureautique Kivu : 1 820 / 115 USD, 21 jours, garantie 24 mois, SAV à Goma.",
+        "Grands Lacs Informatique : 1 690 / 130 USD, 30 jours, garantie 12 mois, pas de SAV à Goma.",
+      ] },
+      { img: 'P1_pdf_offre-fournisseur', doc: true, profile: 'Document', title: "PDF : offre du fournisseur", text: [
+        "L'offre PDF reprend l'identité du fournisseur, l'appel d'offres, les prix par article, le délai, les réponses au questionnaire et un cadre pour le cachet et la signature.",
+      ] },
+      { img: '07_agent-achats_offres-scellees', profile: 'Agent achats', user: 'Paul Kasongo', title: 'Offres scellées', text: [
+        "Tant que l'appel d'offres est ouvert, l'acheteur voit **qui** a soumis et **quand**, mais **ni les prix ni les réponses** : les offres sont scellées. L'export Excel du comparatif est refusé.",
+      ] },
+    ] },
+    { title: 'Clôture, comparatif et attribution', steps: [
+      { img: '08_agent-achats_cloture-anticipee', profile: 'Agent achats', user: 'Paul Kasongo', title: "Clôturer l'appel d'offres", text: [
+        "L'appel d'offres se clôture automatiquement à la date limite. Ici, les trois fournisseurs ayant répondu, Paul clique **« Clôturer maintenant »**. Après la clôture, plus aucune offre ne peut être déposée ni modifiée, et l'appel d'offres ne peut plus être prolongé.",
+      ] },
+      { img: '09_agent-achats_comparatif-offres', profile: 'Agent achats', user: 'Paul Kasongo', title: 'Comparer les offres', text: [
+        "Les prix sont dévoilés : le **comparatif** croise les articles et les fournisseurs, avec le total, le délai et la **note technique** (points obtenus / points possibles). Les réponses au questionnaire sont consultables, et le comparatif s'exporte en Excel.",
+      ], note: "Le moins cher (Grands Lacs Informatique) n'est pas forcément retenu : sa garantie est de 12 mois, sans service après-vente à Goma, et sa note technique est la plus basse." },
+      { img: '10_agent-achats_attribution', profile: 'Agent achats', user: 'Paul Kasongo', title: 'Attribuer le marché', text: [
+        "Paul clique **« Attribuer »** sur l'offre de Kivu Tech Solutions. Ce n'est pas l'offre la moins chère : la fenêtre le signale et demande de **justifier le choix**. Paul indique le meilleur rapport qualité / prix (garantie 36 mois, SAV à Goma, livraison en 14 jours). L'attribution termine l'étape « Appel d'offres » du workflow.",
+      ] },
+      { img: '11_agent-achats_appel-offres-attribue', profile: 'Agent achats', user: 'Paul Kasongo', title: "Appel d'offres attribué", text: [
+        "La fiche indique l'attributaire et le commentaire. Le fournisseur retenu est prévenu ; les autres voient le résultat sur leur portail.",
+      ] },
+      { img: '12_fournisseur_marche-remporte', profile: 'Fournisseur', user: 'Aline Mapendo — Kivu Tech Solutions SARL', title: 'Le fournisseur retenu', text: [
+        "Sur son portail, Kivu Tech Solutions voit que le marché lui est attribué. Il recevra le bon de commande une fois celui-ci approuvé et le confirmera depuis « Mes commandes ».",
+      ] },
+    ] },
+    { title: 'Bon de commande et approbation N2', steps: [
+      { img: '13_agent-achats_bon-commande-attributaire', profile: 'Agent achats', user: 'Paul Kasongo', title: 'Bon de commande pré-rempli', text: [
+        "L'étape « Créer le bon de commande » ouvre le formulaire avec **l'attributaire de l'appel d'offres choisi d'office** et les articles de la réquisition. Paul reporte les prix de l'offre retenue (27 900 USD au total) et complète les conditions.",
+      ] },
+      { img: '14_manager-n2_mes-taches', profile: 'Manager niveau 2', user: 'Ruth Kahindo', title: 'Approbation au niveau N2', text: [
+        "Après la révision par Grace Nsimba, le montant (27 900 USD, entre 25 000 et 99 999) envoie l'approbation au **Manager niveau 2** : Ruth Kahindo reçoit la tâche.",
+      ] },
+      { img: '15_manager-n2_approbation-bon-commande', profile: 'Manager niveau 2', user: 'Ruth Kahindo', title: 'Approuver le bon de commande', text: [
+        "La fiche indique « Approbation : niveau N2 ». Ruth approuve ; le bon de commande part par email au fournisseur, qui le confirme sur son portail. La suite est celle du cas « Cycle d'achat complet ».",
+      ] },
+      { img: 'P2_pdf_bon-de-commande', doc: true, profile: 'Document', title: 'PDF : bon de commande', text: [
+        "Le bon de commande reprend le fournisseur attributaire, les prix de son offre, les conditions et la référence de l'appel d'offres, avec les signatures du créateur et de l'approbatrice.",
+      ] },
+      { img: '16_demandeur_suivi-workflow', profile: 'Demandeur', user: 'Marie Bahati', title: 'Suivi du workflow', text: [
+        "Le suivi de la réquisition montre l'appel d'offres publié puis attribué avec le fournisseur retenu, le bon de commande et son approbation au niveau N2.",
+      ] },
+    ] },
+  ],
+  rules: [
+    ['Offres scellées', "Ni prix ni réponses visibles par l'acheteur avant la clôture ; pas d'export avant la clôture."],
+    ['Après la clôture', "Plus aucune offre déposée ou modifiée ; l'appel d'offres ne peut plus être prolongé."],
+    ['Note technique', "Calculée sur les questions à choix notées ; les fournisseurs ne voient jamais le barème."],
+    ['Attribution', "Termine l'étape du workflow ; l'attributaire est proposé d'office dans le bon de commande (préqualifié ou non)."],
+    ["Niveau d'approbation", "Fixé par le montant du bon de commande : N1 (< 25 000), N2 (25 000 – 99 999), N3 (≥ 100 000)."],
   ],
 });
 

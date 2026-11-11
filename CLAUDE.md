@@ -599,6 +599,7 @@ Tous préfixés `po_` pour éviter les conflits avec les helpers de `Requisition
 - Modèles : singleton exporté (`module.exports = new XxxModel()`)
 - Transactions DB : `db.withTransaction(async (tx) => …)` (de préférence) ou `db.transaction()` avec `addInsertQuery` / `addUpdateQuery` puis `execute()` — les deux sur une connexion dédiée du pool
 - Auth middleware : `authenticate`, `hasPermission('PERMISSION_NAME')`
+- **Index** (migration `62_search_indexes.sql`, 2026-11-11) : extension `pg_trgm` + index GIN `gin_trgm_ops` (préfixe `trgm_`) sur les colonnes cherchées en `ILIKE '%…%'` (n° de documents, noms, emails, codes, n° de série / d'inventaire / de lot / de mouvement) — 300 000 lignes : 327 ms → 0,35 ms ; index des clés étrangères de jointure (lignes de réquisition / PO / GRN, `users.enterprise_id`, `user_profiles.profile_id`…) ; listes `(enterprise_id, created_at DESC)`. **Nouvelle recherche « contient » sur une colonne → index trigramme ; nouvelle table enfant → index sur sa clé vers le parent ; nouvelle liste triée par date → index (enterprise_id, created_at DESC)**
 - Numérotation : REQ-YYYY-NNNN pour réquisitions, PO-YYYY-NNNN pour POs, GRN-YYYY-NNNN, SAN-YYYY-NNNN, INV-YYYY-NNNN, PAY-YYYY-NNNN
 
 ## Tests

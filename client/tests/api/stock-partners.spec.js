@@ -182,6 +182,26 @@ test.describe.serial('API › Partenaires et transferts vers un partenaire', () 
     expect((await json(await request.post(`/api/partner-portal/transfers/${shipment2.id}/receive`, { headers: auth(partnerToken), data: {} }))).body.code).toBe('CANCELLED');
   });
 
+  test('Compte du responsable créé avec la fiche (mot de passe dans le formulaire)', async ({ request }) => {
+    const code = `HF-${stamp}`;
+    const base = { code, name: `Hôpital ${stamp}`, partnerType: 'HEALTH_FACILITY', locationId: ids.kin, contactName: 'Marie Kabila', contactTitle: 'Directrice' };
+    const mail = `hgr.${stamp.toLowerCase()}@nowhere.test`;
+    // Contrôles avant tout enregistrement : aucun partenaire créé si le compte est refusé
+    expect((await json(await request.post('/api/partners', { headers: H(), data: { ...base, managerPassword: password } }))).body.code).toBe('MANAGER_EMAIL_REQUIRED');
+    expect((await json(await request.post('/api/partners', { headers: H(), data: { ...base, email: mail, managerPassword: 'court' } }))).body.code).toBe('PASSWORD_TOO_SHORT');
+    expect((await json(await request.post('/api/partners', { headers: H(), data: { ...base, email: partner.email, managerPassword: password } }))).body.code).toBe('EMAIL_IN_USE');
+    expect((await json(await request.get(`/api/partners?search=${code}&status=`, { headers: H() }))).body.data).toHaveLength(0);
+
+    const r = await json(await request.post('/api/partners', { headers: H(), data: { ...base, email: mail, managerPassword: password } }));
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body.account.email).toBe(mail);
+    expect(r.body.data.accounts.map(a => a.email)).toEqual([mail]);
+    expect(await login(request, mail)).toBeTruthy();
+    // Déjà un compte : plus de création par la modification
+    const again = await json(await request.put(`/api/partners/${r.body.data.id}`, { headers: H(), data: { managerPassword: password } }));
+    expect([again.status, again.body.code]).toEqual([409, 'MANAGER_HAS_ACCOUNT']);
+  });
+
   test('Catalogue filtré par dépôt : articles en stock dans ce dépôt, quantité du dépôt', async ({ request }) => {
     const items = (await json(await request.get(`/api/stock-items?warehouseId=${wh.id}&limit=1000`, { headers: H() }))).body.data;
     const byId = Object.fromEntries(items.map(i => [i.id, Number(i.stock_quantity)]));

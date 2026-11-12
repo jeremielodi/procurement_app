@@ -6566,9 +6566,8 @@
           {
             "type": "steps",
             "items": [
-              "Stock › \"Partners\" › \"New partner\" (administrator or logistics profile).",
-              "Enter the code (e.g. ZS-KARISIMBI), the name, the type (\"Health zone\"…), the location, then the manager: name, position (e.g. Zone chief medical officer), email and phone.",
-              "On the partner record, click \"Create the manager's account\" and enter a password (or \"Generate\"): the manager can sign in to the partner area right away. \"Other account\" adds another person."
+              "Stock › \"Partners\" › \"New partner\": code (e.g. ZS-KARISIMBI), name, type (\"Health zone\"…), location, then the manager: name, position (e.g. Zone chief medical officer), email, phone and password (\"Generate\" button) — the partner area account is created with the record.",
+              "Password left empty: on the partner record, \"Create the manager's account\" creates it later. \"Other account\" adds another person."
             ]
           },
           {
@@ -7674,14 +7673,19 @@
       "PASSWORD_TOO_SHORT": "Password: at least 8 characters",
       "PARTNER_INACTIVE": "Partner inactive",
       "EMAIL_IN_USE": "An account already exists with this email",
-      "PASSWORD_REQUIRED": "Enter the account password (or click \"Generate\")"
+      "PASSWORD_REQUIRED": "Enter the account password (or click \"Generate\")",
+      "MANAGER_NAME_REQUIRED": "Enter the manager's name to create the account",
+      "MANAGER_EMAIL_REQUIRED": "Enter the manager's email to create the account",
+      "MANAGER_HAS_ACCOUNT": "The manager already has an account"
     },
     "password": "Password",
     "passwordHint": "Give this password to the partner. It is also emailed when possible; it can be changed in \"My profile\".",
     "generatePassword": "Generate",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
-    "accountCreatedNoEmail": "Access created for {{email}}, but the email could not be sent: give the password to the partner yourself."
+    "accountCreatedNoEmail": "Access created for {{email}}, but the email could not be sent: give the password to the partner yourself.",
+    "managerPassword": "Manager's password (partner area access)",
+    "managerPasswordHint": "When filled in, the manager's account is created with the record (name and email required); give the manager this password, it is also emailed when possible. Leave empty to create the account later."
   },
   "partnerPortal": {
     "of": "partner of {{enterprise}}",

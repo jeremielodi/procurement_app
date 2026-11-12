@@ -1,5 +1,5 @@
 // Transfert vers un partenaire (migration 66), de bout en bout dans le navigateur :
-// l'administrateur enregistre une zone de santé et crée le compte de son responsable (mot de passe obligatoire),
+// l'administrateur enregistre une zone de santé avec le mot de passe de son responsable (compte créé avec la fiche),
 // envoie des articles depuis la fiche du partenaire ; le responsable se connecte à son espace, confirme la réception
 // avec un manque ; la fiche du bon côté entreprise affiche la quantité reçue et la confirmation venue de l'espace partenaire.
 import { test, expect } from '@playwright/test';
@@ -30,24 +30,25 @@ test('Transfert vers un partenaire : enregistrer, envoyer, confirmer la récepti
   await page.getByTestId('partner-contactName').fill('Jean Mukendi');
   await page.getByTestId('partner-contactTitle').fill('Médecin chef de zone');
   await page.getByTestId('partner-email').fill(managerEmail);
+  // 2. Mot de passe du responsable dans le même formulaire : son compte est créé avec la fiche
+  await page.getByTestId('partner-managerPassword-generate').click();
+  await expect(page.getByTestId('partner-managerPassword')).toHaveValue(/^[A-Za-z0-9]{12}$/);
+  await page.getByTestId('partner-managerPassword').fill(password);
   await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
   await page.getByTestId('partner-search').fill(stamp);
   const row = page.getByTestId('partner-row').filter({ hasText: `ZS-E2E-${stamp}` });
   await expect(row).toContainText('Zone de santé');
   await expect(row).toContainText('Jean Mukendi');
 
-  // 2. Compte du responsable : mot de passe obligatoire, saisi par l'administrateur (le compte ne dépend pas de l'email)
   await row.getByRole('link', { name: `Zone de santé E2E ${stamp}` }).click();
   await expect(page).toHaveURL(/\/stock\/partners\/[0-9a-f-]{36}$/);
-  await page.getByTestId('partner-manager-account').click();
-  await page.getByRole('button', { name: 'Créer l\'accès' }).click(); // sans mot de passe : refusé, la fenêtre reste ouverte
-  await expect(page.getByText('Saisissez le mot de passe du compte')).toBeVisible();
-  await page.getByTestId('account-generate-password').click();
-  await expect(page.getByTestId('account-password')).toHaveValue(/^[A-Za-z0-9]{12}$/);
-  await page.getByTestId('account-password').fill(password);
-  await page.getByRole('button', { name: 'Créer l\'accès' }).click();
   await expect(page.getByTestId('partner-account')).toContainText(managerEmail);
   await expect(page.getByTestId('partner-manager-account')).toHaveCount(0);
+  // Le responsable a un compte : plus de champ mot de passe en modification
+  await page.getByTestId('partner-edit').click();
+  await expect(page.getByTestId('partner-code')).toBeVisible();
+  await expect(page.getByTestId('partner-managerPassword')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Annuler' }).click();
 
   // 3. Envoyer des articles depuis la fiche (type et partenaire repris)
   await page.getByTestId('partner-send').click();

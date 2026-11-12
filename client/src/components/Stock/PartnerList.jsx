@@ -1,7 +1,7 @@
 // src/components/Stock/PartnerList.jsx
 // Partenaires de l'entreprise (ex. zones de santé) : destinataires des transferts de stock « vers un partenaire ».
-// Chaque partenaire : code unique, type, localisation, responsable (son compte de l'espace partenaire se crée depuis la
-// fiche). Gestion : MANAGE_PARTNERS ; lecture : gestion du stock.
+// Chaque partenaire : code unique, type, localisation, responsable (son compte de l'espace partenaire se crée avec la
+// fiche si son mot de passe est saisi, sinon plus tard depuis la fiche). Gestion : MANAGE_PARTNERS ; lecture : gestion du stock.
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HeartHandshake as Handshake, Plus, Pencil, RefreshCw, Search } from 'lucide-react';
@@ -11,7 +11,8 @@ import SearchSelect from '../Common/SearchSelect';
 import { partnerService } from '../../services/stockService';
 import { locationService } from '../../services/referenceService';
 import { usePermissions } from '../../hooks/usePermissions';
-import { t } from '../../i18n';
+import { t, getLang } from '../../i18n';
+import PartnerPasswordField from './PartnerPasswordField';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 // Filtres : largeur naturelle, sur une seule ligne (comme « État du stock »)
@@ -19,7 +20,15 @@ const filterCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:out
 export const PARTNER_TYPES = ['HEALTH_ZONE', 'HEALTH_FACILITY', 'NGO', 'GOVERNMENT', 'OTHER'];
 const EMPTY = { code: '', name: '', partnerType: 'HEALTH_ZONE', locationId: '', address: '', contactName: '', contactTitle: '', email: '', phone: '', notes: '' };
 const ERROR_CODES = ['PARTNER_CODE_REQUIRED', 'PARTNER_CODE_INVALID', 'PARTNER_CODE_EXISTS', 'PARTNER_NAME_REQUIRED', 'PARTNER_TYPE_INVALID',
-  'LOCATION_REQUIRED', 'LOCATION_INVALID', 'EMAIL_INVALID'];
+  'LOCATION_REQUIRED', 'LOCATION_INVALID', 'EMAIL_INVALID', 'MANAGER_NAME_REQUIRED', 'MANAGER_EMAIL_REQUIRED', 'PASSWORD_TOO_SHORT',
+  'EMAIL_IN_USE', 'MANAGER_HAS_ACCOUNT', 'PARTNER_INACTIVE'];
+
+/** Message après la création du compte du responsable (identifiants envoyés par email ou à communiquer soi-même) */
+export function accountCreatedToast(account) {
+  if (!account) return;
+  if (account.emailed) toast.success(t('partners.accountCreatedEmailed', { email: account.email }));
+  else toast(t('partners.accountCreatedNoEmail', { email: account.email }), { icon: '⚠️', duration: 10_000 });
+}
 
 export function partnerErrorMessage(err) {
   const d = err?.response?.data || {};
@@ -33,25 +42,40 @@ export function PartnerTypeBadge({ type }) {
   return <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs ${color}`}>{t(`partners.types.${type || 'OTHER'}`)}</span>;
 }
 
-/** Fenêtre de création / modification d'un partenaire ; partner = fiche existante (modification) */
+/**
+ * Fenêtre de création / modification d'un partenaire ; partner = fiche existante (modification).
+ * Mot de passe du responsable (facultatif) : renseigné, son compte de l'espace partenaire est créé avec la fiche
+ * (proposé en modification tant que le responsable n'a pas de compte).
+ */
 export function PartnerFormModal({ partner, onClose, onSaved }) {
   const [form, setForm] = useState(() => (partner ? {
     code: partner.code, name: partner.name, partnerType: partner.partner_type, locationId: String(partner.location_id),
     address: partner.address || '', contactName: partner.contact_name || '', contactTitle: partner.contact_title || '',
     email: partner.email || '', phone: partner.phone || '', notes: partner.notes || '',
   } : { ...EMPTY }));
+  const [managerPassword, setManagerPassword] = useState('');
   const [locations, setLocations] = useState([]);
   const [saving, setSaving] = useState(false);
   useEffect(() => { locationService.listPublic().then(r => setLocations(r.data || [])).catch(() => {}); }, []);
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+  // Le responsable a déjà un compte : plus de mot de passe ici (gestion des comptes sur la fiche)
+  const managerHasAccount = !!partner && (partner.accounts
+    ? partner.accounts.some(a => a.email === String(partner.email || '').toLowerCase())
+    : Number(partner.account_count) > 0);
 
   const save = async () => {
     if (!form.code.trim() || !form.name.trim() || !form.locationId) { toast.error(t('partners.required')); return; }
+    if (managerPassword) {
+      if (!form.contactName.trim()) { toast.error(t('partners.err.MANAGER_NAME_REQUIRED')); return; }
+      if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) { toast.error(t('partners.err.MANAGER_EMAIL_REQUIRED')); return; }
+      if (managerPassword.length < 8) { toast.error(t('partners.err.PASSWORD_TOO_SHORT')); return; }
+    }
     setSaving(true);
     try {
-      const payload = { ...form, locationId: Number(form.locationId) };
+      const payload = { ...form, locationId: Number(form.locationId), ...(managerPassword ? { managerPassword, managerLanguage: getLang() } : {}) };
       const res = partner ? await partnerService.update(partner.id, payload) : await partnerService.create(payload);
       toast.success(t(partner ? 'partners.updated' : 'partners.created'));
+      accountCreatedToast(res.account);
       onSaved(res.data);
     } catch (err) { toast.error(partnerErrorMessage(err)); } finally { setSaving(false); }
   };
@@ -87,6 +111,12 @@ export function PartnerFormModal({ partner, onClose, onSaved }) {
         {field('contactTitle', t('partners.managerTitle'), { maxLength: 150, placeholder: t('partners.managerTitlePlaceholder') })}
         {field('email', t('partners.managerEmail'), { type: 'email', maxLength: 150 })}
         {field('phone', t('partners.managerPhone'), { maxLength: 50 })}
+        {!managerHasAccount && (
+          <div className="sm:col-span-2">
+            <PartnerPasswordField value={managerPassword} onChange={setManagerPassword} label={t('partners.managerPassword')}
+              hint={t('partners.managerPasswordHint')} testId="partner-managerPassword" />
+          </div>
+        )}
         <label className="text-sm sm:col-span-2">
           <span className="mb-1 block font-medium text-gray-700">{t('partners.notes')}</span>
           <textarea rows={2} value={form.notes} onChange={set('notes')} maxLength={2000} className={inputCls} />

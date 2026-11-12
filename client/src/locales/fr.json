@@ -6566,9 +6566,8 @@
           {
             "type": "steps",
             "items": [
-              "Stock › « Partenaires » › « Nouveau partenaire » (profil administrateur ou logistique).",
-              "Saisissez le code (ex. ZS-KARISIMBI), le nom, le type (« Zone de santé »…), la localisation, puis le responsable : nom, fonction (ex. Médecin chef de zone), email et téléphone.",
-              "Sur la fiche du partenaire, cliquez sur « Créer le compte du responsable », saisissez son mot de passe (ou « Générer ») : il peut se connecter aussitôt à l'espace partenaire. « Autre compte » ajoute une autre personne."
+              "Stock › « Partenaires » › « Nouveau partenaire » : code (ex. ZS-KARISIMBI), nom, type (« Zone de santé »…), localisation, puis le responsable : nom, fonction (ex. Médecin chef de zone), email, téléphone et son mot de passe (bouton « Générer ») — son compte de l'espace partenaire est créé avec la fiche.",
+              "Mot de passe laissé vide : sur la fiche du partenaire, « Créer le compte du responsable » le crée plus tard. « Autre compte » ajoute une autre personne."
             ]
           },
           {
@@ -7674,14 +7673,19 @@
       "PASSWORD_TOO_SHORT": "Mot de passe : 8 caractères au moins",
       "PARTNER_INACTIVE": "Partenaire inactif",
       "EMAIL_IN_USE": "Un compte existe déjà avec cet email",
-      "PASSWORD_REQUIRED": "Saisissez le mot de passe du compte (ou cliquez sur « Générer »)"
+      "PASSWORD_REQUIRED": "Saisissez le mot de passe du compte (ou cliquez sur « Générer »)",
+      "MANAGER_NAME_REQUIRED": "Renseignez le nom du responsable pour créer son compte",
+      "MANAGER_EMAIL_REQUIRED": "Renseignez l'email du responsable pour créer son compte",
+      "MANAGER_HAS_ACCOUNT": "Le responsable a déjà un compte"
     },
     "password": "Mot de passe",
     "passwordHint": "Communiquez ce mot de passe au partenaire. Il lui est aussi envoyé par email si possible ; il pourra le changer dans « Mon profil ».",
     "generatePassword": "Générer",
     "showPassword": "Afficher le mot de passe",
     "hidePassword": "Masquer le mot de passe",
-    "accountCreatedNoEmail": "Accès créé pour {{email}}, mais l'email n'a pas pu être envoyé : communiquez vous-même le mot de passe au partenaire."
+    "accountCreatedNoEmail": "Accès créé pour {{email}}, mais l'email n'a pas pu être envoyé : communiquez vous-même le mot de passe au partenaire.",
+    "managerPassword": "Mot de passe du responsable (accès à l'espace partenaire)",
+    "managerPasswordHint": "Renseigné, le compte du responsable est créé avec la fiche (nom et email obligatoires) ; communiquez-lui ce mot de passe, il le reçoit aussi par email si possible. Laissez vide pour créer le compte plus tard."
   },
   "partnerPortal": {
     "of": "partenaire de {{enterprise}}",

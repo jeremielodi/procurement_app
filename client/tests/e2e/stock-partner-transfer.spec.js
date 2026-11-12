@@ -1,5 +1,5 @@
 // Transfert vers un partenaire (migration 66), de bout en bout dans le navigateur :
-// l'administrateur enregistre une zone de santé et crée le compte de son responsable (mot de passe défini, sans email),
+// l'administrateur enregistre une zone de santé et crée le compte de son responsable (mot de passe obligatoire),
 // envoie des articles depuis la fiche du partenaire ; le responsable se connecte à son espace, confirme la réception
 // avec un manque ; la fiche du bon côté entreprise affiche la quantité reçue et la confirmation venue de l'espace partenaire.
 import { test, expect } from '@playwright/test';
@@ -36,11 +36,14 @@ test('Transfert vers un partenaire : enregistrer, envoyer, confirmer la récepti
   await expect(row).toContainText('Zone de santé');
   await expect(row).toContainText('Jean Mukendi');
 
-  // 2. Compte du responsable, mot de passe défini par l'administrateur (aucun email)
+  // 2. Compte du responsable : mot de passe obligatoire, saisi par l'administrateur (le compte ne dépend pas de l'email)
   await row.getByRole('link', { name: `Zone de santé E2E ${stamp}` }).click();
   await expect(page).toHaveURL(/\/stock\/partners\/[0-9a-f-]{36}$/);
   await page.getByTestId('partner-manager-account').click();
-  await page.getByTestId('account-manual-password').check();
+  await page.getByRole('button', { name: 'Créer l\'accès' }).click(); // sans mot de passe : refusé, la fenêtre reste ouverte
+  await expect(page.getByText('Saisissez le mot de passe du compte')).toBeVisible();
+  await page.getByTestId('account-generate-password').click();
+  await expect(page.getByTestId('account-password')).toHaveValue(/^[A-Za-z0-9]{12}$/);
   await page.getByTestId('account-password').fill(password);
   await page.getByRole('button', { name: 'Créer l\'accès' }).click();
   await expect(page.getByTestId('partner-account')).toContainText(managerEmail);

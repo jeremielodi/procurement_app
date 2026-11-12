@@ -60,13 +60,15 @@ test.describe.serial('API › Partenaires et transferts vers un partenaire', () 
     expect(upd.body.data.name).toBe(partner.name); // champs absents inchangés
   });
 
-  test('Compte du responsable (mot de passe défini) puis espace partenaire cloisonné', async ({ request }) => {
+  test('Compte du responsable (mot de passe obligatoire) puis espace partenaire cloisonné', async ({ request }) => {
+    // Mot de passe obligatoire : le compte ne dépend jamais de l'envoi d'un email
+    expect((await json(await request.post(`/api/partners/${partner.id}/accounts`, { headers: H(), data: {} }))).body.code).toBe('PASSWORD_REQUIRED');
     expect((await json(await request.post(`/api/partners/${partner.id}/accounts`, { headers: H(), data: { password: 'court' } }))).body.code).toBe('PASSWORD_TOO_SHORT');
     const r = await json(await request.post(`/api/partners/${partner.id}/accounts`, { headers: H(), data: { password } }));
     expect(r.status, JSON.stringify(r.body)).toBe(201);
     expect(r.body.data.email).toBe(partner.email);
     expect(r.body.data.first_name).toBe('Jean');
-    expect(r.body.data.emailed).toBe(false);
+    expect(typeof r.body.data.emailed).toBe('boolean'); // créé que l'email parte ou non (SMTP de l'environnement)
     expect((await json(await request.post(`/api/partners/${partner.id}/accounts`, { headers: H(), data: { password } }))).body.code).toBe('EMAIL_IN_USE');
     const otherMail = `ong.${stamp.toLowerCase()}@nowhere.test`;
     expect((await request.post(`/api/partners/${other.id}/accounts`, { headers: H(), data: { email: otherMail, firstName: 'Awa', password } })).status()).toBe(201);

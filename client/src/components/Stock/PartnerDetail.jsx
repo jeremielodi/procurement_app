@@ -3,7 +3,7 @@
 // responsable créé depuis la fiche, autres comptes, activation), envois reçus, matériel détenu (retour possible).
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, HeartHandshake as Handshake, Pencil, RefreshCw, UserPlus, PackageMinus, Undo2, MapPin, Phone, Mail, KeyRound } from 'lucide-react';
+import { ArrowLeft, HeartHandshake as Handshake, Pencil, RefreshCw, UserPlus, PackageMinus, Undo2, MapPin, Phone, Mail, KeyRound, Eye, EyeOff, Wand2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
 import SearchSelect from '../Common/SearchSelect';
@@ -16,22 +16,35 @@ import { IssueStatusBadge } from './StockIssueDetail';
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(getLocale()) : '—');
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
-const ACCOUNT_ERRORS = ['EMAIL_REQUIRED', 'NAME_REQUIRED', 'PASSWORD_TOO_SHORT', 'PARTNER_INACTIVE', 'EMAIL_IN_USE', 'EMAIL_FAILED'];
+const ACCOUNT_ERRORS = ['EMAIL_REQUIRED', 'NAME_REQUIRED', 'PASSWORD_REQUIRED', 'PASSWORD_TOO_SHORT', 'PARTNER_INACTIVE', 'EMAIL_IN_USE'];
 
-/** Création d'un compte de l'espace partenaire — manager : compte du responsable (fiche) */
+/** Mot de passe proposé : 12 caractères sans caractères ambigus (0/O, 1/l/I) */
+function generatePassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const bytes = new Uint32Array(12);
+  window.crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => chars[b % chars.length]).join('');
+}
+
+/**
+ * Création d'un compte de l'espace partenaire — manager : compte du responsable (fiche).
+ * Mot de passe obligatoire, saisi (ou généré) par l'administrateur : le compte ne dépend pas de l'envoi d'un email ;
+ * les identifiants sont envoyés par email si possible, sinon l'administrateur les communique lui-même.
+ */
 function AccountModal({ partner, manager, onClose, onCreated }) {
   const [form, setForm] = useState({ email: '', firstName: '', lastName: '', position: '', language: getLang(), password: '' });
-  const [manual, setManual] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const save = async () => {
-    if (manual && form.password.length < 8) { toast.error(t('partners.err.PASSWORD_TOO_SHORT')); return; }
+    if (!form.password) { toast.error(t('partners.err.PASSWORD_REQUIRED')); return; }
+    if (form.password.length < 8) { toast.error(t('partners.err.PASSWORD_TOO_SHORT')); return; }
     setSaving(true);
     try {
-      const payload = manager ? { language: form.language } : { ...form };
-      payload.password = manual ? form.password : undefined;
+      const payload = manager ? { language: form.language, password: form.password } : { ...form };
       const res = await partnerService.createAccount(partner.id, payload);
-      toast.success(res.data?.emailed ? t('partners.accountCreatedEmailed', { email: res.data.email }) : t('partners.accountCreated', { email: res.data?.email }));
+      if (res.data?.emailed) toast.success(t('partners.accountCreatedEmailed', { email: res.data.email }));
+      else toast(t('partners.accountCreatedNoEmail', { email: res.data?.email }), { icon: '⚠️', duration: 10_000 });
       onCreated();
     } catch (err) {
       const d = err.response?.data || {};
@@ -62,16 +75,24 @@ function AccountModal({ partner, manager, onClose, onCreated }) {
             <option value="en">English</option>
           </SearchSelect>
         </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)} data-testid="account-manual-password" />
-          {t('partners.manualPassword')}
-        </label>
-        {manual ? (
-          <>
-            <input type="text" value={form.password} onChange={set('password')} minLength={8} placeholder={t('partners.passwordPlaceholder')} className={inputCls} data-testid="account-password" />
-            <p className="text-xs text-amber-700">{t('partners.manualPasswordHint')}</p>
-          </>
-        ) : <p className="text-xs text-gray-500">{t('partners.emailPasswordHint')}</p>}
+        <div>
+          <span className="mb-1 block font-medium text-gray-700">{t('partners.password')} *</span>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={set('password')} minLength={8} required autoComplete="new-password"
+                placeholder={t('partners.passwordPlaceholder')} className={`${inputCls} pr-9 font-mono`} data-testid="account-password" />
+              <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-800"
+                aria-label={showPassword ? t('partners.hidePassword') : t('partners.showPassword')}>
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <button type="button" onClick={() => { setForm(f => ({ ...f, password: generatePassword() })); setShowPassword(true); }}
+              className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-50" data-testid="account-generate-password">
+              <Wand2 size={15} /> {t('partners.generatePassword')}
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">{t('partners.passwordHint')}</p>
+        </div>
       </div>
     </Modal>
   );

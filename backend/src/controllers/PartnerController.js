@@ -56,9 +56,9 @@ module.exports = {
   },
 
   /**
-   * POST /partners/:id/accounts { email, firstName, lastName, position, language, password? } — compte de l'espace partenaire
-   * (sans email : compte du responsable, à partir de la fiche). Sans password : généré et envoyé par email (rien n'est
-   * créé si l'email ne part pas) ; avec password : défini par l'administrateur, aucun email.
+   * POST /partners/:id/accounts { email, firstName, lastName, position, language, password } — compte de l'espace
+   * partenaire (sans email : compte du responsable, à partir de la fiche). Mot de passe obligatoire, saisi par
+   * l'administrateur ; identifiants envoyés par email si possible (emailed = false : à communiquer soi-même).
    */
   async createAccount(req, res) {
     try {
@@ -74,9 +74,9 @@ module.exports = {
       await audit(req, AUDIT.PARTNER_ACCOUNT_CREATED, {
         entity: { type: 'partner', id: partner.id, label: `${partner.code} — ${partner.name}` },
         target: { id: account.id, email: account.email },
-        details: { email: account.email, manager: fromManager, passwordEmailed: account.emailed },
+        details: { email: account.email, manager: fromManager, emailed: account.emailed },
       });
-      res.status(201).json({ success: true, data: account, message: account.emailed ? 'Accès créé : identifiants envoyés par email' : 'Accès créé' });
+      res.status(201).json({ success: true, data: account, message: account.emailed ? 'Accès créé : identifiants envoyés par email' : 'Accès créé (email non envoyé : communiquez le mot de passe)' });
     } catch (error) { return sendError(res, error, 'Erreur lors de la création de l\'accès'); }
   },
 

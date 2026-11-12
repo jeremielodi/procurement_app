@@ -6568,12 +6568,12 @@
             "items": [
               "Stock › « Partenaires » › « Nouveau partenaire » (profil administrateur ou logistique).",
               "Saisissez le code (ex. ZS-KARISIMBI), le nom, le type (« Zone de santé »…), la localisation, puis le responsable : nom, fonction (ex. Médecin chef de zone), email et téléphone.",
-              "Sur la fiche du partenaire, cliquez sur « Créer le compte du responsable » : il reçoit par email ses identifiants pour l'espace partenaire. « Autre compte » ajoute une autre personne."
+              "Sur la fiche du partenaire, cliquez sur « Créer le compte du responsable », saisissez son mot de passe (ou « Générer ») : il peut se connecter aussitôt à l'espace partenaire. « Autre compte » ajoute une autre personne."
             ]
           },
           {
             "type": "tip",
-            "text": "Email peu fiable ? Cochez « Définir le mot de passe moi-même (sans email) » et communiquez-lui le mot de passe : aucun email n'est envoyé."
+            "text": "Le mot de passe est saisi à la création du compte (bouton « Générer » pour en proposer un) : le compte existe même si l'email ne part pas. Les identifiants sont aussi envoyés par email ; s'il n'est pas parti, un message vous le signale et vous communiquez le mot de passe vous-même."
           },
           {
             "type": "h",
@@ -7647,11 +7647,7 @@
     "firstName": "Prénom",
     "lastName": "Nom",
     "accountLanguage": "Langue du compte",
-    "manualPassword": "Définir le mot de passe moi-même (sans email)",
     "passwordPlaceholder": "8 caractères au moins",
-    "manualPasswordHint": "Aucun email n'est envoyé : communiquez vous-même ce mot de passe au partenaire.",
-    "emailPasswordHint": "Un mot de passe est généré et envoyé par email ; rien n'est créé si l'email ne part pas.",
-    "accountCreated": "Accès créé pour {{email}}",
     "accountCreatedEmailed": "Accès créé : identifiants envoyés à {{email}}",
     "holdingsTitle": "Matériel détenu (reçu, non rendu)",
     "noHoldings": "Rien de détenu actuellement",
@@ -7678,8 +7674,14 @@
       "PASSWORD_TOO_SHORT": "Mot de passe : 8 caractères au moins",
       "PARTNER_INACTIVE": "Partenaire inactif",
       "EMAIL_IN_USE": "Un compte existe déjà avec cet email",
-      "EMAIL_FAILED": "L'email n'a pas pu être envoyé : aucun accès créé (vous pouvez définir le mot de passe vous-même)"
-    }
+      "PASSWORD_REQUIRED": "Saisissez le mot de passe du compte (ou cliquez sur « Générer »)"
+    },
+    "password": "Mot de passe",
+    "passwordHint": "Communiquez ce mot de passe au partenaire. Il lui est aussi envoyé par email si possible ; il pourra le changer dans « Mon profil ».",
+    "generatePassword": "Générer",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "accountCreatedNoEmail": "Accès créé pour {{email}}, mais l'email n'a pas pu être envoyé : communiquez vous-même le mot de passe au partenaire."
   },
   "partnerPortal": {
     "of": "partenaire de {{enterprise}}",

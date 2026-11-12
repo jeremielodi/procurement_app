@@ -1,12 +1,12 @@
 // backend/src/services/PartnerAccessService.js
 // Comptes de l'espace partenaire (migration 66), créés par l'entreprise depuis la fiche du partenaire :
 // utilisateur prof_partner SANS entreprise (n'apparaît dans aucune liste d'utilisateurs), users.partner_id,
-// mot de passe généré envoyé par email. Compte et profil sont écrits dans une transaction annulée si l'email ne part pas.
+// mot de passe saisi par l'administrateur (obligatoire). Compte et profil sont écrits dans une transaction ; les
+// identifiants sont ensuite envoyés par email à titre d'information (un échec d'envoi n'annule pas le compte).
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const emailService = require('./EmailNotificationService');
-const { generatePassword } = require('../utils/passwordGenerator');
 const { appLink } = require('../utils/appUrl');
 const i18n = require('../i18n');
 
@@ -27,10 +27,12 @@ function invitationHtml(T, { name, email, password, partner, enterprise }) {
 }
 
 /**
- * Crée un compte de l'espace partenaire et envoie ses identifiants.
- * { email, firstName, lastName, position, language, password? } — password fourni (≥ 8 caractères) : défini par
- * l'administrateur, qui le communique lui-même (aucun email) ; sinon généré et envoyé par email.
- * Refus : 400 EMAIL_REQUIRED / NAME_REQUIRED / PASSWORD_TOO_SHORT, 409 PARTNER_INACTIVE / EMAIL_IN_USE, 502 EMAIL_FAILED.
+ * Crée un compte de l'espace partenaire. Le mot de passe est OBLIGATOIRE, saisi par l'administrateur (choix de
+ * l'utilisateur : un compte ne doit pas dépendre de l'envoi d'un email). Les identifiants sont ensuite envoyés par email
+ * à titre d'information : si l'email ne part pas, le compte existe quand même (emailed = false) et l'administrateur
+ * communique le mot de passe lui-même.
+ * { email, firstName, lastName, position, language, password } — refus : 400 EMAIL_REQUIRED / NAME_REQUIRED /
+ * PASSWORD_REQUIRED / PASSWORD_TOO_SHORT, 409 PARTNER_INACTIVE / EMAIL_IN_USE.
  */
 async function createAccount(partnerId, { email, firstName, lastName, position, language, password: chosen }, { grantedBy }) {
   const lang = i18n.LANGS.includes(language) ? language : 'fr';
@@ -38,10 +40,11 @@ async function createAccount(partnerId, { email, firstName, lastName, position, 
   if (!EMAIL_RE.test(mail)) throw fail(400, 'EMAIL_REQUIRED', 'Email valide obligatoire');
   const first = String(firstName || '').trim().slice(0, 100);
   if (!first) throw fail(400, 'NAME_REQUIRED', 'Prénom obligatoire');
-  const manual = chosen !== undefined && chosen !== null && chosen !== '';
-  if (manual && String(chosen).length < 8) throw fail(400, 'PASSWORD_TOO_SHORT', 'Mot de passe : 8 caractères au moins');
+  const password = chosen === undefined || chosen === null ? '' : String(chosen);
+  if (!password) throw fail(400, 'PASSWORD_REQUIRED', 'Mot de passe obligatoire');
+  if (password.length < 8) throw fail(400, 'PASSWORD_TOO_SHORT', 'Mot de passe : 8 caractères au moins');
 
-  return db.withTransaction(async (tx) => {
+  const result = await db.withTransaction(async (tx) => {
     const partner = await tx.one(
       `SELECT p.id, p.name, p.is_active, e.name AS enterprise_name
        FROM partners p JOIN enterprise e ON e.id = p.enterprise_id WHERE p.id = $1 FOR UPDATE OF p`,
@@ -54,7 +57,6 @@ async function createAccount(partnerId, { email, firstName, lastName, position, 
     }
 
     const userId = uuidv4();
-    const password = manual ? String(chosen) : generatePassword();
     await tx.exec(
       `INSERT INTO users (id, username, email, password_hash, first_name, last_name, position, language, is_active, enterprise_id, partner_id, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NULL, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
@@ -66,17 +68,15 @@ async function createAccount(partnerId, { email, firstName, lastName, position, 
       [userId, grantedBy]
     );
 
-    const created = { id: userId, email: mail, first_name: first, last_name: lastName || null, is_active: true, language: lang, emailed: !manual };
-    if (manual) return { partner, account: created };
-
-    // Dernière étape : sans email, rien n'est enregistré (le partenaire ne connaîtrait pas son mot de passe)
-    const T = i18n.translator(lang);
-    const sent = await emailService.sendEmail(mail, T('email.partnerAccess.subject', { enterprise: partner.enterprise_name }),
-      invitationHtml(T, { name: `${first} ${lastName || ''}`.trim(), email: mail, password, partner: partner.name, enterprise: partner.enterprise_name }));
-    if (!sent?.success) throw fail(502, 'EMAIL_FAILED', 'Email non envoyé : compte non créé');
-
-    return { partner, account: created };
+    return { partner, account: { id: userId, email: mail, first_name: first, last_name: lastName || null, is_active: true, language: lang } };
   });
+
+  // Après l'enregistrement : identifiants envoyés par email, sans conditionner la création du compte
+  const T = i18n.translator(lang);
+  const sent = await emailService.sendEmail(mail, T('email.partnerAccess.subject', { enterprise: result.partner.enterprise_name }),
+    invitationHtml(T, { name: `${first} ${lastName || ''}`.trim(), email: mail, password, partner: result.partner.name, enterprise: result.partner.enterprise_name }));
+  result.account.emailed = !!sent?.success;
+  return result;
 }
 
 module.exports = { createAccount };

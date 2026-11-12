@@ -6568,12 +6568,12 @@
             "items": [
               "Stock › \"Partners\" › \"New partner\" (administrator or logistics profile).",
               "Enter the code (e.g. ZS-KARISIMBI), the name, the type (\"Health zone\"…), the location, then the manager: name, position (e.g. Zone chief medical officer), email and phone.",
-              "On the partner record, click \"Create the manager's account\": the manager receives the partner area sign-in details by email. \"Other account\" adds another person."
+              "On the partner record, click \"Create the manager's account\" and enter a password (or \"Generate\"): the manager can sign in to the partner area right away. \"Other account\" adds another person."
             ]
           },
           {
             "type": "tip",
-            "text": "Unreliable email? Tick \"Set the password myself (no email)\" and give the password to the person: no email is sent."
+            "text": "The password is entered when the account is created (\"Generate\" suggests one): the account exists even if the email fails. The sign-in details are also emailed; if the email fails, a message tells you and you give the password yourself."
           },
           {
             "type": "h",
@@ -7647,11 +7647,7 @@
     "firstName": "First name",
     "lastName": "Last name",
     "accountLanguage": "Account language",
-    "manualPassword": "Set the password myself (no email)",
     "passwordPlaceholder": "At least 8 characters",
-    "manualPasswordHint": "No email is sent: give this password to the partner yourself.",
-    "emailPasswordHint": "A password is generated and emailed; nothing is created if the email fails.",
-    "accountCreated": "Access created for {{email}}",
     "accountCreatedEmailed": "Access created: sign-in details sent to {{email}}",
     "holdingsTitle": "Items held (received, not returned)",
     "noHoldings": "Nothing held at the moment",
@@ -7678,8 +7674,14 @@
       "PASSWORD_TOO_SHORT": "Password: at least 8 characters",
       "PARTNER_INACTIVE": "Partner inactive",
       "EMAIL_IN_USE": "An account already exists with this email",
-      "EMAIL_FAILED": "The email could not be sent: no access created (you can set the password yourself)"
-    }
+      "PASSWORD_REQUIRED": "Enter the account password (or click \"Generate\")"
+    },
+    "password": "Password",
+    "passwordHint": "Give this password to the partner. It is also emailed when possible; it can be changed in \"My profile\".",
+    "generatePassword": "Generate",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "accountCreatedNoEmail": "Access created for {{email}}, but the email could not be sent: give the password to the partner yourself."
   },
   "partnerPortal": {
     "of": "partner of {{enterprise}}",

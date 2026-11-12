@@ -11,7 +11,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Boxes, Plus, Pencil, RefreshCw, Search, AlertTriangle, ShoppingCart, FileUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
-import { stockItemService } from '../../services/stockService';
+import { stockItemService, warehouseService } from '../../services/stockService';
 import { categoryService, unitService } from '../../services/referenceService';
 import { unitLabel } from '../../utils/units';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -22,6 +22,8 @@ import { ASSET_CATEGORIES } from '../Enterprises/AssetTagSettings';
 import { NatureBadge, NaturePicker, useStockNatures } from './StockNature';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
+// Listes déroulantes des filtres : largeur naturelle, sur une seule ligne (comme « État du stock »)
+const filterCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 // unitId : unité du référentiel de la plateforme (GET /units) — Pièce par défaut, posée à l'ouverture
 const EMPTY = { code: '', name: '', description: '', unitId: '', categoryId: '', isStockable: true, trackLots: false, trackExpiry: false, trackSerials: false, minQuantity: '', reorderQuantity: '', leadTimeDays: '', assetCategory: '', nature: 'CONSUMABLE' };
@@ -36,7 +38,9 @@ export default function StockItemList() {
   const [pagination, setPagination] = useState({});
   const [categories, setCategories] = useState([]);
   const [params] = useSearchParams();
-  const [filters, setFilters] = useState({ search: '', categoryId: '', stockable: '', nature: params.get('nature') || '', belowMin: params.get('belowMin') === '1', all: false });
+  const [filters, setFilters] = useState({ search: '', categoryId: '', stockable: '', nature: params.get('nature') || '', warehouseId: params.get('warehouseId') || '', belowMin: params.get('belowMin') === '1', all: false });
+  const [warehouses, setWarehouses] = useState([]);
+  useEffect(() => { warehouseService.list().then(r => setWarehouses(r.data || [])).catch(() => {}); }, []);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
@@ -58,6 +62,7 @@ export default function StockItemList() {
       const res = await stockItemService.list({
         search: debounced.search || undefined, categoryId: debounced.categoryId || undefined,
         stockable: debounced.stockable || undefined, nature: debounced.nature || undefined, belowMin: debounced.belowMin ? 1 : undefined,
+        warehouseId: debounced.warehouseId || undefined,
         all: debounced.all ? 1 : undefined, page, limit: 50,
       });
       setRows(res.data || []);
@@ -136,28 +141,33 @@ export default function StockItemList() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-lg p-3">
-        <div className="relative flex-1 min-w-[220px]">
+        <div className="relative flex-1 min-w-[160px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={filters.search} onChange={set('search')} placeholder={t('stock.items.search')} className={`${inputCls} pl-9`} />
         </div>
-        <SearchSelect value={filters.categoryId} onChange={set('categoryId')} className={`${inputCls} w-auto`} aria-label={t('stock.category')}>
+        {/* Dépôt : articles ayant du stock dans ce dépôt, quantité du dépôt */}
+        <SearchSelect value={filters.warehouseId} onChange={set('warehouseId')} className={filterCls} aria-label={t('stock.warehouse')} data-testid="item-warehouse-filter">
+          <option value="">{t('stock.allWarehouses')}</option>
+          {warehouses.map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name}</option>)}
+        </SearchSelect>
+        <SearchSelect value={filters.categoryId} onChange={set('categoryId')} className={filterCls} aria-label={t('stock.category')}>
           <option value="">{t('stock.allCategories')}</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </SearchSelect>
-        <SearchSelect value={filters.stockable} onChange={set('stockable')} className={`${inputCls} w-auto`} aria-label={t('stock.items.stockable')}>
+        <SearchSelect value={filters.stockable} onChange={set('stockable')} className={filterCls} aria-label={t('stock.items.stockable')}>
           <option value="">{t('stock.items.allTypes')}</option>
           <option value="true">{t('stock.items.stockableOnly')}</option>
           <option value="false">{t('stock.notStockable')}</option>
         </SearchSelect>
         {natures.both && (
-          <SearchSelect value={filters.nature} onChange={set('nature')} className={`${inputCls} w-auto`} aria-label={t('stock.nature.label')} data-testid="item-nature-filter">
+          <SearchSelect value={filters.nature} onChange={set('nature')} className={filterCls} aria-label={t('stock.nature.label')} data-testid="item-nature-filter">
             <option value="">{t('stock.nature.allNatures')}</option>
             <option value="EQUIPMENT">{t('stock.nature.EQUIPMENT')}</option>
             <option value="CONSUMABLE">{t('stock.nature.CONSUMABLE')}</option>
           </SearchSelect>
         )}
-        <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={filters.belowMin} onChange={set('belowMin')} /> {t('stock.items.belowMin')}</label>
-        <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={filters.all} onChange={set('all')} /> {t('stock.items.showInactive')}</label>
+        <label className="flex items-center gap-2 whitespace-nowrap text-sm text-gray-700"><input type="checkbox" checked={filters.belowMin} onChange={set('belowMin')} /> {t('stock.items.belowMin')}</label>
+        <label className="flex items-center gap-2 whitespace-nowrap text-sm text-gray-700" title={t('stock.items.showInactive')}><input type="checkbox" checked={filters.all} onChange={set('all')} /> {t('stock.items.inactiveShort')}</label>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">

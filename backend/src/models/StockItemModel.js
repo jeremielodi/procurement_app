@@ -24,9 +24,16 @@ const COLUMNS = [
 ];
 
 class StockItemModel {
-  async list({ search, categoryId, stockable, nature, activeOnly = false, belowMin = false, limit = 200, offset = 0 } = {}) {
+  /** warehouseId : articles ayant du stock dans ce dépôt, quantité = celle du dépôt */
+  async list({ search, categoryId, stockable, nature, warehouseId, activeOnly = false, belowMin = false, limit = 200, offset = 0 } = {}) {
     const params = [];
     let where = `WHERE 1=1${tenant.filter('si.enterprise_id', params)}`;
+    let warehouseSql = '';
+    if (warehouseId) {
+      params.push(String(warehouseId));
+      warehouseSql = ` AND b.warehouse_id::text = $${params.length}`;
+      where += ` AND EXISTS (SELECT 1 FROM stock_balances wb WHERE wb.stock_item_id = si.id AND wb.warehouse_id::text = $${params.length} AND wb.quantity > 0)`;
+    }
     if (activeOnly) where += ' AND si.is_active';
     if (categoryId) { params.push(categoryId); where += ` AND si.category_id = $${params.length}`; }
     if (stockable === true || stockable === 'true') where += ' AND si.is_stockable';
@@ -39,7 +46,7 @@ class StockItemModel {
       params.push(`%${String(search).trim()}%`);
       where += ` AND (si.code ILIKE $${params.length} OR si.name ILIKE $${params.length} OR si.description ILIKE $${params.length})`;
     }
-    let sql = `SELECT * FROM (${SELECT(await stockProject.inlineFilter('b.project_id'))} ${where}) x`;
+    let sql = `SELECT * FROM (${SELECT((await stockProject.inlineFilter('b.project_id')) + warehouseSql)} ${where}) x`;
     if (belowMin) sql += ' WHERE x.min_quantity IS NOT NULL AND x.stock_quantity < x.min_quantity';
     const total = (await db.one(`SELECT COUNT(*)::int AS n FROM (${sql}) t`, params)).n;
     params.push(Math.min(parseInt(limit) || 200, 1000), parseInt(offset) || 0);

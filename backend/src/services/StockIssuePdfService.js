@@ -43,7 +43,7 @@ const TEMPLATE = `<!doctype html>
   .sig { flex: 1; border: 1px dashed #9CA3AF; border-radius: 6px; height: 110px; padding: 8px; color: #6B7280; }
   .sig b { display: block; color: #111827; margin: 4px 0; }
   .sig img { display: block; max-height: 48px; max-width: 170px; object-fit: contain; margin-bottom: 4px; }
-  .sig .ink { color: #1E3FA8; font-weight: 600; }
+  .ink { color: #1E3FA8; font-weight: 600; }
 </style></head>
 <body>
   <div class="header">
@@ -52,7 +52,7 @@ const TEMPLATE = `<!doctype html>
       <div><h2>{{brand.name}}</h2><div>{{#if brand.address}}{{brand.address}}<br>{{/if}}{{#if brand.phone}}{{brand.phone}}{{/if}}{{#if brand.email}} · {{brand.email}}{{/if}}</div></div>
     </div>
     <div class="title">
-      <h1>{{#if transfer}}{{L.transferTitle}}{{else}}{{L.title}}{{/if}}</h1>
+      <h1>{{#if transfer}}{{L.transferTitle}}{{else}}{{#if partner}}{{L.partnerTitle}}{{else}}{{L.title}}{{/if}}{{/if}}</h1>
       <div class="num">{{issue.issue_number}}</div>
       <div>{{L.date}} : <b>{{sis_datetime issue.issued_at}}</b></div>
       {{#if cancelled}}<div class="cancelled">{{L.cancelled}}</div>{{/if}}
@@ -66,13 +66,17 @@ const TEMPLATE = `<!doctype html>
       {{#if transfer}}
       <div class="row"><span>{{L.destinationWarehouse}}</span><b>{{issue.destination_warehouse_name}} ({{issue.destination_warehouse_code}})</b></div>
       <div class="row"><span>{{L.location}}</span><span>{{issue.destination_warehouse_location}}</span></div>
+      {{else}}{{#if partner}}
+      <div class="row"><span>{{L.partner}}</span><b>{{issue.partner_name}} ({{issue.partner_code}})</b></div>
+      <div class="row"><span>{{L.partnerType}}</span><span>{{T.partnerType}}</span></div>
+      <div class="row"><span>{{L.location}}</span><span>{{issue.partner_location}}</span></div>
       {{else}}{{#if department}}
       <div class="row"><span>{{L.department}}</span><b>{{issue.department_code}} — {{issue.department_name}}</b></div>
       {{#if issue.recipient_id}}<div class="row"><span>{{L.collectedBy}}</span><span>{{issue.recipient_name}}</span></div>{{/if}}
       {{else}}
       <div class="row"><span>{{L.name}}</span><b>{{issue.recipient_name}}</b></div>
       <div class="row"><span>{{L.email}}</span><span>{{issue.recipient_email}}</span></div>
-      {{/if}}{{/if}}
+      {{/if}}{{/if}}{{/if}}
       {{#if issue.project_name}}<div class="row"><span>{{L.project}}</span><span>{{issue.project_code}} — {{issue.project_name}}</span></div>{{/if}}
     </div>
     <div class="box">
@@ -85,7 +89,7 @@ const TEMPLATE = `<!doctype html>
   {{#if issue.purpose}}<div class="box" style="margin-bottom:12px"><h3>{{L.purpose}}</h3>{{issue.purpose}}</div>{{/if}}
 
   <table>
-    <thead><tr><th style="width:26px">{{L.no}}</th><th>{{L.code}}</th><th>{{L.item}}</th><th>{{L.lot}}</th><th class="n">{{L.quantity}}</th><th>{{L.unit}}</th></tr></thead>
+    <thead><tr><th style="width:26px">{{L.no}}</th><th>{{L.code}}</th><th>{{L.item}}</th><th>{{L.lot}}</th><th class="n">{{L.quantity}}</th>{{#if showReceived}}<th class="n">{{L.received}}</th>{{/if}}<th>{{L.unit}}</th></tr></thead>
     <tbody>
       {{#each issue.lines}}
       <tr>
@@ -94,6 +98,7 @@ const TEMPLATE = `<!doctype html>
         <td>{{this.item_name}}<div class="muted">{{this.movement_number}}</div></td>
         <td>{{#if this.lot_number}}{{this.lot_number}}{{#if this.expiry_date}}<div class="muted">{{@root.L.expiry}} {{sis_date this.expiry_date}}</div>{{/if}}{{else}}—{{/if}}</td>
         <td class="n">{{sis_qty this.quantity}}</td>
+        {{#if @root.showReceived}}<td class="n ink">{{sis_qty this.received_quantity}}</td>{{/if}}
         <td>{{this.unit}}</td>
       </tr>
       {{/each}}
@@ -109,7 +114,7 @@ const TEMPLATE = `<!doctype html>
 
   <div class="signatures">
     <div class="sig">{{L.storekeeper}}<b>{{issue.issued_by_name}}</b>{{#if sig.issuer}}<img src="{{sig.issuer}}" alt="">{{/if}}{{L.signature}} <span class="ink">{{sis_date issue.issued_at}}</span></div>
-    <div class="sig">{{#if transfer}}{{L.receiverSignature}}<b>{{issue.destination_warehouse_name}}</b>{{else}}{{L.recipientSignature}}<b>{{T.receiverName}}</b>{{/if}}{{#if sig.receiver}}<img src="{{sig.receiver}}" alt="">{{/if}}{{L.signature}}{{#if issue.acknowledged_at}} <span class="ink">{{sis_date issue.acknowledged_at}}</span>{{/if}}</div>
+    <div class="sig">{{#if transfer}}{{L.receiverSignature}}<b>{{issue.destination_warehouse_name}}</b>{{else}}{{#if partner}}{{L.partnerSignature}}<b>{{issue.partner_name}}</b>{{#if issue.acknowledged_by_name}}<span>{{issue.acknowledged_by_name}}</span>{{/if}}{{else}}{{L.recipientSignature}}<b>{{T.receiverName}}</b>{{/if}}{{/if}}{{#if sig.receiver}}<img src="{{sig.receiver}}" alt="">{{/if}}{{L.signature}}{{#if issue.acknowledged_at}} <span class="ink">{{sis_date issue.acknowledged_at}}</span>{{/if}}</div>
   </div>
 </body></html>`;
 
@@ -124,8 +129,10 @@ class StockIssuePdfService {
     const dt = (d) => new Date(d).toLocaleString(ctx.locale, { dateStyle: 'short', timeStyle: 'short' });
     const transfer = issue.destination_type === 'WAREHOUSE';
     const department = issue.destination_type === 'DEPARTMENT';
+    const partner = issue.destination_type === 'PARTNER';
     const T = {
       destinationType: ctx.t(`pdf.stockIssue.type${issue.destination_type || 'USER'}`),
+      partnerType: partner ? ctx.t(`pdf.stockIssue.partnerTypes.${issue.partner_type || 'OTHER'}`) : '',
       receiverName: department && !issue.recipient_id ? issue.department_name : issue.recipient_name,
       acknowledged: issue.acknowledged_at
         ? ctx.t('pdf.stockIssue.acknowledgedOn', { name: issue.acknowledged_by_name || issue.recipient_name || '—', date: dt(issue.acknowledged_at) }) : '',
@@ -138,7 +145,9 @@ class StockIssuePdfService {
       issuer: await signatureDataUri(issue.issued_by),
       receiver: issue.acknowledged_at ? await signatureDataUri(issue.acknowledged_by) : null,
     };
-    const html = Handlebars.compile(TEMPLATE)({ issue, brand, cancelled: issue.status === 'CANCELLED', transfer, department, T, sig, ...ctx });
+    // Quantités reçues : transfert vers un dépôt ou un partenaire réceptionné
+    const showReceived = (transfer || partner) && !!issue.acknowledged_at;
+    const html = Handlebars.compile(TEMPLATE)({ issue, brand, cancelled: issue.status === 'CANCELLED', transfer, department, partner, showReceived, T, sig, ...ctx });
     const pdf = await renderPdf(html, {
       format: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>',
       footerTemplate: `

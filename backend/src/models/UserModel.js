@@ -164,7 +164,7 @@ class UserModel {
           u.last_name, 
           u.department, 
           u.position, 
-          u.enterprise_id,
+          u.enterprise_id, u.partner_id,
           u.language,
           u.avatar_updated_at, u.signature_updated_at,
           u.is_active, 
@@ -193,6 +193,7 @@ class UserModel {
       department: user.department,
       position: user.position,
       enterpriseId: user.enterprise_id,
+      partnerId: user.partner_id || null, // compte de l'espace partenaire (migration 66)
       avatarVersion: user.avatar_updated_at || null,
       signatureVersion: user.signature_updated_at || null,
       language: user.language,
@@ -606,7 +607,7 @@ class UserModel {
 async authenticate(email, password) {
   const user = await db.one(
     `SELECT id, username, email, password_hash, first_name, last_name,
-            department, position, is_active, enterprise_id, language, avatar_updated_at, signature_updated_at
+            department, position, is_active, enterprise_id, partner_id, language, avatar_updated_at, signature_updated_at
      FROM users WHERE email = $1 AND is_active = true`,
     [email]
   );
@@ -636,6 +637,7 @@ async authenticate(email, password) {
       language: user.language,
       isActive: user.is_active,
       enterpriseId: user.enterprise_id,
+      partnerId: user.partner_id || null,
       avatarVersion: user.avatar_updated_at || null,
       signatureVersion: user.signature_updated_at || null,
       profiles,

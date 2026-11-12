@@ -35,6 +35,11 @@ import StockItemDetail from './components/Stock/StockItemDetail';
 import StockMovements from './components/Stock/StockMovements';
 import MovementGroupDetail from './components/Stock/MovementGroupDetail';
 import WarehouseList from './components/Stock/WarehouseList';
+import PartnerList from './components/Stock/PartnerList';
+import PartnerDetail from './components/Stock/PartnerDetail';
+import PartnerTransferList from './components/PartnerPortal/PartnerTransferList';
+import PartnerTransferDetail from './components/PartnerPortal/PartnerTransferDetail';
+import PartnerHoldings from './components/PartnerPortal/PartnerHoldings';
 import StockIssueList from './components/Stock/StockIssueList';
 import StockIssueForm from './components/Stock/StockIssueForm';
 import StockIssueDetail from './components/Stock/StockIssueDetail';
@@ -349,6 +354,12 @@ function App() {
         <Route path="/stock/returns" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockReturnList /></Layout></ProtectedRoute>} />
         <Route path="/stock/returns/new" element={<ProtectedRoute requiredPermission="ISSUE_STOCK"><Layout><StockReturnForm /></Layout></ProtectedRoute>} />
         <Route path="/stock/returns/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockReturnDetail /></Layout></ProtectedRoute>} />
+        {/* Partenaires (ex. zones de santé) et espace partenaire — migration 66 */}
+        <Route path="/stock/partners" element={<ProtectedRoute requiredPermission={['MANAGE_PARTNERS', 'VIEW_STOCK']}><Layout><PartnerList /></Layout></ProtectedRoute>} />
+        <Route path="/stock/partners/:id" element={<ProtectedRoute requiredPermission={['MANAGE_PARTNERS', 'VIEW_STOCK']}><Layout><PartnerDetail /></Layout></ProtectedRoute>} />
+        <Route path="/partner/transfers" element={<ProtectedRoute requiredPermission="PARTNER_PORTAL"><Layout><PartnerTransferList /></Layout></ProtectedRoute>} />
+        <Route path="/partner/transfers/:id" element={<ProtectedRoute requiredPermission="PARTNER_PORTAL"><Layout><PartnerTransferDetail /></Layout></ProtectedRoute>} />
+        <Route path="/partner/holdings" element={<ProtectedRoute requiredPermission="PARTNER_PORTAL"><Layout><PartnerHoldings /></Layout></ProtectedRoute>} />
         {/* Articles remis à l'utilisateur connecté (tout utilisateur d'entreprise) */}
         <Route path="/my-items" element={<ProtectedRoute><Layout><StockIssueList mine /></Layout></ProtectedRoute>} />
         <Route path="/my-items/:id" element={<ProtectedRoute><Layout><StockIssueDetail /></Layout></ProtectedRoute>} />

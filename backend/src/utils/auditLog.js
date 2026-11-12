@@ -83,6 +83,13 @@ const AUDIT = {
   PAYMENT_STATUS_CHANGED: 'PAYMENT_STATUS_CHANGED',
   PAYMENT_BLOCKED: 'PAYMENT_BLOCKED', // coordonnées bancaires du fournisseur non vérifiées
   STOCK_ISSUE_CANCELLED: 'STOCK_ISSUE_CANCELLED',
+  // Partenaires et transferts vers un partenaire (migration 66)
+  PARTNER_CREATED: 'PARTNER_CREATED',
+  PARTNER_UPDATED: 'PARTNER_UPDATED', // avant / après
+  PARTNER_ACCOUNT_CREATED: 'PARTNER_ACCOUNT_CREATED', // compte de l'espace partenaire (mot de passe envoyé par email)
+  PARTNER_ACCOUNT_ACTIVATED: 'PARTNER_ACCOUNT_ACTIVATED',
+  PARTNER_ACCOUNT_DEACTIVATED: 'PARTNER_ACCOUNT_DEACTIVATED',
+  PARTNER_TRANSFER_RECEIVED: 'PARTNER_TRANSFER_RECEIVED', // réception confirmée (espace partenaire) ou enregistrée par le magasin
   STOCK_ENTRY_VALIDATED: 'STOCK_ENTRY_VALIDATED', // bon d'entrée hors bon de commande validé (le stock augmente)
   STOCK_ENTRY_REJECTED: 'STOCK_ENTRY_REJECTED',
   STOCK_ENTRY_CANCELLED: 'STOCK_ENTRY_CANCELLED', // retiré par son auteur, ou annulé après validation (écritures inverses)

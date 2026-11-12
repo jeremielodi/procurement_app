@@ -19,9 +19,9 @@ export const enterpriseLogoUrl = (e) =>
 export function EnterpriseProvider({ children }) {
   const auth = useContext(AuthContext);
   const isAuthenticated = auth?.isAuthenticated;
-  // Fournisseurs (partagés) et super admin plateforme : pas d'entreprise courante
+  // Fournisseurs (partagés), partenaires et super admin plateforme : pas d'entreprise courante
   const profiles = auth?.user?.profiles || [];
-  const noEnterprise = profiles.some(p => p.id === 'prof_supplier' || p.id === 'prof_superadmin');
+  const noEnterprise = profiles.some(p => ['prof_supplier', 'prof_superadmin', 'prof_partner'].includes(p.id));
 
   const [enterprise, setEnterprise] = useState(null);
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);

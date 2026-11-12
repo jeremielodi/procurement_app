@@ -86,7 +86,8 @@
     "noFileSelected": "Aucun fichier sélectionné",
     "pageOf": "Page {{page}} / {{pages}}",
     "searchInList": "Rechercher dans la liste…",
-    "noMatch": "Aucun résultat"
+    "noMatch": "Aucun résultat",
+    "partner": "Partenaire"
   },
   "nav": {
     "groups": {
@@ -99,7 +100,8 @@
       "administration": "Administration",
       "system": "Système",
       "budget": "Budget",
-      "stock": "Stock"
+      "stock": "Stock",
+      "partnerPortal": "Espace partenaire"
     },
     "enterprises": "Entreprises",
     "references": "Localisations et catégories",
@@ -147,7 +149,10 @@
     "receiptRecon": "Rapprochement réceptions",
     "stockPlanning": "Prévision",
     "stockRequests": "Demandes au magasin",
-    "consumables": "Consommables"
+    "consumables": "Consommables",
+    "partnerTransfers": "Envois reçus",
+    "partnerHoldings": "Matériel détenu",
+    "partners": "Partenaires"
   },
   "header": {
     "toggleSidebar": "Afficher / masquer le menu",
@@ -515,8 +520,8 @@
           "desc": "Chaque mouvement est tracé et ne peut être modifié ; le stock ne peut jamais devenir négatif. Export Excel."
         },
         {
-          "title": "Transferts entre dépôts",
-          "desc": "Marchandise « en transit » jusqu'à sa réception au dépôt de destination ; les quantités manquantes sont enregistrées comme pertes en transit."
+          "title": "Transferts entre dépôts et vers les partenaires",
+          "desc": "Marchandise « en transit » jusqu'à sa réception au dépôt de destination ; les quantités manquantes sont enregistrées comme pertes en transit. Envois aux partenaires (zones de santé, ONG…) : le responsable confirme la réception, ligne par ligne, dans son espace partenaire."
         },
         {
           "title": "Inventaires et ajustements",
@@ -3309,7 +3314,8 @@
       "leadTimeDays": "Délai de livraison (jours)",
       "leadTimeHint": "Vide = délai de l'entreprise",
       "assetCategory": "Catégorie TAG (n° d'inventaire)",
-      "assetCategoryHint": "Code de 2 à 5 lettres dans le n° d'inventaire des équipements (ex. IMA-MIHR-LAP-2026-001)."
+      "assetCategoryHint": "Code de 2 à 5 lettres dans le n° d'inventaire des équipements (ex. IMA-MIHR-LAP-2026-001).",
+      "inactiveShort": "Inactifs"
     },
     "mv": {
       "title": "Mouvements de stock",
@@ -3587,7 +3593,9 @@
         "REQUEST_DESTINATION_MISMATCH": "La sortie doit aller à la destination de la demande",
         "REQUEST_WAREHOUSE_MISMATCH": "La demande est adressée à un autre dépôt",
         "REQUEST_LINE_INVALID": "Article absent de la demande",
-        "NATURE_FORBIDDEN": "Vous n'êtes pas autorisé à gérer les articles de cette nature"
+        "NATURE_FORBIDDEN": "Vous n'êtes pas autorisé à gérer les articles de cette nature",
+        "PARTNER_REQUIRED": "Choisissez le partenaire",
+        "PARTNER_INVALID": "Partenaire introuvable ou inactif"
       },
       "projectLabel": "Projet",
       "noUnits": "Aucune unité en stock dans ce dépôt",
@@ -3597,12 +3605,14 @@
       "types": {
         "USER": "Vers un employé",
         "WAREHOUSE": "Vers un dépôt (transfert)",
-        "DEPARTMENT": "Vers un département"
+        "DEPARTMENT": "Vers un département",
+        "PARTNER": "Vers un partenaire"
       },
       "typeHelp": {
         "USER": "Remise d'articles à une personne de l'entreprise, qui confirme la réception.",
         "WAREHOUSE": "Transfert entre dépôts : le stock passe du dépôt source au dépôt de destination (mêmes lots, mêmes n° de série).",
-        "DEPARTMENT": "Articles sortis pour un département (consommation ou matériel du service) ; le responsable ou la personne qui les retire confirme."
+        "DEPARTMENT": "Articles sortis pour un département (consommation ou matériel du service) ; le responsable ou la personne qui les retire confirme.",
+        "PARTNER": "Transfert à un partenaire (ex. zone de santé), qui confirme la réception dans son espace."
       },
       "allTypes": "Tous les types",
       "destination": "Destination",
@@ -3639,7 +3649,20 @@
       "receiveShortWarning_other": "{{count}} lignes reçues en quantité inférieure : la différence sera enregistrée comme perte en transit (équipement non reçu = « perdu »).",
       "cancelReceivedTransferText": "Les quantités reçues repartiront du dépôt de destination vers le dépôt d'origine (écritures inverses) ; les pertes en transit restent enregistrées. Impossible si une partie a déjà été utilisée au dépôt de destination.",
       "projectStockHint": "Le stock de ce projet est pris en priorité, puis le stock sans projet — jamais celui d'un autre projet.",
-      "noProjectStockHint": "Sans projet : le stock sans projet est pris d'abord, puis celui des projets."
+      "noProjectStockHint": "Sans projet : le stock sans projet est pris d'abord, puis celui des projets.",
+      "chooseRecipient": "— Choisir un employé —",
+      "partner": "Partenaire",
+      "choosePartner": "— Choisir un partenaire —",
+      "partnerHint": "Le stock sort dès l'enregistrement ; le partenaire confirme ensuite la réception, ligne par ligne, dans son espace.",
+      "partnerNoAccount": "Ce partenaire n'a pas encore de compte : la réception devra être enregistrée par le magasin (bon signé sur papier), ou créez le compte du responsable depuis sa fiche.",
+      "noPartner": "Aucun partenaire actif : enregistrez-le d'abord (Stock › Partenaires).",
+      "ackPartnerPrompt": "Le partenaire n'a pas encore confirmé la réception. Si le bon a été signé sur papier, vous pouvez enregistrer la réception pour lui.",
+      "waitingPartner": "En attente de la confirmation de réception par le partenaire, dans son espace.",
+      "recordPartnerReceipt": "Enregistrer la réception",
+      "ackPartnerStoreText": "Saisissez les quantités reçues par {{name}}, d'après le bon signé. Le manque éventuel est enregistré comme perte en transit.",
+      "cancelPartnerText": "Le stock revient au dépôt (le partenaire n'a pas encore confirmé la réception). Le partenaire est prévenu.",
+      "ackSourceStore": "enregistrée par le magasin, bon signé sur papier",
+      "ackSourcePortal": "confirmée dans l'espace partenaire"
     },
     "return": {
       "title": "Retours en stock",
@@ -3688,15 +3711,18 @@
         "NO_LINES": "Aucun article",
         "department": "Choisissez le département",
         "HOLDER_REQUIRED": "Indiquez l'employé ou le département",
-        "NATURE_FORBIDDEN": "Vous n'êtes pas autorisé à gérer les articles de cette nature"
+        "NATURE_FORBIDDEN": "Vous n'êtes pas autorisé à gérer les articles de cette nature",
+        "partner": "Choisissez le partenaire qui rend les articles"
       },
       "holderType": "Rendu par",
       "holderTypes": {
         "USER": "Un employé",
-        "DEPARTMENT": "Un département"
+        "DEPARTMENT": "Un département",
+        "PARTNER": "Un partenaire"
       },
       "chooseDepartment": "Choisir le département",
-      "pdf": "Bon de retour (PDF)"
+      "pdf": "Bon de retour (PDF)",
+      "choosePartner": "— Choisir un partenaire —"
     },
     "equipment": {
       "title": "Équipements",
@@ -3718,7 +3744,8 @@
         "ASSIGNED": "Affecté",
         "LOST": "Perdu",
         "RETIRED": "Réformé",
-        "IN_TRANSIT": "En transit"
+        "IN_TRANSIT": "En transit",
+        "AT_PARTNER": "Chez un partenaire"
       },
       "condition": {
         "GOOD": "Bon état",
@@ -3747,7 +3774,8 @@
       "regenerateConfirm": "Remplacer le n° {{tag}} par un nouveau n° selon la codification ? Pensez à changer l'étiquette.",
       "regenerated": "N° d'inventaire recalculé",
       "tagHint": "Le n° suit la codification de « Mon entreprise » ; segment vide = code initial inventaire du projet de financement.",
-      "export": "Exporter (Excel)"
+      "export": "Exporter (Excel)",
+      "partnerHolder": "Partenaire : {{name}}"
     },
     "count": {
       "title": "Inventaires",
@@ -5773,7 +5801,7 @@
       },
       "issues": {
         "title": "Sorties de stock et transferts",
-        "summary": "Vers un employé, vers un autre dépôt ou vers un département, avec accusé de réception.",
+        "summary": "Vers un employé, vers un autre dépôt, vers un département ou vers un partenaire, avec accusé de réception.",
         "blocks": [
           {
             "type": "p",
@@ -6522,6 +6550,147 @@
             ]
           }
         ]
+      },
+      "partners": {
+        "title": "Partenaires et transferts vers un partenaire",
+        "summary": "Zones de santé, structures sanitaires, ONG : enregistrement, compte du responsable, envois, réception, retours.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Un partenaire (zone de santé, structure sanitaire, ONG, administration…) reçoit des articles du stock de l'entreprise. Il appartient à votre entreprise, a un code unique, un type et une localisation, et un responsable (nom, fonction, email, téléphone)."
+          },
+          {
+            "type": "h",
+            "text": "Enregistrer un partenaire"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Stock › « Partenaires » › « Nouveau partenaire » (profil administrateur ou logistique).",
+              "Saisissez le code (ex. ZS-KARISIMBI), le nom, le type (« Zone de santé »…), la localisation, puis le responsable : nom, fonction (ex. Médecin chef de zone), email et téléphone.",
+              "Sur la fiche du partenaire, cliquez sur « Créer le compte du responsable » : il reçoit par email ses identifiants pour l'espace partenaire. « Autre compte » ajoute une autre personne."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Email peu fiable ? Cochez « Définir le mot de passe moi-même (sans email) » et communiquez-lui le mot de passe : aucun email n'est envoyé."
+          },
+          {
+            "type": "h",
+            "text": "Envoyer des articles"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Stock › « Sorties » › « Nouvelle sortie » › type « Vers un partenaire » (ou « Envoyer des articles » depuis la fiche du partenaire).",
+              "Choisissez le dépôt, le partenaire, les articles et quantités (lots FEFO, équipements par n° de série).",
+              "« Enregistrer le transfert » : le stock du dépôt diminue tout de suite ; les comptes du partenaire sont prévenus (notification et email)."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Réception par le partenaire"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Le partenaire confirme dans son espace la quantité reçue de chaque ligne ; un manque est enregistré comme perte en transit et le magasinier qui a expédié est prévenu.",
+              "Équipement reçu : statut « Chez un partenaire » (visible dans Équipements) ; non reçu : « Perdu ».",
+              "Partenaire sans compte, ou bon signé sur papier : sur la fiche du bon, « Enregistrer la réception » permet au magasin de saisir les quantités pour lui (mention « enregistrée par le magasin »)."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Annuler ou récupérer"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Tant que le partenaire n'a pas confirmé la réception, « Annuler le transfert » remet le stock au dépôt.",
+              "Après la réception, l'envoi n'est plus annulable : enregistrez un retour (Stock › « Retours » › « Un partenaire », ou « Enregistrer un retour » sur sa fiche) pour ce qu'il rend — seulement ce qu'il a confirmé avoir reçu."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/stock/partners",
+                "label": "Partenaires"
+              },
+              {
+                "to": "/stock/issues/new?type=PARTNER",
+                "label": "Nouvel envoi à un partenaire"
+              }
+            ]
+          }
+        ],
+        "faq": [
+          {
+            "q": "Le partenaire ne trouve pas son mot de passe",
+            "a": "Il peut utiliser « Mot de passe oublié » sur la page de connexion, avec l'email de son compte."
+          },
+          {
+            "q": "Le stock d'un envoi compte-t-il dans la prévision ?",
+            "a": "Oui : un envoi à un partenaire est une sortie, comptée dans la consommation moyenne du dépôt."
+          }
+        ]
+      },
+      "partnerPortal": {
+        "title": "Guide de l'espace partenaire",
+        "summary": "Envois reçus, confirmation de la réception, matériel détenu.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Envois reçus"
+          },
+          {
+            "type": "p",
+            "text": "« Envois reçus » liste les articles que l'entreprise vous a envoyés : « À confirmer » (en transit), « Reçus », « Annulés ». Vous êtes prévenu par notification et par email à chaque envoi."
+          },
+          {
+            "type": "h",
+            "text": "Confirmer une réception"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Ouvrez l'envoi.",
+              "Pour chaque ligne, indiquez la quantité réellement reçue (pour un équipement : reçu ou manquant).",
+              "Ajoutez un commentaire si besoin (colis abîmés, manque constaté).",
+              "Cliquez sur « Confirmer la réception » : l'expéditeur est prévenu ; un manque est signalé comme perte en transit."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "La confirmation est définitive : vérifiez les quantités avant de valider."
+          },
+          {
+            "type": "p",
+            "text": "« Bon de transfert (PDF) » imprime le bon, avec les quantités reçues après la confirmation."
+          },
+          {
+            "type": "h",
+            "text": "Matériel détenu"
+          },
+          {
+            "type": "p",
+            "text": "« Matériel détenu » liste les articles et équipements reçus que vous n'avez pas rendus. Pour rendre du matériel, contactez le magasin de l'entreprise : il enregistre le retour."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/partner/transfers",
+                "label": "Envois reçus"
+              },
+              {
+                "to": "/partner/holdings",
+                "label": "Matériel détenu"
+              }
+            ]
+          }
+        ],
+        "faq": []
       }
     }
   },
@@ -6654,7 +6823,13 @@
       "STOCK_UNITS_IMPORTED": "Parc existant importé (Excel / CSV)",
       "STOCK_UNITS_RETAGGED": "N° d'inventaire recalculés (codification)",
       "PROCUREMENT_AGENT_ASSIGNED": "Agent achats désigné",
-      "PROCUREMENT_AGENT_CHANGED": "Agent achats remplacé"
+      "PROCUREMENT_AGENT_CHANGED": "Agent achats remplacé",
+      "PARTNER_CREATED": "Partenaire enregistré",
+      "PARTNER_UPDATED": "Partenaire modifié",
+      "PARTNER_ACCOUNT_CREATED": "Accès à l'espace partenaire créé",
+      "PARTNER_ACCOUNT_ACTIVATED": "Compte partenaire réactivé",
+      "PARTNER_ACCOUNT_DEACTIVATED": "Compte partenaire désactivé",
+      "PARTNER_TRANSFER_RECEIVED": "Réception confirmée par le partenaire"
     },
     "groups": {
       "all": "Tous les événements",
@@ -7417,5 +7592,127 @@
       "NOT_ALLOWED": "Seuls le chef du projet et l'administrateur peuvent changer l'agent achats",
       "NOT_PROCUREMENT_AGENT": "Cette réquisition est traitée par l'agent achats désigné à sa validation"
     }
+  },
+  "partners": {
+    "title": "Partenaires",
+    "subtitle": "Partenaires de l'entreprise (zones de santé, structures sanitaires, ONG…) qui reçoivent des articles du stock.",
+    "new": "Nouveau partenaire",
+    "newTitle": "Nouveau partenaire",
+    "editTitle": "Modifier {{name}}",
+    "created": "Partenaire enregistré",
+    "updated": "Partenaire modifié",
+    "required": "Code, nom et localisation sont obligatoires",
+    "search": "Rechercher (code, nom, responsable, localisation)…",
+    "allTypes": "Tous les types",
+    "allLocations": "Toutes les localisations",
+    "count_one": "{{count}} partenaire",
+    "count_other": "{{count}} partenaires",
+    "none": "Aucun partenaire",
+    "notFound": "Partenaire introuvable",
+    "code": "Code",
+    "name": "Nom",
+    "type": "Type",
+    "location": "Localisation",
+    "chooseLocation": "— Choisir une localisation —",
+    "address": "Adresse",
+    "manager": "Responsable",
+    "managerName": "Nom du responsable",
+    "managerNamePlaceholder": "Ex. Dr Jean Mukendi",
+    "managerTitle": "Fonction",
+    "managerTitlePlaceholder": "Ex. Médecin chef de zone",
+    "managerEmail": "Email",
+    "managerPhone": "Téléphone",
+    "noManager": "Aucun responsable renseigné",
+    "notes": "Notes",
+    "accounts": "Comptes",
+    "pending": "À confirmer",
+    "units": "Équipements",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "send": "Envoyer des articles",
+    "accountsTitle": "Accès à l'espace partenaire",
+    "createManagerAccount": "Créer le compte du responsable",
+    "addAccount": "Autre compte",
+    "managerIncomplete": "Renseignez le nom et l'email du responsable (Modifier) pour créer son compte.",
+    "noAccount": "Aucun compte : le partenaire ne peut pas encore confirmer ses réceptions lui-même.",
+    "accountName": "Nom",
+    "lastLogin": "Dernière connexion",
+    "deactivate": "Désactiver",
+    "reactivate": "Réactiver",
+    "accountActivated": "Compte réactivé",
+    "accountDeactivated": "Compte désactivé",
+    "managerAccountTitle": "Compte du responsable",
+    "accountTitle": "Nouveau compte de l'espace partenaire",
+    "createAccount": "Créer l'accès",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "accountLanguage": "Langue du compte",
+    "manualPassword": "Définir le mot de passe moi-même (sans email)",
+    "passwordPlaceholder": "8 caractères au moins",
+    "manualPasswordHint": "Aucun email n'est envoyé : communiquez vous-même ce mot de passe au partenaire.",
+    "emailPasswordHint": "Un mot de passe est généré et envoyé par email ; rien n'est créé si l'email ne part pas.",
+    "accountCreated": "Accès créé pour {{email}}",
+    "accountCreatedEmailed": "Accès créé : identifiants envoyés à {{email}}",
+    "holdingsTitle": "Matériel détenu (reçu, non rendu)",
+    "noHoldings": "Rien de détenu actuellement",
+    "shipmentsTitle": "Envois",
+    "noShipment": "Aucun envoi à ce partenaire",
+    "types": {
+      "HEALTH_ZONE": "Zone de santé",
+      "HEALTH_FACILITY": "Structure sanitaire",
+      "NGO": "ONG / association",
+      "GOVERNMENT": "Administration publique",
+      "OTHER": "Autre"
+    },
+    "err": {
+      "PARTNER_CODE_REQUIRED": "Code du partenaire obligatoire",
+      "PARTNER_CODE_INVALID": "Code invalide (lettres, chiffres, « - », « _ », « . », 30 caractères au plus)",
+      "PARTNER_CODE_EXISTS": "Ce code est déjà utilisé par un autre partenaire",
+      "PARTNER_NAME_REQUIRED": "Nom du partenaire obligatoire",
+      "PARTNER_TYPE_INVALID": "Type de partenaire invalide",
+      "LOCATION_REQUIRED": "Localisation obligatoire",
+      "LOCATION_INVALID": "Localisation introuvable ou inactive",
+      "EMAIL_INVALID": "Email invalide",
+      "EMAIL_REQUIRED": "Email valide obligatoire",
+      "NAME_REQUIRED": "Prénom obligatoire",
+      "PASSWORD_TOO_SHORT": "Mot de passe : 8 caractères au moins",
+      "PARTNER_INACTIVE": "Partenaire inactif",
+      "EMAIL_IN_USE": "Un compte existe déjà avec cet email",
+      "EMAIL_FAILED": "L'email n'a pas pu être envoyé : aucun accès créé (vous pouvez définir le mot de passe vous-même)"
+    }
+  },
+  "partnerPortal": {
+    "of": "partenaire de {{enterprise}}",
+    "counts": {
+      "pending": "À confirmer",
+      "received": "Reçus",
+      "units": "Équipements détenus"
+    },
+    "pendingBanner_one": "{{count}} envoi attend votre confirmation de réception.",
+    "pendingBanner_other": "{{count}} envois attendent votre confirmation de réception.",
+    "tabs": {
+      "pending": "À confirmer",
+      "received": "Reçus",
+      "cancelled": "Annulés",
+      "all": "Tous"
+    },
+    "none": "Aucun envoi",
+    "notFound": "Envoi introuvable",
+    "number": "N° d'envoi",
+    "sentOn": "Envoyé le",
+    "from": "Depuis",
+    "items": "Articles",
+    "lines_one": "{{count}} ligne",
+    "lines_other": "{{count}} lignes",
+    "sentBy": "Envoyé le {{date}} depuis {{warehouse}} ({{location}})",
+    "confirmTitle": "Confirmer la réception",
+    "confirmText": "Indiquez pour chaque ligne la quantité réellement reçue. Tout manque est signalé à l'expéditeur comme perte en transit.",
+    "commentPlaceholder": "Commentaire (état des colis, manque constaté…)",
+    "confirm": "Confirmer la réception",
+    "receivedOk": "Réception confirmée",
+    "cancelled": "Envoi annulé le {{date}} — motif : {{reason}}",
+    "holdingsTitle": "Matériel détenu",
+    "holdingsSubtitle": "Articles et équipements reçus, non rendus.",
+    "noHoldings": "Aucun matériel détenu"
   }
 }

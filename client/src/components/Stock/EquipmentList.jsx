@@ -19,7 +19,9 @@ import RetagUnitsModal from './RetagUnitsModal';
 import AssignUnitsModal from './AssignUnitsModal';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
-const STATUS_CLS = { IN_STOCK: 'bg-green-100 text-green-800', ASSIGNED: 'bg-blue-100 text-blue-800', IN_TRANSIT: 'bg-violet-100 text-violet-800', LOST: 'bg-red-100 text-red-700', RETIRED: 'bg-gray-200 text-gray-600' };
+const STATUS_CLS = { IN_STOCK: 'bg-green-100 text-green-800', ASSIGNED: 'bg-blue-100 text-blue-800', IN_TRANSIT: 'bg-violet-100 text-violet-800', AT_PARTNER: 'bg-amber-100 text-amber-800', LOST: 'bg-red-100 text-red-700', RETIRED: 'bg-gray-200 text-gray-600' };
+// Listes déroulantes des filtres : largeur naturelle, sur une seule ligne (comme « État du stock »)
+const filterCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(getLocale()) : '—');
 
 export function UnitStatusBadge({ status }) {
@@ -57,7 +59,8 @@ export default function EquipmentList() {
   const [pagination, setPagination] = useState({});
   const [serialItems, setSerialItems] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
-  const [filters, setFilters] = useState({ search: '', status: '', stockItemId: '' });
+  const [filters, setFilters] = useState({ search: '', status: '', stockItemId: '', warehouseId: '' });
+  const [filterWarehouses, setFilterWarehouses] = useState([]); // dépôts visibles (filtre), comme « État du stock »
   const [debounced, setDebounced] = useState(filters);
   const [loading, setLoading] = useState(true);
   const [register, setRegister] = useState(null);
@@ -71,6 +74,7 @@ export default function EquipmentList() {
   useEffect(() => {
     stockItemService.list({ limit: 1000 }).then(r => setSerialItems((r.data || []).filter(i => i.track_serials))).catch(() => {});
     warehouseService.mine().then(r => setWarehouses(r.data || [])).catch(() => {});
+    warehouseService.list().then(r => setFilterWarehouses(r.data || [])).catch(() => {});
   }, []);
   useEffect(() => { const id = setTimeout(() => setDebounced(filters), 300); return () => clearTimeout(id); }, [filters]);
 
@@ -164,7 +168,7 @@ export default function EquipmentList() {
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs">
-        {['IN_STOCK', 'ASSIGNED', 'IN_TRANSIT', 'LOST', 'RETIRED'].map(s => (
+        {['IN_STOCK', 'ASSIGNED', 'IN_TRANSIT', 'AT_PARTNER', 'LOST', 'RETIRED'].map(s => (
           <button key={s} onClick={() => setFilters(f => ({ ...f, status: f.status === s ? '' : s }))}
             className={`rounded-full px-3 py-1 ${filters.status === s ? 'ring-2 ring-blue-400 ' : ''}${STATUS_CLS[s]}`}>
             {t(`stock.equipment.status.${s}`)}{!filters.status && counts[s] ? ` · ${counts[s]}` : ''}
@@ -177,7 +181,11 @@ export default function EquipmentList() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={filters.search} onChange={set('search')} placeholder={t('stock.equipment.search')} className={`${inputCls} pl-9`} />
         </div>
-        <SearchSelect value={filters.stockItemId} onChange={set('stockItemId')} className={`${inputCls} w-auto`} aria-label={t('stock.item')}>
+        <SearchSelect value={filters.warehouseId} onChange={set('warehouseId')} className={filterCls} aria-label={t('stock.warehouse')} data-testid="equipment-warehouse-filter">
+          <option value="">{t('stock.allWarehouses')}</option>
+          {filterWarehouses.map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name}</option>)}
+        </SearchSelect>
+        <SearchSelect value={filters.stockItemId} onChange={set('stockItemId')} className={filterCls} aria-label={t('stock.item')}>
           <option value="">{t('stock.equipment.allItems')}</option>
           {serialItems.map(i => <option key={i.id} value={i.id}>{i.code} — {i.name}</option>)}
         </SearchSelect>
@@ -217,6 +225,11 @@ export default function EquipmentList() {
                         <>
                           <b>{u.holder_name}</b>{u.holder_active === false && <span className="ml-1 rounded bg-red-50 px-1 text-xs text-red-700">{t('stock.equipment.holderInactive')}</span>}
                           {hasPermission('ISSUE_STOCK') && hasPermission('MANAGE_EQUIPMENT') && <Link to={`/stock/returns/new?userId=${u.holder_id}`} className="ml-2 text-xs text-blue-600 hover:underline">{t('stock.equipment.recover')}</Link>}
+                        </>
+                      ) : u.partner_id ? (
+                        <>
+                          <b>{t('stock.equipment.partnerHolder', { name: u.partner_name })}</b>
+                          {u.status === 'AT_PARTNER' && hasPermission('ISSUE_STOCK') && hasPermission('MANAGE_EQUIPMENT') && <Link to={`/stock/returns/new?partnerId=${u.partner_id}`} className="ml-2 text-xs text-blue-600 hover:underline">{t('stock.equipment.recover')}</Link>}
                         </>
                       ) : (u.warehouse_name || '—')}
                     </td>

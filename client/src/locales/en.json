@@ -86,7 +86,8 @@
     "noFileSelected": "No file selected",
     "pageOf": "Page {{page}} / {{pages}}",
     "searchInList": "Search the list…",
-    "noMatch": "No results"
+    "noMatch": "No results",
+    "partner": "Partner"
   },
   "nav": {
     "groups": {
@@ -99,7 +100,8 @@
       "administration": "Administration",
       "system": "System",
       "budget": "Budget",
-      "stock": "Stock"
+      "stock": "Stock",
+      "partnerPortal": "Partner area"
     },
     "enterprises": "Companies",
     "references": "Locations and categories",
@@ -147,7 +149,10 @@
     "receiptRecon": "Receipt reconciliation",
     "stockPlanning": "Forecast",
     "stockRequests": "Store requests",
-    "consumables": "Consumables"
+    "consumables": "Consumables",
+    "partnerTransfers": "Shipments received",
+    "partnerHoldings": "Items held",
+    "partners": "Partners"
   },
   "header": {
     "toggleSidebar": "Show / hide menu",
@@ -515,8 +520,8 @@
           "desc": "Every movement is recorded and cannot be altered; stock can never go negative. Excel export."
         },
         {
-          "title": "Transfers between warehouses",
-          "desc": "Goods stay \"in transit\" until received at the destination warehouse; missing quantities are recorded as losses in transit."
+          "title": "Transfers between warehouses and to partners",
+          "desc": "Goods stay \"in transit\" until received at the destination warehouse; missing quantities are recorded as losses in transit. Shipments to partners (health zones, NGOs…): the manager confirms receipt, line by line, in the partner area."
         },
         {
           "title": "Stock counts and adjustments",
@@ -3309,7 +3314,8 @@
       "leadTimeDays": "Lead time (days)",
       "leadTimeHint": "Empty = company lead time",
       "assetCategory": "Tag category (asset tag)",
-      "assetCategoryHint": "2 to 5 letter code in equipment asset tags (e.g. IMA-MIHR-LAP-2026-001)."
+      "assetCategoryHint": "2 to 5 letter code in equipment asset tags (e.g. IMA-MIHR-LAP-2026-001).",
+      "inactiveShort": "Inactive"
     },
     "mv": {
       "title": "Stock movements",
@@ -3587,7 +3593,9 @@
         "REQUEST_DESTINATION_MISMATCH": "The issue must go to the request's destination",
         "REQUEST_WAREHOUSE_MISMATCH": "The request is addressed to another warehouse",
         "REQUEST_LINE_INVALID": "Item not on the request",
-        "NATURE_FORBIDDEN": "You are not allowed to manage items of this nature"
+        "NATURE_FORBIDDEN": "You are not allowed to manage items of this nature",
+        "PARTNER_REQUIRED": "Choose the partner",
+        "PARTNER_INVALID": "Partner not found or inactive"
       },
       "projectLabel": "Project",
       "noUnits": "No unit in stock in this warehouse",
@@ -3597,12 +3605,14 @@
       "types": {
         "USER": "To an employee",
         "WAREHOUSE": "To a warehouse (transfer)",
-        "DEPARTMENT": "To a department"
+        "DEPARTMENT": "To a department",
+        "PARTNER": "To a partner"
       },
       "typeHelp": {
         "USER": "Items handed over to a person in the company, who confirms receipt.",
         "WAREHOUSE": "Transfer between warehouses: stock moves from the source warehouse to the destination warehouse (same lots, same serial numbers).",
-        "DEPARTMENT": "Items issued to a department (consumption or department equipment); the manager or the person collecting them confirms."
+        "DEPARTMENT": "Items issued to a department (consumption or department equipment); the manager or the person collecting them confirms.",
+        "PARTNER": "Transfer to a partner (e.g. health zone), which confirms receipt in its area."
       },
       "allTypes": "All types",
       "destination": "Destination",
@@ -3639,7 +3649,20 @@
       "receiveShortWarning_other": "{{count}} lines received short: the difference will be recorded as lost in transit (equipment not received = \"lost\").",
       "cancelReceivedTransferText": "The received quantities will move back from the destination warehouse to the source warehouse (reversing entries); losses in transit stay recorded. Not possible if part of it was already used at the destination.",
       "projectStockHint": "This project's stock is used first, then stock without a project — never another project's stock.",
-      "noProjectStockHint": "No project: stock without a project is used first, then project stock."
+      "noProjectStockHint": "No project: stock without a project is used first, then project stock.",
+      "chooseRecipient": "— Choose an employee —",
+      "partner": "Partner",
+      "choosePartner": "— Choose a partner —",
+      "partnerHint": "Stock leaves as soon as it is recorded; the partner then confirms receipt line by line in its area.",
+      "partnerNoAccount": "This partner has no account yet: the store will have to record the receipt (note signed on paper), or create the manager's account from the partner record.",
+      "noPartner": "No active partner: register it first (Stock › Partners).",
+      "ackPartnerPrompt": "The partner has not confirmed receipt yet. If the note was signed on paper, you can record the receipt on its behalf.",
+      "waitingPartner": "Waiting for the partner to confirm receipt in its area.",
+      "recordPartnerReceipt": "Record the receipt",
+      "ackPartnerStoreText": "Enter the quantities received by {{name}}, according to the signed note. Any shortage is recorded as a loss in transit.",
+      "cancelPartnerText": "Stock goes back to the warehouse (the partner has not confirmed receipt yet). The partner is notified.",
+      "ackSourceStore": "recorded by the store, note signed on paper",
+      "ackSourcePortal": "confirmed in the partner area"
     },
     "return": {
       "title": "Stock returns",
@@ -3688,15 +3711,18 @@
         "NO_LINES": "No items",
         "department": "Choose the department",
         "HOLDER_REQUIRED": "Enter the employee or the department",
-        "NATURE_FORBIDDEN": "You are not allowed to manage items of this nature"
+        "NATURE_FORBIDDEN": "You are not allowed to manage items of this nature",
+        "partner": "Choose the partner returning the items"
       },
       "holderType": "Returned by",
       "holderTypes": {
         "USER": "An employee",
-        "DEPARTMENT": "A department"
+        "DEPARTMENT": "A department",
+        "PARTNER": "A partner"
       },
       "chooseDepartment": "Choose the department",
-      "pdf": "Return note (PDF)"
+      "pdf": "Return note (PDF)",
+      "choosePartner": "— Choose a partner —"
     },
     "equipment": {
       "title": "Equipment",
@@ -3718,7 +3744,8 @@
         "ASSIGNED": "Assigned",
         "LOST": "Lost",
         "RETIRED": "Retired",
-        "IN_TRANSIT": "In transit"
+        "IN_TRANSIT": "In transit",
+        "AT_PARTNER": "At a partner"
       },
       "condition": {
         "GOOD": "Good",
@@ -3747,7 +3774,8 @@
       "regenerateConfirm": "Replace tag {{tag}} with a new one following the codification? Remember to change the label.",
       "regenerated": "Asset tag recalculated",
       "tagHint": "The tag follows the \"My company\" codification; empty segment = funding project's inventory prefix.",
-      "export": "Export (Excel)"
+      "export": "Export (Excel)",
+      "partnerHolder": "Partner: {{name}}"
     },
     "count": {
       "title": "Stock counts",
@@ -5773,7 +5801,7 @@
       },
       "issues": {
         "title": "Stock issues and transfers",
-        "summary": "To an employee, to another warehouse or to a department, with acknowledgement of receipt.",
+        "summary": "To an employee, to another warehouse, to a department or to a partner, with receipt acknowledgement.",
         "blocks": [
           {
             "type": "p",
@@ -6522,6 +6550,147 @@
             ]
           }
         ]
+      },
+      "partners": {
+        "title": "Partners and transfers to a partner",
+        "summary": "Health zones, health facilities, NGOs: registration, manager's account, shipments, receipt, returns.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "A partner (health zone, health facility, NGO, administration…) receives items from the organization's stock. It belongs to your organization and has a unique code, a type, a location and a manager (name, position, email, phone)."
+          },
+          {
+            "type": "h",
+            "text": "Register a partner"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Stock › \"Partners\" › \"New partner\" (administrator or logistics profile).",
+              "Enter the code (e.g. ZS-KARISIMBI), the name, the type (\"Health zone\"…), the location, then the manager: name, position (e.g. Zone chief medical officer), email and phone.",
+              "On the partner record, click \"Create the manager's account\": the manager receives the partner area sign-in details by email. \"Other account\" adds another person."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Unreliable email? Tick \"Set the password myself (no email)\" and give the password to the person: no email is sent."
+          },
+          {
+            "type": "h",
+            "text": "Send items"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Stock › \"Issues\" › \"New issue\" › type \"To a partner\" (or \"Send items\" from the partner record).",
+              "Choose the warehouse, the partner, the items and quantities (FEFO lots, equipment by serial number).",
+              "\"Save transfer\": the warehouse stock goes down immediately; the partner's accounts are notified (notification and email)."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Receipt by the partner"
+          },
+          {
+            "type": "list",
+            "items": [
+              "The partner confirms in its area the quantity received on each line; a shortage is recorded as a loss in transit and the storekeeper who shipped is notified.",
+              "Equipment received: status \"At a partner\" (visible in Equipment); not received: \"Lost\".",
+              "Partner without an account, or note signed on paper: on the issue note, \"Record the receipt\" lets the store enter the quantities on its behalf (shown as \"recorded by the store\")."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Cancel or recover"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Until the partner confirms receipt, \"Cancel transfer\" puts the stock back in the warehouse.",
+              "After receipt the shipment can no longer be cancelled: record a return (Stock › \"Returns\" › \"A partner\", or \"Record a return\" on its record) for what it gives back — only what it confirmed receiving."
+            ]
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/stock/partners",
+                "label": "Partners"
+              },
+              {
+                "to": "/stock/issues/new?type=PARTNER",
+                "label": "New shipment to a partner"
+              }
+            ]
+          }
+        ],
+        "faq": [
+          {
+            "q": "The partner lost its password",
+            "a": "It can use \"Forgot password\" on the sign-in page, with its account email."
+          },
+          {
+            "q": "Does a shipment count in the replenishment forecast?",
+            "a": "Yes: a shipment to a partner is an issue, counted in the warehouse's average monthly consumption."
+          }
+        ]
+      },
+      "partnerPortal": {
+        "title": "Partner area guide",
+        "summary": "Shipments received, receipt confirmation, items held.",
+        "blocks": [
+          {
+            "type": "h",
+            "text": "Shipments received"
+          },
+          {
+            "type": "p",
+            "text": "\"Shipments received\" lists the items the organization sent you: \"To confirm\" (in transit), \"Received\", \"Cancelled\". You are notified by notification and email for each shipment."
+          },
+          {
+            "type": "h",
+            "text": "Confirm a receipt"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Open the shipment.",
+              "For each line, enter the quantity actually received (for equipment: received or missing).",
+              "Add a comment if needed (damaged parcels, shortage found).",
+              "Click \"Confirm receipt\": the sender is notified; a shortage is reported as a loss in transit."
+            ]
+          },
+          {
+            "type": "warn",
+            "text": "Confirmation is final: check the quantities before confirming."
+          },
+          {
+            "type": "p",
+            "text": "\"Transfer note (PDF)\" prints the note, with the received quantities after confirmation."
+          },
+          {
+            "type": "h",
+            "text": "Items held"
+          },
+          {
+            "type": "p",
+            "text": "\"Items held\" lists the items and equipment received that you have not returned. To return items, contact the organization's store: it records the return."
+          },
+          {
+            "type": "links",
+            "links": [
+              {
+                "to": "/partner/transfers",
+                "label": "Shipments received"
+              },
+              {
+                "to": "/partner/holdings",
+                "label": "Items held"
+              }
+            ]
+          }
+        ],
+        "faq": []
       }
     }
   },
@@ -6654,7 +6823,13 @@
       "STOCK_UNITS_IMPORTED": "Existing assets imported (Excel / CSV)",
       "STOCK_UNITS_RETAGGED": "Asset tags recalculated (codification)",
       "PROCUREMENT_AGENT_ASSIGNED": "Procurement agent assigned",
-      "PROCUREMENT_AGENT_CHANGED": "Procurement agent replaced"
+      "PROCUREMENT_AGENT_CHANGED": "Procurement agent replaced",
+      "PARTNER_CREATED": "Partner created",
+      "PARTNER_UPDATED": "Partner updated",
+      "PARTNER_ACCOUNT_CREATED": "Partner area access created",
+      "PARTNER_ACCOUNT_ACTIVATED": "Partner account reactivated",
+      "PARTNER_ACCOUNT_DEACTIVATED": "Partner account deactivated",
+      "PARTNER_TRANSFER_RECEIVED": "Receipt confirmed by the partner"
     },
     "groups": {
       "all": "All events",
@@ -7417,5 +7592,127 @@
       "NOT_ALLOWED": "Only the project manager and the administrator can change the procurement agent",
       "NOT_PROCUREMENT_AGENT": "This requisition is processed by the procurement agent assigned when it was approved"
     }
+  },
+  "partners": {
+    "title": "Partners",
+    "subtitle": "The organization's partners (health zones, health facilities, NGOs…) receiving items from the stock.",
+    "new": "New partner",
+    "newTitle": "New partner",
+    "editTitle": "Edit {{name}}",
+    "created": "Partner created",
+    "updated": "Partner updated",
+    "required": "Code, name and location are required",
+    "search": "Search (code, name, manager, location)…",
+    "allTypes": "All types",
+    "allLocations": "All locations",
+    "count_one": "{{count}} partner",
+    "count_other": "{{count}} partners",
+    "none": "No partner",
+    "notFound": "Partner not found",
+    "code": "Code",
+    "name": "Name",
+    "type": "Type",
+    "location": "Location",
+    "chooseLocation": "— Choose a location —",
+    "address": "Address",
+    "manager": "Manager",
+    "managerName": "Manager's name",
+    "managerNamePlaceholder": "E.g. Dr Jean Mukendi",
+    "managerTitle": "Position",
+    "managerTitlePlaceholder": "E.g. Zone chief medical officer",
+    "managerEmail": "Email",
+    "managerPhone": "Phone",
+    "noManager": "No manager entered",
+    "notes": "Notes",
+    "accounts": "Accounts",
+    "pending": "To confirm",
+    "units": "Equipment",
+    "active": "Active",
+    "inactive": "Inactive",
+    "send": "Send items",
+    "accountsTitle": "Partner area access",
+    "createManagerAccount": "Create the manager's account",
+    "addAccount": "Other account",
+    "managerIncomplete": "Enter the manager's name and email (Edit) to create the account.",
+    "noAccount": "No account: the partner cannot confirm its receipts itself yet.",
+    "accountName": "Name",
+    "lastLogin": "Last sign-in",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "accountActivated": "Account reactivated",
+    "accountDeactivated": "Account deactivated",
+    "managerAccountTitle": "Manager's account",
+    "accountTitle": "New partner area account",
+    "createAccount": "Create access",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "accountLanguage": "Account language",
+    "manualPassword": "Set the password myself (no email)",
+    "passwordPlaceholder": "At least 8 characters",
+    "manualPasswordHint": "No email is sent: give this password to the partner yourself.",
+    "emailPasswordHint": "A password is generated and emailed; nothing is created if the email fails.",
+    "accountCreated": "Access created for {{email}}",
+    "accountCreatedEmailed": "Access created: sign-in details sent to {{email}}",
+    "holdingsTitle": "Items held (received, not returned)",
+    "noHoldings": "Nothing held at the moment",
+    "shipmentsTitle": "Shipments",
+    "noShipment": "No shipment to this partner",
+    "types": {
+      "HEALTH_ZONE": "Health zone",
+      "HEALTH_FACILITY": "Health facility",
+      "NGO": "NGO / association",
+      "GOVERNMENT": "Public administration",
+      "OTHER": "Other"
+    },
+    "err": {
+      "PARTNER_CODE_REQUIRED": "Partner code is required",
+      "PARTNER_CODE_INVALID": "Invalid code (letters, digits, \"-\", \"_\", \".\", 30 characters max)",
+      "PARTNER_CODE_EXISTS": "This code is already used by another partner",
+      "PARTNER_NAME_REQUIRED": "Partner name is required",
+      "PARTNER_TYPE_INVALID": "Invalid partner type",
+      "LOCATION_REQUIRED": "Location is required",
+      "LOCATION_INVALID": "Location not found or inactive",
+      "EMAIL_INVALID": "Invalid email",
+      "EMAIL_REQUIRED": "A valid email is required",
+      "NAME_REQUIRED": "First name is required",
+      "PASSWORD_TOO_SHORT": "Password: at least 8 characters",
+      "PARTNER_INACTIVE": "Partner inactive",
+      "EMAIL_IN_USE": "An account already exists with this email",
+      "EMAIL_FAILED": "The email could not be sent: no access created (you can set the password yourself)"
+    }
+  },
+  "partnerPortal": {
+    "of": "partner of {{enterprise}}",
+    "counts": {
+      "pending": "To confirm",
+      "received": "Received",
+      "units": "Equipment held"
+    },
+    "pendingBanner_one": "{{count}} shipment is waiting for your receipt confirmation.",
+    "pendingBanner_other": "{{count}} shipments are waiting for your receipt confirmation.",
+    "tabs": {
+      "pending": "To confirm",
+      "received": "Received",
+      "cancelled": "Cancelled",
+      "all": "All"
+    },
+    "none": "No shipment",
+    "notFound": "Shipment not found",
+    "number": "Shipment no.",
+    "sentOn": "Sent on",
+    "from": "From",
+    "items": "Items",
+    "lines_one": "{{count}} line",
+    "lines_other": "{{count}} lines",
+    "sentBy": "Sent on {{date}} from {{warehouse}} ({{location}})",
+    "confirmTitle": "Confirm receipt",
+    "confirmText": "For each line, enter the quantity actually received. Any shortage is reported to the sender as a loss in transit.",
+    "commentPlaceholder": "Comment (condition of parcels, shortage found…)",
+    "confirm": "Confirm receipt",
+    "receivedOk": "Receipt confirmed",
+    "cancelled": "Shipment cancelled on {{date}} — reason: {{reason}}",
+    "holdingsTitle": "Items held",
+    "holdingsSubtitle": "Items and equipment received, not returned.",
+    "noHoldings": "No item held"
   }
 }

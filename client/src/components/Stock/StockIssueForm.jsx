@@ -6,9 +6,9 @@
 // imposé et le matériel endommagé.
 // ?requestId= : sert une demande au magasin — destination, dépôt, projet et articles repris de la demande (verrouillés),
 // quantité plafonnée au reste à servir de chaque ligne (contrôlé aussi par le serveur).
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, PackageMinus, Plus, Trash2, Save, User, X, Warehouse, ArrowRightLeft, Building2, Inbox } from 'lucide-react';
+import { ArrowLeft, PackageMinus, Plus, Trash2, Save, User, Warehouse, ArrowRightLeft, Building2, Inbox, HeartHandshake as Handshake } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CatalogAutocomplete from './CatalogAutocomplete';
 import { warehouseService, stockService, stockIssueService, equipmentService } from '../../services/stockService';
@@ -24,48 +24,34 @@ const today = () => new Date().toISOString().slice(0, 10);
 const newLine = () => ({ key: Math.random().toString(36).slice(2), text: '', item: null, lotId: '', quantity: '', balances: null, units: null, unitIds: [], requestLineId: null, maxQuantity: null });
 const ERROR_CODES = ['NATURE_FORBIDDEN', 'STOCK_INSUFFICIENT', 'WAREHOUSE_FORBIDDEN', 'RECIPIENT_INVALID', 'LOT_EXPIRED', 'ITEM_NOT_STOCKABLE', 'NO_LINES', 'INVALID_QUANTITY', 'UNITS_REQUIRED', 'UNIT_UNAVAILABLE',
   'INVALID_DESTINATION', 'RECIPIENT_REQUIRED', 'DESTINATION_REQUIRED', 'SAME_WAREHOUSE', 'DESTINATION_INVALID', 'DEPARTMENT_REQUIRED', 'DEPARTMENT_INVALID',
-  'REQUEST_NOT_OPEN', 'REQUEST_QUANTITY_EXCEEDED', 'REQUEST_DESTINATION_MISMATCH', 'REQUEST_WAREHOUSE_MISMATCH', 'REQUEST_LINE_INVALID'];
+  'REQUEST_NOT_OPEN', 'REQUEST_QUANTITY_EXCEEDED', 'REQUEST_DESTINATION_MISMATCH', 'REQUEST_WAREHOUSE_MISMATCH', 'REQUEST_LINE_INVALID',
+  'PARTNER_REQUIRED', 'PARTNER_INVALID'];
 
-// Types de sortie (ordre d'affichage) et leurs icônes
-export const ISSUE_TYPES = [['USER', User], ['WAREHOUSE', ArrowRightLeft], ['DEPARTMENT', Building2]];
+// Types de sortie (ordre d'affichage) et leurs icônes — PARTNER : transfert vers un partenaire (ex. zone de santé)
+export const ISSUE_TYPES = [['USER', User], ['WAREHOUSE', ArrowRightLeft], ['DEPARTMENT', Building2], ['PARTNER', Handshake]];
 
-/** Recherche d'un bénéficiaire (utilisateurs actifs de l'entreprise) */
-export function RecipientPicker({ value, onChange, locked = false }) {
-  const [q, setQ] = useState('');
-  const [options, setOptions] = useState([]);
-  const [open, setOpen] = useState(false);
-  const timer = useRef(null);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  const search = (text) => {
-    setQ(text);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(async () => {
-      try { setOptions((await stockIssueService.recipients(text)).data || []); setOpen(true); } catch { /* toast api */ }
-    }, 250);
-  };
-  if (value) {
-    return (
-      <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm">
-        <span className="flex items-center gap-2"><User size={16} className="text-blue-600" /><b>{value.first_name} {value.last_name}</b> <span className="text-gray-500">{value.email}</span></span>
-        {!locked && <button type="button" onClick={() => onChange(null)} className="rounded p-1 hover:bg-blue-100" aria-label={t('stock.issue.changeRecipient')}><X size={14} /></button>}
-      </div>
-    );
-  }
+// Bénéficiaires possibles, chargés une fois par page (liste déroulante avec recherche)
+let recipientsCache = null;
+
+/** Choix d'un bénéficiaire (utilisateurs actifs de l'entreprise) : liste déroulante avec recherche (nom, email, fonction) */
+export function RecipientPicker({ value, onChange, locked = false, testId = 'issue-recipient' }) {
+  const [options, setOptions] = useState(recipientsCache || []);
+  useEffect(() => {
+    if (recipientsCache) return;
+    stockIssueService.recipients('').then(r => { recipientsCache = r.data || []; setOptions(recipientsCache); }).catch(() => {});
+  }, []);
+  // Bénéficiaire imposé (demande au magasin) absent de la liste : affiché quand même
+  const list = value && !options.some(u => String(u.id) === String(value.id)) ? [value, ...options] : options;
   return (
-    <div className="relative">
-      <input value={q} onChange={e => search(e.target.value)} onFocus={() => search(q)} placeholder={t('stock.issue.recipientSearch')} className={inputCls} data-testid="issue-recipient" />
-      {open && (
-        <ul className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 text-sm shadow-lg">
-          {options.length === 0 && <li className="px-3 py-2 text-gray-500">{t('refs.none')}</li>}
-          {options.map(u => (
-            <li key={u.id} onMouseDown={(e) => { e.preventDefault(); onChange(u); setOpen(false); }} className="cursor-pointer px-3 py-1.5 hover:bg-blue-50">
-              <b>{u.first_name} {u.last_name}</b> <span className="text-gray-500">{u.email}</span>
-              {(u.department || u.position) && <div className="text-xs text-gray-400">{[u.position, u.department].filter(Boolean).join(' · ')}</div>}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <SearchSelect value={value?.id || ''} disabled={locked} searchThreshold={0} data-testid={testId} className={inputCls}
+      onChange={e => onChange(list.find(u => String(u.id) === e.target.value) || null)}>
+      <option value="">{t('stock.issue.chooseRecipient')}</option>
+      {list.map(u => (
+        <option key={u.id} value={u.id} data-search={[u.email, u.position, u.department].filter(Boolean).join(' ')}>
+          {`${u.first_name || ''} ${u.last_name || ''}`.trim()}{u.email ? ` — ${u.email}` : ''}{u.position ? ` (${u.position})` : ''}
+        </option>
+      ))}
+    </SearchSelect>
   );
 }
 
@@ -75,9 +61,10 @@ export default function StockIssueForm() {
   const [warehouses, setWarehouses] = useState(null);
   const [warehouseId, setWarehouseId] = useState(params.get('warehouseId') || '');
   const [type, setType] = useState(ISSUE_TYPES.some(([k]) => k === params.get('type')) ? params.get('type') : 'USER');
-  const [destinations, setDestinations] = useState({ warehouses: [], departments: [] });
+  const [destinations, setDestinations] = useState({ warehouses: [], departments: [], partners: [] });
   const [destinationWarehouseId, setDestinationWarehouseId] = useState('');
   const [departmentId, setDepartmentId] = useState('');
+  const [partnerId, setPartnerId] = useState(params.get('partnerId') || '');
   const [projects, setProjects] = useState([]);
   const [recipient, setRecipient] = useState(null);
   const isTransfer = type === 'WAREHOUSE';
@@ -121,7 +108,7 @@ export default function StockIssueForm() {
       else if (warehouseId && !list.some(w => String(w.id) === String(warehouseId))) setWarehouseId('');
     }).catch(() => setWarehouses([]));
     projectService.getAll().then(r => setProjects(r.data || [])).catch(() => {});
-    stockIssueService.destinations().then(r => setDestinations(r.data || { warehouses: [], departments: [] })).catch(() => {});
+    stockIssueService.destinations().then(r => setDestinations({ warehouses: [], departments: [], partners: [], ...(r.data || {}) })).catch(() => {});
   }, []);
 
   // Le dépôt de destination ne peut pas être le dépôt source
@@ -201,15 +188,17 @@ export default function StockIssueForm() {
     if (type === 'USER' && !recipient) { toast.error(t('stock.issue.err.recipient')); return; }
     if (type === 'WAREHOUSE' && !destinationWarehouseId) { toast.error(t('stock.issue.err.destination')); return; }
     if (type === 'DEPARTMENT' && !departmentId) { toast.error(t('stock.issue.err.department')); return; }
+    if (type === 'PARTNER' && !partnerId) { toast.error(t('stock.issue.err.PARTNER_REQUIRED')); return; }
     if (!filledLines.length) { toast.error(t('stock.issue.err.noLines')); return; }
     if (hasErrors) { toast.error(t('grn.err.fixLines')); return; }
     setSaving(true);
     try {
       const res = await stockIssueService.create({
         destinationType: type, warehouseId,
-        recipientId: type !== 'WAREHOUSE' ? recipient?.id : undefined,
+        recipientId: ['USER', 'DEPARTMENT'].includes(type) ? recipient?.id : undefined,
         destinationWarehouseId: isTransfer ? destinationWarehouseId : undefined,
         departmentId: type === 'DEPARTMENT' ? departmentId : undefined,
+        partnerId: type === 'PARTNER' ? partnerId : undefined,
         projectId: !isTransfer && projectId ? projectId : undefined, purpose,
         stockRequestId: request?.id,
         lines: lines.map((l, i) => ({ l, c: computed[i] })).filter(({ l, c }) => l.item && (!l.requestLineId || c.qty > 0))
@@ -245,9 +234,10 @@ export default function StockIssueForm() {
       <form onSubmit={submit} className="space-y-6" noValidate>
         <fieldset>
           <legend className="mb-2 text-sm font-medium text-gray-700">{t('stock.issue.typeLabel')} *</legend>
-          <div className="grid gap-3 sm:grid-cols-3" role="radiogroup">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup">
             {ISSUE_TYPES.map(([key, Icon]) => (
-              <button key={key} type="button" role="radio" aria-checked={type === key} onClick={() => setType(key)} data-testid={`issue-type-${key}`} disabled={fromRequest && type !== key}
+              <button key={key} type="button" role="radio" aria-checked={type === key} onClick={() => setType(key)} data-testid={`issue-type-${key}`} disabled={(fromRequest && type !== key) || (key === 'PARTNER' && !fromRequest && destinations.partners.length === 0 && type !== key)}
+                title={key === 'PARTNER' && destinations.partners.length === 0 ? t('stock.issue.noPartner') : undefined}
                 className={`rounded-xl border-2 p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${type === key ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                 <span className={`flex items-center gap-2 text-sm font-semibold ${type === key ? 'text-blue-800' : 'text-gray-800'}`}><Icon size={18} /> {t(`stock.issue.types.${key}`)}</span>
                 <span className="mt-1 block text-xs text-gray-500">{t(`stock.issue.typeHelp.${key}`)}</span>
@@ -294,6 +284,22 @@ export default function StockIssueForm() {
                 <option value="">{t('stock.issue.chooseDepartment')}</option>
                 {destinations.departments.map(d => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
               </SearchSelect>
+            </label>
+          )}
+          {type === 'PARTNER' && (
+            <label className="text-sm">
+              <span className="mb-1 flex items-center gap-2 font-medium text-gray-700"><Handshake size={15} /> {t('stock.issue.partner')} *</span>
+              <SearchSelect value={partnerId} onChange={e => setPartnerId(e.target.value)} data-testid="issue-partner" searchThreshold={0}
+                className={`${inputCls} ${submitted && !partnerId ? 'border-red-400' : ''}`}>
+                <option value="">{t('stock.issue.choosePartner')}</option>
+                {destinations.partners.map(p => (
+                  <option key={p.id} value={p.id} data-search={p.code}>{p.name} ({p.code}) — {p.location_name}</option>
+                ))}
+              </SearchSelect>
+              {partnerId && destinations.partners.find(p => String(p.id) === String(partnerId))?.has_account === false && (
+                <span className="mt-1 block text-xs text-amber-700" data-testid="issue-partner-no-account">{t('stock.issue.partnerNoAccount')}</span>
+              )}
+              <span className="mt-1 block text-xs text-gray-500">{t('stock.issue.partnerHint')}</span>
             </label>
           )}
           {type === 'DEPARTMENT' && (
@@ -414,7 +420,7 @@ export default function StockIssueForm() {
         <div className="flex gap-3">
           <button type="button" onClick={() => navigate(-1)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50">{t('common.cancel')}</button>
           <button type="submit" disabled={saving || !warehouseId} className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-            <Save size={16} /> {saving ? t('po.saving') : isTransfer ? t('stock.issue.saveTransfer') : t('stock.issue.save')}
+            <Save size={16} /> {saving ? t('po.saving') : isTransfer || type === 'PARTNER' ? t('stock.issue.saveTransfer') : t('stock.issue.save')}
           </button>
         </div>
       </form>

@@ -205,13 +205,14 @@ async function validateItem(req, fields, existing = null) {
 }
 
 const items = {
-  /** GET /stock-items?search=&categoryId=&stockable=&all=1&belowMin=1&page=&limit= */
+  /** GET /stock-items?search=&categoryId=&stockable=&warehouseId=&all=1&belowMin=1&page=&limit= */
   async list(req, res) {
     try {
       const limit = Math.min(parseInt(req.query.limit) || 50, 1000);
       const page = Math.max(parseInt(req.query.page) || 1, 1);
       const { rows, total } = await stockItemModel.list({
         search: req.query.search, categoryId: req.query.categoryId, stockable: req.query.stockable, nature: req.query.nature,
+        warehouseId: req.query.warehouseId,
         activeOnly: !['1', 'true'].includes(String(req.query.all)), belowMin: ['1', 'true'].includes(String(req.query.belowMin)),
         limit, offset: (page - 1) * limit,
       });

@@ -37,14 +37,19 @@ class StockEquipmentModel {
    * Articles encore détenus (bons de sortie non annulés, reste > 0) par un employé (sorties « vers un employé »)
    * ou par un département (sorties « vers un département ») : holdings(userId) / holdings(null, { departmentId })
    */
-  async holdings(userId, { departmentId, restrictNature = false } = {}) {
-    const params = [departmentId || userId];
-    const owner = departmentId
-      ? `si.destination_type = 'DEPARTMENT' AND si.department_id = $1`
-      : `si.destination_type = 'USER' AND si.recipient_id = $1`;
+  async holdings(userId, { departmentId, partnerId, restrictNature = false } = {}) {
+    const params = [partnerId || departmentId || userId];
+    const owner = partnerId
+      // Partenaire (migration 66) : seulement ce qu'il a confirmé avoir reçu
+      ? `si.destination_type = 'PARTNER' AND si.partner_id = $1 AND si.acknowledged_at IS NOT NULL`
+      : departmentId
+        ? `si.destination_type = 'DEPARTMENT' AND si.department_id = $1`
+        : `si.destination_type = 'USER' AND si.recipient_id = $1`;
+    // Détenu : reçu (partenaire) ou remis, moins le déjà rendu
+    const held = partnerId ? 'COALESCE(il.received_quantity, 0)' : 'il.quantity';
     return db.select(
-      `SELECT il.id AS issue_line_id, il.quantity::float8 AS quantity, il.returned_quantity::float8 AS returned_quantity,
-              (il.quantity - il.returned_quantity)::float8 AS remaining,
+      `SELECT il.id AS issue_line_id, ${held}::float8 AS quantity, il.returned_quantity::float8 AS returned_quantity,
+              (${held} - il.returned_quantity)::float8 AS remaining,
               si.id AS issue_id, si.issue_number, si.issued_at, si.warehouse_id, w.name AS warehouse_name,
               it.id AS stock_item_id, it.code AS item_code, it.name AS item_name, it.unit, it.track_serials,
               lt.lot_number, un.id AS unit_id, un.serial_number, un.asset_tag, un.condition
@@ -54,7 +59,7 @@ class StockEquipmentModel {
        JOIN warehouses w ON w.id = si.warehouse_id
        LEFT JOIN stock_lots lt ON lt.id = il.lot_id
        LEFT JOIN stock_units un ON un.id = il.unit_id
-       WHERE ${owner} AND si.status = 'ISSUED' AND il.quantity - il.returned_quantity > 0${tenant.filter('si.enterprise_id', params)}${restrictNature ? (await stockNature.filter('it.nature', params)) + (await stockProject.filter('il.project_id', params)) : ''}
+       WHERE ${owner} AND si.status = 'ISSUED' AND ${held} - il.returned_quantity > 0${tenant.filter('si.enterprise_id', params)}${restrictNature ? (await stockNature.filter('it.nature', params)) + (await stockProject.filter('il.project_id', params)) : ''}
        ORDER BY it.track_serials DESC, si.issued_at, it.name, un.serial_number NULLS LAST, il.id`,
       params
     );
@@ -75,9 +80,11 @@ class StockEquipmentModel {
    *                   lines: [{ issueLineId, quantity, condition }], comment }
    * context.userId : magasinier qui réceptionne (doit avoir accès au dépôt)
    */
-  async createReturn({ warehouseId, returnedBy, departmentId, lines = [], comment }, { userId }) {
+  async createReturn({ warehouseId, returnedBy, departmentId, partnerId, lines = [], comment }, { userId }) {
     if (!Array.isArray(lines) || !lines.length) throw fail(400, 'NO_LINES', 'Sélectionnez au moins un article à rendre');
-    if (!returnedBy === !departmentId) throw fail(400, 'HOLDER_REQUIRED', 'Indiquez l\'employé ou le département qui rend les articles');
+    if ([returnedBy, departmentId, partnerId].filter(Boolean).length !== 1) {
+      throw fail(400, 'HOLDER_REQUIRED', 'Indiquez l\'employé, le département ou le partenaire qui rend les articles');
+    }
     const warehouse = (await warehouseModel.accessibleFor(userId)).find(w => String(w.id) === String(warehouseId));
     if (!warehouse) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès à ce dépôt');
 
@@ -90,8 +97,9 @@ class StockEquipmentModel {
         if (seen.has(String(raw.issueLineId))) throw fail(400, 'DUPLICATE_LINE', 'Ligne en double', { line: index });
         seen.add(String(raw.issueLineId));
         const line = await tx.one(
-          `SELECT il.id, il.stock_item_id, il.lot_id, il.unit_id, il.project_id, il.quantity, il.returned_quantity,
-                  si.id AS issue_id, si.status, si.recipient_id, si.department_id, si.destination_type, si.enterprise_id, it.name AS item_name, it.nature
+          `SELECT il.id, il.stock_item_id, il.lot_id, il.unit_id, il.project_id, il.quantity, il.returned_quantity, il.received_quantity,
+                  si.id AS issue_id, si.status, si.recipient_id, si.department_id, si.partner_id, si.acknowledged_at,
+                  si.destination_type, si.enterprise_id, it.name AS item_name, it.nature
            FROM stock_issue_lines il
            JOIN stock_issues si ON si.id = il.issue_id
            JOIN stock_items it ON it.id = il.stock_item_id
@@ -102,11 +110,16 @@ class StockEquipmentModel {
         if (line.status !== 'ISSUED') throw fail(409, 'ISSUE_CANCELLED', `${line.item_name} : bon de sortie annulé`, { line: index });
         try { await stockNature.assertAllowed([line.nature]); } catch (e) { e.line = index; throw e; } // migration 63
         try { await stockProject.assertAllowed([line.project_id]); } catch (e) { e.line = index; throw e; } // migration 65
-        const held = departmentId
-          ? line.destination_type === 'DEPARTMENT' && String(line.department_id) === String(departmentId)
-          : line.destination_type === 'USER' && String(line.recipient_id) === String(returnedBy);
-        if (!held) throw fail(400, 'NOT_HOLDER', `${line.item_name} : article remis à un autre ${departmentId ? 'département' : 'utilisateur'}`, { line: index });
-        const remaining = num(line.quantity) - num(line.returned_quantity);
+        const held = partnerId
+          ? line.destination_type === 'PARTNER' && String(line.partner_id) === String(partnerId) && !!line.acknowledged_at
+          : departmentId
+            ? line.destination_type === 'DEPARTMENT' && String(line.department_id) === String(departmentId)
+            : line.destination_type === 'USER' && String(line.recipient_id) === String(returnedBy);
+        if (!held) {
+          throw fail(400, 'NOT_HOLDER', `${line.item_name} : article remis à un autre ${partnerId ? 'partenaire (ou réception non confirmée)' : departmentId ? 'département' : 'utilisateur'}`, { line: index });
+        }
+        // Partenaire : seulement la quantité qu'il a reçue
+        const remaining = num(partnerId ? line.received_quantity : line.quantity) - num(line.returned_quantity);
         const quantity = line.unit_id ? 1 : num(raw.quantity);
         if (!(quantity > EPS)) throw fail(400, 'INVALID_QUANTITY', 'Quantité invalide', { line: index });
         if (quantity - remaining > EPS) throw fail(400, 'OVER_RETURN', `${line.item_name} : ${quantity} rendu(s) pour ${remaining} détenu(s)`, { line: index, remaining });
@@ -114,9 +127,10 @@ class StockEquipmentModel {
       }
 
       const ret = await tx.one(
-        `INSERT INTO stock_returns (enterprise_id, warehouse_id, returned_by, department_id, received_by, comment)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, return_number`,
-        [warehouse.enterprise_id, warehouse.id, departmentId ? null : returnedBy, departmentId || null, userId, comment ? String(comment).slice(0, 2000) : null]
+        `INSERT INTO stock_returns (enterprise_id, warehouse_id, returned_by, department_id, partner_id, received_by, comment)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, return_number`,
+        [warehouse.enterprise_id, warehouse.id, departmentId || partnerId ? null : returnedBy, departmentId || null, partnerId || null, userId,
+          comment ? String(comment).slice(0, 2000) : null]
       );
       for (const p of prepared) {
         let movementId = null;
@@ -133,8 +147,8 @@ class StockEquipmentModel {
         if (p.line.unit_id) {
           await tx.exec(
             p.condition === 'LOST'
-              ? `UPDATE stock_units SET status = 'LOST', holder_id = NULL, department_id = NULL, warehouse_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
-              : `UPDATE stock_units SET status = 'IN_STOCK', holder_id = NULL, department_id = NULL, warehouse_id = $2, condition = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+              ? `UPDATE stock_units SET status = 'LOST', holder_id = NULL, department_id = NULL, partner_id = NULL, warehouse_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
+              : `UPDATE stock_units SET status = 'IN_STOCK', holder_id = NULL, department_id = NULL, partner_id = NULL, warehouse_id = $2, condition = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
             p.condition === 'LOST' ? [p.line.unit_id] : [p.line.unit_id, warehouse.id, p.condition]
           );
         }
@@ -148,25 +162,28 @@ class StockEquipmentModel {
     });
   }
 
-  async listReturns({ userId: holderId, departmentId, warehouseId, search, limit = 50, offset = 0 } = {}) {
+  async listReturns({ userId: holderId, departmentId, partnerId, warehouseId, search, limit = 50, offset = 0 } = {}) {
     const params = [];
     let where = `WHERE 1=1${tenant.filter('r.enterprise_id', params)}`;
     if (holderId) { params.push(holderId); where += ` AND r.returned_by = $${params.length}`; }
     if (departmentId) { params.push(departmentId); where += ` AND r.department_id = $${params.length}`; }
+    if (partnerId) { params.push(String(partnerId)); where += ` AND r.partner_id::text = $${params.length}`; }
     if (warehouseId) { params.push(warehouseId); where += ` AND r.warehouse_id = $${params.length}`; }
     where += await stockNature.existsLine('SELECT 1 FROM stock_return_lines nl JOIN stock_issue_lines nil ON nil.id = nl.issue_line_id JOIN stock_items ni ON ni.id = nil.stock_item_id WHERE nl.return_id = r.id', 'ni.nature', params, 'nil.project_id');
     if (search) {
       params.push(`%${String(search).trim()}%`);
       where += ` AND (r.return_number ILIKE $${params.length} OR u.first_name ILIKE $${params.length} OR u.last_name ILIKE $${params.length}
-                 OR u.email ILIKE $${params.length} OR d.name ILIKE $${params.length} OR d.code ILIKE $${params.length})`;
+                 OR u.email ILIKE $${params.length} OR d.name ILIKE $${params.length} OR d.code ILIKE $${params.length}
+                 OR pt.name ILIKE $${params.length} OR pt.code ILIKE $${params.length})`;
     }
     const from = `FROM stock_returns r LEFT JOIN users u ON u.id = r.returned_by LEFT JOIN departments d ON d.id = r.department_id
+      LEFT JOIN partners pt ON pt.id = r.partner_id
       JOIN warehouses w ON w.id = r.warehouse_id LEFT JOIN users rb ON rb.id = r.received_by ${where}`;
     const total = (await db.one(`SELECT COUNT(*)::int AS n ${from}`, params)).n;
     params.push(Math.min(parseInt(limit) || 50, 200), parseInt(offset) || 0);
     const rows = await db.select(
-      `SELECT r.*, COALESCE(d.name, TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, ''))) AS returned_by_name,
-              d.name AS department_name,
+      `SELECT r.*, COALESCE(pt.name, d.name, TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, ''))) AS returned_by_name,
+              d.name AS department_name, pt.name AS partner_name,
               TRIM(COALESCE(rb.first_name, '') || ' ' || COALESCE(rb.last_name, '')) AS received_by_name, w.name AS warehouse_name,
               (SELECT COUNT(*)::int FROM stock_return_lines rl WHERE rl.return_id = r.id) AS line_count,
               (SELECT COUNT(*)::int FROM stock_return_lines rl WHERE rl.return_id = r.id AND rl.condition = 'LOST') AS lost_count
@@ -178,11 +195,13 @@ class StockEquipmentModel {
 
   async getReturn(id) {
     const ret = await db.one(
-      `SELECT r.*, COALESCE(d.name, TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, ''))) AS returned_by_name,
+      `SELECT r.*, COALESCE(pt.name, d.name, TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, ''))) AS returned_by_name,
               u.email AS returned_by_email, d.code AS department_code, d.name AS department_name,
+              pt.code AS partner_code, pt.name AS partner_name,
               TRIM(COALESCE(rb.first_name, '') || ' ' || COALESCE(rb.last_name, '')) AS received_by_name,
               w.name AS warehouse_name, w.code AS warehouse_code
        FROM stock_returns r LEFT JOIN users u ON u.id = r.returned_by LEFT JOIN departments d ON d.id = r.department_id
+       LEFT JOIN partners pt ON pt.id = r.partner_id
        JOIN warehouses w ON w.id = r.warehouse_id
        LEFT JOIN users rb ON rb.id = r.received_by WHERE r.id = $1`,
       [id]
@@ -209,7 +228,7 @@ class StockEquipmentModel {
   // Unités (équipements)
   // ------------------------------------------------------------------
   // exportAll : export Excel du registre (jusqu'à 20 000 équipements au lieu de 500 par page)
-  async units({ status, stockItemId, warehouseId, holderId, departmentId, projectId, search, limit = 100, offset = 0, exportAll = false } = {}) {
+  async units({ status, stockItemId, warehouseId, holderId, departmentId, partnerId, projectId, search, limit = 100, offset = 0, exportAll = false } = {}) {
     const params = [];
     let where = `WHERE un.status <> 'VOID'${tenant.filter('un.enterprise_id', params)}`;
     if (status) { params.push(status); where += ` AND un.status = $${params.length}`; }
@@ -217,6 +236,7 @@ class StockEquipmentModel {
     if (warehouseId) { params.push(warehouseId); where += ` AND un.warehouse_id = $${params.length}`; }
     if (holderId) { params.push(holderId); where += ` AND un.holder_id = $${params.length}`; }
     if (departmentId) { params.push(departmentId); where += ` AND un.department_id = $${params.length}`; }
+    if (partnerId) { params.push(String(partnerId)); where += ` AND un.partner_id::text = $${params.length}`; }
     if (projectId === 'none') where += ' AND un.project_id IS NULL';
     else if (projectId) { params.push(projectId); where += ` AND un.project_id = $${params.length}`; }
     where += await stockProject.filter('un.project_id', params); // projets autorisés (migration 65)
@@ -224,7 +244,7 @@ class StockEquipmentModel {
       params.push(`%${String(search).trim()}%`);
       where += ` AND (un.serial_number ILIKE $${params.length} OR un.asset_tag ILIKE $${params.length} OR it.name ILIKE $${params.length}
                  OR it.code ILIKE $${params.length} OR h.first_name ILIKE $${params.length} OR h.last_name ILIKE $${params.length}
-                 OR hd.name ILIKE $${params.length})`;
+                 OR hd.name ILIKE $${params.length} OR upt.name ILIKE $${params.length})`;
     }
     const from = `
       FROM stock_units un
@@ -232,6 +252,7 @@ class StockEquipmentModel {
       LEFT JOIN warehouses w ON w.id = un.warehouse_id
       LEFT JOIN users h ON h.id = un.holder_id
       LEFT JOIN departments hd ON hd.id = un.department_id
+      LEFT JOIN partners upt ON upt.id = un.partner_id
       LEFT JOIN projects fp ON fp.id = un.project_id
       ${where}`;
     const total = (await db.one(`SELECT COUNT(*)::int AS n ${from}`, params)).n;
@@ -247,6 +268,7 @@ class StockEquipmentModel {
               w.id AS warehouse_id, w.name AS warehouse_name,
               h.id AS holder_id, TRIM(COALESCE(h.first_name, '') || ' ' || COALESCE(h.last_name, '')) AS holder_name, h.email AS holder_email,
               h.is_active AS holder_active, hd.id AS department_id, hd.name AS department_name,
+              upt.id AS partner_id, upt.name AS partner_name,
               fp.id AS project_id, fp.code AS project_code, fp.name AS project_name,
               (SELECT si.issued_at FROM stock_issue_lines il JOIN stock_issues si ON si.id = il.issue_id
                 WHERE il.unit_id = un.id AND si.status = 'ISSUED' AND il.returned_quantity < il.quantity ORDER BY si.issued_at DESC LIMIT 1) AS assigned_at
@@ -261,10 +283,11 @@ class StockEquipmentModel {
     return db.one(
       `SELECT un.*, it.code AS item_code, it.name AS item_name, w.name AS warehouse_name,
               TRIM(COALESCE(h.first_name, '') || ' ' || COALESCE(h.last_name, '')) AS holder_name, h.email AS holder_email,
-              hd.name AS department_name, fp.code AS project_code, fp.name AS project_name
+              hd.name AS department_name, fp.code AS project_code, fp.name AS project_name, upt.name AS partner_name
        FROM stock_units un JOIN stock_items it ON it.id = un.stock_item_id
        LEFT JOIN warehouses w ON w.id = un.warehouse_id LEFT JOIN users h ON h.id = un.holder_id
        LEFT JOIN departments hd ON hd.id = un.department_id
+       LEFT JOIN partners upt ON upt.id = un.partner_id
        LEFT JOIN projects fp ON fp.id = un.project_id
        WHERE un.id = $1`,
       [id]

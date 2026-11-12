@@ -11,6 +11,8 @@ import { t, getLocale, useTranslation } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
+// Listes déroulantes des filtres : largeur naturelle, sur une seule ligne (comme « État du stock »)
+const filterCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 const today = () => new Date().toISOString().slice(0, 10);
 const in90 = () => new Date(Date.now() + 90 * 86400e3).toISOString().slice(0, 10);
@@ -115,11 +117,11 @@ export default function ConsumableList() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={filters.search} onChange={set('search')} placeholder={t('stock.consumables.search')} className={`${inputCls} pl-9`} data-testid="consumables-search" />
         </div>
-        <SearchSelect value={filters.warehouseId} onChange={set('warehouseId')} className={`${inputCls} w-auto`} aria-label={t('stock.warehouse')}>
+        <SearchSelect value={filters.warehouseId} onChange={set('warehouseId')} className={filterCls} aria-label={t('stock.warehouse')} data-testid="consumables-warehouse">
           <option value="">{t('stock.allWarehouses')}</option>
-          {warehouses.map(w => <option key={w.id} value={w.id}>{w.name} ({w.code})</option>)}
+          {warehouses.map(w => <option key={w.id} value={w.id}>{w.location_name ? `${w.location_name} — ` : ''}{w.name}</option>)}
         </SearchSelect>
-        <SearchSelect value={filters.expiring} onChange={set('expiring')} className={`${inputCls} w-auto`} aria-label={t('stock.expiry')} data-testid="consumables-expiring">
+        <SearchSelect value={filters.expiring} onChange={set('expiring')} className={filterCls} aria-label={t('stock.expiry')} data-testid="consumables-expiring">
           <option value="">{t('stock.consumables.allExpiry')}</option>
           <option value="0">{t('stock.consumables.onlyExpired')}</option>
           <option value="90">{t('stock.consumables.within90')}</option>

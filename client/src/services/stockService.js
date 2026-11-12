@@ -76,7 +76,30 @@ export const stockIssueService = {
   acknowledge: (id, comment) => api.post(`/stock-issues/${id}/acknowledge`, { comment }).then(data),
   receive: (id, payload) => api.post(`/stock-issues/${id}/receive`, payload).then(data),
   cancel: (id, reason) => api.post(`/stock-issues/${id}/cancel`, { reason }).then(data),
+  // Envoi à un partenaire : réception signée sur papier enregistrée par le magasin
+  partnerReceipt: (id, payload) => api.post(`/stock-issues/${id}/partner-receipt`, payload, { skipErrorToast: true }).then(data),
   pdf: (id) => api.get(`/stock-issues/${id}/pdf`, { params: { lang: getLang() }, responseType: 'blob' }).then(data),
+};
+
+// Partenaires de l'entreprise (ex. zones de santé) et comptes de leur espace
+export const partnerService = {
+  list: (params = {}) => api.get('/partners', { params }).then(data),
+  get: (id) => api.get(`/partners/${id}`).then(data),
+  create: (payload) => api.post('/partners', payload, { skipErrorToast: true }).then(data),
+  update: (id, payload) => api.put(`/partners/${id}`, payload, { skipErrorToast: true }).then(data),
+  // Sans email : compte du responsable (fiche) ; password : défini par l'administrateur (aucun email)
+  createAccount: (id, payload = {}) => api.post(`/partners/${id}/accounts`, payload, { skipErrorToast: true }).then(data),
+  setAccountActive: (id, userId, isActive) => api.patch(`/partners/${id}/accounts/${userId}`, { isActive }).then(data),
+};
+
+// Espace partenaire (comptes prof_partner)
+export const partnerPortalService = {
+  me: () => api.get('/partner-portal/me').then(data),
+  transfers: (params = {}) => api.get('/partner-portal/transfers', { params }).then(data),
+  transfer: (id) => api.get(`/partner-portal/transfers/${id}`).then(data),
+  receive: (id, payload) => api.post(`/partner-portal/transfers/${id}/receive`, payload, { skipErrorToast: true }).then(data),
+  holdings: () => api.get('/partner-portal/holdings').then(data),
+  pdf: (id) => api.get(`/partner-portal/transfers/${id}/pdf`, { params: { lang: getLang() }, responseType: 'blob' }).then(data),
 };
 
 // Bons d'entrée hors bon de commande (don, achat hors système, retour, autre) : saisis, puis validés par une autre personne
@@ -131,6 +154,8 @@ export const equipmentService = {
   // { data: lignes détenues, user: { id, first_name, last_name, email, is_active } }
   holdings: (userId) => api.get('/stock-holdings', { params: { userId } }).then(data),
   departmentHoldings: (departmentId) => api.get('/stock-holdings', { params: { departmentId } }).then(data),
+  // Ce qu'un partenaire a reçu et n'a pas rendu (équipements « chez le partenaire » compris)
+  partnerHoldings: (partnerId) => api.get('/stock-holdings', { params: { partnerId } }).then(data),
   myHoldings: () => api.get('/stock-holdings/mine').then(data),
 };
 

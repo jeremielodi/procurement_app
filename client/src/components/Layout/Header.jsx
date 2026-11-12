@@ -16,8 +16,10 @@ export default function Header({ toggleSidebar }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const { user, logout } = useAuth()
   const isSupplier = user?.profiles?.some(p => p.id === 'prof_supplier')
-  // Recherche globale : comptes d'entreprise seulement (ni fournisseur, ni super admin de la plateforme)
-  const showSearch = !isSupplier && !user?.profiles?.some(p => p.id === 'prof_superadmin')
+  // Compte de l'espace partenaire (migration 66)
+  const isPartner = !!user?.profiles?.length && user.profiles.every(p => p.id === 'prof_partner')
+  // Recherche globale : comptes d'entreprise seulement (ni fournisseur, ni partenaire, ni super admin de la plateforme)
+  const showSearch = !isSupplier && !isPartner && !user?.profiles?.some(p => p.id === 'prof_superadmin')
 
   const handleNavigateToProfile = () => {
     setIsProfileOpen(false)
@@ -73,7 +75,7 @@ export default function Header({ toggleSidebar }) {
                 <p className="text-sm font-medium text-gray-700">
                   {user?.firstName} {user?.lastName}
                 </p>
-                <p className="text-xs text-gray-500">{isSupplier ? t('common.supplier') : (user?.role || t('common.user'))}</p>
+                <p className="text-xs text-gray-500">{isSupplier ? t('common.supplier') : isPartner ? t('common.partner') : (user?.role || t('common.user'))}</p>
               </div>
               <ChevronDown size={16} className="text-gray-500" />
             </button>
@@ -98,7 +100,7 @@ export default function Header({ toggleSidebar }) {
                       <User size={18} />
                       <span>{t('nav.myProfile')}</span>
                     </Link>
-                    {!isSupplier && <Link
+                    {!isSupplier && !isPartner && <Link
                       to="/settings"
                       onClick={() => setIsProfileOpen(false)}
                       className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"

@@ -39,9 +39,14 @@ const page = (req, max = 200) => {
 };
 
 module.exports = {
-  /** GET /stock-holdings?userId= | ?departmentId= — ce que détient un employé ou un département (VIEW_STOCK) */
+  /** GET /stock-holdings?userId= | ?departmentId= | ?partnerId= — ce que détient un employé, un département ou un partenaire (VIEW_STOCK) */
   async holdings(req, res) {
     try {
+      if (req.query.partnerId) {
+        const partner = await db.one('SELECT id, code, name FROM partners WHERE id::text = $1', [String(req.query.partnerId)]);
+        if (!partner) return res.status(404).json({ success: false, message: 'Partenaire introuvable' });
+        return res.json({ success: true, data: await equipmentModel.holdings(null, { partnerId: partner.id, restrictNature: true }), partner });
+      }
       if (req.query.departmentId) {
         const department = await db.one('SELECT id, code, name FROM departments WHERE id::text = $1', [String(req.query.departmentId)]);
         if (!department) return res.status(404).json({ success: false, message: 'Département introuvable' });
@@ -65,18 +70,21 @@ module.exports = {
     } catch (error) { return sendError(res, error, 'Erreur lors du chargement des détentions'); }
   },
 
-  /** POST /stock-returns { warehouseId, returnedBy | departmentId, lines: [{ issueLineId, quantity, condition }], comment } */
+  /** POST /stock-returns { warehouseId, returnedBy | departmentId | partnerId, lines: [{ issueLineId, quantity, condition }], comment } */
   async createReturn(req, res) {
     try {
       const b = req.body || {};
-      if (!b.warehouseId || (!b.returnedBy && !b.departmentId)) {
-        return res.status(400).json({ success: false, code: 'REQUIRED', message: 'Dépôt et employé (ou département) requis' });
+      if (!b.warehouseId || (!b.returnedBy && !b.departmentId && !b.partnerId)) {
+        return res.status(400).json({ success: false, code: 'REQUIRED', message: 'Dépôt et employé (ou département, ou partenaire) requis' });
       }
       const result = await equipmentModel.createReturn(
-        { warehouseId: b.warehouseId, returnedBy: b.departmentId ? null : b.returnedBy, departmentId: b.departmentId || null, lines: b.lines, comment: b.comment },
+        {
+          warehouseId: b.warehouseId, returnedBy: b.departmentId || b.partnerId ? null : b.returnedBy,
+          departmentId: b.partnerId ? null : b.departmentId || null, partnerId: b.partnerId || null, lines: b.lines, comment: b.comment,
+        },
         { userId: req.user.id }
       );
-      if (!b.departmentId && String(b.returnedBy) !== String(req.user.id)) {
+      if (!b.departmentId && !b.partnerId && String(b.returnedBy) !== String(req.user.id)) {
         try {
           const user = await userModel.findById(b.returnedBy);
           const T = i18n.translator(user?.language);

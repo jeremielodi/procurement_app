@@ -380,6 +380,16 @@
       "assignedBody": "<strong>{name}</strong> vous a désigné agent achats de la réquisition <strong>{number}</strong> en l'approuvant. Les étapes achats (méthode d'achat, sourcing, bon de commande, confirmation fournisseur) vous sont réservées.",
       "changedBody": "<strong>{name}</strong> vous a désigné nouvel agent achats de la réquisition <strong>{number}</strong>. Les étapes achats (méthode d'achat, sourcing, bon de commande, confirmation fournisseur) vous sont désormais réservées.",
       "open": "Ouvrir la réquisition"
+    },
+    "partnerAccess": {
+      "subject": "Votre accès à l'espace partenaire — {enterprise}",
+      "intro": "{enterprise} vous a ouvert un accès à l'espace partenaire de procureApp pour {partner}.",
+      "credentials": "Vos identifiants de connexion :",
+      "email": "Email :",
+      "features": "Dans votre espace, vous voyez les articles qui vous sont envoyés et vous confirmez leur réception, ligne par ligne."
+    },
+    "partnerTransfer": {
+      "open": "Voir l'envoi"
     }
   },
   "notification": {
@@ -412,7 +422,11 @@
       "transferTitle": "Transfert entrant : {number}",
       "transferMessage": "Des articles ont été transférés du dépôt {from} vers le dépôt {to} ({number}). Confirmez leur arrivée.",
       "transferCancelledTitle": "Transfert annulé : {number}",
-      "transferCancelledMessage": "Le transfert {number} vers le dépôt {to} a été annulé : les articles sont revenus au dépôt {from}."
+      "transferCancelledMessage": "Le transfert {number} vers le dépôt {to} a été annulé : les articles sont revenus au dépôt {from}.",
+      "partnerReceivedTitle": "Réception confirmée par le partenaire : {number}",
+      "partnerReceivedMessage": "{name} a confirmé avoir reçu tous les articles de l'envoi {number}.",
+      "partnerReceivedWithLossTitle": "Réception avec manque : {number}",
+      "partnerReceivedWithLossMessage": "{name} a confirmé la réception de l'envoi {number} avec un manque sur {count} ligne(s)."
     },
     "stockReturn": {
       "title": "Retour enregistré : {number}",
@@ -485,6 +499,14 @@
       "changedMessage": "{name} (administrateur) a enregistré votre signature. Vérifiez-la dans « Mon profil ».",
       "removedTitle": "Votre signature a été retirée",
       "removedMessage": "{name} (administrateur) a retiré votre signature. Vous pouvez en déposer une dans « Mon profil »."
+    },
+    "partnerTransfer": {
+      "sentTitle": "Articles envoyés : {number}",
+      "sentMessage": "{from} vous a envoyé des articles ({number}). Confirmez leur réception dans votre espace partenaire, ligne par ligne.",
+      "cancelledTitle": "Envoi annulé : {number}",
+      "cancelledMessage": "L'envoi {number} de {from} a été annulé.",
+      "recordedTitle": "Réception enregistrée : {number}",
+      "recordedMessage": "Le magasin a enregistré la réception de l'envoi {number} (bon signé sur papier)."
     }
   },
   "pdf": {
@@ -809,7 +831,20 @@
       "department": "Département",
       "collectedBy": "Retiré par",
       "receiverSignature": "Réceptionnaire (reçu conforme)",
-      "transferCancelledOn": "Transfert annulé par {name} le {date} — motif : {reason}. Les articles sont revenus au dépôt d'origine."
+      "transferCancelledOn": "Transfert annulé par {name} le {date} — motif : {reason}. Les articles sont revenus au dépôt d'origine.",
+      "typePARTNER": "Transfert vers un partenaire",
+      "partnerTitle": "Bon de transfert vers un partenaire",
+      "partner": "Partenaire",
+      "partnerType": "Type",
+      "partnerSignature": "Partenaire (reçu conforme)",
+      "received": "Qté reçue",
+      "partnerTypes": {
+        "HEALTH_ZONE": "Zone de santé",
+        "HEALTH_FACILITY": "Structure sanitaire",
+        "NGO": "ONG / association",
+        "GOVERNMENT": "Administration publique",
+        "OTHER": "Autre"
+      }
     },
     "stockReturn": {
       "title": "BON DE RETOUR",
@@ -1045,7 +1080,13 @@
     "STOCK_UNITS_IMPORTED": "Parc existant importé (Excel / CSV)",
     "STOCK_UNITS_RETAGGED": "N° d'inventaire recalculés (codification)",
     "PROCUREMENT_AGENT_ASSIGNED": "Agent achats désigné",
-    "PROCUREMENT_AGENT_CHANGED": "Agent achats remplacé"
+    "PROCUREMENT_AGENT_CHANGED": "Agent achats remplacé",
+    "PARTNER_CREATED": "Partenaire enregistré",
+    "PARTNER_UPDATED": "Partenaire modifié",
+    "PARTNER_ACCOUNT_CREATED": "Accès à l'espace partenaire créé",
+    "PARTNER_ACCOUNT_ACTIVATED": "Compte partenaire réactivé",
+    "PARTNER_ACCOUNT_DEACTIVATED": "Compte partenaire désactivé",
+    "PARTNER_TRANSFER_RECEIVED": "Réception d'un envoi confirmée par le partenaire"
   },
   "auditExport": {
     "sheet": "Journal d'audit",

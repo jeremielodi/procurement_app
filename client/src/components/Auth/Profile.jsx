@@ -195,7 +195,8 @@ export default function Profile() {
       </div>
 
       {/* Intérim pendant une absence (chef de projet) : l'intérimaire valide les réquisitions de ses projets */}
-      <DelegationCard currentUserId={user?.id} />
+      {/* Pas d'intérim pour un compte partenaire (aucune entreprise) */}
+      {!user?.profiles?.every(p => p.id === 'prof_partner') && <DelegationCard currentUserId={user?.id} />}
 
       {/* Informations personnelles */}
       <div className="bg-white rounded-lg shadow">

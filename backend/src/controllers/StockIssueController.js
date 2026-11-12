@@ -11,6 +11,34 @@ const i18n = require('../i18n');
 const { audit, AUDIT } = require('../utils/auditLog');
 const stockRequestNotify = require('../services/StockRequestNotifications');
 const stockNature = require('../utils/stockNature');
+const warehouseModel = require('../models/WarehouseModel');
+const partnerModel = require('../models/PartnerModel');
+const emailService = require('../services/EmailNotificationService');
+const { appLink } = require('../utils/appUrl');
+
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/** Envoi à un partenaire : notification in-app + email (langue du compte) à chaque compte actif de son espace */
+async function notifyPartner(req, issue, key) {
+  try {
+    for (const acc of await partnerModel.activeAccounts(issue.partner_id)) {
+      const T = i18n.translator(acc.language);
+      const vars = { number: issue.issue_number, from: issue.warehouse_name, partner: issue.partner_name };
+      const link = `/partner/transfers/${issue.id}`;
+      const title = T(`notification.partnerTransfer.${key}Title`, vars);
+      const message = T(`notification.partnerTransfer.${key}Message`, vars);
+      await notificationModel.create({ userId: acc.id, title, message, type: 'INFO', link });
+      req.io?.to(`user-${acc.id}`).emit('notification', { title, message, type: 'INFO', link, timestamp: new Date().toISOString() });
+      emailService.sendEmail(acc.email, title, `
+        <p>${T('email.hello', { name: escapeHtml(`${acc.first_name || ''} ${acc.last_name || ''}`.trim()) })}</p>
+        <p>${escapeHtml(message)}</p>
+        <p><a href="${appLink(link)}" style="background: #2563eb; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none;">${T('email.partnerTransfer.open')}</a></p>`)
+        .catch((e) => console.error('Email partenaire :', e.message));
+    }
+  } catch (error) {
+    console.error('Notification partenaire :', error.message);
+  }
+}
 
 function sendError(res, error, fallback) {
   if (error.status) {
@@ -52,6 +80,7 @@ async function receivers(issue) {
 }
 
 async function notifyReceivers(req, issue, key, link) {
+  if (issue.destination_type === 'PARTNER') return notifyPartner(req, issue, key === 'cancelled' ? 'cancelled' : 'sent');
   const vars = {
     number: issue.issue_number, department: issue.department_name,
     from: issue.warehouse_name, to: issue.destination_warehouse_name,
@@ -96,6 +125,7 @@ async function restrictLines(req, issue) {
 
 module.exports = {
   notifyCreated,
+  notify,
 
   /** GET /stock-issues — ?mine=1 : bons dont je suis bénéficiaire (sans VIEW_STOCK : toujours les miens) */
   async list(req, res) {
@@ -129,6 +159,9 @@ module.exports = {
       issue.can_acknowledge = issue.status === 'ISSUED' && !issue.acknowledged_at && await stockIssueModel.canAcknowledge(issue, req.user.id);
       // Annuler le bon : gérer toutes ses natures (MANAGE_*, migration 63) et aucune ligne masquée
       issue.can_manage = !issue.hidden_line_count && await stockNature.managesLines(issue.lines);
+      // Envoi à un partenaire : le magasin peut enregistrer la réception signée sur papier (accès au dépôt source)
+      issue.can_record_partner_receipt = issue.destination_type === 'PARTNER' && issue.status === 'ISSUED' && !issue.acknowledged_at
+        && issue.can_manage && await userModel.hasPermission(req.user.id, 'ISSUE_STOCK') && await warehouseModel.canOperate(req.user.id, issue.warehouse_id);
       res.json({ success: true, data: issue });
     } catch (error) { return sendError(res, error, 'Erreur lors du chargement du bon de sortie'); }
   },
@@ -140,7 +173,7 @@ module.exports = {
       const result = await stockIssueModel.create(
         {
           destinationType: b.destinationType || 'USER', warehouseId: b.warehouseId, recipientId: b.recipientId,
-          destinationWarehouseId: b.destinationWarehouseId, departmentId: b.departmentId,
+          destinationWarehouseId: b.destinationWarehouseId, departmentId: b.departmentId, partnerId: b.partnerId,
           projectId: b.projectId, purpose: b.purpose, stockRequestId: b.stockRequestId, lines: b.lines,
         },
         { userId: req.user.id }
@@ -173,6 +206,26 @@ module.exports = {
       }
       res.json({ success: true, data: { ...result, issue }, message: 'Transfert réceptionné' });
     } catch (error) { return sendError(res, error, 'Erreur lors de la réception du transfert'); }
+  },
+
+  /**
+   * POST /stock-issues/:id/partner-receipt { lines: [{ lineId, receivedQuantity }], comment } — envoi à un partenaire :
+   * le magasin enregistre la réception signée sur papier (ISSUE_STOCK + accès au dépôt source ; source STORE)
+   */
+  async partnerReceipt(req, res) {
+    try {
+      const current = await stockIssueModel.getById(req.params.id);
+      if (!current || current.destination_type !== 'PARTNER') return res.status(404).json({ success: false, message: 'Envoi introuvable' });
+      await stockNature.assertSql(db, 'SELECT DISTINCT it.nature FROM stock_issue_lines il JOIN stock_items it ON it.id = il.stock_item_id WHERE il.issue_id = $1', [current.id]);
+      const result = await stockIssueModel.receivePartner(req.params.id, { userId: req.user.id, comment: req.body?.comment, lines: req.body?.lines, source: 'STORE' });
+      const issue = await stockIssueModel.getById(req.params.id);
+      await audit(req, AUDIT.PARTNER_TRANSFER_RECEIVED, {
+        entity: { type: 'stock_issue', id: issue.id, label: issue.issue_number },
+        details: { partner: issue.partner_name, source: 'STORE', linesWithLoss: result.linesWithLoss },
+      });
+      await notifyPartner(req, issue, 'recorded');
+      res.json({ success: true, data: { ...result, issue }, message: 'Réception enregistrée' });
+    } catch (error) { return sendError(res, error, 'Erreur lors de l\'enregistrement de la réception'); }
   },
 
   /** POST /stock-issues/:id/cancel { reason } — écritures inverses (retour en stock / retour au dépôt source) */

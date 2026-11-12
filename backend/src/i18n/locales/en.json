@@ -380,6 +380,16 @@
       "assignedBody": "<strong>{name}</strong> assigned you as procurement agent for requisition <strong>{number}</strong> when approving it. The procurement steps (procurement method, sourcing, purchase order, supplier confirmation) are reserved for you.",
       "changedBody": "<strong>{name}</strong> assigned you as the new procurement agent for requisition <strong>{number}</strong>. The procurement steps (procurement method, sourcing, purchase order, supplier confirmation) are now reserved for you.",
       "open": "Open the requisition"
+    },
+    "partnerAccess": {
+      "subject": "Your access to the partner area — {enterprise}",
+      "intro": "{enterprise} has opened an access to the procureApp partner area for {partner}.",
+      "credentials": "Your sign-in details:",
+      "email": "Email:",
+      "features": "In your area you see the items sent to you and confirm their receipt, line by line."
+    },
+    "partnerTransfer": {
+      "open": "View the shipment"
     }
   },
   "notification": {
@@ -412,7 +422,11 @@
       "transferTitle": "Incoming transfer: {number}",
       "transferMessage": "Items were transferred from warehouse {from} to warehouse {to} ({number}). Please confirm their arrival.",
       "transferCancelledTitle": "Transfer cancelled: {number}",
-      "transferCancelledMessage": "Transfer {number} to warehouse {to} was cancelled: the items went back to warehouse {from}."
+      "transferCancelledMessage": "Transfer {number} to warehouse {to} was cancelled: the items went back to warehouse {from}.",
+      "partnerReceivedTitle": "Receipt confirmed by the partner: {number}",
+      "partnerReceivedMessage": "{name} confirmed receiving all items of shipment {number}.",
+      "partnerReceivedWithLossTitle": "Receipt with shortage: {number}",
+      "partnerReceivedWithLossMessage": "{name} confirmed receiving shipment {number} with a shortage on {count} line(s)."
     },
     "stockReturn": {
       "title": "Return recorded: {number}",
@@ -485,6 +499,14 @@
       "changedMessage": "{name} (administrator) saved your signature. Check it in \"My profile\".",
       "removedTitle": "Your signature has been removed",
       "removedMessage": "{name} (administrator) removed your signature. You can add one in \"My profile\"."
+    },
+    "partnerTransfer": {
+      "sentTitle": "Items sent: {number}",
+      "sentMessage": "{from} has sent you items ({number}). Confirm their receipt line by line in your partner area.",
+      "cancelledTitle": "Shipment cancelled: {number}",
+      "cancelledMessage": "Shipment {number} from {from} has been cancelled.",
+      "recordedTitle": "Receipt recorded: {number}",
+      "recordedMessage": "The store recorded the receipt of shipment {number} (note signed on paper)."
     }
   },
   "pdf": {
@@ -809,7 +831,20 @@
       "department": "Department",
       "collectedBy": "Collected by",
       "receiverSignature": "Receiver (received in good order)",
-      "transferCancelledOn": "Transfer cancelled by {name} on {date} — reason: {reason}. The items went back to the source warehouse."
+      "transferCancelledOn": "Transfer cancelled by {name} on {date} — reason: {reason}. The items went back to the source warehouse.",
+      "typePARTNER": "Transfer to a partner",
+      "partnerTitle": "Transfer note to a partner",
+      "partner": "Partner",
+      "partnerType": "Type",
+      "partnerSignature": "Partner (received in good order)",
+      "received": "Qty received",
+      "partnerTypes": {
+        "HEALTH_ZONE": "Health zone",
+        "HEALTH_FACILITY": "Health facility",
+        "NGO": "NGO / association",
+        "GOVERNMENT": "Public administration",
+        "OTHER": "Other"
+      }
     },
     "stockReturn": {
       "title": "RETURN NOTE",
@@ -1045,7 +1080,13 @@
     "STOCK_UNITS_IMPORTED": "Existing assets imported (Excel / CSV)",
     "STOCK_UNITS_RETAGGED": "Asset tags recalculated (codification)",
     "PROCUREMENT_AGENT_ASSIGNED": "Procurement agent assigned",
-    "PROCUREMENT_AGENT_CHANGED": "Procurement agent replaced"
+    "PROCUREMENT_AGENT_CHANGED": "Procurement agent replaced",
+    "PARTNER_CREATED": "Partner created",
+    "PARTNER_UPDATED": "Partner updated",
+    "PARTNER_ACCOUNT_CREATED": "Partner area access created",
+    "PARTNER_ACCOUNT_ACTIVATED": "Partner account reactivated",
+    "PARTNER_ACCOUNT_DEACTIVATED": "Partner account deactivated",
+    "PARTNER_TRANSFER_RECEIVED": "Shipment receipt confirmed by the partner"
   },
   "auditExport": {
     "sheet": "Audit log",

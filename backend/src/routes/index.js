@@ -825,6 +825,17 @@ router.post('/stock-issues', authenticate, hasPermission('ISSUE_STOCK'), stockIs
 router.post('/stock-issues/:id/acknowledge', authenticate, stockIssueController.acknowledge);
 router.post('/stock-issues/:id/receive', authenticate, stockIssueController.receive);
 router.post('/stock-issues/:id/cancel', authenticate, hasPermission('ISSUE_STOCK'), stockIssueController.cancel);
+// Envoi à un partenaire : réception signée sur papier enregistrée par le magasin (migration 66)
+router.post('/stock-issues/:id/partner-receipt', authenticate, hasPermission('ISSUE_STOCK'), stockIssueController.partnerReceipt);
+
+// Partenaires de l'entreprise (migration 66) — registre : MANAGE_PARTNERS ; lecture aussi pour la gestion du stock
+const partnerController = require('../controllers/PartnerController');
+router.get('/partners', authenticate, hasAnyPermission('MANAGE_PARTNERS', 'VIEW_STOCK', 'ISSUE_STOCK'), partnerController.list);
+router.get('/partners/:id', authenticate, hasAnyPermission('MANAGE_PARTNERS', 'VIEW_STOCK', 'ISSUE_STOCK'), partnerController.get);
+router.post('/partners', authenticate, hasPermission('MANAGE_PARTNERS'), partnerController.create);
+router.put('/partners/:id', authenticate, hasPermission('MANAGE_PARTNERS'), partnerController.update);
+router.post('/partners/:id/accounts', authenticate, hasPermission('MANAGE_PARTNERS'), partnerController.createAccount);
+router.patch('/partners/:id/accounts/:userId', authenticate, hasPermission('MANAGE_PARTNERS'), partnerController.setAccountActive);
 
 // Bons d'entrée hors bon de commande (don, achat hors système, retour, autre) — validés par une autre personne (migration 47)
 const stockEntryController = require('../controllers/StockEntryController');
@@ -987,6 +998,17 @@ router.put('/tenders/:id', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TE
 router.post('/tenders/:id/close', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), procurementAgent('tender', from.param('id')), tenderController.close.bind(tenderController));
 router.post('/tenders/:id/cancel', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), procurementAgent('tender', from.param('id')), tenderController.cancel.bind(tenderController));
 router.post('/tenders/:id/award', hasPermission('MANAGE_TENDERS'), onProject('MANAGE_TENDERS', 'tender', from.param('id')), procurementAgent('tender', from.param('id')), tenderController.award.bind(tenderController));
+
+// ============================================
+// ESPACE PARTENAIRE (migration 66) — comptes prof_partner, restreints à /partner-portal par tenantContext
+// ============================================
+const partnerPortal = require('../controllers/PartnerPortalController');
+router.get('/partner-portal/me', hasPermission('PARTNER_PORTAL'), partnerPortal.me);
+router.get('/partner-portal/transfers', hasPermission('PARTNER_PORTAL'), partnerPortal.transfers);
+router.get('/partner-portal/transfers/:id/pdf', hasPermission('PARTNER_PORTAL'), partnerPortal.pdf);
+router.get('/partner-portal/transfers/:id', hasPermission('PARTNER_PORTAL'), partnerPortal.transfer);
+router.post('/partner-portal/transfers/:id/receive', hasPermission('PARTNER_PORTAL'), partnerPortal.receive);
+router.get('/partner-portal/holdings', hasPermission('PARTNER_PORTAL'), partnerPortal.holdings);
 
 // ============================================
 // PORTAIL FOURNISSEUR

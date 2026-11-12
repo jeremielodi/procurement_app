@@ -3,12 +3,14 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
 import LoadingSpinner from '../Common/LoadingSpinner';
-import { isSupplierUser, isSuperAdminUser } from '../../utils/accountType';
+import { isSupplierUser, isSuperAdminUser, isPartnerUser } from '../../utils/accountType';
 import { loginPathFor } from '../../utils/loginRedirect';
 import { t } from '../../i18n';
 
 // Pages accessibles à un compte fournisseur / au super admin de la plateforme
 const SUPPLIER_PATHS = ['/supplier/', '/notifications'];
+// Compte partenaire : son espace, ses notifications, son profil (mot de passe, langue, photo)
+const PARTNER_PATHS = ['/partner/', '/notifications', '/profile'];
 const SUPERADMIN_PATHS = ['/admin/enterprises', '/admin/profiles', '/admin/references', '/admin/audit', '/notifications'];
 
 export default function ProtectedRoute({ 
@@ -34,6 +36,10 @@ export default function ProtectedRoute({
   // Un fournisseur ne voit que son portail
   if (isSupplierUser(user) && !SUPPLIER_PATHS.some(p => location.pathname.startsWith(p))) {
     return <Navigate to="/supplier/dashboard" replace />;
+  }
+  // Un partenaire ne voit que son espace
+  if (isPartnerUser(user) && !PARTNER_PATHS.some(p => location.pathname.startsWith(p))) {
+    return <Navigate to="/partner/transfers" replace />;
   }
 
   // Le super admin gère la plateforme (entreprises, rôles), pas les achats

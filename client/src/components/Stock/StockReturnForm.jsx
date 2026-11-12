@@ -1,10 +1,11 @@
 // src/components/Stock/StockReturnForm.jsx
-// Retour en stock : la logistique récupère auprès d'un employé (départ, fin de mission…) ou d'un département ce qu'il
-// détient — équipements (n° de série) et consommables non utilisés — dans un dépôt de son choix.
+// Retour en stock : la logistique récupère auprès d'un employé (départ, fin de mission…), d'un département ou d'un
+// partenaire (ce qu'il a confirmé avoir reçu) ce qu'il détient — équipements (n° de série) et consommables non utilisés —
+// dans un dépôt de son choix.
 // État : bon (remis en stock), endommagé (en stock, non réaffectable), perdu (aucune entrée en stock).
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Undo2, Save, Warehouse, CheckSquare, User, Building2 } from 'lucide-react';
+import { ArrowLeft, Undo2, Save, Warehouse, CheckSquare, User, Building2, HeartHandshake as Handshake } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RecipientPicker } from './StockIssueForm';
 import { warehouseService, equipmentService, stockReturnService, stockIssueService } from '../../services/stockService';
@@ -18,9 +19,11 @@ const ERROR_CODES = ['OVER_RETURN', 'NOT_HOLDER', 'ISSUE_CANCELLED', 'WAREHOUSE_
 export default function StockReturnForm() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const [holderType, setHolderType] = useState(params.get('departmentId') ? 'DEPARTMENT' : 'USER');
+  const [holderType, setHolderType] = useState(params.get('partnerId') ? 'PARTNER' : params.get('departmentId') ? 'DEPARTMENT' : 'USER');
   const [departments, setDepartments] = useState([]);
   const [department, setDepartment] = useState(null);
+  const [partners, setPartners] = useState([]);
+  const [partner, setPartner] = useState(null);
   const [user, setUser] = useState(null);
   const [holdings, setHoldings] = useState(null);
   const [selection, setSelection] = useState({}); // issueLineId → { checked, quantity, condition }
@@ -55,9 +58,19 @@ export default function StockReturnForm() {
       if (res.department) setDepartment(res.department);
     } catch { setHoldings([]); }
   };
+  const loadPartnerHoldings = async (partnerId) => {
+    setHoldings(null);
+    setSelection({});
+    try {
+      const res = await equipmentService.partnerHoldings(partnerId);
+      setHoldings(res.data || []);
+      if (res.partner) setPartner(res.partner);
+    } catch { setHoldings([]); }
+  };
   useEffect(() => {
-    stockIssueService.destinations().then(r => setDepartments(r.data?.departments || [])).catch(() => {});
-    if (params.get('departmentId')) loadDepartmentHoldings(params.get('departmentId'));
+    stockIssueService.destinations().then(r => { setDepartments(r.data?.departments || []); setPartners(r.data?.partners || []); }).catch(() => {});
+    if (params.get('partnerId')) loadPartnerHoldings(params.get('partnerId'));
+    else if (params.get('departmentId')) loadDepartmentHoldings(params.get('departmentId'));
     else if (params.get('userId')) loadHoldings(params.get('userId'));
   }, []);
 
@@ -70,16 +83,22 @@ export default function StockReturnForm() {
     setDepartment(d);
     if (d) loadDepartmentHoldings(d.id); else { setHoldings(null); setSelection({}); }
   };
+  const pickPartner = (id) => {
+    const p = partners.find(x => String(x.id) === String(id)) || null;
+    setPartner(p);
+    if (p) loadPartnerHoldings(p.id); else { setHoldings(null); setSelection({}); }
+  };
   const switchHolder = (type) => {
     if (type === holderType) return;
     setHolderType(type);
     setUser(null);
     setDepartment(null);
+    setPartner(null);
     setHoldings(null);
     setSelection({});
   };
-  const holder = holderType === 'DEPARTMENT' ? department : user;
-  const holderName = holderType === 'DEPARTMENT' ? department?.name : user && `${user.first_name} ${user.last_name}`;
+  const holder = holderType === 'PARTNER' ? partner : holderType === 'DEPARTMENT' ? department : user;
+  const holderName = holderType === 'PARTNER' ? partner?.name : holderType === 'DEPARTMENT' ? department?.name : user && `${user.first_name} ${user.last_name}`;
 
   const sel = (h) => selection[h.issue_line_id] || { checked: false, quantity: h.remaining, condition: 'GOOD' };
   const setSel = (h, patch) => setSelection(prev => ({ ...prev, [h.issue_line_id]: { ...sel(h), ...patch } }));
@@ -90,7 +109,7 @@ export default function StockReturnForm() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!holder) { toast.error(holderType === 'DEPARTMENT' ? t('stock.return.err.department') : t('stock.return.err.user')); return; }
+    if (!holder) { toast.error(t(holderType === 'PARTNER' ? 'stock.return.err.partner' : holderType === 'DEPARTMENT' ? 'stock.return.err.department' : 'stock.return.err.user')); return; }
     if (!chosen.length) { toast.error(t('stock.return.err.noLines')); return; }
     if (!warehouseId && chosen.some(h => sel(h).condition !== 'LOST')) { toast.error(t('stock.issue.err.warehouse')); return; }
     if (invalid) { toast.error(t('grn.err.fixLines')); return; }
@@ -98,7 +117,7 @@ export default function StockReturnForm() {
     try {
       const res = await stockReturnService.create({
         warehouseId: warehouseId || (warehouses || [])[0]?.id, comment,
-        ...(holderType === 'DEPARTMENT' ? { departmentId: department.id } : { returnedBy: user.id }),
+        ...(holderType === 'PARTNER' ? { partnerId: partner.id } : holderType === 'DEPARTMENT' ? { departmentId: department.id } : { returnedBy: user.id }),
         lines: chosen.map(h => ({ issueLineId: h.issue_line_id, condition: sel(h).condition, ...(h.track_serials ? {} : { quantity: Number(sel(h).quantity) }) })),
       });
       toast.success(t('stock.return.created', { number: res.data.returnNumber }));
@@ -121,7 +140,7 @@ export default function StockReturnForm() {
             <div className="mb-1 flex items-center justify-between gap-2">
               <span className="font-medium text-gray-700">{t('stock.return.holderType')} *</span>
               <div className="inline-flex rounded-lg border border-gray-300 p-0.5 text-xs" role="radiogroup">
-                {[['USER', User], ['DEPARTMENT', Building2]].map(([key, Icon]) => (
+                {[['USER', User], ['DEPARTMENT', Building2], ['PARTNER', Handshake]].map(([key, Icon]) => (
                   <button key={key} type="button" role="radio" aria-checked={holderType === key} onClick={() => switchHolder(key)} data-testid={`return-holder-${key}`}
                     className={`flex items-center gap-1 rounded-md px-2 py-1 ${holderType === key ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
                     <Icon size={13} /> {t(`stock.return.holderTypes.${key}`)}
@@ -131,9 +150,15 @@ export default function StockReturnForm() {
             </div>
             {holderType === 'USER' ? (
               <>
-                <RecipientPicker value={user} onChange={pickUser} />
+                <RecipientPicker value={user} onChange={pickUser} testId="return-user" />
                 {user && user.is_active === false && <p className="mt-1 text-xs text-amber-700">{t('stock.return.inactiveUser')}</p>}
               </>
+            ) : holderType === 'PARTNER' ? (
+              <SearchSelect value={partner?.id || ''} onChange={e => pickPartner(e.target.value)} className={inputCls} data-testid="return-partner" searchThreshold={0}>
+                <option value="">{t('stock.return.choosePartner')}</option>
+                {partner && !partners.some(p => String(p.id) === String(partner.id)) && <option value={partner.id}>{partner.name} ({partner.code})</option>}
+                {partners.map(p => <option key={p.id} value={p.id} data-search={p.code}>{p.name} ({p.code}) — {p.location_name}</option>)}
+              </SearchSelect>
             ) : (
               <SearchSelect value={department?.id || ''} onChange={e => pickDepartment(e.target.value)} className={inputCls} data-testid="return-department">
                 <option value="">{t('stock.return.chooseDepartment')}</option>

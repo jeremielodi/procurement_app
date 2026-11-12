@@ -28,6 +28,7 @@ const SECTIONS = [
   { id: 'stock', roles: ['logistic'] },
   { id: 'issues', roles: ['logistic', 'requester'] },
   { id: 'equipment', roles: ['logistic'] },
+  { id: 'partners', roles: ['logistic'] },
   { id: 'control', roles: ['finance', 'auditor', 'admin', 'management', 'dg'] },
   { id: 'dashboard', roles: ['*'] },
   { id: 'budget', roles: ['finance'] },
@@ -36,13 +37,16 @@ const SECTIONS = [
   { id: 'faq', roles: ['*'] },
 ]
 const SUPPLIER_SECTIONS = ['supplierPortal', 'account']
+// Compte de l'espace partenaire (migration 66)
+const PARTNER_SECTIONS = ['partnerPortal', 'account']
+const PARTNER_LINK = (to) => to.startsWith('/partner/') || to === '/notifications' || to === '/profile'
 const SUPERADMIN_SECTIONS = ['overview', 'roles', 'control', 'admin', 'account']
 // Écrans accessibles à un compte fournisseur (cf. ProtectedRoute) : les autres liens sont masqués
 const SUPPLIER_LINK = (to) => to.startsWith('/supplier/') || to === '/notifications'
 
 // Écran courant → rubrique ouverte par défaut (préfixe le plus long d'abord)
 const ROUTE_SECTIONS = [
-  ['/stock/issues', 'issues'], ['/my-items', 'issues'],
+  ['/stock/issues', 'issues'], ['/my-items', 'issues'], ['/stock/partners', 'partners'],
   ['/stock/equipment', 'equipment'], ['/stock/consumables', 'stock'], ['/stock/returns', 'equipment'],
   ['/stock', 'stock'],
   ['/requisitions', 'requisitions'], ['/tasks', 'tasks'],
@@ -51,7 +55,7 @@ const ROUTE_SECTIONS = [
   ['/tenders', 'tenders'], ['/suppliers', 'suppliers'], ['/budget', 'budget'], ['/dashboard', 'dashboard'],
   ['/admin/audit', 'control'], ['/users', 'admin'], ['/projects', 'admin'], ['/departments', 'admin'], ['/settings', 'admin'], ['/admin', 'admin'],
   ['/profile', 'account'], ['/notifications', 'account'],
-  ['/supplier', 'supplierPortal'],
+  ['/supplier', 'supplierPortal'], ['/partner', 'partnerPortal'],
 ]
 
 // Cas concrets : pages HTML statiques (client/public/docs/cas-concret, générées par scripts/doc-cas-concret), nouvel onglet
@@ -321,15 +325,17 @@ export default function HelpCenter() {
   const profileIds = (user?.profiles || []).map(p => p.id)
   const isSupplier = profileIds.includes('prof_supplier') && profileIds.length === 1
   const isSuperAdmin = profileIds.includes('prof_superadmin')
+  const isPartner = profileIds.length > 0 && profileIds.every(id => id === 'prof_partner')
   const isAdmin = profileIds.includes('prof_admin')
   const roles = new Set(profileIds.map(id => id.replace(/^prof_/, '')))
 
   const availableIds = isSupplier ? SUPPLIER_SECTIONS
+    : isPartner ? PARTNER_SECTIONS
     : isSuperAdmin ? SUPERADMIN_SECTIONS
     : SECTIONS.map(s => s.id)
 
   // Rubriques mises en avant : celles des profils de l'utilisateur (tout pour un admin d'entreprise)
-  const highlighted = new Set(isSupplier || isAdmin || isSuperAdmin ? availableIds
+  const highlighted = new Set(isSupplier || isPartner || isAdmin || isSuperAdmin ? availableIds
     : SECTIONS.filter(s => s.roles.includes('*') || s.roles.some(r => roles.has(r))).map(s => s.id))
 
   const currentSection = ROUTE_SECTIONS.find(([prefix]) =>
@@ -352,7 +358,7 @@ export default function HelpCenter() {
       {isOpen && createPortal(
         <HelpPanel onClose={() => setIsOpen(false)} initialSection={initialSection} availableIds={availableIds}
           highlighted={highlighted} currentSection={initialSection}
-          linkFilter={isSupplier ? SUPPLIER_LINK : () => true} showCases={!isSupplier} />,
+          linkFilter={isSupplier ? SUPPLIER_LINK : isPartner ? PARTNER_LINK : () => true} showCases={!isSupplier && !isPartner} />,
         document.body)}
     </>
   )

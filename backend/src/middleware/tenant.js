@@ -3,6 +3,8 @@
 //
 // 1. tenantContext : détermine le type de compte et l'entreprise courante
 //    - fournisseur  : uniquement portail fournisseur, profil, ses notifications (fournisseurs partagés)
+//    - partenaire   : uniquement l'espace partenaire, profil, ses notifications — contexte { enterpriseId, partnerId }
+//                     = entreprise du partenaire (users.partner_id, migration 66) ; partenaire / entreprise inactifs → 403
 //    - super admin  : uniquement la gestion des entreprises / profils (ne voit aucune donnée d'achat)
 //    - utilisateur  : rattaché à une entreprise active → contexte { enterpriseId } pour les modèles
 // 2. tenantGuard : tout identifiant cité (URL, query, body) doit appartenir à l'entreprise courante,
@@ -12,6 +14,7 @@ const userModel = require('../models/UserModel');
 const tenant = require('../utils/tenant');
 
 const SUPPLIER_PATHS = [/^\/auth\/profile$/, /^\/supplier-portal(\/|$)/, /^\/notifications(\/|$)/];
+const PARTNER_PATHS = [/^\/auth\/profile$/, /^\/partner-portal(\/|$)/, /^\/notifications(\/|$)/];
 const SUPERADMIN_PATHS = [/^\/auth\/profile$/, /^\/locations(\/|$)/, /^\/market-categories(\/|$)/, /^\/units(\/|$)/,/^\/enterprises(\/|$)/, /^\/currencies(\/|$)/, /^\/notifications(\/|$)/, /^\/profiles(\/|$)/, /^\/audit-logs(\/|$)/];
 
 async function ownsNotification(notificationId, userId) {
@@ -23,7 +26,7 @@ async function ownsNotification(notificationId, userId) {
 async function checkNotificationAccess(req) {
   const me = String(req.user.id);
   const [, a, b] = req.path.split('/').filter(Boolean);
-  if (req.method === 'POST') return !req.isSupplierAccount && !req.isSuperAdmin;
+  if (req.method === 'POST') return !req.isSupplierAccount && !req.isSuperAdmin && !req.isPartnerAccount;
   if (req.method === 'GET') return a === 'detail' ? ownsNotification(b, me) : a === me;
   if (req.method === 'PUT') return b === 'read' ? ownsNotification(a, me) : a === me;
   if (req.method === 'DELETE') return b === 'all' ? a === me : ownsNotification(a, me);
@@ -36,8 +39,11 @@ async function tenantContext(req, res, next) {
     const [profiles, user] = await Promise.all([
       userModel.getUserProfiles(req.user.id),
       db.one(
-        `SELECT u.enterprise_id, u.is_active, e.is_active AS enterprise_active, e.name AS enterprise_name
-         FROM users u LEFT JOIN enterprise e ON e.id = u.enterprise_id WHERE u.id = $1`,
+        `SELECT u.enterprise_id, u.is_active, e.is_active AS enterprise_active, e.name AS enterprise_name, u.partner_id,
+                pt.enterprise_id AS partner_enterprise_id, pt.is_active AS partner_active, pe.is_active AS partner_enterprise_active
+         FROM users u LEFT JOIN enterprise e ON e.id = u.enterprise_id
+         LEFT JOIN partners pt ON pt.id = u.partner_id LEFT JOIN enterprise pe ON pe.id = pt.enterprise_id
+         WHERE u.id = $1`,
         [req.user.id]
       ),
     ]);
@@ -45,6 +51,8 @@ async function tenantContext(req, res, next) {
     const ids = profiles.map(p => p.id);
     req.isSupplierAccount = ids.length > 0 && ids.every(p => p === 'prof_supplier');
     req.isSuperAdmin = ids.includes('prof_superadmin');
+    // Compte de l'espace partenaire : uniquement le profil prof_partner (migration 66)
+    req.isPartnerAccount = ids.length > 0 && ids.every(p => p === 'prof_partner');
 
     if (req.path.startsWith('/notifications') && !(await checkNotificationAccess(req))) {
       return res.status(403).json({ success: false, message: 'Accès refusé' });
@@ -54,6 +62,17 @@ async function tenantContext(req, res, next) {
         return res.status(403).json({ success: false, message: 'Accès réservé au portail fournisseur' });
       }
       return tenant.run({ enterpriseId: null, supplier: true }, next);
+    }
+    if (req.isPartnerAccount) {
+      if (!PARTNER_PATHS.some(re => re.test(req.path))) {
+        return res.status(403).json({ success: false, message: 'Accès réservé à l\'espace partenaire' });
+      }
+      if (!user.partner_id || user.partner_active === false || user.partner_enterprise_active === false) {
+        return res.status(403).json({ success: false, code: 'PARTNER_INACTIVE', message: 'Partenaire inactif' });
+      }
+      req.partnerId = user.partner_id;
+      // Pas de req.enterpriseId : tenantGuard ne s'applique pas, l'espace partenaire contrôle lui-même partner_id
+      return tenant.run({ enterpriseId: user.partner_enterprise_id, partnerId: user.partner_id, partner: true }, next);
     }
     if (req.isSuperAdmin) {
       if (!SUPERADMIN_PATHS.some(re => re.test(req.path))) {
@@ -110,6 +129,8 @@ const PATH_RESOURCES = [
   { re: new RegExp(`^/stock/movement-groups/(${UUID})(/|$)`), table: 'stock_movement_groups' },
   { re: new RegExp(`^/stock/planning/items/(${UUID})(/|$)`), table: 'stock_items' },
   { re: new RegExp(`^/stock-requests/(${UUID})(/|$)`), table: 'stock_requests' },
+  // Partenaires (migration 66) ; comptes d'un partenaire : /partners/:id/accounts/:userId (compte vérifié par le modèle)
+  { re: new RegExp(`^/partners/(${UUID})(/|$)`), table: 'partners' },
   // Intérim du chef de projet (migration 53)
   { re: new RegExp(`^/delegations/(${UUID})(/|$)`), table: 'user_delegations' },
 ];
@@ -130,6 +151,7 @@ const KEY_TABLES = {
   warehouseId: 'warehouses', warehouse_id: 'warehouses', destinationWarehouseId: 'warehouses',
   stockItemId: 'stock_items', stock_item_id: 'stock_items',
   stockRequestId: 'stock_requests',
+  partnerId: 'partners', partner_id: 'partners',
   lotId: 'stock_lots', lot_id: 'stock_lots',
   // Part d'une réquisition répartie entre plusieurs fournisseurs (migration 38)
   supplierLotId: 'requisition_supplier_lots', supplier_lot_id: 'requisition_supplier_lots',

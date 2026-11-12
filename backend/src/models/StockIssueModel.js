@@ -4,6 +4,9 @@
 //   WAREHOUSE  → transfert vers un autre dépôt (TRANSFER_OUT au dépôt source + TRANSFER_IN au dépôt de destination,
 //                mêmes lots, mêmes n° de série ; l'équipement reste « en stock », dans le nouveau dépôt)
 //   DEPARTMENT → sortie vers un département (ISSUE ; personne qui retire facultative ; équipement « affecté » au département)
+//   PARTNER    → transfert vers un partenaire (migration 66) : le stock SORT à l'expédition (ISSUE ; équipement « en transit »
+//                vers le partenaire) ; le partenaire confirme la réception ligne par ligne dans son espace (ou le magasin
+//                l'enregistre pour lui) : reçu → équipement « chez le partenaire », manque = perte en transit (équipement « perdu »)
 // Création ATOMIQUE (db.withTransaction) : soldes verrouillés (FOR UPDATE), lots alloués FEFO
 // (péremption la plus proche d'abord, lots périmés exclus) sauf lot imposé.
 // Annulation = écritures inverses (ISSUE_REVERSAL, ou TRANSFER_OUT / TRANSFER_IN pour un transfert), jamais de suppression.
@@ -14,13 +17,14 @@ const warehouseModel = require('./WarehouseModel');
 const stockRequestModel = require('./StockRequestModel');
 const stockNature = require('../utils/stockNature');
 const stockProject = require('../utils/stockProject');
+const partnerModel = require('./PartnerModel');
 
 const EPS = 1e-9;
 // Natures des lignes d'un bon (toute action sur le bon exige toutes ses natures — migration 63)
 const LINE_NATURES_SQL = 'SELECT DISTINCT it.nature FROM stock_issue_lines il JOIN stock_items it ON it.id = il.stock_item_id WHERE il.issue_id = $1';
 // Projets de financement des lignes (stock cloisonné par projet — migration 65)
 const LINE_PROJECTS_SQL = 'SELECT DISTINCT project_id FROM stock_issue_lines WHERE issue_id = $1';
-const DESTINATIONS = ['USER', 'WAREHOUSE', 'DEPARTMENT'];
+const DESTINATIONS = ['USER', 'WAREHOUSE', 'DEPARTMENT', 'PARTNER'];
 const fail = (status, code, message, extra = {}) => Object.assign(new Error(message), { status, code, ...extra });
 const num = (v) => {
   const n = parseFloat(v);
@@ -33,8 +37,10 @@ const HEADER_SQL = `
          TRIM(COALESCE(r.first_name, '') || ' ' || COALESCE(r.last_name, '')) AS recipient_name, r.email AS recipient_email,
          dw.code AS destination_warehouse_code, dw.name AS destination_warehouse_name, dl.name AS destination_warehouse_location,
          d.code AS department_code, d.name AS department_name, d.manager_id AS department_manager_id,
+         pt.code AS partner_code, pt.name AS partner_name, pt.partner_type, pl.name AS partner_location,
          CASE si.destination_type
            WHEN 'WAREHOUSE' THEN dw.name
+           WHEN 'PARTNER' THEN pt.name
            WHEN 'DEPARTMENT' THEN d.name
            ELSE TRIM(COALESCE(r.first_name, '') || ' ' || COALESCE(r.last_name, ''))
          END AS destination_label,
@@ -50,6 +56,8 @@ const HEADER_SQL = `
   LEFT JOIN warehouses dw ON dw.id = si.destination_warehouse_id
   LEFT JOIN locations dl ON dl.id = dw.location_id
   LEFT JOIN departments d ON d.id = si.department_id
+  LEFT JOIN partners pt ON pt.id = si.partner_id
+  LEFT JOIN locations pl ON pl.id = pt.location_id
   LEFT JOIN users ib ON ib.id = si.issued_by
   LEFT JOIN users ab ON ab.id = si.acknowledged_by
   LEFT JOIN users cb ON cb.id = si.cancelled_by
@@ -68,13 +76,13 @@ async function activeMember(tx, userId, enterpriseId) {
 
 class StockIssueModel {
   /**
-   * @param {object} data { destinationType = 'USER', warehouseId, recipientId, destinationWarehouseId, departmentId,
+   * @param {object} data { destinationType = 'USER', warehouseId, recipientId, destinationWarehouseId, departmentId, partnerId,
    *                        projectId, purpose, lines: [{ stockItemId, lotId?, quantity, unitIds? }] }
    * @param {object} context  { userId } — doit avoir accès au dépôt source ;
    *   tx : transaction englobante (import des affectations : tous les bons dans une seule opération) ;
    *   allowDamaged : remise d'un équipement endommagé (affectation déjà existante, enregistrée après coup)
    */
-  async create({ destinationType = 'USER', warehouseId, recipientId, destinationWarehouseId, departmentId, projectId, purpose, stockRequestId, lines = [] }, { userId, tx: outerTx, allowDamaged = false }) {
+  async create({ destinationType = 'USER', warehouseId, recipientId, destinationWarehouseId, departmentId, partnerId, projectId, purpose, stockRequestId, lines = [] }, { userId, tx: outerTx, allowDamaged = false }) {
     const type = String(destinationType || 'USER').toUpperCase();
     if (!DESTINATIONS.includes(type)) throw fail(400, 'INVALID_DESTINATION', 'Type de sortie invalide');
     if (!Array.isArray(lines) || !lines.length) throw fail(400, 'NO_LINES', 'Ajoutez au moins un article');
@@ -106,7 +114,15 @@ class StockIssueModel {
       let recipient = null;
       let destination = null;
       let department = null;
-      if (type === 'USER') {
+      let partner = null;
+      if (type === 'PARTNER') {
+        if (stockRequestId) throw fail(400, 'INVALID_DESTINATION', 'Une demande au magasin ne se sert pas vers un partenaire');
+        if (!partnerId) throw fail(400, 'PARTNER_REQUIRED', 'Partenaire requis');
+        partner = await tx.one('SELECT id, enterprise_id, is_active, name FROM partners WHERE id::text = $1', [String(partnerId)]);
+        if (!partner || !partner.is_active || String(partner.enterprise_id) !== String(warehouse.enterprise_id)) {
+          throw fail(400, 'PARTNER_INVALID', 'Partenaire introuvable ou inactif');
+        }
+      } else if (type === 'USER') {
         if (!recipientId) throw fail(400, 'RECIPIENT_REQUIRED', 'Bénéficiaire requis');
         recipient = await activeMember(tx, recipientId, warehouse.enterprise_id);
         if (!recipient) throw fail(400, 'RECIPIENT_INVALID', 'Bénéficiaire introuvable ou inactif');
@@ -235,10 +251,10 @@ class StockIssueModel {
       // ---- Bon et mouvements
       const issue = await tx.one(
         `INSERT INTO stock_issues (enterprise_id, warehouse_id, destination_type, recipient_id, destination_warehouse_id, department_id,
-                                   project_id, purpose, issued_by, request_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, issue_number`,
+                                   project_id, purpose, issued_by, request_id, partner_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, issue_number`,
         [warehouse.enterprise_id, warehouse.id, type, recipient?.id || null, destination?.id || null, department?.id || null,
-         projectId || null, purpose ? String(purpose).slice(0, 2000) : null, userId, served?.request.id || null]
+         projectId || null, purpose ? String(purpose).slice(0, 2000) : null, userId, served?.request.id || null, partner?.id || null]
       );
       for (const a of allocations) {
         const line = await tx.one(
@@ -261,7 +277,13 @@ class StockIssueModel {
           await tx.exec('UPDATE stock_issue_lines SET stock_movement_id = $1 WHERE id = $2', [out.id, line.id]);
           continue;
         }
-        if (a.unitId) {
+        if (a.unitId && partner) {
+          // Vers un partenaire : en transit jusqu'à la confirmation de la réception
+          await tx.exec(
+            `UPDATE stock_units SET status = 'IN_TRANSIT', partner_id = $2, warehouse_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+            [a.unitId, partner.id]
+          );
+        } else if (a.unitId) {
           await tx.exec(
             `UPDATE stock_units SET status = 'ASSIGNED', holder_id = $2, department_id = $3, warehouse_id = NULL, updated_at = CURRENT_TIMESTAMP
              WHERE id = $1`,
@@ -269,20 +291,21 @@ class StockIssueModel {
           );
         }
         const movement = await stockModel.addMovement(tx, {
-          ...base, warehouseId: warehouse.id, type: 'ISSUE', quantity: -a.quantity, comment: issue.issue_number,
+          ...base, warehouseId: warehouse.id, type: 'ISSUE', quantity: -a.quantity,
+          comment: partner ? `${issue.issue_number} → ${partner.name}` : issue.issue_number,
         });
         await tx.exec('UPDATE stock_issue_lines SET stock_movement_id = $1 WHERE id = $2', [movement.id, line.id]);
       }
       const requestStatus = served ? await stockRequestModel.refreshStatus(tx, served.request.id) : null;
       return {
         id: issue.id, issueNumber: issue.issue_number, lines: allocations.length, destinationType: type,
-        recipientId: recipient?.id || null, destinationWarehouseId: destination?.id || null, departmentId: department?.id || null,
+        recipientId: recipient?.id || null, destinationWarehouseId: destination?.id || null, departmentId: department?.id || null, partnerId: partner?.id || null,
         stockRequestId: served?.request.id || null, requestStatus,
       };
     });
   }
 
-  /** Destinations possibles : dépôts actifs (transfert) et départements actifs de l'entreprise */
+  /** Destinations possibles : dépôts actifs (transfert), départements et partenaires actifs de l'entreprise */
   async destinations() {
     const params = [];
     const scope = tenant.filter('w.enterprise_id', params);
@@ -298,19 +321,23 @@ class StockIssueModel {
        WHERE COALESCE(d.is_active, true)${tenant.filter('d.enterprise_id', dParams)} ORDER BY d.name`,
       dParams
     );
-    return { warehouses, departments };
+    return { warehouses, departments, partners: await partnerModel.options() };
   }
 
   /** Peut confirmer la réception : bénéficiaire ; département sans bénéficiaire → responsable du département ;
-   *  transfert → utilisateur ayant accès au dépôt de destination */
+   *  transfert → utilisateur ayant accès au dépôt de destination ; partenaire → compte actif de son espace
+   *  (le magasin peut aussi enregistrer la réception pour le partenaire : receivePartner source STORE) */
   async canAcknowledge(issue, userId) {
     if (issue.destination_type === 'WAREHOUSE') return warehouseModel.canOperate(userId, issue.destination_warehouse_id);
+    if (issue.destination_type === 'PARTNER') {
+      return !!(await db.one('SELECT 1 FROM users WHERE id::text = $1 AND partner_id = $2 AND is_active', [String(userId), issue.partner_id]));
+    }
     if (issue.recipient_id) return String(issue.recipient_id) === String(userId);
     if (issue.destination_type === 'DEPARTMENT') return !!issue.department_manager_id && String(issue.department_manager_id) === String(userId);
     return false;
   }
 
-  async list({ warehouseId, recipientId, departmentId, destinationType, status, inTransit, search, fromDate, toDate, mine, userId, limit = 50, offset = 0 } = {}) {
+  async list({ warehouseId, recipientId, departmentId, partnerId, destinationType, status, inTransit, acknowledged, search, fromDate, toDate, mine, userId, limit = 50, offset = 0 } = {}) {
     const params = [];
     let where = `WHERE 1=1${tenant.filter('si.enterprise_id', params)}`;
     if (mine) { params.push(userId); where += ` AND si.recipient_id = $${params.length}`; }
@@ -320,12 +347,14 @@ class StockIssueModel {
     if (warehouseId) { params.push(warehouseId); where += ` AND (si.warehouse_id = $${params.length} OR si.destination_warehouse_id = $${params.length})`; }
     if (recipientId) { params.push(recipientId); where += ` AND si.recipient_id = $${params.length}`; }
     if (departmentId) { params.push(departmentId); where += ` AND si.department_id = $${params.length}`; }
+    if (partnerId) { params.push(String(partnerId)); where += ` AND si.partner_id::text = $${params.length}`; }
     if (destinationType && DESTINATIONS.includes(String(destinationType).toUpperCase())) {
       params.push(String(destinationType).toUpperCase()); where += ` AND si.destination_type = $${params.length}`;
     }
     if (status) { params.push(status); where += ` AND si.status = $${params.length}`; }
-    // Transferts expédiés, pas encore réceptionnés
-    if (['1', 'true', true].includes(inTransit)) where += ` AND si.destination_type = 'WAREHOUSE' AND si.status = 'ISSUED' AND si.acknowledged_at IS NULL`;
+    // Transferts expédiés (vers un dépôt ou un partenaire), pas encore réceptionnés
+    if (['1', 'true', true].includes(inTransit)) where += ` AND si.destination_type IN ('WAREHOUSE', 'PARTNER') AND si.status = 'ISSUED' AND si.acknowledged_at IS NULL`;
+    if (['1', 'true', true].includes(acknowledged)) where += ' AND si.acknowledged_at IS NOT NULL';
     if (fromDate) { params.push(fromDate); where += ` AND si.issued_at >= $${params.length}::date`; }
     if (toDate) { params.push(toDate); where += ` AND si.issued_at < ($${params.length}::date + 1)`; }
     if (search) {
@@ -333,6 +362,7 @@ class StockIssueModel {
       where += ` AND (si.issue_number ILIKE $${params.length} OR r.first_name ILIKE $${params.length} OR r.last_name ILIKE $${params.length}
                  OR r.email ILIKE $${params.length} OR si.purpose ILIKE $${params.length}
                  OR dw.name ILIKE $${params.length} OR dw.code ILIKE $${params.length} OR d.name ILIKE $${params.length} OR d.code ILIKE $${params.length}
+                 OR pt.name ILIKE $${params.length} OR pt.code ILIKE $${params.length}
                  OR EXISTS (SELECT 1 FROM stock_issue_lines il JOIN stock_items it ON it.id = il.stock_item_id
                             WHERE il.issue_id = si.id AND (it.code ILIKE $${params.length} OR it.name ILIKE $${params.length})))`;
     }
@@ -340,7 +370,8 @@ class StockIssueModel {
       `SELECT COUNT(*)::int AS n FROM stock_issues si
        LEFT JOIN users r ON r.id = si.recipient_id
        LEFT JOIN warehouses dw ON dw.id = si.destination_warehouse_id
-       LEFT JOIN departments d ON d.id = si.department_id ${where}`,
+       LEFT JOIN departments d ON d.id = si.department_id
+       LEFT JOIN partners pt ON pt.id = si.partner_id ${where}`,
       params
     )).n;
     params.push(Math.min(parseInt(limit) || 50, 200), parseInt(offset) || 0);
@@ -396,6 +427,7 @@ class StockIssueModel {
     const current = await this.getById(id);
     if (!current) throw fail(404, 'NOT_FOUND', 'Bon de sortie introuvable');
     if (current.destination_type === 'WAREHOUSE') return this.receiveTransfer(id, { userId, comment }); // tout reçu
+    if (current.destination_type === 'PARTNER') return this.receivePartner(id, { userId, comment }); // tout reçu
     if (!(await this.canAcknowledge(current, userId))) {
       throw fail(403, 'NOT_RECIPIENT', current.destination_type === 'WAREHOUSE'
         ? 'Seul un utilisateur ayant accès au dépôt de destination peut confirmer la réception'
@@ -464,6 +496,58 @@ class StockIssueModel {
     });
   }
 
+  /**
+   * Réception d'un envoi à un partenaire (migration 66). Le stock est déjà sorti à l'expédition : aucune écriture de stock,
+   * seules les quantités reçues sont enregistrées (manque = perte en transit) ; équipement reçu → « chez le partenaire »,
+   * non reçu → « perdu ».
+   * source PORTAL : compte actif de l'espace du partenaire ; STORE : magasin (accès au dépôt source) qui enregistre une
+   * réception signée sur papier. lines : [{ lineId, receivedQuantity }] — absent = tout reçu ; équipement : 0 ou 1.
+   */
+  async receivePartner(id, { userId, comment, lines: received = [], source = 'PORTAL' }) {
+    const current = await this.getById(id);
+    if (!current || current.destination_type !== 'PARTNER') throw fail(404, 'NOT_FOUND', 'Envoi introuvable');
+    if (source === 'STORE') {
+      if (!(await warehouseModel.canOperate(userId, current.warehouse_id))) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès au dépôt de cet envoi');
+    } else if (!(await this.canAcknowledge(current, userId))) {
+      throw fail(403, 'NOT_RECIPIENT', 'Seul un compte du partenaire peut confirmer la réception');
+    }
+    const byLine = new Map((Array.isArray(received) ? received : []).map(r => [String(r.lineId), r.receivedQuantity]));
+    return db.withTransaction(async (tx) => {
+      const issue = await tx.one('SELECT id, status, acknowledged_at, partner_id FROM stock_issues WHERE id = $1 FOR UPDATE', [id]);
+      if (issue.status !== 'ISSUED') throw fail(409, 'CANCELLED', 'Envoi annulé');
+      if (issue.acknowledged_at) throw fail(409, 'ALREADY_ACKNOWLEDGED', 'Réception déjà confirmée');
+      const lines = await tx.select('SELECT id, unit_id, quantity FROM stock_issue_lines WHERE issue_id = $1 FOR UPDATE', [id]);
+      for (const key of byLine.keys()) {
+        if (!lines.some(l => String(l.id) === key)) throw fail(400, 'INVALID_RECEIVED_QUANTITY', 'Ligne inconnue');
+      }
+      let lost = 0;
+      for (const [index, l] of lines.entries()) {
+        const sent = num(l.quantity);
+        const raw = byLine.has(String(l.id)) ? byLine.get(String(l.id)) : sent;
+        const qty = num(raw);
+        if (raw === '' || raw === null || qty < 0 || qty - sent > EPS || (l.unit_id && ![0, 1].includes(qty))) {
+          throw fail(400, 'INVALID_RECEIVED_QUANTITY', 'Quantité reçue invalide', { line: index });
+        }
+        if (l.unit_id) {
+          await tx.exec(
+            qty > 0
+              ? `UPDATE stock_units SET status = 'AT_PARTNER', partner_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
+              : `UPDATE stock_units SET status = 'LOST', partner_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+            qty > 0 ? [l.unit_id, issue.partner_id] : [l.unit_id]
+          );
+        }
+        if (qty < sent - EPS) lost++;
+        await tx.exec('UPDATE stock_issue_lines SET received_quantity = $2 WHERE id = $1', [l.id, qty]);
+      }
+      await tx.exec(
+        `UPDATE stock_issues SET acknowledged_at = CURRENT_TIMESTAMP, acknowledged_by = $2, acknowledgement_comment = $3,
+                acknowledgement_source = $4 WHERE id = $1`,
+        [id, userId, comment ? String(comment).slice(0, 1000) : null, source === 'STORE' ? 'STORE' : 'PORTAL']
+      );
+      return { id, linesWithLoss: lost };
+    });
+  }
+
   /** Annulation : écritures inverses (ISSUE_REVERSAL ; transfert en transit : retour au dépôt source ; transfert réceptionné :
    *  TRANSFER_OUT au dépôt de destination + TRANSFER_IN au dépôt source, pour la quantité reçue) */
   async cancel(id, { userId, reason }) {
@@ -491,6 +575,10 @@ class StockIssueModel {
       );
       if (lines.some(l => num(l.returned_quantity) > 0)) {
         throw fail(409, 'HAS_RETURNS', 'Des articles de ce bon ont déjà été rendus : enregistrez un retour pour le reste au lieu d\'annuler');
+      }
+      // Envoi à un partenaire : annulable tant que le partenaire n'a pas confirmé la réception (ensuite : bon de retour)
+      if (issue.destination_type === 'PARTNER' && issue.acknowledged_at) {
+        throw fail(409, 'PARTNER_RECEIVED', 'Le partenaire a confirmé la réception : enregistrez un retour au lieu d\'annuler');
       }
       const note = `Annulation ${issue.issue_number}${reason ? ` — ${reason}` : ''}`;
       if (issue.destination_type === 'WAREHOUSE' && !issue.acknowledged_at) {
@@ -555,8 +643,8 @@ class StockIssueModel {
       for (const line of lines) {
         if (line.unit_id) {
           await tx.exec(
-            `UPDATE stock_units SET status = 'IN_STOCK', holder_id = NULL, department_id = NULL, warehouse_id = $2, updated_at = CURRENT_TIMESTAMP
-             WHERE id = $1 AND status = 'ASSIGNED'`,
+            `UPDATE stock_units SET status = 'IN_STOCK', holder_id = NULL, department_id = NULL, partner_id = NULL, warehouse_id = $2, updated_at = CURRENT_TIMESTAMP
+             WHERE id = $1 AND (status = 'ASSIGNED' OR (status = 'IN_TRANSIT' AND partner_id IS NOT NULL))`,
             [line.unit_id, issue.warehouse_id]
           );
         }
@@ -588,7 +676,8 @@ class StockIssueModel {
       sql += ` AND (u.first_name ILIKE $${params.length} OR u.last_name ILIKE $${params.length} OR u.email ILIKE $${params.length}
                OR (u.first_name || ' ' || u.last_name) ILIKE $${params.length})`;
     }
-    return db.select(`${sql} ORDER BY u.first_name, u.last_name LIMIT 30`, params);
+    // Sans recherche : toute la liste (liste déroulante avec recherche du formulaire de sortie)
+    return db.select(`${sql} ORDER BY u.first_name, u.last_name LIMIT ${search ? 30 : 5000}`, params);
   }
 }
 

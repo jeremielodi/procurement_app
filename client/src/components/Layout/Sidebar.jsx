@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
+  HeartHandshake as Handshake,
   LayoutDashboard,
   CheckSquare,
   ShoppingCart,
@@ -51,6 +52,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import api from '../../services/api'
 import { useTranslation } from '../../i18n'
 import { useEnterprise, enterpriseLogoUrl } from '../../contexts/EnterpriseContext'
+import { isPartnerUser } from '../../utils/accountType'
 
 // Définition des groupes de menu (label = clé de traduction)
 const menuGroups = [
@@ -182,6 +184,17 @@ const menuGroups = [
     ]
   },
   {
+    // Espace partenaire (comptes prof_partner, migration 66)
+    id: 'partner-portal',
+    label: 'nav.groups.partnerPortal',
+    icon: Handshake,
+    partnerOnly: true,
+    items: [
+      { path: '/partner/transfers', icon: Inbox, label: 'nav.partnerTransfers', permission: 'PARTNER_PORTAL' },
+      { path: '/partner/holdings', icon: Package, label: 'nav.partnerHoldings', permission: 'PARTNER_PORTAL' }
+    ]
+  },
+  {
     id: 'stock',
     label: 'nav.groups.stock',
     icon: Warehouse,
@@ -199,7 +212,8 @@ const menuGroups = [
       { path: '/stock/counts', icon: ClipboardCheck, label: 'nav.stockCounts', permission: 'VIEW_STOCK' },
       { path: '/stock/adjustments', icon: SlidersHorizontal, label: 'nav.stockAdjustments', permission: 'VIEW_STOCK' },
       { path: '/stock/movements', icon: History, label: 'nav.stockMovements', permission: 'VIEW_STOCK' },
-      { path: '/stock/warehouses', icon: Warehouse, label: 'nav.warehouses', permission: 'VIEW_STOCK' }
+      { path: '/stock/warehouses', icon: Warehouse, label: 'nav.warehouses', permission: 'VIEW_STOCK' },
+      { path: '/stock/partners', icon: Handshake, label: 'nav.partners', permission: ['MANAGE_PARTNERS', 'VIEW_STOCK'] } // migration 66
     ]
   },
   {
@@ -367,11 +381,12 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   // Vérifier si l'utilisateur peut voir un élément du menu
   const isSupplier = user?.profiles?.some(p => p.id === 'prof_supplier')
   const isSuperAdmin = user?.profiles?.some(p => p.id === 'prof_superadmin')
+  const isPartner = isPartnerUser(user)
   const { enterprise } = useEnterprise()
   const enterpriseLogo = enterpriseLogoUrl(enterprise)
 
   const canSeeMenuItem = (item) => {
-    if (item.hideForSupplier && (isSupplier || isSuperAdmin)) return false
+    if (item.hideForSupplier && (isSupplier || isSuperAdmin || isPartner)) return false
     if (isSuperAdmin) return true
     if (item.permission && !hasPermission(item.permission)) return false
     return true
@@ -384,6 +399,9 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     if (group.superAdminOnly) return false
     if (group.adminOnly && !isAdmin()) return false
     if (group.supplierOnly && !isSupplier) return false
+    // Compte partenaire : son espace et les notifications seulement
+    if (isPartner) return group.partnerOnly || group.id === 'system'
+    if (group.partnerOnly) return false
     return group.items.some(item => canSeeMenuItem(item))
   }
 
@@ -526,7 +544,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         })}
 
         {/* Profils BPMN de l'utilisateur */}
-        {userProfiles.length > 0 && isOpen && !isSupplier && !isSuperAdmin && (
+        {userProfiles.length > 0 && isOpen && !isSupplier && !isSuperAdmin && !isPartner && (
           <div className="mx-5 mt-5 border-t border-white/10 pt-4">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{t('nav.myBpmnProfiles')}</p>
             <div className="flex flex-wrap gap-1.5">

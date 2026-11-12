@@ -20,9 +20,67 @@ import { HiddenLinesNotice } from './StockNature';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString(getLocale(), { dateStyle: 'medium', timeStyle: 'short' }) : '—');
 
+/**
+ * Quantités reçues par ligne (transfert vers un dépôt ou un partenaire) : équipement = case reçu / manquant,
+ * sinon quantité ≤ envoyée. received : { lineId → texte saisi }. Utilisé aussi par l'espace partenaire.
+ */
+export function ReceiveLinesTable({ lines, received, setReceived }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
+      <table className="w-full text-sm" data-testid="receive-lines">
+        <thead className="bg-gray-50 text-left text-xs text-gray-500">
+          <tr>
+            <th className="px-3 py-2">{t('stock.item')}</th>
+            <th className="px-3 py-2 text-right">{t('stock.issue.sentQty')}</th>
+            <th className="px-3 py-2 text-right">{t('stock.issue.receivedQty')}</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {lines.map(l => {
+            const value = received[l.id] ?? '';
+            const short = Number(String(value).replace(',', '.')) < l.quantity;
+            return (
+              <tr key={l.id} className={short ? 'bg-orange-50' : ''}>
+                <td className="px-3 py-2"><span className="mr-1 font-mono text-xs font-semibold">{l.item_code}</span>{l.item_name}
+                  {l.serial_number && <div className="font-mono text-xs text-indigo-700">{t('stock.equipment.serialLabel', { serial: l.serial_number })}</div>}
+                  {l.lot_number && <div className="text-xs text-gray-500">{t('stock.lot')} {l.lot_number}</div>}
+                </td>
+                <td className="px-3 py-2 text-right">{fmtQty(l.quantity)} <span className="text-xs text-gray-400">{l.unit}</span></td>
+                <td className="px-3 py-2 text-right">
+                  {l.unit_id ? (
+                    <label className="inline-flex items-center gap-2 text-xs">
+                      <input type="checkbox" checked={value !== '0'} onChange={e => setReceived(r => ({ ...r, [l.id]: e.target.checked ? '1' : '0' }))} />
+                      {value !== '0' ? t('stock.issue.unitReceived') : t('stock.issue.unitMissing')}
+                    </label>
+                  ) : (
+                    <input type="number" min="0" max={l.quantity} step="any" value={value}
+                      onChange={e => setReceived(r => ({ ...r, [l.id]: e.target.value }))}
+                      aria-label={t('stock.issue.receivedQty')}
+                      className="w-28 rounded border border-gray-300 px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Saisie des quantités reçues → { receivedLines, invalid, shortLines } */
+export function receiptState(lines, received) {
+  const receivedLines = lines.map(l => ({ lineId: l.id, receivedQuantity: Number(String(received[l.id] ?? '').replace(',', '.')) }));
+  const invalid = receivedLines.some((r, i) => !Number.isFinite(r.receivedQuantity) || r.receivedQuantity < 0
+    || r.receivedQuantity > lines[i].quantity || String(received[lines[i].id] ?? '').trim() === '');
+  const shortLines = receivedLines.filter((r, i) => r.receivedQuantity < lines[i].quantity).length;
+  return { receivedLines, invalid, shortLines };
+}
+
 export function IssueStatusBadge({ issue }) {
   if (issue.status === 'CANCELLED') return <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600"><Ban size={11} /> {t('stock.issue.status.CANCELLED')}</span>;
-  const isTransfer = issue.destination_type === 'WAREHOUSE';
+  // Transfert vers un dépôt ou un partenaire : en transit jusqu'à la réception (quantités reçues, manque possible)
+  const isTransfer = ['WAREHOUSE', 'PARTNER'].includes(issue.destination_type);
   if (issue.acknowledged_at) {
     const short = isTransfer && issue.lines?.some(l => l.received_quantity !== null && l.received_quantity < l.quantity);
     if (short) return <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-800"><AlertTriangle size={11} /> {t('stock.issue.status.RECEIVED_SHORT')}</span>;
@@ -35,7 +93,7 @@ export function IssueStatusBadge({ issue }) {
 /** Pastille du type de sortie */
 export function IssueTypeBadge({ type }) {
   const [, Icon] = ISSUE_TYPES.find(([k]) => k === (type || 'USER')) || ISSUE_TYPES[0];
-  const color = { USER: 'bg-blue-50 text-blue-800', WAREHOUSE: 'bg-violet-50 text-violet-800', DEPARTMENT: 'bg-teal-50 text-teal-800' }[type || 'USER'];
+  const color = { USER: 'bg-blue-50 text-blue-800', WAREHOUSE: 'bg-violet-50 text-violet-800', DEPARTMENT: 'bg-teal-50 text-teal-800', PARTNER: 'bg-amber-50 text-amber-800' }[type || 'USER'];
   return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs ${color}`}><Icon size={12} /> {t(`stock.issue.types.${type || 'USER'}`)}</span>;
 }
 
@@ -59,39 +117,50 @@ export default function StockIssueDetail() {
 
   const type = issue.destination_type || 'USER';
   const isTransfer = type === 'WAREHOUSE';
-  const canAck = !!issue.can_acknowledge;
+  const isPartner = type === 'PARTNER';
+  // Quantités reçues saisies ligne par ligne : transfert vers un dépôt, envoi à un partenaire
+  const withReceipt = isTransfer || isPartner;
+  // Partenaire : le magasin enregistre la réception signée sur papier (le partenaire confirme dans son espace)
+  const canAck = !!issue.can_acknowledge || !!issue.can_record_partner_receipt;
   const hasReturns = issue.lines.some(l => l.returned_quantity > 0);
-  const outstanding = issue.lines.some(l => l.returned_quantity < l.quantity);
-  // Annulation : gérer toutes les natures du bon (can_manage du serveur, MANAGE_* — migration 63)
-  const canCancel = issue.status === 'ISSUED' && !hasReturns && hasPermission('ISSUE_STOCK') && !!issue.can_manage;
-  const canReturn = !isTransfer && issue.status === 'ISSUED' && outstanding && hasPermission('ISSUE_STOCK');
-  const returnLink = type === 'DEPARTMENT' ? `/stock/returns/new?departmentId=${issue.department_id}` : `/stock/returns/new?userId=${issue.recipient_id}`;
-  const ackPrompt = isTransfer ? t('stock.issue.ackTransferPrompt') : type === 'DEPARTMENT' ? t('stock.issue.ackDeptPrompt') : t('stock.issue.ackPrompt');
+  const heldQty = (l) => (isPartner ? l.received_quantity || 0 : l.quantity);
+  const outstanding = issue.lines.some(l => l.returned_quantity < heldQty(l));
+  // Annulation : gérer toutes les natures du bon (can_manage du serveur, MANAGE_* — migration 63) ; partenaire : avant sa réception
+  const canCancel = issue.status === 'ISSUED' && !hasReturns && hasPermission('ISSUE_STOCK') && !!issue.can_manage && !(isPartner && issue.acknowledged_at);
+  const canReturn = !isTransfer && issue.status === 'ISSUED' && outstanding && hasPermission('ISSUE_STOCK') && (!isPartner || !!issue.acknowledged_at);
+  const returnLink = isPartner ? `/stock/returns/new?partnerId=${issue.partner_id}`
+    : type === 'DEPARTMENT' ? `/stock/returns/new?departmentId=${issue.department_id}` : `/stock/returns/new?userId=${issue.recipient_id}`;
+  const ackPrompt = isPartner ? t('stock.issue.ackPartnerPrompt') : isTransfer ? t('stock.issue.ackTransferPrompt') : type === 'DEPARTMENT' ? t('stock.issue.ackDeptPrompt') : t('stock.issue.ackPrompt');
 
   const openAck = () => {
     setDialog('ack');
     setText('');
     setReceived(Object.fromEntries(issue.lines.map(l => [l.id, String(l.quantity)])));
   };
-  const receivedLines = issue.lines.map(l => ({ lineId: l.id, receivedQuantity: Number(String(received[l.id] ?? '').replace(',', '.')) }));
-  const invalidReceipt = isTransfer && receivedLines.some((r, i) => !Number.isFinite(r.receivedQuantity) || r.receivedQuantity < 0
-    || r.receivedQuantity > issue.lines[i].quantity || String(received[issue.lines[i].id] ?? '').trim() === '');
-  const shortLines = isTransfer ? receivedLines.filter((r, i) => r.receivedQuantity < issue.lines[i].quantity).length : 0;
+  const state = receiptState(issue.lines, received);
+  const receivedLines = state.receivedLines;
+  const invalidReceipt = withReceipt && state.invalid;
+  const shortLines = withReceipt ? state.shortLines : 0;
 
   const confirm = async () => {
     if (dialog === 'cancel' && !text.trim()) { toast.error(t('stock.issue.cancelReasonRequired')); return; }
     if (dialog === 'ack' && invalidReceipt) { toast.error(t('stock.issue.receiveInvalid')); return; }
     setBusy(true);
     try {
-      if (dialog === 'ack' && isTransfer) {
-        await stockIssueService.receive(id, { comment: text.trim() || undefined, lines: receivedLines });
+      if (dialog === 'ack' && withReceipt) {
+        if (isPartner) await stockIssueService.partnerReceipt(id, { comment: text.trim() || undefined, lines: receivedLines });
+        else await stockIssueService.receive(id, { comment: text.trim() || undefined, lines: receivedLines });
         toast.success(shortLines ? t('stock.issue.receivedShort', { count: shortLines }) : t('stock.issue.received'));
       } else if (dialog === 'ack') { await stockIssueService.acknowledge(id, text.trim() || undefined); toast.success(t('stock.issue.acknowledged')); }
       else { await stockIssueService.cancel(id, text.trim()); toast.success(isTransfer ? t('stock.issue.transferCancelled') : t('stock.issue.cancelled')); }
       setDialog(null);
       setText('');
       await load();
-    } catch { /* toast api */ } finally { setBusy(false); }
+    } catch (err) {
+      // Erreurs sans toast automatique (réception pour un partenaire)
+      const d = err.response?.data || {};
+      if (isPartner && dialog === 'ack') toast.error(d.message || t('common.errorOccurred'));
+    } finally { setBusy(false); }
   };
 
   return (
@@ -106,13 +175,13 @@ export default function StockIssueDetail() {
           )}
           {canCancel && (
             <button onClick={() => { setDialog('cancel'); setText(''); }} className="flex items-center gap-2 rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50">
-              <Ban size={16} /> {isTransfer ? t('stock.issue.cancelTransfer') : t('stock.issue.cancel')}
+              <Ban size={16} /> {withReceipt ? t('stock.issue.cancelTransfer') : t('stock.issue.cancel')}
             </button>
           )}
           <button onClick={() => setShowPdf(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"><Eye size={16} /> {isTransfer ? t('stock.issue.pdfTransfer') : t('stock.issue.pdf')}</button>
           {canAck && (
             <button onClick={openAck} className="flex items-center gap-2 rounded-lg bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700" data-testid="issue-ack">
-              <CheckCircle2 size={16} /> {isTransfer ? t('stock.issue.receive') : t('stock.issue.acknowledge')}
+              <CheckCircle2 size={16} /> {isPartner ? t('stock.issue.recordPartnerReceipt') : isTransfer ? t('stock.issue.receive') : t('stock.issue.acknowledge')}
             </button>
           )}
         </div>
@@ -136,10 +205,15 @@ export default function StockIssueDetail() {
       {canAck && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{ackPrompt}</div>
       )}
+      {isPartner && issue.status === 'ISSUED' && !issue.acknowledged_at && !canAck && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{t('stock.issue.waitingPartner')}</div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         {[
           type === 'USER' && [t('stock.issue.recipient'), <><b>{issue.recipient_name}</b><div className="text-xs text-gray-500">{issue.recipient_email}</div></>],
+          isPartner && [t('stock.issue.partner'), <><Link to={`/stock/partners/${issue.partner_id}`} className="font-semibold text-blue-700 hover:underline">{issue.partner_name}</Link>
+            <div className="text-xs text-gray-500">{issue.partner_code} · {t(`partners.types.${issue.partner_type || 'OTHER'}`)} · {issue.partner_location}</div></>],
           type === 'DEPARTMENT' && [t('stock.issue.department'), <><b>{issue.department_name}</b><div className="text-xs text-gray-500">{issue.department_code}{issue.recipient_id && <> · {t('stock.issue.collectedByLabel')} : {issue.recipient_name}</>}</div></>],
           [isTransfer ? t('stock.issue.sourceWarehouse') : t('stock.warehouse'), <><b>{issue.warehouse_name}</b><div className="text-xs text-gray-500">{issue.warehouse_location} · {issue.warehouse_code}</div></>],
           isTransfer && [`→ ${t('stock.issue.destinationWarehouse')}`, <><b>{issue.destination_warehouse_name}</b><div className="text-xs text-gray-500">{issue.destination_warehouse_location} · {issue.destination_warehouse_code}</div></>],
@@ -161,8 +235,8 @@ export default function StockIssueDetail() {
               <th className="px-4 py-2">{t('stock.item')}</th>
               <th className="px-4 py-2">{t('stock.lot')}</th>
               <th className="px-4 py-2 text-right">{t('stock.quantity')}</th>
+              {withReceipt && <th className="px-4 py-2 text-right">{t('stock.issue.receivedQty')}</th>}
               {!isTransfer && <th className="px-4 py-2 text-right">{t('stock.return.returned')}</th>}
-              {isTransfer && <th className="px-4 py-2 text-right">{t('stock.issue.receivedQty')}</th>}
               <th className="px-4 py-2">{isTransfer ? t('stock.issue.transferMovements') : t('stock.issue.movements')}</th>
             </tr>
           </thead>
@@ -175,13 +249,13 @@ export default function StockIssueDetail() {
                 </td>
                 <td className="px-4 py-2 text-xs">{l.lot_number ? <>{l.lot_number}{l.expiry_date && <div className="text-gray-400">{new Date(l.expiry_date).toLocaleDateString(getLocale())}</div>}</> : '—'}</td>
                 <td className="px-4 py-2 text-right font-medium">{fmtQty(l.quantity)} <span className="text-xs text-gray-400">{l.unit}</span></td>
-                {!isTransfer && <td className={`px-4 py-2 text-right ${l.returned_quantity > 0 ? 'text-blue-700' : 'text-gray-400'}`}>{fmtQty(l.returned_quantity)}</td>}
-                {isTransfer && (
+                {withReceipt && (
                   <td className={`px-4 py-2 text-right ${l.received_quantity === null ? 'text-gray-400' : l.received_quantity < l.quantity ? 'font-medium text-orange-700' : 'text-green-700'}`}>
                     {l.received_quantity === null ? (issue.status === 'ISSUED' ? t('stock.issue.inTransitShort') : '—') : fmtQty(l.received_quantity)}
                     {l.received_quantity !== null && l.received_quantity < l.quantity && <div className="text-xs">{t('stock.issue.transitLoss', { qty: fmtQty(l.quantity - l.received_quantity) })}</div>}
                   </td>
                 )}
+                {!isTransfer && <td className={`px-4 py-2 text-right ${l.returned_quantity > 0 ? 'text-blue-700' : 'text-gray-400'}`}>{fmtQty(l.returned_quantity)}</td>}
                 <td className="px-4 py-2 font-mono text-xs text-gray-500">
                   {l.movement_number}{l.transfer_in_movement_number && <> → {l.transfer_in_movement_number}</>}
                   {l.reversal_movement_number && <span className="text-green-700"> ↩ {l.reversal_out_movement_number ? `${l.reversal_out_movement_number} → ` : ''}{l.reversal_movement_number}</span>}
@@ -195,6 +269,7 @@ export default function StockIssueDetail() {
       {issue.acknowledged_at && (
         <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
           {t('stock.issue.acknowledgedOn', { name: issue.acknowledged_by_name || issue.recipient_name || '—', date: fmtDateTime(issue.acknowledged_at) })}
+          {isPartner && <> ({t(issue.acknowledgement_source === 'STORE' ? 'stock.issue.ackSourceStore' : 'stock.issue.ackSourcePortal')})</>}
           {issue.acknowledgement_comment && <> — « {issue.acknowledgement_comment} »</>}
         </div>
       )}
@@ -209,57 +284,19 @@ export default function StockIssueDetail() {
         onClose={() => !busy && setDialog(null)}
         title={dialog === 'ack' ? t('stock.issue.ackTitle') : t('stock.issue.cancelTitle', { number: issue.issue_number })}
         type={dialog === 'ack' ? 'success' : 'danger'}
-        size={dialog === 'ack' && isTransfer ? 'lg' : 'sm'}
-        confirmText={dialog === 'ack' ? (isTransfer ? t('stock.issue.receive') : t('stock.issue.acknowledge')) : t('stock.issue.cancel')}
+        size={dialog === 'ack' && withReceipt ? 'lg' : 'sm'}
+        confirmText={dialog === 'ack' ? (isPartner ? t('stock.issue.recordPartnerReceipt') : isTransfer ? t('stock.issue.receive') : t('stock.issue.acknowledge')) : t('stock.issue.cancel')}
         onConfirm={confirm}
         isLoading={busy}
       >
         <div className="space-y-3 text-sm text-gray-700">
           <p>{dialog === 'ack'
-            ? (isTransfer ? t('stock.issue.ackTransferText', { name: issue.destination_warehouse_name }) : t('stock.issue.ackText'))
-            : (isTransfer ? (issue.acknowledged_at ? t('stock.issue.cancelReceivedTransferText') : t('stock.issue.cancelTransferText')) : t('stock.issue.cancelText'))}</p>
-          {dialog === 'ack' && isTransfer && (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="w-full text-sm" data-testid="receive-lines">
-                <thead className="bg-gray-50 text-left text-xs text-gray-500">
-                  <tr>
-                    <th className="px-3 py-2">{t('stock.item')}</th>
-                    <th className="px-3 py-2 text-right">{t('stock.issue.sentQty')}</th>
-                    <th className="px-3 py-2 text-right">{t('stock.issue.receivedQty')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {issue.lines.map(l => {
-                    const value = received[l.id] ?? '';
-                    const short = Number(String(value).replace(',', '.')) < l.quantity;
-                    return (
-                      <tr key={l.id} className={short ? 'bg-orange-50' : ''}>
-                        <td className="px-3 py-2"><span className="mr-1 font-mono text-xs font-semibold">{l.item_code}</span>{l.item_name}
-                          {l.serial_number && <div className="font-mono text-xs text-indigo-700">{t('stock.equipment.serialLabel', { serial: l.serial_number })}</div>}
-                          {l.lot_number && <div className="text-xs text-gray-500">{t('stock.lot')} {l.lot_number}</div>}
-                        </td>
-                        <td className="px-3 py-2 text-right">{fmtQty(l.quantity)} <span className="text-xs text-gray-400">{l.unit}</span></td>
-                        <td className="px-3 py-2 text-right">
-                          {l.unit_id ? (
-                            <label className="inline-flex items-center gap-2 text-xs">
-                              <input type="checkbox" checked={value !== '0'} onChange={e => setReceived(r => ({ ...r, [l.id]: e.target.checked ? '1' : '0' }))} />
-                              {value !== '0' ? t('stock.issue.unitReceived') : t('stock.issue.unitMissing')}
-                            </label>
-                          ) : (
-                            <input type="number" min="0" max={l.quantity} step="any" value={value}
-                              onChange={e => setReceived(r => ({ ...r, [l.id]: e.target.value }))}
-                              aria-label={t('stock.issue.receivedQty')}
-                              className="w-28 rounded border border-gray-300 px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {dialog === 'ack' && isTransfer && shortLines > 0 && !invalidReceipt && (
+            ? (isPartner ? t('stock.issue.ackPartnerStoreText', { name: issue.partner_name })
+              : isTransfer ? t('stock.issue.ackTransferText', { name: issue.destination_warehouse_name }) : t('stock.issue.ackText'))
+            : (isPartner ? t('stock.issue.cancelPartnerText')
+              : isTransfer ? (issue.acknowledged_at ? t('stock.issue.cancelReceivedTransferText') : t('stock.issue.cancelTransferText')) : t('stock.issue.cancelText'))}</p>
+          {dialog === 'ack' && withReceipt && <ReceiveLinesTable lines={issue.lines} received={received} setReceived={setReceived} />}
+          {dialog === 'ack' && withReceipt && shortLines > 0 && !invalidReceipt && (
             <p className="rounded-lg border border-orange-200 bg-orange-50 p-2 text-xs text-orange-800">{t('stock.issue.receiveShortWarning', { count: shortLines })}</p>
           )}
           <textarea rows={2} value={text} onChange={e => setText(e.target.value)}

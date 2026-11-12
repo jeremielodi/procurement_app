@@ -869,21 +869,23 @@ router.post('/stock-counts/:id/validate', authenticate, hasPermission('ADJUST_ST
 router.post('/stock-counts/:id/cancel', authenticate, hasPermission('COUNT_STOCK'), stockCountController.cancel);
 router.get('/stock-adjustments', authenticate, hasPermission('VIEW_STOCK'), stockCountController.listAdjustments);
 router.post('/stock-adjustments', authenticate, hasPermission('ADJUST_STOCK'), stockCountController.createAdjustment);
+// Équipements (unités suivies par n° de série) : réservés à la nature « Équipement » (migration 63)
+router.use('/stock-units', authenticate, hasPermission('VIEW_EQUIPMENT')); // écritures : MANAGE_EQUIPMENT en plus
 router.get('/stock-units', authenticate, hasPermission('VIEW_STOCK'), equipmentController.units);
 // Registre des équipements (Excel) — avant /stock-units/:id
 router.get('/stock-units/export', authenticate, hasPermission('VIEW_STOCK'), equipmentController.exportUnits);
-router.post('/stock-units/register', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), equipmentController.registerUnits);
+router.post('/stock-units/register', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), hasPermission('MANAGE_EQUIPMENT'), equipmentController.registerUnits);
 // Import du parc existant (Excel / CSV) : modèle, aperçu, confirmation — avant /stock-units/:id
 router.get('/stock-units/import/template', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), equipmentController.importTemplate);
-router.post('/stock-units/import', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.importUnits);
+router.post('/stock-units/import', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), hasPermission('MANAGE_EQUIPMENT'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.importUnits);
 // Recodification des n° d'inventaire (migration 57 : ORGANISATION-PROJET-CATÉGORIE-ANNÉE-NNN)
 router.get('/stock-units/retag/template', authenticate, hasPermission('MANAGE_STOCK_ITEMS'), equipmentController.retagTemplate);
-router.post('/stock-units/retag',authenticate, hasPermission('MANAGE_STOCK_ITEMS'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.retagUnits);
+router.post('/stock-units/retag',authenticate, hasPermission('MANAGE_STOCK_ITEMS'), hasPermission('MANAGE_EQUIPMENT'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.retagUnits);
 // Import des affectations existantes (bons de sortie vers les détenteurs) — avant /stock-units/:id
 router.get('/stock-units/assignments/import/template', authenticate, hasPermission('ISSUE_STOCK'), equipmentController.assignmentTemplate);
-router.post('/stock-units/assignments/import', authenticate, hasPermission('ISSUE_STOCK'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.importAssignments);
+router.post('/stock-units/assignments/import', authenticate, hasPermission('ISSUE_STOCK'), hasPermission('MANAGE_EQUIPMENT'), require('../utils/tabularImport').uploadHandler({ maxMb: 5 }), equipmentController.importAssignments);
 router.get('/stock-units/:id', authenticate, hasPermission('VIEW_STOCK'), equipmentController.getUnit);
-router.put('/stock-units/:id', authenticate, hasPermission('ISSUE_STOCK'), equipmentController.updateUnit);
+router.put('/stock-units/:id', authenticate, hasPermission('ISSUE_STOCK'), hasPermission('MANAGE_EQUIPMENT'), equipmentController.updateUnit);
 
 // ============================================
 // ROUTES DES NOTES D'ACCEPTATION DE SERVICE (SAN)

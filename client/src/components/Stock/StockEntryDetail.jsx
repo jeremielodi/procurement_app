@@ -11,6 +11,7 @@ import BlobPdfViewer from '../Common/BlobPdfViewer';
 import { stockEntryService } from '../../services/stockService';
 import { ENTRY_TYPES, entryErrorMessage } from './StockEntryForm';
 import { t, getLocale } from '../../i18n';
+import { HiddenLinesNotice } from './StockNature';
 
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 const fmtMoney = (n) => (n === null || n === undefined ? '—' : Number(n).toLocaleString(getLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 4 }));
@@ -147,6 +148,7 @@ export default function StockEntryDetail() {
       </div>
       {entry.reason && <div className="rounded-lg border border-gray-200 bg-white p-3 text-sm"><span className="text-xs text-gray-500">{t('stock.entry.reason')}</span><p>{entry.reason}</p></div>}
 
+      <HiddenLinesNotice count={entry.hidden_line_count} />
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs text-gray-500">

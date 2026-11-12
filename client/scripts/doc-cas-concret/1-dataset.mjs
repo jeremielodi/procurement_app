@@ -19,6 +19,11 @@ const PEOPLE = [
   ['finance', 'Esther', 'Ilunga', 'Comptable', ['prof_finance'], ['prof_finance']],
   ['dg', 'Patrick', 'Tshibanda', 'Directeur général', ['prof_dg'], ['prof_dg']],
 ];
+// Gestionnaires d'une seule nature d'articles, limités au projet EAU-GOMA (profils de stock liés au projet — migration 65)
+const PROJECT_PEOPLE = [
+  ['consumables', 'Claire', 'Furaha', 'Gestionnaire des consommables (pharmacie)', 'prof_consumables_manager'],
+  ['equipment', 'Didier', 'Kambale', 'Gestionnaire des équipements', 'prof_equipment_manager'],
+];
 const SUPPLIER = { name: 'Bureautique Kivu SARL', email: `ventes@bureautique-kivu.${D}` };
 // Fournisseurs inscrits sur le portail : le premier sert au cas « cycle d'achat », les trois répondent à l'appel d'offres
 const SUPPLIERS = [
@@ -104,6 +109,20 @@ export async function dataset() {
     code: 'EAU-GOMA', name: 'Eau potable Goma', description: 'Accès à l\'eau potable dans les quartiers nord de Goma',
     projectManagerId: users.pm.id, startDate: '2026-01-01', endDate: '2027-12-31', inventoryPrefix: 'EAU',
   });
+  // Gestionnaires des équipements / des consommables : profil exercé sur le projet EAU-GOMA seulement
+  for (const [key, first, last, position, profile] of PROJECT_PEOPLE) {
+    const email = `${first}.${last}@${D}`.toLowerCase();
+    let id = await call('POST', '/auth/login', null, { email, password: CFG.password }).then(r => r.user.id, () => null);
+    if (!id) {
+      id = (await call('POST', '/users', admin, {
+        username: `${first}.${last}.${CFG.enterpriseCode}`.toLowerCase(), email, password: CFG.password, firstName: first, lastName: last,
+        position, language: 'fr', department: dept.id, profileIds: [profile], projectProfiles: [{ projectId: project.id, profileIds: [profile] }],
+      })).id;
+    }
+    users[key] = { id, email, name: `${first} ${last}`, position };
+  }
+  await demoSignatures(Object.fromEntries(PROJECT_PEOPLE.map(([k]) => [k, users[k]])));
+
   const lines = list(await call('GET', `/budget?projectId=${project.id}`, admin));
   const budget = lines.find(l => l.entity_code === 'EAU-01') || await call('POST', '/budget', admin, {
     entityCode: 'EAU-01', description: 'Fournitures et équipements de bureau', allocatedAmount: 50000, projectId: project.id,
@@ -127,20 +146,24 @@ export async function dataset() {
   const whs = list(await call('GET', '/warehouses', admin));
   const wh = whs.find(w => w.code === 'MAG-GOMA') || await call('POST', '/warehouses', admin, { code: 'MAG-GOMA', name: 'Magasin central Goma', locationId: goma.id });
   const wh2 = whs.find(w => w.code === 'MAG-NORD') || await call('POST', '/warehouses', admin, { code: 'MAG-NORD', name: 'Magasin antenne Nord', locationId: goma.id });
-  for (const w of [wh, wh2]) await call('PUT', `/warehouses/${w.id}/users`, admin, { userIds: [users.logistic.id, users.storekeeper.id] });
+  for (const w of [wh, wh2]) await call('PUT', `/warehouses/${w.id}/users`, admin, { userIds: [users.logistic.id, users.storekeeper.id, users.consumables.id, users.equipment.id] });
 
   // Articles du catalogue
   const cats = await call('GET', '/public/market-categories');
   const office = cats.find(c => c.code === 'OFFICE_SUPPLIES') || cats.find(c => c.is_stockable);
   const units = await call('GET', '/units', admin);
   const unit = (code) => units.find(u => u.code === code)?.id;
+  const cat = (code) => cats.find(c => c.code === code)?.id || office.id;
   const existing = list(await call('GET', '/stock-items?limit=200', admin));
   const items = {};
+  // Nature (migration 63) : Consommable (papier, toner, savon, médicament) / Équipement (ordinateur à n° de série, chaise sans n° de série)
   for (const [k, code, name, u, extra] of [
-    ['paper', 'PAP-A4', 'Ramette papier A4 80 g', 'REAM', { minQuantity: 20 }],
-    ['toner', 'TON-HP', 'Cartouche toner HP 85A', 'PIECE', { minQuantity: 5 }],
-    ['soap', 'SAV-01', 'Savon en barre (kit hygiène)', 'CARTON', { minQuantity: 10, trackLots: true, trackExpiry: true }],
-    ['laptop', 'LAP-14', 'Ordinateur portable 14"', 'PIECE', { trackSerials: true, assetCategory: 'LAP' }],
+    ['paper', 'PAP-A4', 'Ramette papier A4 80 g', 'REAM', { minQuantity: 20, nature: 'CONSUMABLE' }],
+    ['toner', 'TON-HP', 'Cartouche toner HP 85A', 'PIECE', { minQuantity: 5, nature: 'CONSUMABLE' }],
+    ['soap', 'SAV-01', 'Savon en barre (kit hygiène)', 'CARTON', { minQuantity: 10, trackLots: true, trackExpiry: true, nature: 'CONSUMABLE' }],
+    ['laptop', 'LAP-14', 'Ordinateur portable 14"', 'PIECE', { trackSerials: true, assetCategory: 'LAP', nature: 'EQUIPMENT' }],
+    ['para', 'MED-PARA500', 'Paracétamol 500 mg — boîte de 100 comprimés', 'BOX', { minQuantity: 20, trackLots: true, trackExpiry: true, nature: 'CONSUMABLE', categoryId: cat('MEDICAL_SUPPLIES') }],
+    ['chair', 'MOB-CHAISE', 'Chaise de bureau ergonomique', 'PIECE', { nature: 'EQUIPMENT', categoryId: cat('OFFICE_FURNITURE') }],
   ]) {
     items[k] = existing.find(i => i.code === code)
       || await call('POST', '/stock-items', admin, { code, name, unitId: unit(u), categoryId: office.id, isStockable: true, ...extra });

@@ -15,6 +15,7 @@ import BlobPdfViewer from '../Common/BlobPdfViewer';
 import { stockIssueService } from '../../services/stockService';
 import { usePermissions } from '../../hooks/usePermissions';
 import { t, getLocale } from '../../i18n';
+import { HiddenLinesNotice } from './StockNature';
 
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString(getLocale(), { dateStyle: 'medium', timeStyle: 'short' }) : '—');
@@ -61,7 +62,8 @@ export default function StockIssueDetail() {
   const canAck = !!issue.can_acknowledge;
   const hasReturns = issue.lines.some(l => l.returned_quantity > 0);
   const outstanding = issue.lines.some(l => l.returned_quantity < l.quantity);
-  const canCancel = issue.status === 'ISSUED' && !hasReturns && hasPermission('ISSUE_STOCK');
+  // Annulation : gérer toutes les natures du bon (can_manage du serveur, MANAGE_* — migration 63)
+  const canCancel = issue.status === 'ISSUED' && !hasReturns && hasPermission('ISSUE_STOCK') && !!issue.can_manage;
   const canReturn = !isTransfer && issue.status === 'ISSUED' && outstanding && hasPermission('ISSUE_STOCK');
   const returnLink = type === 'DEPARTMENT' ? `/stock/returns/new?departmentId=${issue.department_id}` : `/stock/returns/new?userId=${issue.recipient_id}`;
   const ackPrompt = isTransfer ? t('stock.issue.ackTransferPrompt') : type === 'DEPARTMENT' ? t('stock.issue.ackDeptPrompt') : t('stock.issue.ackPrompt');
@@ -151,6 +153,7 @@ export default function StockIssueDetail() {
       </div>
       {issue.purpose && <div className="rounded-lg border border-gray-200 bg-white p-3 text-sm"><span className="text-xs text-gray-500">{t('stock.issue.purpose')}</span><p>{issue.purpose}</p></div>}
 
+      <HiddenLinesNotice count={issue.hidden_line_count} />
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs text-gray-500">

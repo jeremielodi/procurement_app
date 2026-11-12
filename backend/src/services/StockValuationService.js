@@ -13,6 +13,8 @@
 // reste celui de l'entreprise) — à la date du jour seulement (les sorties antérieures à la migration 29 n'ont pas de projet).
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
 
 const EPS = 1e-9;
 const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
@@ -25,14 +27,17 @@ class StockValuationService {
    * @returns {{ items: Array, totals: Array<{ currency, value }>, notValued: number, mixedCurrency: number, asOf }}
    */
   async valuation({ asOf, categoryId, warehouseId, projectId } = {}) {
-    if (projectId && asOf) {
+    // Utilisateur limité à certains projets (migration 65) : soldes actuels de ses projets (+ sans projet) × CMUP
+    const restricted = (await stockProject.allowed()) !== null;
+    if (projectId && projectId !== 'none') await stockProject.assertAllowed([projectId]);
+    if ((projectId || restricted) && asOf) {
       const err = new Error('La valorisation par projet n\'est disponible qu\'à la date du jour');
       err.status = 400;
       err.code = 'PROJECT_AS_OF_UNSUPPORTED';
       throw err;
     }
     const params = [];
-    let where = `WHERE si.is_stockable${tenant.filter('si.enterprise_id', params)}`;
+    let where = `WHERE si.is_stockable${tenant.filter('si.enterprise_id', params)}${await stockNature.filter('si.nature', params)}`;
     if (categoryId) { params.push(categoryId); where += ` AND si.category_id = $${params.length}`; }
     const items = await db.select(
       `SELECT si.id, si.code, si.name, si.unit, si.category_id FROM stock_items si ${where} ORDER BY si.name`,
@@ -89,11 +94,12 @@ class StockValuationService {
 
     // Quantités du projet : soldes actuels (tous dépôts ou le dépôt choisi)
     let projectQty = null;
-    if (projectId) {
+    if (projectId || restricted) {
       const pParams = [items.map(i => i.id)];
       let pWhere = 'WHERE b.stock_item_id = ANY($1::uuid[]) AND b.quantity > 0';
       if (projectId === 'none') pWhere += ' AND b.project_id IS NULL';
-      else { pParams.push(projectId); pWhere += ` AND b.project_id = $${pParams.length}`; }
+      else if (projectId) { pParams.push(projectId); pWhere += ` AND b.project_id = $${pParams.length}`; }
+      pWhere += await stockProject.filter('b.project_id', pParams);
       if (warehouseId) { pParams.push(warehouseId); pWhere += ` AND b.warehouse_id = $${pParams.length}`; }
       const sums = await db.select(`SELECT b.stock_item_id, SUM(b.quantity)::float8 AS qty FROM stock_balances b ${pWhere} GROUP BY b.stock_item_id`, pParams);
       projectQty = new Map(sums.map(r => [r.stock_item_id, r.qty]));

@@ -24,10 +24,10 @@ DOC_API_URL=http://localhost:5000/api DOC_APP_URL=http://localhost:3000 npm run 
 
 | Script | Rôle |
 |---|---|
-| `1-dataset.mjs` | Jeu de données : entreprise « Démo procureApp » (code `DOC_ENTERPRISE_CODE`, défaut `DEMO`), 11 comptes (un par profil, signature manuscrite de démonstration, mot de passe `DOC_PASSWORD`, défaut `Demo1234!`), projet EAU-GOMA et son chef de projet, ligne budgétaire EAU-01, dépôts MAG-GOMA / MAG-NORD, 4 articles, 3 fournisseurs inscrits sur le portail. **Réutilisable** : ce qui existe est repris, le reste est créé |
+| `1-dataset.mjs` | Jeu de données : entreprise « Démo procureApp » (code `DOC_ENTERPRISE_CODE`, défaut `DEMO`), 13 comptes (un par profil, dont un gestionnaire des consommables et un gestionnaire des équipements limités au projet, signature manuscrite de démonstration, mot de passe `DOC_PASSWORD`, défaut `Demo1234!`), projet EAU-GOMA et son chef de projet, ligne budgétaire EAU-01, dépôts MAG-GOMA / MAG-NORD, 6 articles (dont un médicament suivi par lot et une chaise = équipement sans n° de série), 3 fournisseurs inscrits sur le portail. **Réutilisable** : ce qui existe est repris, le reste est créé |
 | `2-workflow.mjs` | Cycle d'achat (réquisition de 1 200 USD → paiement) + rendu des 5 PDF |
 | `2b-appel-offres.mjs` | Appel d'offres (15 ordinateurs, 27 900 USD) : trois fournisseurs (prix, délai, questionnaire noté), clôture anticipée, comparatif, attribution, bon de commande approuvé au niveau N2 + PDF de l'offre et du bon |
-| `3-stock.mjs` | Bon d'entrée (don), demande au magasin, sortie, affectation / retour d'ordinateur, transfert, inventaire, rapports |
+| `3-stock.mjs` | Bon d'entrée (don), demande au magasin, sortie, affectation / retour d'ordinateur, transfert, inventaire, équipements et consommables (médicament par lot, chaises, document mixte), rapports |
 | `4-pages.mjs` | Captures PNG → WebP dans `client/public/docs/cas-concret/img/`, puis génération des deux pages (**les textes sont dans ce fichier**) |
 
 Lancer une partie seulement : `node scripts/doc-cas-concret/run-all.mjs workflow` (ou `tender`, `stock`, ou `pages` pour ne régénérer que les pages à partir des captures existantes).

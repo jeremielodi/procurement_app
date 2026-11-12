@@ -99,9 +99,10 @@ const TEMPLATE = `<!doctype html>
 
 class StockReturnPdfService {
   /** @returns {{ pdf: Buffer, ret: object } | null} */
-  async generate(id, { lang } = {}) {
+  async generate(id, { lang, lines } = {}) {
     const ret = await equipmentModel.getReturn(id);
     if (!ret) return null;
+    if (Array.isArray(lines)) ret.lines = lines; // lignes visibles par le demandeur du PDF (natures, migration 63)
     const ctx = pdfContext(lang, 'stockReturn');
     const brand = await getBranding(ret.enterprise_id);
     // Signature image du magasinier qui a enregistré le retour (la personne qui rend signe sur papier)

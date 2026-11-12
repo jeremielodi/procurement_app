@@ -92,11 +92,14 @@ test.describe.serial('API › Import des affectations d\'équipements', () => {
     expect(issue).toMatchObject({ destination_type: 'USER', recipient_id: holderId, purpose: 'Remis à la mission', status: 'ISSUED' });
     const other = (await (await request.get(`/api/stock-issues/${r.body.data.issues.find(i => i.warehouse === wh1.code).id}`, { headers: H() })).json()).data;
     expect(other.purpose).toBe('Affectation existante (import du registre)');
-    // Les deux bons forment une seule opération de stock
-    const groups = (await (await request.get('/api/stock/movements', { headers: H(), params: { stockItemId: laptop.id, limit: 50 } })).json()).data
-      .filter(m => m.movement_type === 'ISSUE').map(m => m.group_id);
-    expect(groups).toHaveLength(3);
-    expect(new Set(groups).size).toBe(1);
+    // Un bon de sortie = une opération de stock (migration 64) : 2 bons → 2 opérations, les unités d'un même bon ensemble
+    const moves = (await (await request.get('/api/stock/movements', { headers: H(), params: { stockItemId: laptop.id, limit: 50 } })).json()).data
+      .filter(m => m.movement_type === 'ISSUE');
+    expect(moves).toHaveLength(3);
+    expect(new Set(moves.map(m => m.group_id)).size).toBe(2);
+    for (const number of new Set(moves.map(m => m.issue_number))) {
+      expect(new Set(moves.filter(m => m.issue_number === number).map(m => m.group_id)).size).toBe(1);
+    }
 
     const holderToken = (await (await request.post('/api/auth/login', { data: holder })).json()).data.token;
     const holdings = (await (await request.get('/api/stock-holdings/mine', { headers: auth(holderToken) })).json()).data;

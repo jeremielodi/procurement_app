@@ -114,9 +114,10 @@ const TEMPLATE = `<!doctype html>
 
 class StockIssuePdfService {
   /** @returns {{ pdf: Buffer, issue: object } | null} */
-  async generate(id, { lang } = {}) {
+  async generate(id, { lang, lines } = {}) {
     const issue = await stockIssueModel.getById(id);
     if (!issue) return null;
+    if (Array.isArray(lines)) issue.lines = lines; // lignes visibles par le demandeur du PDF (natures, migration 63)
     const ctx = pdfContext(lang, 'stockIssue');
     const brand = await getBranding(issue.enterprise_id);
     const dt = (d) => new Date(d).toLocaleString(ctx.locale, { dateStyle: 'short', timeStyle: 'short' });

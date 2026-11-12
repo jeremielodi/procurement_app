@@ -14,6 +14,8 @@ import { t } from '../../i18n';
 export default function CatalogAutocomplete({
   linked, onLink, onTextChange, inputProps = {}, placeholder, className = '', minChars = 2, disabled = false,
   allowUnlink = true,
+  // stockScope : écrans du stock — seuls les articles des natures autorisées (migration 63) ; réquisition / commande : tout le catalogue
+  stockScope = false,
 }) {
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
@@ -67,7 +69,7 @@ export default function CatalogAutocomplete({
     if (String(text || '').trim().length < minChars) { setSuggestions([]); setOpen(false); return; }
     timer.current = setTimeout(async () => {
       try {
-        const res = await stockItemService.search(text.trim(), 8);
+        const res = await stockItemService.search(text.trim(), 8, stockScope ? { scope: 'stock' } : undefined);
         setSuggestions(res.data || []);
         setActive(-1);
         setOpen(true);

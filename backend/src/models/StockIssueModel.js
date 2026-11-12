@@ -12,8 +12,14 @@ const tenant = require('../utils/tenant');
 const stockModel = require('./StockModel');
 const warehouseModel = require('./WarehouseModel');
 const stockRequestModel = require('./StockRequestModel');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
 
 const EPS = 1e-9;
+// Natures des lignes d'un bon (toute action sur le bon exige toutes ses natures — migration 63)
+const LINE_NATURES_SQL = 'SELECT DISTINCT it.nature FROM stock_issue_lines il JOIN stock_items it ON it.id = il.stock_item_id WHERE il.issue_id = $1';
+// Projets de financement des lignes (stock cloisonné par projet — migration 65)
+const LINE_PROJECTS_SQL = 'SELECT DISTINCT project_id FROM stock_issue_lines WHERE issue_id = $1';
 const DESTINATIONS = ['USER', 'WAREHOUSE', 'DEPARTMENT'];
 const fail = (status, code, message, extra = {}) => Object.assign(new Error(message), { status, code, ...extra });
 const num = (v) => {
@@ -93,6 +99,9 @@ class StockIssueModel {
         }
       }
 
+      // Projet du bon (ou de la demande servie) : projet sur lequel l'utilisateur a un profil de stock (migration 65)
+      await stockProject.assertAllowed([projectId]);
+
       // ---- Destination
       let recipient = null;
       let destination = null;
@@ -126,11 +135,13 @@ class StockIssueModel {
       const today = new Date().toISOString().slice(0, 10);
       for (const [index, raw] of lines.entries()) {
         const item = await tx.one(
-          'SELECT id, enterprise_id, code, name, unit, is_stockable, track_lots, track_serials FROM stock_items WHERE id = $1',
+          'SELECT id, enterprise_id, code, name, unit, is_stockable, track_lots, track_serials, nature FROM stock_items WHERE id = $1',
           [raw.stockItemId]
         );
         if (!item || String(item.enterprise_id) !== String(warehouse.enterprise_id)) throw fail(400, 'ITEM_NOT_FOUND', 'Article introuvable', { line: index });
         if (!item.is_stockable) throw fail(400, 'ITEM_NOT_STOCKABLE', `${item.name} : article non stocké`, { line: index });
+        // Nature de l'article autorisée à l'utilisateur (migration 63) — 403 NATURE_FORBIDDEN
+        try { await stockNature.assertAllowed([item.nature]); } catch (e) { e.line = index; throw e; }
 
         if (item.track_serials) {
           const unitIds = [...new Set((raw.unitIds || []).map(String))];
@@ -147,6 +158,7 @@ class StockIssueModel {
                 || (!isTransfer && !allowDamaged && u.condition !== 'GOOD') || used.has(`unit:${id}`)) {
               throw fail(400, 'UNIT_UNAVAILABLE', `${item.name} : équipement ${u?.serial_number || id} indisponible (pas en stock dans ce dépôt, endommagé ou déjà choisi)`, { line: index });
             }
+            try { await stockProject.assertAllowed([u.project_id]); } catch (e) { e.line = index; throw e; } // migration 65
             used.set(`unit:${id}`, 1);
             allocations.push({ item, lotId: null, unitId: u.id, quantity: 1, projectId: u.project_id || null, requestLineId: raw.requestLineId || null });
           }
@@ -172,6 +184,8 @@ class StockIssueModel {
         } else {
           sql += ' AND b.lot_id IS NULL';
         }
+        // Stock des projets autorisés à l'utilisateur et stock sans projet seulement (migration 65)
+        sql += await stockProject.filter('b.project_id', params);
         // FEFO : péremption la plus proche d'abord, puis lot le plus ancien, puis stock du projet / sans projet / autres projets
         sql += ` ORDER BY lt.expiry_date NULLS LAST, lt.created_at NULLS LAST,
                  CASE WHEN b.project_id = $3::uuid THEN 0 WHEN b.project_id IS NULL THEN 1 ELSE 2 END, b.quantity DESC
@@ -300,6 +314,8 @@ class StockIssueModel {
     const params = [];
     let where = `WHERE 1=1${tenant.filter('si.enterprise_id', params)}`;
     if (mine) { params.push(userId); where += ` AND si.recipient_id = $${params.length}`; }
+    // Gestion du stock : bons ayant au moins une ligne d'une nature autorisée (migration 63) ; « mes articles » : tout
+    else where += await stockNature.existsLine('SELECT 1 FROM stock_issue_lines nl JOIN stock_items ni ON ni.id = nl.stock_item_id WHERE nl.issue_id = si.id', 'ni.nature', params, 'nl.project_id');
     // Dépôt : sorties de ce dépôt et transferts reçus par ce dépôt
     if (warehouseId) { params.push(warehouseId); where += ` AND (si.warehouse_id = $${params.length} OR si.destination_warehouse_id = $${params.length})`; }
     if (recipientId) { params.push(recipientId); where += ` AND si.recipient_id = $${params.length}`; }
@@ -334,12 +350,14 @@ class StockIssueModel {
       params
     );
     if (rows.length) {
+      const sParams = [rows.map(r => r.id)];
+      const sNature = mine ? '' : (await stockNature.filter('it.nature', sParams)) + (await stockProject.filter('il.project_id', sParams));
       const summary = await db.select(
         `SELECT il.issue_id, COUNT(*)::int AS line_count,
                 STRING_AGG(DISTINCT it.name, ', ') AS items
          FROM stock_issue_lines il JOIN stock_items it ON it.id = il.stock_item_id
-         WHERE il.issue_id = ANY($1::uuid[]) GROUP BY il.issue_id`,
-        [rows.map(r => r.id)]
+         WHERE il.issue_id = ANY($1::uuid[])${sNature} GROUP BY il.issue_id`,
+        sParams
       );
       const byId = new Map(summary.map(s => [s.issue_id, s]));
       for (const r of rows) Object.assign(r, { line_count: byId.get(r.id)?.line_count || 0, items: byId.get(r.id)?.items || '' });
@@ -353,7 +371,7 @@ class StockIssueModel {
     issue.lines = await db.select(
       `SELECT il.id, il.quantity::float8 AS quantity, il.returned_quantity::float8 AS returned_quantity, il.received_quantity::float8 AS received_quantity,
               il.stock_item_id, il.lot_id, il.unit_id, il.project_id, pj.code AS project_code, pj.name AS project_name,
-              un.serial_number, un.asset_tag, un.status AS unit_status, it.track_serials,
+              un.serial_number, un.asset_tag, un.status AS unit_status, it.track_serials, it.nature AS item_nature,
               it.code AS item_code, it.name AS item_name, it.unit,
               lt.lot_number, lt.expiry_date, m.movement_number, rm.movement_number AS reversal_movement_number,
               tm.movement_number AS transfer_in_movement_number, rom.movement_number AS reversal_out_movement_number
@@ -407,6 +425,8 @@ class StockIssueModel {
     if (!(await warehouseModel.canOperate(userId, current.destination_warehouse_id))) {
       throw fail(403, 'NOT_RECIPIENT', 'Seul un utilisateur ayant accès au dépôt de destination peut réceptionner le transfert');
     }
+    await stockNature.assertSql(db, LINE_NATURES_SQL, [id]);
+    await stockProject.assertSql(db, LINE_PROJECTS_SQL, [id]);
     const byLine = new Map((Array.isArray(received) ? received : []).map(r => [String(r.lineId), r.receivedQuantity]));
     return db.withTransaction(async (tx) => {
       const issue = await tx.one('SELECT id, issue_number, status, acknowledged_at, enterprise_id, warehouse_id, destination_warehouse_id FROM stock_issues WHERE id = $1 FOR UPDATE', [id]);
@@ -456,6 +476,8 @@ class StockIssueModel {
         [id]
       );
       if (!issue) throw fail(404, 'NOT_FOUND', 'Bon de sortie introuvable');
+      await stockNature.assertSql(tx, LINE_NATURES_SQL, [id]);
+      await stockProject.assertSql(tx, LINE_PROJECTS_SQL, [id]);
       // Demande au magasin servie par ce bon : la quantité servie baisse, la demande redevient à servir
       const done = async (result) => {
         if (issue.request_id) result.requestStatus = await stockRequestModel.refreshStatus(tx, issue.request_id);

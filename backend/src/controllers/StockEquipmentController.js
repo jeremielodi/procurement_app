@@ -12,6 +12,19 @@ const unitImportService = require('../services/StockUnitImportService');
 const assignmentImportService = require('../services/StockAssignmentImportService');
 const { notifyCreated } = require('./StockIssueController');
 const { audit, AUDIT } = require('../utils/auditLog');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
+
+/** Bon de retour limité aux lignes des natures autorisées (migration 63) ; null si aucune n'est visible */
+async function visibleReturn(id) {
+  const ret = await equipmentModel.getReturn(id);
+  if (!ret) return null;
+  const { lines, hidden } = await stockNature.splitLines(ret.lines);
+  if (!lines.length && hidden) return null;
+  ret.lines = lines;
+  ret.hidden_line_count = hidden;
+  return ret;
+}
 
 function sendError(res, error, fallback) {
   if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, line: error.line, remaining: error.remaining });
@@ -32,14 +45,14 @@ module.exports = {
       if (req.query.departmentId) {
         const department = await db.one('SELECT id, code, name FROM departments WHERE id::text = $1', [String(req.query.departmentId)]);
         if (!department) return res.status(404).json({ success: false, message: 'Département introuvable' });
-        return res.json({ success: true, data: await equipmentModel.holdings(null, { departmentId: department.id }), department });
+        return res.json({ success: true, data: await equipmentModel.holdings(null, { departmentId: department.id, restrictNature: true }), department });
       }
       if (!req.query.userId) return res.status(400).json({ success: false, message: 'userId ou departmentId requis' });
       const user = await userModel.findById(req.query.userId);
       if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
       res.json({
         success: true,
-        data: await equipmentModel.holdings(req.query.userId),
+        data: await equipmentModel.holdings(req.query.userId, { restrictNature: true }),
         user: { id: user.id, first_name: user.firstName, last_name: user.lastName, email: user.email, is_active: user.isActive },
       });
     } catch (error) { return sendError(res, error, 'Erreur lors du chargement des détentions'); }
@@ -87,7 +100,7 @@ module.exports = {
 
   async getReturn(req, res) {
     try {
-      const ret = await equipmentModel.getReturn(req.params.id);
+      const ret = await visibleReturn(req.params.id);
       if (!ret) return res.status(404).json({ success: false, message: 'Bon de retour introuvable' });
       res.json({ success: true, data: ret });
     } catch (error) { return sendError(res, error, 'Erreur lors du chargement du retour'); }
@@ -96,7 +109,8 @@ module.exports = {
   /** GET /stock-returns/:id/pdf?lang= — bon de retour à imprimer et signer */
   async returnPdf(req, res) {
     try {
-      const result = await stockReturnPdfService.generate(req.params.id, { lang: i18n.fromRequest(req) });
+      const visible = await visibleReturn(req.params.id);
+      const result = visible && await stockReturnPdfService.generate(req.params.id, { lang: i18n.fromRequest(req), lines: visible.lines });
       if (!result) return res.status(404).json({ success: false, message: 'Bon de retour introuvable' });
       res.set('Content-Type', 'application/pdf');
       res.set('Content-Disposition', `inline; filename="${String(result.ret.return_number).replace(/[^\w.-]+/g, '_')}.pdf"`);
@@ -117,7 +131,8 @@ module.exports = {
   async getUnit(req, res) {
     try {
       const unit = await equipmentModel.getUnit(req.params.id);
-      if (!unit || unit.status === 'VOID') return res.status(404).json({ success: false, message: 'Équipement introuvable' });
+      // Équipement financé par un projet non autorisé (migration 65) : introuvable
+      if (!unit || unit.status === 'VOID' || !stockProject.isAllowed(await stockProject.allowed(), unit.project_id)) return res.status(404).json({ success: false, message: 'Équipement introuvable' });
       const history = await stockModel.movements({ unitId: req.params.id, limit: 200 });
       res.json({ success: true, data: { ...unit, history: history.rows } });
     } catch (error) { return sendError(res, error, 'Erreur lors du chargement de l\'équipement'); }

@@ -11,6 +11,7 @@ import { stockCountService, warehouseService } from '../../services/stockService
 import { usePermissions } from '../../hooks/usePermissions';
 import { t, getLocale } from '../../i18n';
 import api from '../../services/api';
+import { NatureBadge, NaturePicker, useStockNatures } from './StockNature';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -27,7 +28,9 @@ export default function StockCountList() {
   const [open, setOpen] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [form, setForm] = useState({ warehouseId: '', categoryId: '', comment: '' });
+  const [form, setForm] = useState({ warehouseId: '', categoryId: '', comment: '', nature: '' });
+  // Nature de l'inventaire (migration 63) : une seule nature autorisée = imposée ; les deux = « tout le dépôt » ou une nature
+  const natures = useStockNatures();
   const [busy, setBusy] = useState(false);
 
   const load = () => { setLoading(true); stockCountService.list({ limit: 100 }).then(r => setRows(r.data || [])).catch(() => {}).finally(() => setLoading(false)); };
@@ -40,7 +43,7 @@ export default function StockCountList() {
       const list = w.data || [];
       setWarehouses(list);
       setCategories((c.data?.data || []).filter(x => x.is_stockable !== false));
-      setForm({ warehouseId: list.length === 1 ? list[0].id : '', categoryId: '', comment: '' });
+      setForm({ warehouseId: list.length === 1 ? list[0].id : '', categoryId: '', comment: '', nature: '' });
     } catch { /* toast api */ }
   };
 
@@ -48,12 +51,12 @@ export default function StockCountList() {
     if (!form.warehouseId) { toast.error(t('stock.issue.err.warehouse')); return; }
     setBusy(true);
     try {
-      const res = await stockCountService.open({ warehouseId: form.warehouseId, categoryId: form.categoryId || undefined, comment: form.comment || undefined });
+      const res = await stockCountService.open({ warehouseId: form.warehouseId, categoryId: form.categoryId || undefined, comment: form.comment || undefined, nature: form.nature || undefined });
       toast.success(t('stock.count.opened', { number: res.data.countNumber, count: res.data.lines }));
       navigate(`/stock/counts/${res.data.id}`);
     } catch (err) {
       const d = err.response?.data || {};
-      toast.error(d.code === 'COUNT_ALREADY_OPEN' ? t('stock.count.err.COUNT_ALREADY_OPEN') : (d.message || t('common.errorOccurred')));
+      toast.error(['COUNT_ALREADY_OPEN', 'NATURE_FORBIDDEN', 'NATURE_INVALID'].includes(d.code) ? t(`stock.count.err.${d.code}`) : (d.message || t('common.errorOccurred')));
     } finally { setBusy(false); }
   };
 
@@ -95,7 +98,9 @@ export default function StockCountList() {
                   <tr key={c.id}>
                     <td className="px-4 py-2"><Link to={`/stock/counts/${c.id}`} className="font-mono font-semibold text-blue-600 hover:underline">{c.count_number}</Link></td>
                     <td className="px-4 py-2">{c.warehouse_name}</td>
-                    <td className="px-4 py-2">{c.category_name || t('stock.count.wholeWarehouse')}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-wrap items-center gap-1.5">{c.category_name || t('stock.count.wholeWarehouse')} <NatureBadge nature={c.nature} /></div>
+                    </td>
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2">
                         <div className="h-1.5 w-24 rounded-full bg-gray-100"><div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${c.line_count ? Math.round((c.counted_count / c.line_count) * 100) : 0}%` }} /></div>
@@ -128,6 +133,14 @@ export default function StockCountList() {
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </SearchSelect>
           </label>
+          {natures.manageBoth ? (
+            <div>
+              <span className="mb-1 block font-medium text-gray-700">{t('stock.nature.label')}</span>
+              <NaturePicker allowAll testId="count-nature" value={form.nature} onChange={(nature) => setForm(f => ({ ...f, nature }))} />
+            </div>
+          ) : natures.manage.length === 1 && (
+            <p className="flex items-center gap-2 text-xs text-gray-600" data-testid="count-nature-fixed">{t('stock.nature.countLimited')} <NatureBadge nature={natures.manage[0]} /></p>
+          )}
           <label className="block">
             <span className="mb-1 block font-medium text-gray-700">{t('stock.return.comment')}</span>
             <input value={form.comment} onChange={e => setForm(f => ({ ...f, comment: e.target.value }))} maxLength={2000} className={inputCls} placeholder={t('stock.count.commentPlaceholder')} />

@@ -14,8 +14,9 @@ const { resolveItemUnit } = require('../utils/units');
 const importService = require('../services/StockItemImportService');
 const i18n = require('../i18n');
 const { audit, AUDIT } = require('../utils/auditLog');
+const stockNature = require('../utils/stockNature');
 
-const bad = (res, message, code) => res.status(400).json({ success: false, code, message });
+const bad =(res, message, code) => res.status(400).json({ success: false, code, message });
 const str = (v, max) => (v === undefined || v === null ? undefined : String(v).trim().slice(0, max));
 const bool = (v) => (v === undefined ? undefined : v === true || v === 'true' || v === 1 || v === '1');
 const numOrNull = (v) => (v === undefined ? undefined : v === null || v === '' ? null : Number(v));
@@ -138,6 +139,8 @@ function itemFields(body) {
     assetCategory: body.assetCategory === undefined ? undefined : (String(body.assetCategory || '').trim().toUpperCase() || null),
     reorderQuantity: numOrNull(body.reorderQuantity),
     isActive: bool(body.isActive),
+    // Nature (migration 63) : EQUIPMENT / CONSUMABLE ; '' ou valeur inconnue → refusé par validateItem
+    nature: body.nature === undefined ? undefined : (stockNature.normalize(body.nature) || 'INVALID'),
   };
 }
 
@@ -171,6 +174,21 @@ async function validateItem(req, fields, existing = null) {
   if (expiry && !lots) return 'Le suivi de péremption nécessite le suivi par lot';
   if (lots && !stockable) return 'Un article non stockable ne peut pas être suivi par lot';
   if (serials && (!stockable || lots)) return 'Un équipement suivi par n° de série doit être stockable et sans suivi par lot';
+  // Nature : le suivi par n° de série impose « Équipement » ; à la création sans nature : équipement si n° de série,
+  // sinon la seule nature autorisée à l'utilisateur, sinon consommable
+  if (fields.nature === 'INVALID') return { message: 'Nature invalide (EQUIPMENT ou CONSUMABLE)', code: 'NATURE_INVALID' };
+  if (!existing && fields.nature === undefined) {
+    const allowed = await stockNature.allowed('manage');
+    fields.nature = serials ? 'EQUIPMENT' : (allowed.length === 1 ? allowed[0] : 'CONSUMABLE');
+  }
+  if (existing && fields.nature === undefined && fields.trackSerials === true && existing.nature !== 'EQUIPMENT') fields.nature = 'EQUIPMENT';
+  const nature = fields.nature ?? existing?.nature;
+  if (serials && nature !== 'EQUIPMENT') {
+    return { message: 'Un article suivi par n° de série est un équipement', code: 'NATURE_SERIALS_EQUIPMENT' };
+  }
+  // L'utilisateur doit avoir accès à la nature de l'article (et à la nouvelle, si elle change)
+  // (403 NATURE_FORBIDDEN, renvoyé tel quel par serverError)
+  await stockNature.assertAllowed([existing?.nature, nature]);
   if (existing && await stockItemModel.hasMovements(existing.id)) {
     // Le stock existant a été enregistré avec ces règles : les changer fausserait l'historique
     if ((fields.isStockable !== undefined && fields.isStockable !== existing.is_stockable)
@@ -193,7 +211,7 @@ const items = {
       const limit = Math.min(parseInt(req.query.limit) || 50, 1000);
       const page = Math.max(parseInt(req.query.page) || 1, 1);
       const { rows, total } = await stockItemModel.list({
-        search: req.query.search, categoryId: req.query.categoryId, stockable: req.query.stockable,
+        search: req.query.search, categoryId: req.query.categoryId, stockable: req.query.stockable, nature: req.query.nature,
         activeOnly: !['1', 'true'].includes(String(req.query.all)), belowMin: ['1', 'true'].includes(String(req.query.belowMin)),
         limit, offset: (page - 1) * limit,
       });
@@ -204,19 +222,22 @@ const items = {
   /** GET /stock-items/search?q= — autocomplétion (réquisition, réception) */
   async search(req, res) {
     try {
-      res.json({ success: true, data: await stockItemModel.search(req.query.q, req.query.limit) });
+      // ?scope=stock : écrans du stock (natures autorisées seulement)
+      res.json({ success: true, data: await stockItemModel.search(req.query.q, req.query.limit, { restrictNature: req.query.scope === 'stock' }) });
     } catch (error) { return serverError(res, error, 'Erreur lors de la recherche d\'articles'); }
   },
 
   async get(req, res) {
     try {
       const item = await stockItemModel.getById(req.params.id);
-      if (!item) return res.status(404).json({ success: false, message: 'Article introuvable' });
+      // Nature non autorisée : comme un article d'une autre entreprise (404)
+      if (!item || !(await stockNature.allowed()).includes(item.nature)) return res.status(404).json({ success: false, message: 'Article introuvable' });
       const [balances, lots] = await Promise.all([
         stockModel.balances({ stockItemId: req.params.id }),
         stockModel.lots(req.params.id),
       ]);
-      res.json({ success: true, data: { ...item, balances, lots } });
+      // can_manage : modifier la fiche, faire entrer / sortir l'article (MANAGE_* de sa nature, migration 63)
+      res.json({ success: true, data: { ...item, balances, lots, can_manage: (await stockNature.allowed('manage')).includes(item.nature) } });
     } catch (error) { return serverError(res, error, 'Erreur lors du chargement de l\'article'); }
   },
 
@@ -277,7 +298,7 @@ const items = {
   async update(req, res) {
     try {
       const existing = await stockItemModel.getById(req.params.id);
-      if (!existing) return res.status(404).json({ success: false, message: 'Article introuvable' });
+      if (!existing || !(await stockNature.allowed()).includes(existing.nature)) return res.status(404).json({ success: false, message: 'Article introuvable' });
       const fields = itemFields(req.body || {});
       const error = await validateItem(req, fields, existing);
       if (error) return bad(res, error.message || error, error.code);
@@ -336,7 +357,7 @@ const stock = {
   async planningItem(req, res) {
     try {
       const item = await stockItemModel.getById(req.params.id);
-      if (!item) return res.status(404).json({ success: false, code: 'NOT_FOUND', message: 'Article introuvable' });
+      if (!item || !(await stockNature.allowed()).includes(item.nature)) return res.status(404).json({ success: false, code: 'NOT_FOUND', message: 'Article introuvable' });
       res.json({ success: true, data: await planningService.itemDetail(req.params.id, { warehouseId: req.query.warehouseId }) });
     } catch (error) { return serverError(res, error, 'Erreur lors du calcul de la prévision'); }
   },

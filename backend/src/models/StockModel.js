@@ -5,18 +5,20 @@
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const { localizedSql } = require('../utils/requestLang');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
 
 class StockModel {
   /**
    * Soldes, une ligne par article × dépôt × lot × projet (quantité > 0 sauf includeEmpty).
    * projectId : stock d'un projet, ou 'none' = stock sans projet (migration 29)
    */
-  async balances({ warehouseId, stockItemId, categoryId, locationId, projectId, search, expiringWithinDays, includeEmpty = false } = {}) {
+  async balances({ warehouseId, stockItemId, categoryId, locationId, projectId, search, expiringWithinDays, nature, includeEmpty = false } = {}) {
     const params = [];
     let sql = `
       SELECT b.id, b.quantity, b.updated_at,
              si.id AS stock_item_id, si.code AS item_code, si.name AS item_name, si.unit, si.min_quantity,
-             si.track_lots, si.track_expiry, ${localizedSql('mc')} AS category_name,
+             si.track_lots, si.track_expiry, si.nature, ${localizedSql('mc')} AS category_name,
              w.id AS warehouse_id, w.code AS warehouse_code, w.name AS warehouse_name,
              l.id AS location_id, l.name AS location_name,
              lt.id AS lot_id, lt.lot_number, lt.expiry_date,
@@ -30,6 +32,10 @@ class StockModel {
       LEFT JOIN projects p ON p.id = b.project_id
       WHERE 1=1${tenant.filter('b.enterprise_id', params)}`;
     if (!includeEmpty) sql += ' AND b.quantity > 0';
+    sql += await stockNature.filter('si.nature', params); // natures autorisées (migration 63)
+    sql += await stockProject.filter('b.project_id', params); // projets autorisés (migration 65)
+    const wanted = stockNature.normalize(nature); // menu « Consommables » / « Équipements »
+    if (wanted) { params.push(wanted); sql += ` AND si.nature = $${params.length}`; }
     if (projectId === 'none') sql += ' AND b.project_id IS NULL';
     else if (projectId) { params.push(projectId); sql += ` AND b.project_id = $${params.length}`; }
     if (warehouseId) { params.push(warehouseId); sql += ` AND b.warehouse_id = $${params.length}`; }
@@ -58,6 +64,7 @@ class StockModel {
                WHERE stock_item_id = $1 AND warehouse_id = $2 AND lot_id IS NOT DISTINCT FROM $3::uuid AND quantity > 0`;
     if (projectId === 'none') sql += ' AND project_id IS NULL';
     else if (projectId) { params.push(projectId); sql += ` AND project_id = $${params.length}`; }
+    sql += await stockProject.filter('project_id', params); // projets autorisés à l'utilisateur (migration 65)
     const rows = await tx.select(`${sql} ORDER BY (project_id IS NOT NULL), quantity DESC FOR UPDATE`, params);
     const allocations = [];
     let remaining = Number(quantity);
@@ -78,6 +85,8 @@ class StockModel {
     if (stockItemId) { params.push(stockItemId); where += ` AND m.stock_item_id = $${params.length}`; }
     if (lotId) { params.push(lotId); where += ` AND m.lot_id = $${params.length}`; }
     if (unitId) { params.push(unitId); where += ` AND m.unit_id = $${params.length}`; }
+    where += await stockNature.filter('si.nature', params); // natures autorisées (migration 63)
+    where += await stockProject.filter('m.project_id', params); // projets autorisés (migration 65)
     if (projectId === 'none') where += ' AND m.project_id IS NULL';
     else if (projectId) { params.push(projectId); where += ` AND m.project_id = $${params.length}`; }
     if (type) { params.push(type); where += ` AND m.movement_type = $${params.length}`; }
@@ -160,6 +169,11 @@ class StockModel {
       LEFT JOIN stock_units xu ON xu.id = x.unit_id
       WHERE x.group_id = g.id AND ${cond})`;
     if (groupId) { params.push(String(groupId)); where += ` AND g.id::text = $${params.length}`; }
+    // Natures autorisées (migration 63) : groupe visible s'il a au moins un mouvement autorisé ; les agrégats
+    // ne comptent que ceux-là
+    const natureCond = (await stockNature.filter('xi.nature', params)) + (await stockProject.filter('x.project_id', params)); // + projets (migration 65)
+    if (natureCond) where += anyMovement(natureCond.replace(/^ AND /, ''));
+    const lateralNature = natureCond.replace(/xi.nature/g, 'si.nature').replace(/x.project_id/g, 'm.project_id');
     if (warehouseId) { params.push(warehouseId); where += anyMovement(`x.warehouse_id = $${params.length}`); }
     if (type) { params.push(type); where += anyMovement(`x.movement_type = $${params.length}`); }
     if (projectId === 'none') where += anyMovement('x.project_id IS NULL');
@@ -209,7 +223,7 @@ class StockModel {
          FROM stock_movements m
          JOIN stock_items si ON si.id = m.stock_item_id
          JOIN warehouses w ON w.id = m.warehouse_id
-         WHERE m.group_id = g.id
+         WHERE m.group_id = g.id${lateralNature}
        ) a
        ${where}
        ORDER BY g.created_at DESC, g.group_number DESC
@@ -241,18 +255,19 @@ class StockModel {
   /** Tableau de bord du stock (entreprise courante) */
   async summary() {
     const params = [];
-    const scope = tenant.filter('si.enterprise_id', params);
+    const scope = tenant.filter('si.enterprise_id', params) + await stockNature.filter('si.nature', params);
+    const bScope = await stockProject.filter('b.project_id', params); // soldes des projets autorisés (migration 65)
     return db.one(
       `SELECT
          (SELECT COUNT(*) FROM stock_items si WHERE si.is_active AND si.is_stockable${scope})::int AS stockable_items,
          (SELECT COUNT(DISTINCT b.stock_item_id) FROM stock_balances b JOIN stock_items si ON si.id = b.stock_item_id
-           WHERE b.quantity > 0${scope})::int AS items_in_stock,
+           WHERE b.quantity > 0${scope}${bScope})::int AS items_in_stock,
          (SELECT COUNT(*) FROM stock_items si WHERE si.is_active AND si.min_quantity IS NOT NULL${scope}
            AND COALESCE((SELECT SUM(b.quantity) FROM stock_balances b WHERE b.stock_item_id = si.id), 0) < si.min_quantity)::int AS below_min,
          (SELECT COUNT(*) FROM stock_balances b JOIN stock_items si ON si.id = b.stock_item_id JOIN stock_lots lt ON lt.id = b.lot_id
-           WHERE b.quantity > 0 AND lt.expiry_date IS NOT NULL AND lt.expiry_date <= CURRENT_DATE + 90${scope})::int AS lots_expiring_90d,
+           WHERE b.quantity > 0 AND lt.expiry_date IS NOT NULL AND lt.expiry_date <= CURRENT_DATE + 90${scope}${bScope})::int AS lots_expiring_90d,
          (SELECT COUNT(*) FROM stock_balances b JOIN stock_items si ON si.id = b.stock_item_id JOIN stock_lots lt ON lt.id = b.lot_id
-           WHERE b.quantity > 0 AND lt.expiry_date IS NOT NULL AND lt.expiry_date < CURRENT_DATE${scope})::int AS lots_expired`,
+           WHERE b.quantity > 0 AND lt.expiry_date IS NOT NULL AND lt.expiry_date < CURRENT_DATE${scope}${bScope})::int AS lots_expired`,
       params
     );
   }
@@ -320,6 +335,8 @@ class StockModel {
       err.code = 'PROJECT_NOT_FOUND';
       throw err;
     }
+    // Projet sur lequel l'utilisateur a un profil de stock (migration 65) — 403 PROJECT_FORBIDDEN
+    await stockProject.assertAllowed([p.id]);
     return p.id;
   }
 }

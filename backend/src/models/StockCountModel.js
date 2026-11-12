@@ -11,6 +11,8 @@ const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const stockModel = require('./StockModel');
 const warehouseModel = require('./WarehouseModel');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
 
 const EPS = 1e-9;
 const REASONS = ['DAMAGE', 'LOSS', 'THEFT', 'EXPIRED', 'FOUND', 'CORRECTION', 'OTHER'];
@@ -39,17 +41,35 @@ async function warehouseFor(userId, warehouseId) {
 }
 
 class StockCountModel {
-  async open({ warehouseId, categoryId, comment }, { userId }) {
+  /**
+   * nature (migration 63) : EQUIPMENT / CONSUMABLE = inventaire limité à cette nature ; absente = tout le dépôt, ou la seule
+   * nature autorisée à l'utilisateur. Un seul inventaire ouvert par dépôt × nature, sans chevauchement avec « tout ».
+   */
+  async open({ warehouseId, categoryId, comment, nature: wanted }, { userId }) {
     const warehouse = await warehouseFor(userId, warehouseId);
+    const allowed = await stockNature.allowed('manage');
+    if (wanted !== undefined && wanted !== null && wanted !== '' && !stockNature.normalize(wanted)) throw fail(400, 'NATURE_INVALID', 'Nature invalide');
+    let nature = stockNature.normalize(wanted);
+    if (!nature && allowed.length < stockNature.NATURES.length) nature = allowed[0] || null;
+    await stockNature.assertAllowed(nature ? [nature] : stockNature.NATURES);
     try {
       return await db.withTransaction(async (tx) => {
-        const count = await tx.one(
-          `INSERT INTO stock_counts (enterprise_id, warehouse_id, category_id, comment, created_by)
-           VALUES ($1, $2, $3, $4, $5) RETURNING id, count_number`,
-          [warehouse.enterprise_id, warehouse.id, categoryId || null, comment ? String(comment).slice(0, 2000) : null, userId]
+        await tx.one('SELECT id FROM warehouses WHERE id = $1 FOR UPDATE', [warehouse.id]);
+        const overlap = await tx.one(
+          `SELECT count_number FROM stock_counts WHERE warehouse_id = $1 AND status = 'OPEN'
+             AND (nature IS NULL OR $2::text IS NULL OR nature = $2) LIMIT 1`,
+          [warehouse.id, nature]
         );
-        const cat = categoryId ? ' AND si.category_id = $2' : '';
-        const params = categoryId ? [warehouse.id, categoryId] : [warehouse.id];
+        if (overlap) throw fail(409, 'COUNT_ALREADY_OPEN', `Un inventaire est déjà en cours dans ce dépôt (${overlap.count_number})`);
+        const count = await tx.one(
+          `INSERT INTO stock_counts (enterprise_id, warehouse_id, category_id, comment, created_by, nature)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, count_number`,
+          [warehouse.enterprise_id, warehouse.id, categoryId || null, comment ? String(comment).slice(0, 2000) : null, userId, nature]
+        );
+        const params = [warehouse.id];
+        let cat = '';
+        if (categoryId) { params.push(categoryId); cat += ` AND si.category_id = $${params.length}`; }
+        if (nature) { params.push(nature); cat += ` AND si.nature = $${params.length}`; }
         // Articles en quantité (lots compris)
         const balances = await tx.select(
           // Le comptage ne distingue pas les projets : une ligne par article × lot (somme des soldes par projet)
@@ -87,6 +107,12 @@ class StockCountModel {
     let where = `WHERE 1=1${tenant.filter('c.enterprise_id', params)}`;
     if (warehouseId) { params.push(warehouseId); where += ` AND c.warehouse_id = $${params.length}`; }
     if (status) { params.push(status); where += ` AND c.status = $${params.length}`; }
+    // Natures (migration 63) : inventaire de cette nature, ou inventaire « tout le dépôt » ayant au moins une ligne autorisée
+    const natureCond = await stockNature.filter('ni.nature', params);
+    if (natureCond === ' AND FALSE') where += natureCond;
+    else if (natureCond) {
+      where += ` AND (${natureCond.replace(/^ AND ni\.nature/, 'c.nature')} OR (c.nature IS NULL AND EXISTS (SELECT 1 FROM stock_count_lines nl JOIN stock_items ni ON ni.id = nl.stock_item_id WHERE nl.count_id = c.id${natureCond})))`;
+    }
     const total = (await db.one(`SELECT COUNT(*)::int AS n FROM stock_counts c ${where}`, params)).n;
     params.push(Math.min(parseInt(limit) || 50, 200), parseInt(offset) || 0);
     const rows = await db.select(
@@ -121,7 +147,7 @@ class StockCountModel {
       `SELECT cl.id, cl.stock_item_id, cl.lot_id, cl.unit_id, cl.expected_quantity::float8 AS expected_quantity,
               cl.counted_quantity::float8 AS counted_quantity, cl.added_during_count, cl.note, cl.counted_at,
               (cl.counted_quantity - cl.expected_quantity)::float8 AS difference,
-              it.code AS item_code, it.name AS item_name, it.unit, it.track_lots, it.track_serials,
+              it.code AS item_code, it.name AS item_name, it.unit, it.track_lots, it.track_serials, it.nature AS item_nature,
               lt.lot_number, lt.expiry_date, un.serial_number, un.asset_tag, m.movement_number,
               ${name('cb.first_name', 'cb.last_name')} AS counted_by_name
        FROM stock_count_lines cl
@@ -138,10 +164,12 @@ class StockCountModel {
   }
 
   async lockOpen(tx, id, userId) {
-    const count = await tx.one('SELECT id, count_number, status, warehouse_id, enterprise_id FROM stock_counts WHERE id = $1 FOR UPDATE', [id]);
+    const count = await tx.one('SELECT id, count_number, status, warehouse_id, enterprise_id, nature FROM stock_counts WHERE id = $1 FOR UPDATE', [id]);
     if (!count) throw fail(404, 'NOT_FOUND', 'Inventaire introuvable');
     if (count.status !== 'OPEN') throw fail(409, 'COUNT_CLOSED', 'Inventaire déjà validé ou annulé');
     if (!(await warehouseModel.canOperate(userId, count.warehouse_id))) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès à ce dépôt');
+    // Nature de l'inventaire autorisée (« tout le dépôt » : les deux) — migration 63
+    await stockNature.assertAllowed(count.nature ? [count.nature] : stockNature.NATURES);
     return count;
   }
 
@@ -151,8 +179,12 @@ class StockCountModel {
     return db.withTransaction(async (tx) => {
       await this.lockOpen(tx, id, userId);
       for (const [index, e] of entries.entries()) {
-        const line = await tx.one('SELECT id, unit_id FROM stock_count_lines WHERE id::text = $1 AND count_id = $2', [String(e.lineId), id]);
+        const line = await tx.one(
+          'SELECT cl.id, cl.unit_id, it.nature FROM stock_count_lines cl JOIN stock_items it ON it.id = cl.stock_item_id WHERE cl.id::text = $1 AND cl.count_id = $2',
+          [String(e.lineId), id]
+        );
         if (!line) throw fail(400, 'LINE_NOT_FOUND', 'Ligne d\'inventaire introuvable', { line: index });
+        try { await stockNature.assertAllowed([line.nature]); } catch (err) { err.line = index; throw err; } // migration 63
         const cleared = e.countedQuantity === null || e.countedQuantity === '';
         const qty = cleared ? null : num(e.countedQuantity);
         if (!cleared && (qty < 0 || !Number.isFinite(qty))) throw fail(400, 'INVALID_QUANTITY', 'Quantité invalide', { line: index });
@@ -173,9 +205,12 @@ class StockCountModel {
   async addLine(id, { stockItemId, lotId, lotNumber, expiryDate, countedQuantity, note }, { userId }) {
     return db.withTransaction(async (tx) => {
       const count = await this.lockOpen(tx, id, userId);
-      const item = await tx.one('SELECT id, enterprise_id, name, is_stockable, track_lots, track_expiry, track_serials FROM stock_items WHERE id::text = $1', [String(stockItemId)]);
+      const item = await tx.one('SELECT id, enterprise_id, name, is_stockable, track_lots, track_expiry, track_serials, nature FROM stock_items WHERE id::text = $1', [String(stockItemId)]);
       if (!item || String(item.enterprise_id) !== String(count.enterprise_id)) throw fail(400, 'ITEM_NOT_FOUND', 'Article introuvable');
       if (!item.is_stockable) throw fail(400, 'ITEM_NOT_STOCKABLE', `${item.name} : article non stocké`);
+      // Nature autorisée à l'utilisateur et, pour un inventaire limité à une nature, celle de l'inventaire (migration 63)
+      await stockNature.assertAllowed([item.nature]);
+      if (count.nature && item.nature !== count.nature) throw fail(400, 'ITEM_NATURE_MISMATCH', `${item.name} : article hors du périmètre de cet inventaire`);
       if (item.track_serials) throw fail(400, 'SERIAL_ITEM', `${item.name} : enregistrez les équipements trouvés avec leur n° de série (« Enregistrer le parc existant »)`);
       const qty = num(countedQuantity);
       if (!(qty > 0)) throw fail(400, 'INVALID_QUANTITY', 'Quantité invalide');
@@ -284,9 +319,10 @@ class StockCountModel {
     const note = String(comment || '').trim();
     if (!note) throw fail(400, 'COMMENT_REQUIRED', 'Expliquez l\'ajustement');
     return db.withTransaction(async (tx) => {
-      const item = await tx.one('SELECT id, enterprise_id, name, is_stockable, track_lots, track_serials FROM stock_items WHERE id::text = $1', [String(stockItemId)]);
+      const item = await tx.one('SELECT id, enterprise_id, name, is_stockable, track_lots, track_serials, nature FROM stock_items WHERE id::text = $1', [String(stockItemId)]);
       if (!item || String(item.enterprise_id) !== String(warehouse.enterprise_id)) throw fail(400, 'ITEM_NOT_FOUND', 'Article introuvable');
       if (!item.is_stockable) throw fail(400, 'ITEM_NOT_STOCKABLE', `${item.name} : article non stocké`);
+      await stockNature.assertAllowed([item.nature]); // migration 63
       let qty = num(quantity);
       let unit = null;
       if (item.track_serials) {
@@ -335,6 +371,9 @@ class StockCountModel {
     const params = [];
     let where = `WHERE 1=1${tenant.filter('a.enterprise_id', params)}`;
     if (warehouseId) { params.push(warehouseId); where += ` AND a.warehouse_id = $${params.length}`; }
+    where += await stockNature.existsLine('SELECT 1 FROM stock_items ni WHERE ni.id = a.stock_item_id', 'ni.nature', params); // migration 63
+    // Projets des mouvements de l'ajustement (migration 65)
+    where += await stockNature.existsLine("SELECT 1 FROM stock_movements am JOIN stock_items ni ON ni.id = am.stock_item_id WHERE am.source_type = 'ADJUSTMENT' AND am.source_id = a.id::text", 'ni.nature', params, 'am.project_id');
     const total = (await db.one(`SELECT COUNT(*)::int AS n FROM stock_adjustments a ${where}`, params)).n;
     params.push(Math.min(parseInt(limit) || 50, 200), parseInt(offset) || 0);
     const rows = await db.select(

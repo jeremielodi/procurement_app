@@ -9,6 +9,8 @@
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const warehouseModel = require('./WarehouseModel');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
 
 const EPS = 1e-9;
 const OPEN = ['TO_SERVE', 'PARTIALLY_SERVED'];
@@ -172,6 +174,11 @@ class StockRequestModel {
     const statuses = status ? String(status).split(',').filter(s => STATUSES.includes(s)) : [];
     if (statuses.length) { params.push(statuses); where += ` AND r.status = ANY($${params.length}::text[])`; }
     if (warehouseId) { params.push(String(warehouseId)); where += ` AND r.warehouse_id::text = $${params.length}`; }
+    // Magasin (à servir, toutes) : demandes ayant au moins un article d'une nature autorisée (migration 63)
+    if (scope === 'toServe' || scope === 'all') {
+      where += await stockNature.existsLine('SELECT 1 FROM stock_request_lines nl JOIN stock_items ni ON ni.id = nl.stock_item_id WHERE nl.request_id = r.id', 'ni.nature', params);
+      where += await stockProject.filter('r.project_id', params); // projet de la demande (migration 65)
+    }
     if (search) {
       params.push(`%${String(search).trim()}%`);
       const p = `$${params.length}`;
@@ -198,7 +205,7 @@ class StockRequestModel {
     request.lines = await db.select(
       `SELECT l.id, l.stock_item_id, l.requested_quantity::float8 AS requested_quantity, l.validated_quantity::float8 AS validated_quantity,
               ${SERVED_SQL('l')}::float8 AS served_quantity, l.comment,
-              it.code AS item_code, it.name AS item_name, it.unit, it.track_serials, it.track_lots,
+              it.code AS item_code, it.name AS item_name, it.unit, it.track_serials, it.track_lots, it.nature AS item_nature,
               COALESCE((SELECT SUM(b.quantity) FROM stock_balances b LEFT JOIN stock_lots lt ON lt.id = b.lot_id
                         WHERE b.stock_item_id = l.stock_item_id AND b.warehouse_id = $2
                           AND (lt.expiry_date IS NULL OR lt.expiry_date >= CURRENT_DATE)), 0)::float8 AS available
@@ -257,6 +264,7 @@ class StockRequestModel {
       }
       const given = new Map((Array.isArray(lines) ? lines : []).map(l => [String(l.lineId), l.validatedQuantity]));
       const current = await tx.select('SELECT l.id, l.requested_quantity::float8 AS requested, it.track_serials FROM stock_request_lines l JOIN stock_items it ON it.id = l.stock_item_id WHERE l.request_id = $1', [r.id]);
+      await stockProject.assertSql(tx, 'SELECT project_id FROM stock_requests WHERE id = $1', [r.id]); // migration 65
       let any = false;
       for (const [line, l] of current.entries()) {
         const q = given.has(String(l.id)) ? num(given.get(String(l.id))) : l.requested;
@@ -321,6 +329,8 @@ class StockRequestModel {
       if (!r) throw fail(404, 'NOT_FOUND', 'Demande introuvable');
       if (!OPEN.includes(r.status)) throw fail(409, 'NOT_OPEN', 'La demande n\'est pas à servir');
       if (!(await warehouseModel.canOperate(userId, r.warehouse_id))) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès à ce dépôt');
+      // Solder la demande touche tous ses articles : toutes leurs natures doivent être autorisées (migration 63)
+      await stockNature.assertSql(tx, 'SELECT DISTINCT it.nature FROM stock_request_lines l JOIN stock_items it ON it.id = l.stock_item_id WHERE l.request_id = $1', [r.id]);
       await tx.exec(
         `UPDATE stock_requests SET status = 'CLOSED', closed_by = $2, closed_at = CURRENT_TIMESTAMP, close_reason = $3,
                 updated_at = CURRENT_TIMESTAMP WHERE id = $1`,

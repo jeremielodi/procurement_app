@@ -21,6 +21,8 @@ const warehouseModel = require('../models/WarehouseModel');
 const { cellText, parseNumber, readRows, isBlankRow, dropLeadingBlankRows, mapHeader, normalize } = require('../utils/tabularImport');
 const { parseDate } = require('./StockItemImportService');
 const { SEGMENT_RE } = require('../utils/assetTags');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
 
 const MAX_ROWS = 3000;
 const EPS = 1e-9;
@@ -74,7 +76,7 @@ async function loadContext(userId, codes) {
   const params = [codes];
   const items = await db.select(
     `SELECT si.id, si.code, si.name, si.unit, si.is_active, si.is_stockable, si.track_lots, si.track_serials
-     FROM stock_items si WHERE UPPER(si.code) = ANY($1::text[])${tenant.filter('si.enterprise_id', params)}`,
+     FROM stock_items si WHERE UPPER(si.code) = ANY($1::text[])${tenant.filter('si.enterprise_id', params)}${await stockNature.filter('si.nature', params)}`, // autre nature = inconnu (migration 63)
     params
   );
   const ids = items.map(i => i.id);
@@ -85,7 +87,7 @@ async function loadContext(userId, codes) {
     warehouseModel.accessibleFor(userId),
     warehouseModel.list({ activeOnly: true }),
     db.select('SELECT id, format_key FROM currency'),
-    db.select(`SELECT p.id, p.code, p.name FROM projects p WHERE 1=1${tenant.filter('p.enterprise_id', pParams)}`, pParams),
+    db.select(`SELECT p.id, p.code, p.name FROM projects p WHERE 1=1${tenant.filter('p.enterprise_id', pParams)}${await stockProject.filter('p.id', pParams)}`, pParams),
   ]);
   const ent = (enterpriseId && await db.one('SELECT id, currency_id FROM enterprise WHERE id = $1', [enterpriseId])) || { id: enterpriseId, currency_id: null };
   return {
@@ -299,7 +301,8 @@ async function apply(file, { userId }) {
       });
       quantity += o.quantity;
     }
-    const group = await tx.one(`SELECT current_setting('app.stock_movement_group', true) AS id`);
+    // Groupes de la transaction (migration 64 : un par source) — l'import n'en crée qu'un (source IMPORT, sans document)
+    const group = await tx.one(`SELECT NULLIF(split_part(COALESCE(current_setting('app.stock_movement_groups', true), ''), ',', 1), '') AS id`);
     const number = group?.id ? (await tx.one('SELECT group_number FROM stock_movement_groups WHERE id::text = $1', [group.id]))?.group_number : null;
     return { units: units.length, openings: openings.length, openingQuantity: quantity, damaged: units.filter(u => u.condition === 'DAMAGED').length, groupNumber: number || null };
   });
@@ -315,7 +318,7 @@ async function template({ userId, lang, format = 'xlsx' }) {
     db.select(`SELECT si.code, si.name, si.track_serials FROM stock_items si
                WHERE si.is_active AND si.is_stockable AND NOT si.track_lots${tenant.filter('si.enterprise_id', iParams)} ORDER BY si.code`, iParams),
     warehouseModel.accessibleFor(userId),
-    db.select(`SELECT p.code, p.name FROM projects p WHERE p.is_active${tenant.filter('p.enterprise_id', pParams)} ORDER BY p.code`, pParams),
+    db.select(`SELECT p.code, p.name FROM projects p WHERE p.is_active${tenant.filter('p.enterprise_id', pParams)}${await stockProject.filter('p.id', pParams)} ORDER BY p.code`, pParams),
   ]);
   const headers = FIELDS.map(f => T(`stockUnitImport.headers.${f.key}`));
   const serialItem = items.find(i => i.track_serials)?.code || 'EX-LAPTOP';

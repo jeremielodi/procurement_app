@@ -9,6 +9,8 @@ const tenant = require('../utils/tenant');
 const stockModel = require('./StockModel');
 const warehouseModel = require('./WarehouseModel');
 const { SEGMENT_RE } = require('../utils/assetTags');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
 
 const EPS = 1e-9;
 const CONDITIONS = ['GOOD', 'DAMAGED', 'LOST'];
@@ -35,7 +37,7 @@ class StockEquipmentModel {
    * Articles encore détenus (bons de sortie non annulés, reste > 0) par un employé (sorties « vers un employé »)
    * ou par un département (sorties « vers un département ») : holdings(userId) / holdings(null, { departmentId })
    */
-  async holdings(userId, { departmentId } = {}) {
+  async holdings(userId, { departmentId, restrictNature = false } = {}) {
     const params = [departmentId || userId];
     const owner = departmentId
       ? `si.destination_type = 'DEPARTMENT' AND si.department_id = $1`
@@ -52,7 +54,7 @@ class StockEquipmentModel {
        JOIN warehouses w ON w.id = si.warehouse_id
        LEFT JOIN stock_lots lt ON lt.id = il.lot_id
        LEFT JOIN stock_units un ON un.id = il.unit_id
-       WHERE ${owner} AND si.status = 'ISSUED' AND il.quantity - il.returned_quantity > 0${tenant.filter('si.enterprise_id', params)}
+       WHERE ${owner} AND si.status = 'ISSUED' AND il.quantity - il.returned_quantity > 0${tenant.filter('si.enterprise_id', params)}${restrictNature ? (await stockNature.filter('it.nature', params)) + (await stockProject.filter('il.project_id', params)) : ''}
        ORDER BY it.track_serials DESC, si.issued_at, it.name, un.serial_number NULLS LAST, il.id`,
       params
     );
@@ -89,7 +91,7 @@ class StockEquipmentModel {
         seen.add(String(raw.issueLineId));
         const line = await tx.one(
           `SELECT il.id, il.stock_item_id, il.lot_id, il.unit_id, il.project_id, il.quantity, il.returned_quantity,
-                  si.id AS issue_id, si.status, si.recipient_id, si.department_id, si.destination_type, si.enterprise_id, it.name AS item_name
+                  si.id AS issue_id, si.status, si.recipient_id, si.department_id, si.destination_type, si.enterprise_id, it.name AS item_name, it.nature
            FROM stock_issue_lines il
            JOIN stock_issues si ON si.id = il.issue_id
            JOIN stock_items it ON it.id = il.stock_item_id
@@ -98,6 +100,8 @@ class StockEquipmentModel {
         );
         if (!line || String(line.enterprise_id) !== String(warehouse.enterprise_id)) throw fail(400, 'LINE_NOT_FOUND', 'Ligne de sortie introuvable', { line: index });
         if (line.status !== 'ISSUED') throw fail(409, 'ISSUE_CANCELLED', `${line.item_name} : bon de sortie annulé`, { line: index });
+        try { await stockNature.assertAllowed([line.nature]); } catch (e) { e.line = index; throw e; } // migration 63
+        try { await stockProject.assertAllowed([line.project_id]); } catch (e) { e.line = index; throw e; } // migration 65
         const held = departmentId
           ? line.destination_type === 'DEPARTMENT' && String(line.department_id) === String(departmentId)
           : line.destination_type === 'USER' && String(line.recipient_id) === String(returnedBy);
@@ -150,6 +154,7 @@ class StockEquipmentModel {
     if (holderId) { params.push(holderId); where += ` AND r.returned_by = $${params.length}`; }
     if (departmentId) { params.push(departmentId); where += ` AND r.department_id = $${params.length}`; }
     if (warehouseId) { params.push(warehouseId); where += ` AND r.warehouse_id = $${params.length}`; }
+    where += await stockNature.existsLine('SELECT 1 FROM stock_return_lines nl JOIN stock_issue_lines nil ON nil.id = nl.issue_line_id JOIN stock_items ni ON ni.id = nil.stock_item_id WHERE nl.return_id = r.id', 'ni.nature', params, 'nil.project_id');
     if (search) {
       params.push(`%${String(search).trim()}%`);
       where += ` AND (r.return_number ILIKE $${params.length} OR u.first_name ILIKE $${params.length} OR u.last_name ILIKE $${params.length}
@@ -185,7 +190,7 @@ class StockEquipmentModel {
     if (!ret) return null;
     ret.lines = await db.select(
       `SELECT rl.id, rl.quantity::float8 AS quantity, rl.condition, m.movement_number,
-              si.id AS issue_id, si.issue_number, it.code AS item_code, it.name AS item_name, it.unit,
+              si.id AS issue_id, si.issue_number, it.code AS item_code, it.name AS item_name, it.unit, it.nature AS item_nature, il.project_id,
               lt.lot_number, un.serial_number, un.asset_tag
        FROM stock_return_lines rl
        JOIN stock_issue_lines il ON il.id = rl.issue_line_id
@@ -214,6 +219,7 @@ class StockEquipmentModel {
     if (departmentId) { params.push(departmentId); where += ` AND un.department_id = $${params.length}`; }
     if (projectId === 'none') where += ' AND un.project_id IS NULL';
     else if (projectId) { params.push(projectId); where += ` AND un.project_id = $${params.length}`; }
+    where += await stockProject.filter('un.project_id', params); // projets autorisés (migration 65)
     if (search) {
       params.push(`%${String(search).trim()}%`);
       where += ` AND (un.serial_number ILIKE $${params.length} OR un.asset_tag ILIKE $${params.length} OR it.name ILIKE $${params.length}
@@ -313,6 +319,7 @@ class StockEquipmentModel {
   async updateUnit(id, { assetTag, notes, condition, retire, reason, acquisitionDate, tagProjectCode }, { userId }) {
     return db.withTransaction(async (tx) => {
       const unit = await tx.one('SELECT * FROM stock_units WHERE id = $1 FOR UPDATE', [id]);
+      if (unit) await stockProject.assertAllowed([unit.project_id]); // migration 65
       if (!unit || unit.status === 'VOID') throw fail(404, 'NOT_FOUND', 'Équipement introuvable');
       if ((condition !== undefined || retire) && unit.status !== 'IN_STOCK') {
         throw fail(409, 'NOT_IN_STOCK', 'Équipement hors stock : faites d\'abord le retour');

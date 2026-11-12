@@ -15,7 +15,7 @@ import { t, getLocale } from '../../i18n';
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const REASONS = ['DAMAGE', 'LOSS', 'THEFT', 'EXPIRED', 'FOUND', 'CORRECTION', 'OTHER'];
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
-const ERROR_CODES = ['PROJECT_NOT_FOUND', 'STOCK_INSUFFICIENT', 'COMMENT_REQUIRED', 'INVALID_REASON', 'LOT_REQUIRED', 'UNIT_REQUIRED', 'UNIT_UNAVAILABLE', 'INVALID_QUANTITY', 'WAREHOUSE_FORBIDDEN', 'ITEM_NOT_STOCKABLE'];
+const ERROR_CODES = ['PROJECT_NOT_FOUND', 'STOCK_INSUFFICIENT', 'COMMENT_REQUIRED', 'INVALID_REASON', 'LOT_REQUIRED', 'UNIT_REQUIRED', 'UNIT_UNAVAILABLE', 'INVALID_QUANTITY', 'WAREHOUSE_FORBIDDEN', 'ITEM_NOT_STOCKABLE', 'NATURE_FORBIDDEN'];
 const empty = { warehouseId: '', item: null, text: '', lotId: '', unitId: '', direction: 'OUT', quantity: '', reason: 'DAMAGE', comment: '', projectId: '' };
 
 export default function StockAdjustments() {
@@ -134,7 +134,7 @@ export default function StockAdjustments() {
             <option value="">{t('grn.chooseWarehouse')}</option>
             {warehouses.map(w => <option key={w.id} value={w.id}>{w.location_name} — {w.name} ({w.code})</option>)}
           </SearchSelect>
-          <CatalogAutocomplete linked={form.item} onLink={(item) => setForm(f => ({ ...f, item, text: item ? item.name : '', lotId: '', unitId: '' }))}
+          <CatalogAutocomplete stockScope linked={form.item} onLink={(item) => setForm(f => ({ ...f, item, text: item ? item.name : '', lotId: '', unitId: '' }))}
             onTextChange={(text) => setForm(f => ({ ...f, text }))} placeholder={t('stock.issue.itemSearch')} className={inputCls} minChars={1}
             inputProps={{ value: form.text, readOnly: !!form.item }} />
           {form.item?.track_serials ? (

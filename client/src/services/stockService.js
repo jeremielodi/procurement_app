@@ -18,7 +18,7 @@ export const warehouseService = {
 export const stockItemService = {
   list: (params = {}) => api.get('/stock-items', { params }).then(data),
   // Autocomplétion (réquisition, réception) — ouverte à tous les utilisateurs de l'entreprise
-  search: (q, limit = 15) => api.get('/stock-items/search', { params: { q, limit } }).then(data),
+  search: (q, limit = 15, extra = {}) => api.get('/stock-items/search', { params: { q, limit, ...extra } }).then(data),
   get: (id) => api.get(`/stock-items/${id}`).then(data),
   create: (payload) => api.post('/stock-items', payload).then(data),
   update: (id, payload) => api.put(`/stock-items/${id}`, payload).then(data),

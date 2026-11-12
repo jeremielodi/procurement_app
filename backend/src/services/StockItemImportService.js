@@ -20,6 +20,8 @@ const stockModel = require('../models/StockModel');
 const warehouseModel = require('../models/WarehouseModel');
 const { cellText, parseNumber, readRows, isBlankRow, dropLeadingBlankRows, mapHeader, normalize } = require('../utils/tabularImport');
 const { activeUnits, unitMatcher } = require('../utils/units');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
 
 const MAX_ROWS = 2000;
 
@@ -30,6 +32,8 @@ const FIELDS = [
   { key: 'trackExpiry', bool: true }, { key: 'trackSerials', bool: true }, { key: 'minQuantity' }, { key: 'reorderQuantity' },
   // Code catégorie du n° d'inventaire des équipements (migration 57 : IMA-PROJET-LAP-2026-001)
   { key: 'assetCategory' },
+  // Nature (migration 63) : Équipement / Consommable ; vide = équipement si suivi par n° de série, sinon consommable
+  { key: 'nature' },
   { key: 'warehouse', opening: true }, { key: 'openingQuantity', opening: true }, { key: 'unitCost', opening: true },
   { key: 'currency', opening: true }, { key: 'lotNumber', opening: true }, { key: 'expiryDate', opening: true },
   // Projet qui a financé le stock initial (facultatif, migration 28)
@@ -49,6 +53,7 @@ const ALIASES = {
   trackSerials: ['suivi par n° de serie', 'n° de serie', 'numeros de serie', 'track serials', 'serial tracking', 'serial numbers'],
   minQuantity: ['stock minimum', 'minimum', 'stock min', 'min', 'minimum stock', 'min quantity'],
   assetCategory: ['categorie tag', 'code categorie tag', "categorie d'actif", 'code tag', 'asset category', 'tag category'],
+  nature: ['nature', "nature de l'article", "type d'article", 'equipement ou consommable', 'item nature', 'item type'],
   reorderQuantity: ['quantite de reapprovisionnement', 'qte reappro', 'reapprovisionnement', 'reorder quantity', 'reorder qty'],
   warehouse: ['code depot', 'depot', 'warehouse', 'warehouse code'],
   openingQuantity: ['quantite initiale', 'stock initial', 'quantite en stock', 'qte initiale', 'opening quantity', 'initial quantity', 'opening stock'],
@@ -72,6 +77,12 @@ const TRUE = ['oui', 'o', 'yes', 'y', 'x', '1', 'vrai', 'true'];
 const FALSE = ['non', 'n', 'no', '0', 'faux', 'false', '-'];
 const CODE_RE = /^[A-Z0-9_.-]{1,50}$/;
 const ASSET_CATEGORY_RE = /^[A-Z0-9]{2,5}$/;
+// Valeurs acceptées pour la colonne Nature (normalisées : minuscules, sans accents)
+const NATURE_VALUES = {
+  EQUIPMENT: ['equipement', 'equipements', 'equipment', 'e', 'eq', 'bien durable', 'immobilisation'],
+  CONSUMABLE: ['consommable', 'consommables', 'consumable', 'consumables', 'c'],
+};
+const natureOf = (v) => Object.keys(NATURE_VALUES).find(k => NATURE_VALUES[k].includes(v) || k.toLowerCase() === v) || null;
 
 function fail(line, code, params = {}) { return { line, code, params }; }
 
@@ -100,13 +111,13 @@ async function loadContext(userId, codes) {
   const items = await db.select(
     `SELECT si.id, si.code, si.name, si.unit, si.unit_id, si.description, si.category_id, si.is_stockable, si.track_lots,
             si.track_expiry, si.track_serials, si.min_quantity::float8 AS min_quantity,
-            si.reorder_quantity::float8 AS reorder_quantity, si.asset_category, si.enterprise_id
+            si.reorder_quantity::float8 AS reorder_quantity, si.asset_category, si.nature, si.enterprise_id
      FROM stock_items si WHERE 1=1${scope} AND UPPER(si.code) = ANY($${params.length}::text[])`,
     params
   );
   const ids = items.map(i => i.id);
   const projectParams = [];
-  const projectScope = tenant.filter('p.enterprise_id', projectParams);
+  const projectScope = tenant.filter('p.enterprise_id', projectParams) + await stockProject.filter('p.id', projectParams); // projets autorisés (migration 65)
   const [moved, lots, categories, accessible, allWarehouses, currencies, projects, units] = await Promise.all([
     ids.length ? db.select('SELECT DISTINCT stock_item_id, warehouse_id FROM stock_movements WHERE stock_item_id = ANY($1::uuid[])', [ids]) : [],
     ids.length ? db.select(`SELECT stock_item_id, UPPER(lot_number) AS lot, to_char(expiry_date, 'YYYY-MM-DD') AS expiry
@@ -177,6 +188,7 @@ async function analyze(file, { userId }) {
   const text = (r, key) => cellText(raw(r, key)).trim();
   const codes = [...new Set(dataRows.map(({ r }) => text(r, 'code').toUpperCase()).filter(Boolean))];
   const ctx = await loadContext(userId, codes);
+  const allowedNatures = await stockNature.allowed('manage'); // natures que l'utilisateur gère (migration 63)
 
   const items = [];          // une entrée par code
   const itemByCode = new Map();
@@ -229,6 +241,12 @@ async function analyze(file, { userId }) {
       if (!ASSET_CATEGORY_RE.test(assetCategory)) problems.push(fail(line, 'ASSET_CATEGORY_INVALID', { value: assetCategory }));
       else given.assetCategory = assetCategory;
     }
+    const natureRaw = text(r, 'nature');
+    if (natureRaw) {
+      const nature = natureOf(normalize(natureRaw));
+      if (!nature) problems.push(fail(line, 'NATURE_INVALID', { value: natureRaw }));
+      else given.nature = nature;
+    }
 
     // ---- Fiche article : première ligne du code, ou cohérence avec elle
     let entry = itemByCode.get(code);
@@ -257,6 +275,16 @@ async function analyze(file, { userId }) {
       if (expiry && !lots) problems.push(fail(line, 'EXPIRY_NEEDS_LOTS'));
       if (lots && !stockable) problems.push(fail(line, 'LOTS_NEED_STOCKABLE'));
       if (serials && (!stockable || lots)) problems.push(fail(line, 'SERIALS_INVALID'));
+      // Nature : suivi par n° de série = équipement ; sans valeur : celle de l'article, sinon équipement si n° de série,
+      // sinon la seule nature autorisée à l'utilisateur, sinon consommable. L'utilisateur doit avoir accès à l'ancienne et
+      // à la nouvelle nature (migration 63)
+      let nature = given.nature ?? existing?.nature
+        ?? (serials ? 'EQUIPMENT' : (allowedNatures.length === 1 ? allowedNatures[0] : 'CONSUMABLE'));
+      if (serials && nature !== 'EQUIPMENT') {
+        if (given.nature) problems.push(fail(line, 'NATURE_SERIALS_EQUIPMENT'));
+        else nature = 'EQUIPMENT';
+      }
+      if (![existing?.nature, nature].filter(Boolean).every(n => allowedNatures.includes(n))) problems.push(fail(line, 'NATURE_FORBIDDEN', { value: code }));
       if (existing && ctx.movedItems.has(existing.id)
         && ((given.stockable !== undefined && given.stockable !== existing.is_stockable)
           || (given.trackLots !== undefined && given.trackLots !== existing.track_lots)
@@ -275,6 +303,7 @@ async function analyze(file, { userId }) {
         name: given.name, unit_id: given.unit, description: given.description, category_id: given.category?.id,
         is_stockable: given.stockable, track_lots: given.trackLots, track_expiry: given.trackExpiry, track_serials: given.trackSerials,
         min_quantity: given.minQuantity, reorder_quantity: given.reorderQuantity, asset_category: given.assetCategory,
+        nature,
       };
       const fields = {};
       for (const [k, v] of Object.entries(target)) {
@@ -287,7 +316,7 @@ async function analyze(file, { userId }) {
         line, code, action: !existing ? 'CREATE' : Object.keys(fields).length ? 'UPDATE' : 'UNCHANGED',
         id: existing?.id || null, fields, changed: Object.keys(fields),
         name: entry.name, unit: entry.unit, category: (given.category || null) && { code: given.category.code, name: given.category.name },
-        stockable, trackLots: lots, trackExpiry: expiry, trackSerials: serials,
+        stockable, trackLots: lots, trackExpiry: expiry, trackSerials: serials, nature,
       });
     }
 
@@ -434,7 +463,7 @@ async function apply(file, { userId }) {
 async function template({ userId, lang, format = 'xlsx' }) {
   const T = i18n.translator(lang);
   const projectParams = [];
-  const projectScope = tenant.filter('p.enterprise_id', projectParams);
+  const projectScope = tenant.filter('p.enterprise_id', projectParams) + await stockProject.filter('p.id', projectParams); // projets autorisés (migration 65)
   const [categories, warehouses, projects, units] = await Promise.all([
     db.select('SELECT code, name, translations, is_stockable FROM market_categories WHERE is_active ORDER BY name'),
     warehouseModel.accessibleFor(userId),
@@ -447,12 +476,13 @@ async function template({ userId, lang, format = 'xlsx' }) {
   const stockCat = categories.find(c => c.is_stockable) || categories[0];
   const wh = warehouses[0]?.code || 'DEP-01';
   const yes = T('stockImport.yes'), no = T('stockImport.no');
+  const equipment = T('stockImport.natures.EQUIPMENT'), consumable = T('stockImport.natures.CONSUMABLE');
   const headers = FIELDS.map(f => T(`stockImport.headers.${f.key}`));
   // Exemples : consommable avec stock initial, médicament suivi par lot / péremption, équipement (sans stock initial)
   const examples = [
-    ['EX-PAPER-A4', T('stockImport.example.paper'), T('stockImport.example.paperUnit'), stockCat?.code || '', '', yes, no, no, no, 20, 50, '', wh, 120, 4.5, '', '', '', prj],
-    ['EX-PARACETAMOL', T('stockImport.example.drug'), T('stockImport.example.drugUnit'), stockCat?.code || '', '', yes, yes, yes, no, 10, 40, '', wh, 30, 2.1, '', 'L2026-01', '2027-06-30', ''],
-    ['EX-LAPTOP', T('stockImport.example.laptop'), T('stockImport.example.laptopUnit'), stockCat?.code || '', T('stockImport.example.laptopDesc'), yes, no, no, yes, '', '', 'LAP', '', '', '', '', '', '', ''],
+    ['EX-PAPER-A4', T('stockImport.example.paper'), T('stockImport.example.paperUnit'), stockCat?.code || '', '', yes, no, no, no, 20, 50, '', consumable, wh, 120, 4.5, '', '', '', prj],
+    ['EX-PARACETAMOL', T('stockImport.example.drug'), T('stockImport.example.drugUnit'), stockCat?.code || '', '', yes, yes, yes, no, 10, 40, '', consumable, wh, 30, 2.1, '', 'L2026-01', '2027-06-30', ''],
+    ['EX-LAPTOP', T('stockImport.example.laptop'), T('stockImport.example.laptopUnit'), stockCat?.code || '', T('stockImport.example.laptopDesc'), yes, no, no, yes, '', '', 'LAP', equipment, '', '', '', '', '', '', ''],
   ];
 
   if (format === 'csv') {
@@ -482,21 +512,22 @@ async function template({ userId, lang, format = 'xlsx' }) {
     { header: T('stockImport.ref.warehouseCode'), width: 18 }, { header: T('stockImport.ref.warehouseName'), width: 36 }, { width: 4 },
     { header: T('stockImport.ref.yesNo'), width: 10 }, { width: 4 },
     { header: T('stockImport.ref.projectCode'), width: 18 }, { header: T('stockImport.ref.projectName'), width: 40 }, { width: 4 },
-    { header: T('stockImport.ref.unitAbbr'), width: 14 }, { header: T('stockImport.ref.unitName'), width: 30 },
+    { header: T('stockImport.ref.unitAbbr'), width: 14 }, { header: T('stockImport.ref.unitName'), width: 30 }, { width: 4 },
+    { header: T('stockImport.ref.nature'), width: 18 },
   ];
   ref.getRow(1).font = { bold: true };
   const rowsCount = Math.max(categories.length, warehouses.length, projects.length, units.length, 2);
   for (let i = 0; i < rowsCount; i++) {
     const c = categories[i], w = warehouses[i], p = projects[i], u = units[i];
     ref.addRow([c?.code || null, c ? catName(c) : null, null, w?.code || null, w ? `${w.name} (${w.location_name})` : null, null, [yes, no][i] ?? null,
-      null, p?.code || null, p?.name || null, null, u?.abbr || null, u ? unitName(u) : null]);
+      null, p?.code || null, p?.name || null, null, u?.abbr || null, u ? unitName(u) : null, null, [equipment, consumable][i] ?? null]);
   }
   const sheetRef = `'${T('stockImport.sheets.references').replace(/'/g, "''")}'`;
   const listOf = (column, count) => (count ? [`${sheetRef}!$${column}$2:$${column}$${count + 1}`] : null);
   const validations = {
     category: listOf('A', categories.length), warehouse: listOf('D', warehouses.length),
     stockable: listOf('G', 2), trackLots: listOf('G', 2), trackExpiry: listOf('G', 2), trackSerials: listOf('G', 2),
-    project: listOf('I', projects.length), unit: listOf('L', units.length),
+    project: listOf('I', projects.length), unit: listOf('L', units.length), nature: listOf('O', 2),
   };
   FIELDS.forEach((f, i) => {
     const formulae = validations[f.key];

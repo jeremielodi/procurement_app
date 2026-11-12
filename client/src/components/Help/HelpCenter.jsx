@@ -43,7 +43,7 @@ const SUPPLIER_LINK = (to) => to.startsWith('/supplier/') || to === '/notificati
 // Écran courant → rubrique ouverte par défaut (préfixe le plus long d'abord)
 const ROUTE_SECTIONS = [
   ['/stock/issues', 'issues'], ['/my-items', 'issues'],
-  ['/stock/equipment', 'equipment'], ['/stock/returns', 'equipment'],
+  ['/stock/equipment', 'equipment'], ['/stock/consumables', 'stock'], ['/stock/returns', 'equipment'],
   ['/stock', 'stock'],
   ['/requisitions', 'requisitions'], ['/tasks', 'tasks'],
   ['/purchase-orders', 'purchaseOrders'], ['/goods-receipts', 'receiving'],

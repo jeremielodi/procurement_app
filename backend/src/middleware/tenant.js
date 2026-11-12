@@ -68,7 +68,8 @@ async function tenantContext(req, res, next) {
       return res.status(403).json({ success: false, message: `L'entreprise ${user.enterprise_name} est suspendue` });
     }
     req.enterpriseId = user.enterprise_id;
-    return tenant.run({ enterpriseId: user.enterprise_id }, next);
+    // userId / isAdmin : permissions par nature d'article (utils/stockNature.js, calculées à la demande)
+    return tenant.run({ enterpriseId: user.enterprise_id, userId: req.user.id, isAdmin: ids.includes('prof_admin') }, next);
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

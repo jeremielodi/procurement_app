@@ -10,6 +10,7 @@ const db = require('../config/database');
 const i18n = require('../i18n');
 const { audit, AUDIT } = require('../utils/auditLog');
 const stockRequestNotify = require('../services/StockRequestNotifications');
+const stockNature = require('../utils/stockNature');
 
 function sendError(res, error, fallback) {
   if (error.status) {
@@ -78,6 +79,21 @@ async function canView(req, issue) {
   return stockIssueModel.canAcknowledge(issue, req.user.id);
 }
 
+/**
+ * Lignes visibles (migration 63) : bénéficiaire / personne qui confirme la réception = tout le bon ; gestion du stock =
+ * lignes des natures autorisées (hidden_line_count = lignes masquées). Retourne false si aucune ligne n'est visible.
+ */
+async function restrictLines(req, issue) {
+  if (String(issue.recipient_id) === String(req.user.id) || await stockIssueModel.canAcknowledge(issue, req.user.id)) {
+    issue.hidden_line_count = 0;
+    return true;
+  }
+  const { lines, hidden } = await stockNature.splitLines(issue.lines);
+  issue.lines = lines;
+  issue.hidden_line_count = hidden;
+  return lines.length > 0 || hidden === 0;
+}
+
 module.exports = {
   notifyCreated,
 
@@ -109,8 +125,10 @@ module.exports = {
   async get(req, res) {
     try {
       const issue = await stockIssueModel.getById(req.params.id);
-      if (!issue || !(await canView(req, issue))) return res.status(404).json({ success: false, message: 'Bon de sortie introuvable' });
+      if (!issue || !(await canView(req, issue)) || !(await restrictLines(req, issue))) return res.status(404).json({ success: false, message: 'Bon de sortie introuvable' });
       issue.can_acknowledge = issue.status === 'ISSUED' && !issue.acknowledged_at && await stockIssueModel.canAcknowledge(issue, req.user.id);
+      // Annuler le bon : gérer toutes ses natures (MANAGE_*, migration 63) et aucune ligne masquée
+      issue.can_manage = !issue.hidden_line_count && await stockNature.managesLines(issue.lines);
       res.json({ success: true, data: issue });
     } catch (error) { return sendError(res, error, 'Erreur lors du chargement du bon de sortie'); }
   },
@@ -178,8 +196,8 @@ module.exports = {
   async pdf(req, res) {
     try {
       const issue = await stockIssueModel.getById(req.params.id);
-      if (!issue || !(await canView(req, issue))) return res.status(404).json({ success: false, message: 'Bon de sortie introuvable' });
-      const result = await stockIssuePdfService.generate(req.params.id, { lang: i18n.fromRequest(req) });
+      if (!issue || !(await canView(req, issue)) || !(await restrictLines(req, issue))) return res.status(404).json({ success: false, message: 'Bon de sortie introuvable' });
+      const result = await stockIssuePdfService.generate(req.params.id, { lang: i18n.fromRequest(req), lines: issue.lines });
       res.set('Content-Type', 'application/pdf');
       res.set('Content-Disposition', `inline; filename="${String(issue.issue_number).replace(/[^\w.-]+/g, '_')}.pdf"`);
       res.end(result.pdf);

@@ -11,6 +11,7 @@ import { stockRequestService } from '../../services/stockRequestService';
 import { RequestStatusBadge } from './StockRequestList';
 import { requestError } from './StockRequestForm';
 import { t, getLocale, useTranslation } from '../../i18n';
+import { HiddenLinesNotice } from './StockNature';
 
 const fmtQty = (n) => (n === null || n === undefined ? '—' : new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0));
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString(getLocale(), { dateStyle: 'short', timeStyle: 'short' }) : '—');
@@ -103,6 +104,7 @@ export default function StockRequestDetail() {
           {t('stockRequests.validatedBy', { name: r.validated_by_name, date: fmtDateTime(r.validated_at) })}{r.validation_comment ? ` — ${r.validation_comment}` : ''}</div>}
       </div>
 
+      <HiddenLinesNotice count={r.hidden_line_count} />
       <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
         <table className="w-full text-sm" data-testid="request-lines">
           <thead className="bg-gray-50 text-left text-xs text-gray-500">

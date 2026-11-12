@@ -7,6 +7,7 @@ import BlobPdfViewer from '../Common/BlobPdfViewer';
 import { stockReturnService } from '../../services/stockService';
 import { usePermissions } from '../../hooks/usePermissions';
 import { t, getLocale } from '../../i18n';
+import { HiddenLinesNotice } from './StockNature';
 
 const inputCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
@@ -101,6 +102,7 @@ export function StockReturnDetail() {
         <p className="mt-2 text-sm"><span className="text-gray-500">{t('stock.return.holderType')} :</span> <b>{ret.department_name ? t('stock.equipment.departmentHolder', { name: ret.department_name }) : ret.returned_by_name}</b> <span className="text-gray-500">{ret.returned_by_email}</span></p>
         {ret.comment && <p className="mt-2 text-sm text-gray-700">{ret.comment}</p>}
       </div>
+      <HiddenLinesNotice count={ret.hidden_line_count} />
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs text-gray-500">

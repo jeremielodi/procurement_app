@@ -93,7 +93,7 @@ export default function GRNStockEntryModal({ grn, item, onClose, onDone }) {
               <span className="font-semibold">{linked.code}</span> — {linked.name}
             </div>
           ) : (
-            <CatalogAutocomplete linked={stockItem} onLink={setStockItem} placeholder={t('grn.linkItem')}
+            <CatalogAutocomplete stockScope linked={stockItem} onLink={setStockItem} placeholder={t('grn.linkItem')}
               className={inputCls} minChars={1} />
           )}
           {notStockable && <p className="mt-1 text-xs text-red-600">{t('grn.stockEntry.notStockable')}</p>}

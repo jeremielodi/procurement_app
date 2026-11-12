@@ -10,6 +10,8 @@ const warehouseModel = require('../models/WarehouseModel');
 const notify = require('../services/StockRequestNotifications');
 const { audit, AUDIT } = require('../utils/auditLog');
 const { block, same } = require('../utils/segregation');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
 
 function sendError(res, error, fallback) {
   if (error.status) {
@@ -44,7 +46,25 @@ async function loadVisible(req) {
   const r = await stockRequestModel.getById(req.params.id);
   if (!r) return null;
   const flags = await rights(req, r);
-  return flags.canView ? Object.assign(r, flags) : null;
+  if (!flags.canView) return null;
+  // Demandeur et validateur : toute la demande ; magasin : articles des natures autorisées (migration 63)
+  r.hidden_line_count = 0;
+  if (!same(r.requester_id, req.user.id) && !(await stockRequestModel.canValidate(r.id, req.user.id))) {
+    // Demande d'un projet où l'utilisateur n'a pas de profil de stock : introuvable (migration 65)
+    if (!stockProject.isAllowed(await stockProject.allowed(), r.project_id)) return null;
+    const { lines, hidden } = await stockNature.splitLines(r.lines);
+    if (!lines.length && hidden) return null;
+    r.lines = lines;
+    r.hidden_line_count = hidden;
+    if (hidden) flags.can_close = false; // le solde porterait aussi sur des articles non autorisés
+  }
+  // Servir : gérer au moins une nature de la demande ; solder : toutes (MANAGE_*, migration 63)
+  if (flags.can_serve) {
+    const manage = await stockNature.allowed('manage');
+    flags.can_serve = r.lines.some(l => manage.includes(l.item_nature));
+    flags.can_close = flags.can_close && !r.hidden_line_count && await stockNature.managesLines(r.lines);
+  }
+  return Object.assign(r, flags);
 }
 
 module.exports = {

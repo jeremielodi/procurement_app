@@ -10,6 +10,7 @@ const userModel = require('../models/UserModel');
 const warehouseModel = require('../models/WarehouseModel');
 const { audit, AUDIT } = require('../utils/auditLog');
 const { block, same } = require('../utils/segregation');
+const stockNature = require('../utils/stockNature');
 
 /** Notification in-app (+ temps réel) dans la langue du destinataire ; n'interrompt jamais la requête */
 async function notify(req, userId, key, vars, link) {
@@ -158,7 +159,12 @@ class GoodsReceiptController {
       const pending = grn.status !== 'CANCELLED' && !!grn.warehouse_id && !grn.store_confirmed_at;
       const onWarehouse = pending && await warehouseModel.canOperate(req.user.id, grn.warehouse_id);
       grn.store_self_confirmation = onWarehouse && same(grn.received_by, req.user.id);
-      grn.can_store_confirm = onWarehouse && !grn.store_self_confirmation;
+      // … et toutes les natures des articles entrés en stock autorisées (migration 63)
+      const naturesOk = onWarehouse && !grn.store_self_confirmation && await stockNature.assertSql(
+        db, "SELECT DISTINCT si.nature FROM stock_movements m JOIN stock_items si ON si.id = m.stock_item_id WHERE m.source_type = 'GRN' AND m.source_id = $1::text",
+        [String(grn.id)]
+      ).then(() => true, () => false);
+      grn.can_store_confirm = onWarehouse && !grn.store_self_confirmation && naturesOk;
       res.json({ success: true, data: grn });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Erreur récupération GRN', error: error.message });

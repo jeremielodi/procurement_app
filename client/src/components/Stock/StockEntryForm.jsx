@@ -20,7 +20,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 const parseNum = (v) => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : NaN; };
 const newLine = () => ({ key: Math.random().toString(36).slice(2), text: '', item: null, quantity: '', unitCost: '', lotNumber: '', expiryDate: '', serialsText: '' });
 const serialList = (text) => String(text || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-export const ENTRY_ERROR_CODES = ['INVALID_ENTRY_TYPE', 'REASON_REQUIRED', 'NO_LINES', 'WAREHOUSE_REQUIRED', 'WAREHOUSE_FORBIDDEN', 'ITEM_NOT_FOUND',
+export const ENTRY_ERROR_CODES = ['NATURE_FORBIDDEN', 'INVALID_ENTRY_TYPE', 'REASON_REQUIRED', 'NO_LINES', 'WAREHOUSE_REQUIRED', 'WAREHOUSE_FORBIDDEN', 'ITEM_NOT_FOUND',
   'ITEM_NOT_STOCKABLE', 'INVALID_QUANTITY', 'INVALID_COST', 'EXPIRY_INVALID', 'LOT_REQUIRED', 'EXPIRY_REQUIRED', 'LOT_EXPIRED', 'LOT_EXPIRY_MISMATCH',
   'SERIAL_INTEGER', 'SERIALS_REQUIRED', 'SERIAL_DUPLICATE', 'SERIAL_EXISTS', 'PROJECT_NOT_FOUND', 'CURRENCY_INVALID',
   'NOT_PENDING', 'SELF_VALIDATION', 'NOT_AUTHOR', 'NOT_CANCELLABLE', 'ENTRY_USED'];
@@ -190,7 +190,7 @@ export default function StockEntryForm() {
                 return (
                   <tr key={l.key} className={submitted && c.errors.length ? 'bg-red-50/60' : ''} data-testid="entry-line">
                     <td className="px-3 py-2 align-top">
-                      <CatalogAutocomplete
+                      <CatalogAutocomplete stockScope
                         linked={l.item}
                         onLink={(item) => updateLine(l.key, { item, text: item ? item.name : '', lotNumber: '', expiryDate: '', serialsText: '' })}
                         onTextChange={(text) => updateLine(l.key, { text })}

@@ -124,9 +124,13 @@ const TEMPLATE = `<!doctype html>
 
 class StockEntryPdfService {
   /** @returns {{ pdf: Buffer, entry: object } | null} */
-  async generate(id, { lang } = {}) {
+  async generate(id, { lang, lines } = {}) {
     const entry = await stockEntryModel.getById(id);
     if (!entry) return null;
+    if (Array.isArray(lines)) { // lignes visibles par le demandeur du PDF (natures, migration 63)
+      if (lines.length !== entry.lines.length) entry.total_value = null;
+      entry.lines = lines;
+    }
     const ctx = pdfContext(lang, 'stockEntry');
     const brand = await getBranding(entry.enterprise_id);
     const dt = (d) => new Date(d).toLocaleString(ctx.locale, { dateStyle: 'short', timeStyle: 'short' });

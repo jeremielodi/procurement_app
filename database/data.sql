@@ -371,9 +371,10 @@ FROM (VALUES ('prof_manager_n2'), ('prof_manager_n3')) AS lvl(id)
 JOIN profile_permissions pp ON pp.profile_id = 'prof_manager'
 WHERE NOT EXISTS (SELECT 1 FROM profile_permissions x WHERE x.profile_id = lvl.id AND x.permission_id = pp.permission_id);
 
--- Profils de workflow liés au projet (migration 24 : sur une base neuve, les profils sont créés ici, après elle)
+-- Profils de workflow liés au projet (migration 24 : sur une base neuve, les profils sont créés ici, après elle) ;
+-- magasinier : stock cloisonné par projet (migration 65)
 UPDATE profiles SET project_scoped = true
-WHERE id IN ('prof_manager', 'prof_manager_n2', 'prof_manager_n3', 'prof_finance', 'prof_dg', 'prof_management', 'prof_procurement', 'prof_logistic', 'prof_requester')
+WHERE id IN ('prof_manager', 'prof_manager_n2', 'prof_manager_n3', 'prof_finance', 'prof_dg', 'prof_management', 'prof_procurement', 'prof_logistic', 'prof_requester', 'prof_store_keeper')
   AND project_scoped = false;
 
 -- procureApp multi-entreprise : rattacher les données sans entreprise à la première entreprise

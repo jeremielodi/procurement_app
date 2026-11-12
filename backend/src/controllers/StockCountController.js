@@ -3,6 +3,7 @@
 // (ADJUST_STOCK). Consultation : VIEW_STOCK.
 const countModel = require('../models/StockCountModel');
 const { audit, AUDIT } = require('../utils/auditLog');
+const stockNature = require('../utils/stockNature');
 
 function sendError(res, error, fallback) {
   if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, line: error.line, pending: error.pending });
@@ -28,6 +29,17 @@ module.exports = {
     try {
       const count = await countModel.get(req.params.id);
       if (!count) return res.status(404).json({ success: false, message: 'Inventaire introuvable' });
+      // Lignes des natures autorisées seulement (migration 63) ; inventaire d'une autre nature : introuvable
+      const allowed = await stockNature.allowed();
+      const { lines, hidden } = await stockNature.splitLines(count.lines);
+      if ((count.nature && !allowed.includes(count.nature)) || (!lines.length && hidden)) {
+        return res.status(404).json({ success: false, message: 'Inventaire introuvable' });
+      }
+      count.lines = lines;
+      count.hidden_line_count = hidden;
+      // Compter, valider, annuler : gérer la nature de l'inventaire (« tout le dépôt » : les deux — MANAGE_*)
+      const manage = await stockNature.allowed('manage');
+      count.can_manage = count.nature ? manage.includes(count.nature) : manage.length === stockNature.NATURES.length;
       res.json({ success: true, data: count });
     } catch (error) { return sendError(res, error, 'Erreur lors du chargement de l\'inventaire'); }
   },

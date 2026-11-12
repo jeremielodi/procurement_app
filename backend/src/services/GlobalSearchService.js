@@ -6,6 +6,7 @@ const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const userModel = require('../models/UserModel');
 const { requisitionVisibilitySql } = require('../utils/projectAccess');
+const stockNature = require('../utils/stockNature');
 
 const PER_GROUP = 5;
 const escapeLike = (s) => s.replace(/[\\%_]/g, c => '\\' + c);
@@ -42,10 +43,11 @@ const GROUPS = [
     FROM tenders t
     WHERE (t.tender_number ILIKE $1 OR t.title ILIKE $1)${tenant.filter('t.enterprise_id', p)}
     ORDER BY t.created_at DESC LIMIT ${PER_GROUP}`, (r) => `/tenders/${r.id}`],
-  ['stockItems', 'VIEW_STOCK', (p) => `
+  // Articles : natures autorisées seulement (migration 63)
+  ['stockItems', 'VIEW_STOCK', (p, _userId, natures) => `
     SELECT si.id, si.code AS label, si.name AS sublabel, NULL AS status
     FROM stock_items si
-    WHERE (si.code ILIKE $1 OR si.name ILIKE $1)${tenant.filter('si.enterprise_id', p)}
+    WHERE (si.code ILIKE $1 OR si.name ILIKE $1)${tenant.filter('si.enterprise_id', p)} AND si.nature = ANY($${p.push(natures)}::text[])
     ORDER BY si.name LIMIT ${PER_GROUP}`, (r) => `/stock/items/${r.id}`],
 ];
 
@@ -55,12 +57,13 @@ class GlobalSearchService {
     const q = String(query || '').trim().slice(0, 100);
     if (q.length < 2) return [];
     const permissions = new Set(await userModel.getUserPermissions(userId));
+    const natures = await stockNature.allowed();
     const results = await Promise.all(GROUPS
       .filter(([, permission]) => permissions.has(permission))
       .map(async ([group, , sql, link]) => {
         const params = [`%${escapeLike(q)}%`];
         try {
-          const rows = await db.select(sql(params, userId), params);
+          const rows = await db.select(sql(params, userId, natures), params);
           return { group, items: rows.map(r => ({ id: r.id, label: r.label, sublabel: r.sublabel, status: r.status, link: link(r) })) };
         } catch (error) {
           console.error(`Recherche globale (${group}) :`, error.message);

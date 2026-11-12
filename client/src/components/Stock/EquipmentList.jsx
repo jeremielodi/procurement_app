@@ -140,22 +140,22 @@ export default function EquipmentList() {
           <button onClick={exportExcel} disabled={exporting} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50" data-testid="unit-export">
             <Download size={16} /> {t('stock.equipment.export')}
           </button>
-          {hasPermission('ISSUE_STOCK') && (
+          {hasPermission('ISSUE_STOCK') && hasPermission('MANAGE_EQUIPMENT') && (
             <button onClick={() => setAssigning(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" data-testid="unit-assign-import">
               <UserCheck size={16} /> {t('stock.assignImport.button')}
             </button>
           )}
-          {hasPermission('MANAGE_STOCK_ITEMS') && (
+          {hasPermission('MANAGE_STOCK_ITEMS') && hasPermission('MANAGE_EQUIPMENT') && (
             <button onClick={() => setRetagging(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" data-testid="unit-retag">
               <Tag size={16} /> {t('stock.retag.button')}
             </button>
           )}
-          {hasPermission('MANAGE_STOCK_ITEMS') && (
+          {hasPermission('MANAGE_STOCK_ITEMS') && hasPermission('MANAGE_EQUIPMENT') && (
             <button onClick={() => setImporting(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" data-testid="unit-import">
               <FileUp size={16} /> {t('stock.unitImport.button')}
             </button>
           )}
-          {hasPermission('MANAGE_STOCK_ITEMS') && (
+          {hasPermission('MANAGE_STOCK_ITEMS') && hasPermission('MANAGE_EQUIPMENT') && (
             <button onClick={() => setRegister({ stockItemId: '', warehouseId: warehouses.length === 1 ? warehouses[0].id : '', text: '', projectId: '' })} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700" data-testid="register-units">
               <Plus size={16} /> {t('stock.equipment.register')}
             </button>
@@ -211,12 +211,12 @@ export default function EquipmentList() {
                       {u.status === 'ASSIGNED' && u.department_id ? (
                         <>
                           <b>{t('stock.equipment.departmentHolder', { name: u.department_name })}</b>
-                          {hasPermission('ISSUE_STOCK') && <Link to={`/stock/returns/new?departmentId=${u.department_id}`} className="ml-2 text-xs text-blue-600 hover:underline">{t('stock.equipment.recover')}</Link>}
+                          {hasPermission('ISSUE_STOCK') && hasPermission('MANAGE_EQUIPMENT') && <Link to={`/stock/returns/new?departmentId=${u.department_id}`} className="ml-2 text-xs text-blue-600 hover:underline">{t('stock.equipment.recover')}</Link>}
                         </>
                       ) : u.status === 'ASSIGNED' ? (
                         <>
                           <b>{u.holder_name}</b>{u.holder_active === false && <span className="ml-1 rounded bg-red-50 px-1 text-xs text-red-700">{t('stock.equipment.holderInactive')}</span>}
-                          {hasPermission('ISSUE_STOCK') && <Link to={`/stock/returns/new?userId=${u.holder_id}`} className="ml-2 text-xs text-blue-600 hover:underline">{t('stock.equipment.recover')}</Link>}
+                          {hasPermission('ISSUE_STOCK') && hasPermission('MANAGE_EQUIPMENT') && <Link to={`/stock/returns/new?userId=${u.holder_id}`} className="ml-2 text-xs text-blue-600 hover:underline">{t('stock.equipment.recover')}</Link>}
                         </>
                       ) : (u.warehouse_name || '—')}
                     </td>
@@ -268,8 +268,8 @@ export default function EquipmentList() {
               <span className="text-gray-500">{detail.status === 'ASSIGNED' ? t('stock.equipment.heldBy', { name: detail.department_name ? t('stock.equipment.departmentHolder', { name: detail.department_name }) : detail.holder_name }) : detail.warehouse_name}</span>
             </div>
             {detail.notes && <p className="rounded bg-gray-50 p-2 text-gray-700">{detail.notes}</p>}
-            {hasPermission('MANAGE_STOCK_ITEMS') && <TagCodification unit={detail} onSave={updateUnit} />}
-            {detail.status === 'IN_STOCK' && hasPermission('ISSUE_STOCK') && (
+            {hasPermission('MANAGE_STOCK_ITEMS') && hasPermission('MANAGE_EQUIPMENT') && <TagCodification unit={detail} onSave={updateUnit} />}
+            {detail.status === 'IN_STOCK' && hasPermission('ISSUE_STOCK') && hasPermission('MANAGE_EQUIPMENT') && (
               <div className="flex flex-wrap gap-2">
                 {detail.condition === 'GOOD'
                   ? <button onClick={() => updateUnit({ condition: 'DAMAGED' }, t('stock.equipment.updated'))} className="rounded-lg border border-amber-300 px-3 py-1.5 text-amber-700 hover:bg-amber-50">{t('stock.equipment.markDamaged')}</button>

@@ -8,6 +8,11 @@ const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const stockModel = require('./StockModel');
 const warehouseModel = require('./WarehouseModel');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
+// Natures des articles du catalogue entrés en stock par une réception (confirmation du magasin — migration 63)
+const NATURES_IN_STOCK_SQL = `SELECT DISTINCT si.nature FROM stock_movements m JOIN stock_items si ON si.id = m.stock_item_id
+  WHERE m.source_type = 'GRN' AND m.source_id = $1::text`;
 
 const EPS = 1e-9;
 const num = (v) => {
@@ -211,6 +216,8 @@ class GoodsReceiptModel {
    */
   async stockLineChecks(tx, { stockItem, accepted, lotNumber, expiryDate, serials: rawSerials, enterpriseId, index }) {
     const line = index === undefined ? {} : { line: index };
+    // Entrée en stock d'un article d'une nature non autorisée à l'utilisateur : 403 NATURE_FORBIDDEN (migration 63)
+    try { await stockNature.assertItems([stockItem.id], tx); } catch (e) { if (index !== undefined) e.line = index; throw e; }
     if (stockItem.track_lots && !lotNumber) {
       throw fail(400, 'LOT_REQUIRED', `${stockItem.name} : n° de lot obligatoire`, line);
     }
@@ -282,6 +289,8 @@ class GoodsReceiptModel {
    * lot et premier mouvement reportés sur la ligne. → nombre de mouvements écrits
    */
   async writeStockEntry(tx, { po, grn, itemId, stockItem, quantity, lotNumber, expiryDate, serials, warehouseId, unitCost, projectId, userId, comment }) {
+    // Stock du projet de la réquisition : profil de stock sur ce projet (migration 65) — 403 PROJECT_FORBIDDEN
+    await stockProject.assertAllowed([projectId]);
     let lotId = null;
     if (stockItem.track_lots) {
       lotId = await stockModel.findOrCreateLot(tx, {
@@ -526,6 +535,8 @@ class GoodsReceiptModel {
       if (!(await warehouseModel.canOperate(userId, grn.warehouse_id))) {
         throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès au dépôt de cette réception');
       }
+      // Le magasinier signe pour tous les articles entrés en stock : toutes leurs natures doivent être autorisées (migration 63)
+      await stockNature.assertSql(tx, NATURES_IN_STOCK_SQL, [id]);
       const note = String(comment || '').trim().slice(0, 1000) || null;
       await tx.exec(
         `UPDATE goods_receipt_notes SET store_confirmed_by = $2, store_confirmed_at = NOW(), store_confirmation_comment = $3

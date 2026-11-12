@@ -44,6 +44,7 @@ import StockEntryDetail from './components/Stock/StockEntryDetail';
 import StockReturnForm from './components/Stock/StockReturnForm';
 import { StockReturnList, StockReturnDetail } from './components/Stock/StockReturns';
 import EquipmentList from './components/Stock/EquipmentList';
+import ConsumableList from './components/Stock/ConsumableList';
 import StockCountList from './components/Stock/StockCountList';
 import StockCountDetail from './components/Stock/StockCountDetail';
 import StockAdjustments from './components/Stock/StockAdjustments';
@@ -343,7 +344,8 @@ function App() {
         <Route path="/stock/counts" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockCountList /></Layout></ProtectedRoute>} />
         <Route path="/stock/counts/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockCountDetail /></Layout></ProtectedRoute>} />
         <Route path="/stock/adjustments" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockAdjustments /></Layout></ProtectedRoute>} />
-        <Route path="/stock/equipment" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><EquipmentList /></Layout></ProtectedRoute>} />
+        <Route path="/stock/equipment" element={<ProtectedRoute requiredPermission="VIEW_EQUIPMENT"><Layout><EquipmentList /></Layout></ProtectedRoute>} />
+        <Route path="/stock/consumables" element={<ProtectedRoute requiredPermission="VIEW_CONSUMABLES"><Layout><ConsumableList /></Layout></ProtectedRoute>} />
         <Route path="/stock/returns" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockReturnList /></Layout></ProtectedRoute>} />
         <Route path="/stock/returns/new" element={<ProtectedRoute requiredPermission="ISSUE_STOCK"><Layout><StockReturnForm /></Layout></ProtectedRoute>} />
         <Route path="/stock/returns/:id" element={<ProtectedRoute requiredPermission="VIEW_STOCK"><Layout><StockReturnDetail /></Layout></ProtectedRoute>} />

@@ -4,6 +4,8 @@
 // « Réapprovisionner » : prévision du réapprovisionnement (StockPlanning : consommation, seuils, quantité à commander).
 // Délai de livraison de l'article (jours) : remplace celui de l'entreprise dans la prévision.
 // « Importer » : catalogue (+ stock initial) depuis un fichier Excel / CSV, modèle téléchargeable (ImportStockItemsModal).
+// Nature (migration 63) : Équipement / Consommable — filtre, colonne, choix dans la fiche ; seules les natures autorisées
+// (VIEW_EQUIPMENT / VIEW_CONSUMABLES) sont listées et proposées.
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Boxes, Plus, Pencil, RefreshCw, Search, AlertTriangle, ShoppingCart, FileUp } from 'lucide-react';
@@ -17,21 +19,24 @@ import { t, getLocale, useTranslation } from '../../i18n';
 import SearchSelect from '../Common/SearchSelect';
 import ImportStockItemsModal from './ImportStockItemsModal';
 import { ASSET_CATEGORIES } from '../Enterprises/AssetTagSettings';
+import { NatureBadge, NaturePicker, useStockNatures } from './StockNature';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 // unitId : unité du référentiel de la plateforme (GET /units) — Pièce par défaut, posée à l'ouverture
-const EMPTY = { code: '', name: '', description: '', unitId: '', categoryId: '', isStockable: true, trackLots: false, trackExpiry: false, trackSerials: false, minQuantity: '', reorderQuantity: '', leadTimeDays: '', assetCategory: '' };
+const EMPTY = { code: '', name: '', description: '', unitId: '', categoryId: '', isStockable: true, trackLots: false, trackExpiry: false, trackSerials: false, minQuantity: '', reorderQuantity: '', leadTimeDays: '', assetCategory: '', nature: 'CONSUMABLE' };
 
 export default function StockItemList() {
   const { lang } = useTranslation();
   const { hasPermission } = usePermissions();
   const canManage = hasPermission('MANAGE_STOCK_ITEMS');
+  const natures = useStockNatures();
+  const defaultNature = natures.manage.length === 1 ? natures.manage[0] : 'CONSUMABLE';
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({});
   const [categories, setCategories] = useState([]);
   const [params] = useSearchParams();
-  const [filters, setFilters] = useState({ search: '', categoryId: '', stockable: '', belowMin: params.get('belowMin') === '1', all: false });
+  const [filters, setFilters] = useState({ search: '', categoryId: '', stockable: '', nature: params.get('nature') || '', belowMin: params.get('belowMin') === '1', all: false });
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
@@ -52,7 +57,7 @@ export default function StockItemList() {
     try {
       const res = await stockItemService.list({
         search: debounced.search || undefined, categoryId: debounced.categoryId || undefined,
-        stockable: debounced.stockable || undefined, belowMin: debounced.belowMin ? 1 : undefined,
+        stockable: debounced.stockable || undefined, nature: debounced.nature || undefined, belowMin: debounced.belowMin ? 1 : undefined,
         all: debounced.all ? 1 : undefined, page, limit: 50,
       });
       setRows(res.data || []);
@@ -68,6 +73,7 @@ export default function StockItemList() {
     reorderQuantity: it.reorder_quantity !== null && it.reorder_quantity !== undefined ? String(Number(it.reorder_quantity)) : '',
     leadTimeDays: it.lead_time_days !== null && it.lead_time_days !== undefined ? String(it.lead_time_days) : '',
     assetCategory: it.asset_category || '',
+    nature: it.nature || 'CONSUMABLE',
     isActive: it.is_active, hasStock: Number(it.stock_quantity) > 0,
   });
 
@@ -91,6 +97,8 @@ export default function StockItemList() {
         reorderQuantity: editing.reorderQuantity === '' ? null : Number(editing.reorderQuantity),
         leadTimeDays: editing.leadTimeDays === '' ? null : Number(editing.leadTimeDays),
         assetCategory: editing.assetCategory.trim().toUpperCase() || null,
+        // Suivi par n° de série = équipement (contrôlé aussi par le serveur)
+        nature: editing.isStockable && !editing.trackLots && editing.trackSerials ? 'EQUIPMENT' : editing.nature,
         ...(editing.id ? { isActive: editing.isActive } : {}),
       };
       if (editing.id) await stockItemService.update(editing.id, payload);
@@ -114,13 +122,13 @@ export default function StockItemList() {
           <Link to="/stock/planning" className="flex items-center gap-2 border border-orange-300 text-orange-800 bg-orange-50 hover:bg-orange-100 px-4 py-2 rounded-lg text-sm" data-testid="restock">
             <ShoppingCart size={16} /> {t('stock.items.restockPlanning')}
           </Link>
-          {canManage && (
+          {canManage && natures.manage.length > 0 && (
             <button onClick={() => setImporting(true)} className="flex items-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm" data-testid="item-import">
               <FileUp size={16} /> {t('stock.import.button')}
             </button>
           )}
-          {canManage && (
-            <button onClick={() => setEditing({ ...EMPTY, unitId: defaultUnitId })} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm" data-testid="item-new">
+          {canManage && natures.manage.length > 0 && (
+            <button onClick={() => setEditing({ ...EMPTY, unitId: defaultUnitId, nature: defaultNature })} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm" data-testid="item-new">
               <Plus size={16} /> {t('stock.items.new')}
             </button>
           )}
@@ -141,6 +149,13 @@ export default function StockItemList() {
           <option value="true">{t('stock.items.stockableOnly')}</option>
           <option value="false">{t('stock.notStockable')}</option>
         </SearchSelect>
+        {natures.both && (
+          <SearchSelect value={filters.nature} onChange={set('nature')} className={`${inputCls} w-auto`} aria-label={t('stock.nature.label')} data-testid="item-nature-filter">
+            <option value="">{t('stock.nature.allNatures')}</option>
+            <option value="EQUIPMENT">{t('stock.nature.EQUIPMENT')}</option>
+            <option value="CONSUMABLE">{t('stock.nature.CONSUMABLE')}</option>
+          </SearchSelect>
+        )}
         <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={filters.belowMin} onChange={set('belowMin')} /> {t('stock.items.belowMin')}</label>
         <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={filters.all} onChange={set('all')} /> {t('stock.items.showInactive')}</label>
       </div>
@@ -154,6 +169,7 @@ export default function StockItemList() {
               <tr>
                 <th className="px-4 py-2">{t('stock.code')}</th>
                 <th className="px-4 py-2">{t('stock.item')}</th>
+                <th className="px-4 py-2">{t('stock.nature.label')}</th>
                 <th className="px-4 py-2">{t('stock.category')}</th>
                 <th className="px-4 py-2">{t('stock.unit')}</th>
                 <th className="px-4 py-2">{t('stock.items.tracking')}</th>
@@ -169,6 +185,7 @@ export default function StockItemList() {
                   <tr key={it.id} className={it.is_active ? '' : 'text-gray-400'}>
                     <td className="px-4 py-2 font-mono font-semibold">{it.code}</td>
                     <td className="px-4 py-2"><Link to={`/stock/items/${it.id}`} className="text-blue-600 hover:underline">{it.name}</Link></td>
+                    <td className="px-4 py-2"><NatureBadge nature={it.nature} /></td>
                     <td className="px-4 py-2">{it.category_name || '—'}</td>
                     <td className="px-4 py-2">{it.unit}</td>
                     <td className="px-4 py-2 text-xs">
@@ -181,12 +198,12 @@ export default function StockItemList() {
                     </td>
                     <td className="px-4 py-2 text-right text-gray-500">{it.min_quantity !== null ? fmtQty(it.min_quantity) : '—'}</td>
                     <td className="px-4 py-2 text-right">
-                      {canManage && <button onClick={() => openEdit(it)} className="p-1.5 text-gray-600 hover:bg-gray-100 rounded" title={t('common.edit')} aria-label={t('common.edit')}><Pencil size={16} /></button>}
+                      {canManage && natures.canManage(it.nature) && <button onClick={() => openEdit(it)} className="p-1.5 text-gray-600 hover:bg-gray-100 rounded" title={t('common.edit')} aria-label={t('common.edit')}><Pencil size={16} /></button>}
                     </td>
                   </tr>
                 );
               })}
-              {rows.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">{t('stock.items.none')}</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">{t('stock.items.none')}</td></tr>}
             </tbody>
           </table>
         )}
@@ -216,6 +233,13 @@ export default function StockItemList() {
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </SearchSelect>
             </label>
+            <div className="text-sm sm:col-span-2">
+              <span className="mb-1 block font-medium text-gray-700">{t('stock.nature.label')} *</span>
+              <NaturePicker testId="item-nature" value={editing.trackSerials && editing.isStockable && !editing.trackLots ? 'EQUIPMENT' : editing.nature}
+                disabledNatures={editing.trackSerials && editing.isStockable && !editing.trackLots ? ['CONSUMABLE'] : []}
+                onChange={(nature) => setEditing({ ...editing, nature })} />
+              <span className="mt-1 block text-xs text-gray-500">{t('stock.nature.hint')}</span>
+            </div>
             <label className="text-sm sm:col-span-2">
               <span className="mb-1 block font-medium text-gray-700">{t('stock.items.name')} *</span>
               <input className={inputCls} maxLength={200} value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />

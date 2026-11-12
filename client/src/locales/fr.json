@@ -146,7 +146,8 @@
     "expand": "Agrandir le menu",
     "receiptRecon": "Rapprochement réceptions",
     "stockPlanning": "Prévision",
-    "stockRequests": "Demandes au magasin"
+    "stockRequests": "Demandes au magasin",
+    "consumables": "Consommables"
   },
   "header": {
     "toggleSidebar": "Afficher / masquer le menu",
@@ -491,7 +492,7 @@
       "items": [
         {
           "title": "Dépôts et catalogue",
-          "desc": "Plusieurs dépôts par ville, avec des accès par utilisateur ; le catalogue d'articles et le stock existant s'importent depuis Excel en quelques minutes (modèle fourni)."
+          "desc": "Plusieurs dépôts par ville, avec des accès par utilisateur ; le catalogue d'articles et le stock existant s'importent depuis Excel en quelques minutes (modèle fourni). Équipements et consommables séparés : chaque gestionnaire ne voit que sa nature d'articles."
         },
         {
           "title": "Réception et bons d'entrée",
@@ -1844,7 +1845,8 @@
       "ITEM_NOT_FOUND": "Article introuvable",
       "ITEM_NOT_STOCKABLE": "Article non stockable",
       "ITEM_MISMATCH": "La ligne est déjà liée à un autre article",
-      "WAREHOUSE_MISMATCH": "Cette réception est déjà rattachée à un autre dépôt"
+      "WAREHOUSE_MISMATCH": "Cette réception est déjà rattachée à un autre dépôt",
+      "NATURE_FORBIDDEN": "Vous n'êtes pas autorisé à faire entrer en stock les articles de cette nature"
     },
     "stockEntry": {
       "action": "Entrer en stock",
@@ -3449,7 +3451,8 @@
         "expiry": "Date de péremption obligatoire",
         "expired": "Date de péremption dépassée",
         "integer": "Quantité entière obligatoire pour un équipement",
-        "serials": "{{expected}} n° de série attendu(s), {{count}} saisi(s)"
+        "serials": "{{expected}} n° de série attendu(s), {{count}} saisi(s)",
+        "NATURE_FORBIDDEN": "Vous n'êtes pas autorisé à gérer les articles de cette nature"
       },
       "status": {
         "PENDING": "En attente de validation",
@@ -3583,7 +3586,8 @@
         "REQUEST_QUANTITY_EXCEEDED": "Quantité supérieure au reste à servir de la demande",
         "REQUEST_DESTINATION_MISMATCH": "La sortie doit aller à la destination de la demande",
         "REQUEST_WAREHOUSE_MISMATCH": "La demande est adressée à un autre dépôt",
-        "REQUEST_LINE_INVALID": "Article absent de la demande"
+        "REQUEST_LINE_INVALID": "Article absent de la demande",
+        "NATURE_FORBIDDEN": "Vous n'êtes pas autorisé à gérer les articles de cette nature"
       },
       "projectLabel": "Projet",
       "noUnits": "Aucune unité en stock dans ce dépôt",
@@ -3683,7 +3687,8 @@
         "WAREHOUSE_FORBIDDEN": "Vous n'avez pas accès à ce dépôt",
         "NO_LINES": "Aucun article",
         "department": "Choisissez le département",
-        "HOLDER_REQUIRED": "Indiquez l'employé ou le département"
+        "HOLDER_REQUIRED": "Indiquez l'employé ou le département",
+        "NATURE_FORBIDDEN": "Vous n'êtes pas autorisé à gérer les articles de cette nature"
       },
       "holderType": "Rendu par",
       "holderTypes": {
@@ -3816,7 +3821,10 @@
         "INVALID_UNIT_COUNT": "Équipement : présent ou absent",
         "WAREHOUSE_FORBIDDEN": "Vous n'avez pas accès à ce dépôt",
         "ITEM_NOT_STOCKABLE": "Article non stocké",
-        "chooseItem": "Choisissez l'article"
+        "chooseItem": "Choisissez l'article",
+        "NATURE_FORBIDDEN": "Vous n'êtes pas autorisé à gérer les articles de cette nature",
+        "NATURE_INVALID": "Nature invalide",
+        "ITEM_NATURE_MISMATCH": "Cet article n'est pas de la nature de l'inventaire"
       }
     },
     "adjust": {
@@ -3857,7 +3865,8 @@
         "INVALID_QUANTITY": "Quantité invalide",
         "WAREHOUSE_FORBIDDEN": "Vous n'avez pas accès à ce dépôt",
         "ITEM_NOT_STOCKABLE": "Article non stocké",
-        "PROJECT_NOT_FOUND": "Projet de financement introuvable"
+        "PROJECT_NOT_FOUND": "Projet de financement introuvable",
+        "NATURE_FORBIDDEN": "Vous n'êtes pas autorisé à gérer les articles de cette nature"
       }
     },
     "valuation": {
@@ -3981,7 +3990,10 @@
         "LOT_EXPIRY_MISMATCH": "le lot {{lot}} existe déjà avec la date de péremption {{expiry}}",
         "DUPLICATE_OPENING": "même article, dépôt et lot que la ligne {{line}}",
         "PROJECT_UNKNOWN": "Projet inconnu : « {{value}} » (code d'un projet de l'entreprise)",
-        "ASSET_CATEGORY_INVALID": "catégorie TAG « {{value}} » invalide (2 à 5 lettres ou chiffres)"
+        "ASSET_CATEGORY_INVALID": "catégorie TAG « {{value}} » invalide (2 à 5 lettres ou chiffres)",
+        "NATURE_INVALID": "nature « {{value}} » inconnue (Équipement ou Consommable)",
+        "NATURE_SERIALS_EQUIPMENT": "un article suivi par n° de série est un équipement",
+        "NATURE_FORBIDDEN": "{{value}} : vous n'êtes pas autorisé à gérer la nature de cet article"
       },
       "fileErr": {
         "UNREADABLE": "Fichier illisible : vérifiez qu'il s'agit bien d'un .xlsx ou d'un .csv",
@@ -4257,6 +4269,35 @@
         "HOLDER_INACTIVE": "le compte {{value}} est désactivé ou n'est pas un compte d'employé",
         "UNIT_DUPLICATE": "équipement {{value}} déjà présent ligne {{other}}"
       }
+    },
+    "nature": {
+      "label": "Nature",
+      "EQUIPMENT": "Équipement",
+      "CONSUMABLE": "Consommable",
+      "all": "Tout le dépôt",
+      "allNatures": "Toutes les natures",
+      "hint": "Équipement : bien durable (ordinateur, véhicule, chaise…), même sans n° de série. Consommable : article qui s'use ou se consomme. Un article suivi par n° de série est toujours un équipement. Seules les personnes autorisées à cette nature voient et gèrent l'article dans le stock.",
+      "hiddenLines_one": "{{count}} ligne de ce document concerne des articles d'une nature à laquelle vous n'avez pas accès : elle est masquée.",
+      "hiddenLines_other": "{{count}} lignes de ce document concernent des articles d'une nature à laquelle vous n'avez pas accès : elles sont masquées.",
+      "countLimited": "Cet inventaire portera seulement sur la nature :"
+    },
+    "consumables": {
+      "title": "Consommables",
+      "subtitle": "Stock des articles de nature « Consommable », par dépôt et par lot, avec leur date de péremption",
+      "itemsInStock": "Articles en stock",
+      "expiringSoon": "Lots périmant dans 90 jours",
+      "expiredLots": "Lots périmés",
+      "expired": "périmé",
+      "search": "Rechercher par code, désignation ou n° de lot…",
+      "allExpiry": "Toutes les dates de péremption",
+      "onlyExpired": "Périmés",
+      "within90": "Périmant dans 90 jours",
+      "within180": "Périmant dans 180 jours",
+      "project": "Projet",
+      "none": "Aucun consommable en stock pour ces critères",
+      "export": "Exporter (Excel)",
+      "newEntry": "Bon d'entrée",
+      "newIssue": "Sortir des consommables"
     }
   },
   "help": {
@@ -4442,6 +4483,14 @@
               [
                 "Auditeur",
                 "Consulte tous les dossiers d'achat, le stock, le budget et le journal d'audit, avec les exports. Aucune saisie ni approbation."
+              ],
+              [
+                "Gestionnaire des équipements",
+                "Gère dans le stock les seuls équipements (biens durables) des projets qui lui sont attribués : catalogue, entrées, sorties, affectations et retours, inventaires. Ne voit pas les consommables."
+              ],
+              [
+                "Gestionnaire des consommables",
+                "Gère dans le stock les seuls consommables (papier, carburant, médicaments…) des projets qui lui sont attribués : catalogue, entrées, sorties, demandes au magasin, inventaires. Ne voit pas les équipements."
               ]
             ]
           },
@@ -5412,6 +5461,29 @@
           {
             "type": "p",
             "text": "Une fois l'article mouvementé, son unité et ses règles de suivi ne sont plus modifiables (cela fausserait l'historique)."
+          },
+          {
+            "type": "h",
+            "text": "Équipements et consommables"
+          },
+          {
+            "type": "p",
+            "text": "Chaque article du catalogue a une nature : « Équipement » (bien durable : ordinateur, véhicule, chaise… même sans n° de série) ou « Consommable » (article qui s'use ou se consomme : papier, carburant, médicament…). Un article suivi par n° de série est toujours un équipement. La nature se choisit dans la fiche de l'article et se filtre dans la liste (« Toutes les natures ») ; à l'import, colonne « Nature ». Menus « Équipements » (unités suivies par n° de série) et « Consommables » (stock par dépôt et par lot, avec la péremption)."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Deux niveaux de droit par nature, dans le module Stock seulement : « voir » (consultation : finance, auditeur, direction…) et « gérer » (fiche article, entrées, sorties, retours, inventaires, ajustements). Seul celui qui gère une nature peut faire entrer ou sortir ses articles.",
+              "Profils « Gestionnaire des équipements » et « Gestionnaire des consommables » : une seule nature, vue et gérée. Les profils qui géraient déjà le stock (logistique, magasinier, achats, administrateur) gèrent les deux.",
+              "Un document qui mélange les deux natures (ex. un bon de sortie avec un ordinateur et du papier, fait par un magasinier qui gère les deux) reste visible avec vos seules lignes ; un bandeau indique les lignes masquées. L'annuler, le valider ou le solder demande de gérer toutes ses natures.",
+              "Un bon de sortie = une opération de sortie (n° MVG), qui peut contenir plusieurs articles.",
+              "Inventaire : un gestionnaire d'une seule nature compte seulement cette nature ; un inventaire par nature peut être ouvert en même temps dans le même dépôt.",
+              "Stock par projet : les profils de stock (gestionnaires, magasinier, logistique) sont liés au projet, comme les profils du workflow. Sur la fiche utilisateur, « Tous les projets » ou une liste de projets : limité à des projets, l'utilisateur ne voit et ne fait sortir que le stock financé par ces projets, plus le stock sans projet."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "La réquisition n'est pas concernée : tout utilisateur commande ce qu'il veut dans tout le catalogue, et peut demander n'importe quel article au magasin."
           },
           {
             "type": "h",

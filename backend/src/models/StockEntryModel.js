@@ -13,6 +13,10 @@ const tenant = require('../utils/tenant');
 const stockModel = require('./StockModel');
 const warehouseModel = require('./WarehouseModel');
 const goodsReceiptModel = require('./GoodsReceiptModel');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
+// Natures des lignes d'un bon (toute décision sur le bon exige toutes ses natures — migration 63)
+const LINE_NATURES_SQL = 'SELECT DISTINCT it.nature FROM stock_entry_lines el JOIN stock_items it ON it.id = el.stock_item_id WHERE el.entry_id = $1';
 
 const EPS = 1e-9;
 const ENTRY_TYPES = ['DONATION', 'OFF_SYSTEM_PURCHASE', 'RETURN', 'OTHER'];
@@ -97,11 +101,12 @@ class StockEntryModel {
     const serialsByItem = new Map();
     for (const [index, raw] of lines.entries()) {
       const item = await tx.one(
-        'SELECT id, enterprise_id, code, name, unit, is_stockable, is_active, track_lots, track_expiry, track_serials FROM stock_items WHERE id::text = $1',
+        'SELECT id, enterprise_id, code, name, unit, is_stockable, is_active, track_lots, track_expiry, track_serials, nature FROM stock_items WHERE id::text = $1',
         [String(raw.stockItemId || raw.stock_item_id || '')]
       );
       if (!item || String(item.enterprise_id) !== String(enterpriseId)) throw fail(400, 'ITEM_NOT_FOUND', 'Article introuvable', { line: index });
       if (!item.is_stockable) throw fail(400, 'ITEM_NOT_STOCKABLE', `${item.name} : article non stocké`, { line: index });
+      try { await stockNature.assertAllowed([item.nature]); } catch (e) { e.line = index; throw e; } // migration 63
       const quantity = num(raw.quantity);
       if (!(quantity > EPS)) throw fail(400, 'INVALID_QUANTITY', `${item.name} : quantité invalide`, { line: index });
       const rawCost = raw.unitCost ?? raw.unit_cost;
@@ -135,6 +140,8 @@ class StockEntryModel {
     return db.withTransaction(async (tx) => {
       const entry = await tx.one('SELECT * FROM stock_entries WHERE id = $1 FOR UPDATE', [id]);
       if (!entry) throw fail(404, 'NOT_FOUND', 'Bon d\'entrée introuvable');
+      await stockNature.assertSql(tx, LINE_NATURES_SQL, [id]); // toutes les natures du bon (migration 63)
+      await stockProject.assertSql(tx, 'SELECT project_id FROM stock_entries WHERE id = $1', [id]); // projet du bon (migration 65)
       if (entry.status !== 'PENDING') throw fail(409, 'NOT_PENDING', 'Ce bon d\'entrée n\'est plus en attente de validation');
       if (String(entry.created_by) === String(userId)) throw fail(403, 'SELF_VALIDATION', 'Le bon doit être validé par une autre personne que celle qui l\'a saisi');
       if (!(await warehouseModel.canOperate(userId, entry.warehouse_id))) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès au dépôt de ce bon');
@@ -188,6 +195,8 @@ class StockEntryModel {
     return db.withTransaction(async (tx) => {
       const entry = await tx.one('SELECT id, entry_number, status, created_by, warehouse_id FROM stock_entries WHERE id = $1 FOR UPDATE', [id]);
       if (!entry) throw fail(404, 'NOT_FOUND', 'Bon d\'entrée introuvable');
+      await stockNature.assertSql(tx, LINE_NATURES_SQL, [id]); // toutes les natures du bon (migration 63)
+      await stockProject.assertSql(tx, 'SELECT project_id FROM stock_entries WHERE id = $1', [id]); // projet du bon (migration 65)
       if (entry.status !== 'PENDING') throw fail(409, 'NOT_PENDING', 'Ce bon d\'entrée n\'est plus en attente de validation');
       if (String(entry.created_by) === String(userId)) throw fail(403, 'SELF_VALIDATION', 'Retirez votre propre bon au lieu de le refuser');
       if (!(await warehouseModel.canOperate(userId, entry.warehouse_id))) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès au dépôt de ce bon');
@@ -212,6 +221,8 @@ class StockEntryModel {
         [id]
       );
       if (!entry) throw fail(404, 'NOT_FOUND', 'Bon d\'entrée introuvable');
+      await stockNature.assertSql(tx, LINE_NATURES_SQL, [id]); // toutes les natures du bon (migration 63)
+      await stockProject.assertSql(tx, 'SELECT project_id FROM stock_entries WHERE id = $1', [id]); // projet du bon (migration 65)
       if (!['PENDING', 'VALIDATED'].includes(entry.status)) throw fail(409, 'NOT_CANCELLABLE', 'Ce bon d\'entrée est déjà refusé ou annulé');
       if (!(await warehouseModel.canOperate(userId, entry.warehouse_id))) throw fail(403, 'WAREHOUSE_FORBIDDEN', 'Vous n\'avez pas accès au dépôt de ce bon');
       const wasValidated = entry.status === 'VALIDATED';
@@ -263,6 +274,10 @@ class StockEntryModel {
     const params = [];
     let where = `WHERE 1=1${tenant.filter('se.enterprise_id', params)}`;
     if (warehouseId) { params.push(warehouseId); where += ` AND se.warehouse_id = $${params.length}`; }
+    // Bons ayant au moins une ligne d'une nature autorisée ; résumé limité à ces lignes (migration 63)
+    where += await stockNature.existsLine('SELECT 1 FROM stock_entry_lines nl JOIN stock_items ni ON ni.id = nl.stock_item_id WHERE nl.entry_id = se.id', 'ni.nature', params);
+    where += await stockProject.filter('se.project_id', params); // projet de financement du bon (migration 65)
+    const lineNature = await stockNature.filter('it.nature', params);
     if (entryType && ENTRY_TYPES.includes(String(entryType).toUpperCase())) { params.push(String(entryType).toUpperCase()); where += ` AND se.entry_type = $${params.length}`; }
     if (status && STATUSES.includes(String(status).toUpperCase())) { params.push(String(status).toUpperCase()); where += ` AND se.status = $${params.length}`; }
     if (fromDate) { params.push(fromDate); where += ` AND se.created_at >= $${params.length}::date`; }
@@ -281,7 +296,7 @@ class StockEntryModel {
        LEFT JOIN LATERAL (
          SELECT COUNT(*)::int AS line_count, STRING_AGG(DISTINCT it.name, ', ') AS items,
                 CASE WHEN BOOL_AND(el.unit_cost IS NOT NULL) THEN SUM(el.quantity * el.unit_cost)::float8 END AS total_value
-         FROM stock_entry_lines el JOIN stock_items it ON it.id = el.stock_item_id WHERE el.entry_id = x.id
+         FROM stock_entry_lines el JOIN stock_items it ON it.id = el.stock_item_id WHERE el.entry_id = x.id${lineNature}
        ) s ON true
        ORDER BY x.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
@@ -294,7 +309,7 @@ class StockEntryModel {
     if (!entry) return null;
     entry.lines = await db.select(
       `SELECT el.id, el.stock_item_id, el.quantity::float8 AS quantity, el.unit_cost::float8 AS unit_cost, el.lot_number, el.expiry_date, el.serials,
-              el.lot_id, it.code AS item_code, it.name AS item_name, it.unit, it.track_lots, it.track_expiry, it.track_serials,
+              el.lot_id, it.code AS item_code, it.name AS item_name, it.unit, it.track_lots, it.track_expiry, it.track_serials, it.nature AS item_nature,
               m.movement_number,
               (SELECT JSON_AGG(JSON_BUILD_OBJECT('id', u.id, 'serial_number', u.serial_number, 'asset_tag', u.asset_tag, 'status', u.status) ORDER BY u.serial_number)
                FROM stock_movements um JOIN stock_units u ON u.id = um.unit_id

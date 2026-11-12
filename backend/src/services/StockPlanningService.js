@@ -11,6 +11,7 @@ const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const { localizedSql } = require('../utils/requestLang');
 const rules = require('../utils/stockPlanning');
+const stockNature = require('../utils/stockNature');
 
 const DEFAULTS = { amcMonths: 6, safetyMonths: 2, orderIntervalMonths: 1, leadTimeDays: 30 };
 const INACTIVE_PO = ['PO_REJECTED', 'PO_CANCELLED', 'CANCELLED', 'REJECTED'];
@@ -77,7 +78,7 @@ class StockPlanningService {
     periodStart.setMonth(periodStart.getMonth() - settings.amcMonths);
 
     const iParams = [];
-    let iWhere = `WHERE si.is_active AND si.is_stockable${tenant.filter('si.enterprise_id', iParams)}`;
+    let iWhere = `WHERE si.is_active AND si.is_stockable${tenant.filter('si.enterprise_id', iParams)}${await stockNature.filter('si.nature', iParams)}`;
     if (categoryId) { iParams.push(categoryId); iWhere += ` AND si.category_id = $${iParams.length}`; }
     if (stockItemId) { iParams.push(String(stockItemId)); iWhere += ` AND si.id::text = $${iParams.length}`; }
     if (search) {

@@ -25,7 +25,7 @@
       <div class="toc-title">Sommaire</div>
       <ol>
         <li><a href="#scenario">Le scénario</a></li>
-        <li><a href="#phase-1">Organisation du stock</a></li><li><a href="#phase-2">Entrée hors bon de commande (don)</a></li><li><a href="#phase-3">Demande au magasin et sortie</a></li><li><a href="#phase-4">Matériel affecté et retour</a></li><li><a href="#phase-5">Transfert entre dépôts</a></li><li><a href="#phase-6">Inventaire et ajustements</a></li><li><a href="#phase-7">Suivi, prévision et valorisation</a></li>
+        <li><a href="#phase-1">Organisation du stock</a></li><li><a href="#phase-2">Entrée hors bon de commande (don)</a></li><li><a href="#phase-3">Demande au magasin et sortie</a></li><li><a href="#phase-4">Matériel affecté et retour</a></li><li><a href="#phase-5">Transfert entre dépôts</a></li><li><a href="#phase-6">Inventaire et ajustements</a></li><li><a href="#phase-7">Équipements et consommables : qui voit et gère quoi</a></li><li><a href="#phase-8">Suivi, prévision et valorisation</a></li>
         <li><a href="#regles">Règles à retenir</a></li>
       </ol>
       <div class="toc-other">Autres cas concrets :<a href="workflow.html">Cycle d'achat complet →</a><a href="appel-offres.html">Appel d'offres →</a></div>
@@ -33,10 +33,10 @@
     <div class="content">
       <section id="scenario" class="scenario">
         <h2>Le scénario</h2>
-        <p>L'entreprise a deux dépôts à Goma : le <strong>Magasin central Goma (MAG-GOMA)</strong> et le <strong>Magasin antenne Nord (MAG-NORD)</strong>. Le stock du magasin central vient d'être alimenté par la réception de la commande du cas « Cycle d'achat complet » (50 rames, 10 toners, entrées automatiquement en stock).</p><p>Dans ce cas, le magasin reçoit un <strong>don</strong> (savon, ordinateurs, papier), sert une <strong>demande</strong> d'une employée, <strong>affecte un ordinateur</strong> puis le récupère, <strong>transfère</strong> du stock vers l'antenne Nord (avec une perte en transit) et fait son <strong>inventaire</strong> de fin de trimestre.</p><p>Chaque opération écrit des <strong>mouvements de stock</strong> dans un journal non modifiable ; les soldes ne peuvent jamais devenir négatifs, et chaque entrée garde le <strong>projet qui l'a financée</strong>.</p>
+        <p>L'entreprise a deux dépôts à Goma : le <strong>Magasin central Goma (MAG-GOMA)</strong> et le <strong>Magasin antenne Nord (MAG-NORD)</strong>. Le stock du magasin central vient d'être alimenté par la réception de la commande du cas « Cycle d'achat complet » (50 rames, 10 toners, entrées automatiquement en stock).</p><p>Dans ce cas, le magasin reçoit un <strong>don</strong> (savon, ordinateurs, papier), sert une <strong>demande</strong> d'une employée, <strong>affecte un ordinateur</strong> puis le récupère, <strong>transfère</strong> du stock vers l'antenne Nord (avec une perte en transit) et fait son <strong>inventaire</strong> de fin de trimestre.</p><p>Chaque opération écrit des <strong>mouvements de stock</strong> dans un journal non modifiable ; les soldes ne peuvent jamais devenir négatifs, et chaque entrée garde le <strong>projet qui l'a financée</strong>.</p><p>Chaque article a une <strong>nature</strong> : <strong>équipement</strong> (ordinateur, chaise…) ou <strong>consommable</strong> (papier, savon, médicament…). Deux gestionnaires spécialisés, limités au projet Eau potable Goma, montrent qui voit et gère quoi : un <strong>médicament suivi par lot</strong> côté consommables, des <strong>chaises de bureau</strong> (équipement sans n° de série) côté équipements.</p>
         <table class="cast">
           <thead><tr><th>Personne</th><th>Profil</th><th>Ce qu'elle fait dans ce cas</th></tr></thead>
-          <tbody><tr><td><strong>Sarah Amani</strong></td><td><span class="badge p-log">Logistique</span></td><td>Responsable logistique : valide les entrées, affecte et récupère le matériel, transfère, fait l'inventaire.</td></tr><tr><td><strong>Joseph Mbala</strong></td><td><span class="badge p-store">Magasinier</span></td><td>Saisit les bons d'entrée, sert les demandes, réceptionne les transferts. (Dans la démo, il a aussi le profil Logistique : voir la remarque à l'étape 4.)</td></tr><tr><td><strong>Marie Bahati</strong></td><td><span class="badge p-req">Demandeur</span></td><td>Demande des articles au magasin et accuse réception.</td></tr><tr><td><strong>David Lukusa</strong></td><td><span class="badge p-mgr">Manager niveau 1</span></td><td>Reçoit un ordinateur portable en dotation, puis le rend.</td></tr><tr><td><strong>Alice Admin</strong></td><td><span class="badge p-admin">Administrateur</span></td><td>Crée les dépôts et leurs accès, valide les écarts d'inventaire, suit la valorisation.</td></tr></tbody>
+          <tbody><tr><td><strong>Sarah Amani</strong></td><td><span class="badge p-log">Logistique</span></td><td>Responsable logistique : valide les entrées, affecte et récupère le matériel, transfère, fait l'inventaire.</td></tr><tr><td><strong>Joseph Mbala</strong></td><td><span class="badge p-store">Magasinier</span></td><td>Saisit les bons d'entrée, sert les demandes, réceptionne les transferts. (Dans la démo, il a aussi le profil Logistique : voir la remarque à l'étape 4.)</td></tr><tr><td><strong>Marie Bahati</strong></td><td><span class="badge p-req">Demandeur</span></td><td>Demande des articles au magasin et accuse réception.</td></tr><tr><td><strong>David Lukusa</strong></td><td><span class="badge p-mgr">Manager niveau 1</span></td><td>Reçoit un ordinateur portable en dotation, puis le rend.</td></tr><tr><td><strong>Alice Admin</strong></td><td><span class="badge p-admin">Administrateur</span></td><td>Crée les dépôts et leurs accès, valide les écarts d'inventaire, suit la valorisation.</td></tr><tr><td><strong>Claire Furaha</strong></td><td><span class="badge p-doc">Gestionnaire des consommables</span></td><td>Pharmacie : gère les seuls consommables du projet Eau potable Goma — reçoit et sort les médicaments.</td></tr><tr><td><strong>Didier Kambale</strong></td><td><span class="badge p-doc">Gestionnaire des équipements</span></td><td>Gère les seuls équipements du projet Eau potable Goma — reçoit et affecte le mobilier.</td></tr></tbody>
         </table>
         <p class="hint">Cliquez sur une capture pour l'ouvrir en grand. Données de démonstration (entreprise « Démo procureApp »).</p>
       </section>
@@ -623,12 +623,226 @@
     </article>
   </section>
   <section class="phase" id="phase-7">
-    <h2><span class="phase-num">7</span>Suivi, prévision et valorisation</h2>
-    
+    <h2><span class="phase-num">7</span>Équipements et consommables : qui voit et gère quoi</h2>
+    <p class="phase-intro">Dans le module Stock, chaque nature a deux niveaux de droit : <strong>voir</strong> (finance, auditeur, direction…) et <strong>gérer</strong> (fiche article, entrées, sorties, inventaires). Seul celui qui <strong>gère</strong> une nature fait entrer ou sortir ses articles. Les profils de stock sont aussi <strong>liés au projet</strong> : un gestionnaire limité à un projet ne voit que le stock financé par ce projet (et le stock sans projet). La réquisition, elle, n'est pas concernée : chacun commande ce qu'il veut.</p>
     
     <article class="step" id="etape-30">
       <header>
         <span class="step-num">30</span>
+        <div>
+          <h3>La nature de chaque article</h3>
+          <div class="who"><span class="badge p-admin">Administrateur</span><span class="user">Alice Admin</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le catalogue affiche la colonne <strong>Nature</strong> et un filtre « Toutes les natures ». Papier, toner, savon et <strong>paracétamol</strong> sont des <strong>consommables</strong> ; l'ordinateur portable (suivi par n° de série) et la <strong>chaise de bureau</strong> (sans n° de série) sont des <strong>équipements</strong>.</p>
+          <ul><li>Un article suivi par n° de série est toujours un équipement.</li><li>La nature se choisit dans la fiche de l'article ; à l'import Excel, colonne « Nature ».</li></ul>
+          
+        </div>
+        <a class="shot" href="img/stock/32_admin_catalogue-natures.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/stock/32_admin_catalogue-natures.webp" alt="La nature de chaque article" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-31">
+      <header>
+        <span class="step-num">31</span>
+        <div>
+          <h3>Un gestionnaire limité à un projet</h3>
+          <div class="who"><span class="badge p-admin">Administrateur</span><span class="user">Alice Admin</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Fiche de <strong>Claire Furaha</strong> : profil « Gestionnaire des consommables », exercé sur le seul projet <strong>Eau potable Goma</strong> (rubrique « Profils par projet »). Elle voit et gère les consommables de ce projet et le stock sans projet — jamais les équipements, ni le stock d'un autre projet.</p>
+          <ul><li>« Tous les projets » coché : pas de limite de projet.</li><li>Le magasinier et la logistique gèrent les deux natures.</li></ul>
+          
+        </div>
+        <a class="shot" href="img/stock/33_admin_gestionnaire-consommables-projet.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/stock/33_admin_gestionnaire-consommables-projet.webp" alt="Un gestionnaire limité à un projet" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-32">
+      <header>
+        <span class="step-num">32</span>
+        <div>
+          <h3>Exemple consommable : médicament reçu par lot</h3>
+          <div class="who"><span class="badge p-doc">Gestionnaire des consommables</span><span class="user">Claire Furaha</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>La pharmacie centrale remet une dotation de <strong>paracétamol 500 mg</strong> : Claire saisit un bon d'entrée avec <strong>deux lots</strong> et leur <strong>date de péremption</strong> (30 boîtes qui périment dans 2 mois et demi, 50 dans 20 mois). Le bon est validé par Sarah (logistique) : les deux lots entrent en stock.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/stock/34_consommables_bon-entree-medicament.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/stock/34_consommables_bon-entree-medicament.webp" alt="Exemple consommable : médicament reçu par lot" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-33">
+      <header>
+        <span class="step-num">33</span>
+        <div>
+          <h3>Menu « Consommables »</h3>
+          <div class="who"><span class="badge p-doc">Gestionnaire des consommables</span><span class="user">Claire Furaha</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le stock des consommables <strong>par dépôt et par lot</strong>, avec la date de péremption : un lot qui périme dans moins de 90 jours est signalé en orange, un lot périmé en rouge. Filtres par dépôt et par péremption, export Excel.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/stock/35_consommables_menu-consommables.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/stock/35_consommables_menu-consommables.webp" alt="Menu « Consommables »" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-34">
+      <header>
+        <span class="step-num">34</span>
+        <div>
+          <h3>Elle ne voit que les consommables</h3>
+          <div class="who"><span class="badge p-doc">Gestionnaire des consommables</span><span class="user">Claire Furaha</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Dans le catalogue, l'état du stock, le journal, la valorisation… Claire ne voit que les consommables. Le menu « Équipements » n'apparaît pas pour elle.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/stock/36_consommables_catalogue-consommables.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/stock/36_consommables_catalogue-consommables.webp" alt="Elle ne voit que les consommables" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-35">
+      <header>
+        <span class="step-num">35</span>
+        <div>
+          <h3>Sortie : le lot qui périme le plus tôt part en premier</h3>
+          <div class="who"><span class="badge p-doc">Gestionnaire des consommables</span><span class="user">Claire Furaha</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Claire sort 10 boîtes pour la trousse de premiers secours de Marie : l'application prend automatiquement le <strong>lot qui périme le plus tôt</strong> (FEFO). Un bon de sortie = <strong>une opération de sortie</strong>, qui peut contenir plusieurs articles.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/stock/37_consommables_sortie-medicament-fefo.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/stock/37_consommables_sortie-medicament-fefo.webp" alt="Sortie : le lot qui périme le plus tôt part en premier" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-36">
+      <header>
+        <span class="step-num">36</span>
+        <div>
+          <h3>PDF : bon de sortie du médicament</h3>
+          <div class="who"><span class="badge p-doc">Document</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le bon de sortie PDF indique le <strong>n° de lot</strong> et la <strong>péremption</strong> de chaque ligne, à signer par le magasinier et la personne qui reçoit.</p>
+          
+          
+        </div>
+        <a class="shot doc" href="img/stock/P5_pdf_sortie-medicament.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/stock/P5_pdf_sortie-medicament.webp" alt="PDF : bon de sortie du médicament" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-37">
+      <header>
+        <span class="step-num">37</span>
+        <div>
+          <h3>Un document mixte : lignes masquées</h3>
+          <div class="who"><span class="badge p-doc">Gestionnaire des consommables</span><span class="user">Claire Furaha</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Le don du début (savon, ordinateurs, papier) mélange les deux natures. Claire voit le bon avec ses seules lignes de consommables ; un bandeau indique les lignes masquées. Elle ne pourrait ni l'annuler ni le valider : cela toucherait aussi les ordinateurs.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/stock/38_consommables_document-mixte.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/stock/38_consommables_document-mixte.webp" alt="Un document mixte : lignes masquées" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-38">
+      <header>
+        <span class="step-num">38</span>
+        <div>
+          <h3>Exemple équipement : chaises de bureau</h3>
+          <div class="who"><span class="badge p-doc">Gestionnaire des équipements</span><span class="user">Didier Kambale</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Didier saisit un bon d'entrée de <strong>6 chaises de bureau</strong> achetées sur caisse (équipement <strong>sans n° de série</strong>), validé par Sarah. Dans son catalogue, il ne voit que les équipements.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/stock/39_equipements_catalogue-equipements.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/stock/39_equipements_catalogue-equipements.webp" alt="Exemple équipement : chaises de bureau" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-39">
+      <header>
+        <span class="step-num">39</span>
+        <div>
+          <h3>Menu « Équipements »</h3>
+          <div class="who"><span class="badge p-doc">Gestionnaire des équipements</span><span class="user">Didier Kambale</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Les équipements suivis par n° de série (ordinateurs) avec leur n° d'inventaire, leur statut et leur détenteur.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/stock/40_equipements_menu-equipements.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/stock/40_equipements_menu-equipements.webp" alt="Menu « Équipements »" loading="lazy">
+        </a>
+      </div>
+    </article>
+    <article class="step" id="etape-40">
+      <header>
+        <span class="step-num">40</span>
+        <div>
+          <h3>Sortie vers un département</h3>
+          <div class="who"><span class="badge p-doc">Gestionnaire des équipements</span><span class="user">Didier Kambale</span></div>
+        </div>
+      </header>
+      <div class="step-body">
+        <div class="text">
+          <p>Didier remet 4 chaises au département <strong>Logistique</strong> pour le bureau de l'antenne. Il ne pourrait pas sortir de médicaments : il ne gère pas les consommables.</p>
+          
+          
+        </div>
+        <a class="shot" href="img/stock/41_equipements_sortie-chaises-departement.webp" target="_blank" rel="noopener" title="Agrandir la capture">
+          <img src="img/stock/41_equipements_sortie-chaises-departement.webp" alt="Sortie vers un département" loading="lazy">
+        </a>
+      </div>
+    </article>
+  </section>
+  <section class="phase" id="phase-8">
+    <h2><span class="phase-num">8</span>Suivi, prévision et valorisation</h2>
+    
+    
+    <article class="step" id="etape-41">
+      <header>
+        <span class="step-num">41</span>
         <div>
           <h3>Journal des mouvements (par opération)</h3>
           <div class="who"><span class="badge p-log">Logistique</span><span class="user">Sarah Amani</span></div>
@@ -645,9 +859,9 @@
         </a>
       </div>
     </article>
-    <article class="step" id="etape-31">
+    <article class="step" id="etape-42">
       <header>
-        <span class="step-num">31</span>
+        <span class="step-num">42</span>
         <div>
           <h3>Détail d'une opération</h3>
           <div class="who"><span class="badge p-log">Logistique</span><span class="user">Sarah Amani</span></div>
@@ -664,9 +878,9 @@
         </a>
       </div>
     </article>
-    <article class="step" id="etape-32">
+    <article class="step" id="etape-43">
       <header>
-        <span class="step-num">32</span>
+        <span class="step-num">43</span>
         <div>
           <h3>Fiche d'un article</h3>
           <div class="who"><span class="badge p-log">Logistique</span><span class="user">Sarah Amani</span></div>
@@ -683,9 +897,9 @@
         </a>
       </div>
     </article>
-    <article class="step" id="etape-33">
+    <article class="step" id="etape-44">
       <header>
-        <span class="step-num">33</span>
+        <span class="step-num">44</span>
         <div>
           <h3>Prévision du réapprovisionnement</h3>
           <div class="who"><span class="badge p-log">Logistique</span><span class="user">Sarah Amani</span></div>
@@ -702,9 +916,9 @@
         </a>
       </div>
     </article>
-    <article class="step" id="etape-34">
+    <article class="step" id="etape-45">
       <header>
-        <span class="step-num">34</span>
+        <span class="step-num">45</span>
         <div>
           <h3>Valorisation (CMUP)</h3>
           <div class="who"><span class="badge p-admin">Administrateur</span><span class="user">Alice Admin</span></div>
@@ -721,9 +935,9 @@
         </a>
       </div>
     </article>
-    <article class="step" id="etape-35">
+    <article class="step" id="etape-46">
       <header>
-        <span class="step-num">35</span>
+        <span class="step-num">46</span>
         <div>
           <h3>Rapprochement réceptions ↔ stock</h3>
           <div class="who"><span class="badge p-admin">Administrateur</span><span class="user">Alice Admin</span></div>
@@ -740,9 +954,9 @@
         </a>
       </div>
     </article>
-    <article class="step" id="etape-36">
+    <article class="step" id="etape-47">
       <header>
-        <span class="step-num">36</span>
+        <span class="step-num">47</span>
         <div>
           <h3>État du stock en fin de scénario</h3>
           <div class="who"><span class="badge p-log">Logistique</span><span class="user">Sarah Amani</span></div>
@@ -762,7 +976,7 @@
   </section>
       <section id="regles" class="phase rules"><h2>Règles à retenir</h2>
         <table class="cast"><thead><tr><th>Règle</th><th>Ce que fait procureApp</th></tr></thead>
-        <tbody><tr><td><strong>Deux personnes pour une entrée</strong></td><td>Un bon d'entrée est saisi par une personne et validé par une autre ; le stock n'augmente qu'à la validation.</td></tr><tr><td><strong>Accès aux dépôts</strong></td><td>On ne réceptionne, ne sort et ne compte que dans les dépôts auxquels on a accès.</td></tr><tr><td><strong>Lots et péremption</strong></td><td>Sortie automatique du lot qui périme le plus tôt (FEFO) ; lot périmé refusé.</td></tr><tr><td><strong>Projet de financement</strong></td><td>Chaque entrée garde son projet ; une sortie pour un projet ne prend jamais le stock d'un autre projet.</td></tr><tr><td><strong>Journal immuable</strong></td><td>Un mouvement ne se modifie ni ne se supprime : on corrige par une écriture inverse (annulation, ajustement).</td></tr><tr><td><strong>Inventaire</strong></td><td>Écarts validés par l'administrateur uniquement.</td></tr></tbody></table></section>
+        <tbody><tr><td><strong>Deux personnes pour une entrée</strong></td><td>Un bon d'entrée est saisi par une personne et validé par une autre ; le stock n'augmente qu'à la validation.</td></tr><tr><td><strong>Accès aux dépôts</strong></td><td>On ne réceptionne, ne sort et ne compte que dans les dépôts auxquels on a accès.</td></tr><tr><td><strong>Lots et péremption</strong></td><td>Sortie automatique du lot qui périme le plus tôt (FEFO) ; lot périmé refusé.</td></tr><tr><td><strong>Projet de financement</strong></td><td>Chaque entrée garde son projet ; une sortie pour un projet ne prend jamais le stock d'un autre projet.</td></tr><tr><td><strong>Journal immuable</strong></td><td>Un mouvement ne se modifie ni ne se supprime : on corrige par une écriture inverse (annulation, ajustement).</td></tr><tr><td><strong>Inventaire</strong></td><td>Écarts validés par l'administrateur uniquement.</td></tr><tr><td><strong>Équipements et consommables</strong></td><td>Voir une nature ≠ la gérer : seul celui qui gère une nature fait entrer ou sortir ses articles. Un gestionnaire limité à un projet ne voit que le stock de ce projet et le stock sans projet.</td></tr></tbody></table></section>
       <footer class="end">procureApp — documentation « cas concret ». Pour l'aide détaillée de chaque écran, utilisez le bouton « ? » de l'application.</footer>
     </div>
   </div>

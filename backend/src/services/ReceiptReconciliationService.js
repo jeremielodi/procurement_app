@@ -12,6 +12,8 @@
 const ExcelJS = require('exceljs');
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
 
 const EPS = 1e-6;
 const COST_TOLERANCE = 0.01;
@@ -28,6 +30,11 @@ class ReceiptReconciliationService {
     if (isoDate(fromDate)) { params.push(fromDate); where += ` AND g.receipt_date >= $${params.length}::date`; }
     if (isoDate(toDate)) { params.push(toDate); where += ` AND g.receipt_date <= $${params.length}::date`; }
     if (warehouseId) { params.push(warehouseId); where += ` AND g.warehouse_id = $${params.length}`; }
+    // Natures autorisées (migration 63) ; ligne en texte libre (sans article du catalogue) : toujours visible
+    const natureCond = await stockNature.filter('si.nature', params);
+    if (natureCond) where += ` AND (si.id IS NULL OR ${natureCond.replace(/^ AND /, '')})`;
+    // Projet de la réquisition du bon de commande (projet de financement de la réception — migration 65)
+    where += await stockProject.filter('(SELECT rq.project_id FROM requisitions rq WHERE rq.id = po.requisition_id)', params);
     if (search && String(search).trim()) {
       params.push(`%${String(search).trim()}%`);
       const p = `$${params.length}`;

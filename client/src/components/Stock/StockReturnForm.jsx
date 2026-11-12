@@ -13,7 +13,7 @@ import SearchSelect from '../Common/SearchSelect';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
-const ERROR_CODES = ['OVER_RETURN', 'NOT_HOLDER', 'ISSUE_CANCELLED', 'WAREHOUSE_FORBIDDEN', 'NO_LINES', 'HOLDER_REQUIRED'];
+const ERROR_CODES = ['OVER_RETURN', 'NOT_HOLDER', 'ISSUE_CANCELLED', 'WAREHOUSE_FORBIDDEN', 'NO_LINES', 'HOLDER_REQUIRED', 'NATURE_FORBIDDEN'];
 
 export default function StockReturnForm() {
   const navigate = useNavigate();

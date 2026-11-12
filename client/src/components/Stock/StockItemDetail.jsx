@@ -8,6 +8,7 @@ import { stockItemService, stockService } from '../../services/stockService';
 import { MovementTable } from './StockMovements';
 import StockItemPlanning from './StockItemPlanning';
 import { t, getLocale, useTranslation } from '../../i18n';
+import { NatureBadge } from './StockNature';
 
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(getLocale()) : '—');
@@ -51,6 +52,7 @@ export default function StockItemDetail() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2 break-words"><Package className="shrink-0" /> {item.name}</h1>
           <p className="text-sm text-gray-500">
             <span className="font-mono font-semibold">{item.code}</span> · {item.unit}{item.category_name && ` · ${item.category_name}`}
+            <NatureBadge nature={item.nature} className="ml-2" />
             {!item.is_active && <span className="ml-2 rounded bg-gray-100 px-2 py-0.5 text-xs">{t('refs.inactive')}</span>}
           </p>
           {item.description && <p className="mt-2 text-sm text-gray-600">{item.description}</p>}

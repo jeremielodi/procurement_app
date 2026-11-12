@@ -22,7 +22,7 @@ const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(getLocale()) : '');
 const today = () => new Date().toISOString().slice(0, 10);
 const newLine = () => ({ key: Math.random().toString(36).slice(2), text: '', item: null, lotId: '', quantity: '', balances: null, units: null, unitIds: [], requestLineId: null, maxQuantity: null });
-const ERROR_CODES = ['STOCK_INSUFFICIENT', 'WAREHOUSE_FORBIDDEN', 'RECIPIENT_INVALID', 'LOT_EXPIRED', 'ITEM_NOT_STOCKABLE', 'NO_LINES', 'INVALID_QUANTITY', 'UNITS_REQUIRED', 'UNIT_UNAVAILABLE',
+const ERROR_CODES = ['NATURE_FORBIDDEN', 'STOCK_INSUFFICIENT', 'WAREHOUSE_FORBIDDEN', 'RECIPIENT_INVALID', 'LOT_EXPIRED', 'ITEM_NOT_STOCKABLE', 'NO_LINES', 'INVALID_QUANTITY', 'UNITS_REQUIRED', 'UNIT_UNAVAILABLE',
   'INVALID_DESTINATION', 'RECIPIENT_REQUIRED', 'DESTINATION_REQUIRED', 'SAME_WAREHOUSE', 'DESTINATION_INVALID', 'DEPARTMENT_REQUIRED', 'DEPARTMENT_INVALID',
   'REQUEST_NOT_OPEN', 'REQUEST_QUANTITY_EXCEEDED', 'REQUEST_DESTINATION_MISMATCH', 'REQUEST_WAREHOUSE_MISMATCH', 'REQUEST_LINE_INVALID'];
 
@@ -341,7 +341,7 @@ export default function StockIssueForm() {
                 return (
                   <tr key={l.key} className={submitted && c.errors.length ? 'bg-red-50/60' : ''}>
                     <td className="px-3 py-2 align-top">
-                      <CatalogAutocomplete
+                      <CatalogAutocomplete stockScope
                         linked={l.item}
                         onLink={(item) => { updateLine(l.key, { item, text: item ? item.name : '', lotId: '', balances: null }); if (item) loadBalances(l.key, item); }}
                         onTextChange={(text) => updateLine(l.key, { text })}

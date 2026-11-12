@@ -40,6 +40,7 @@ import {
   PackagePlus,
   Inbox,
   Laptop,
+  Pill,
   Undo2,
   ScrollText,
   ShieldCheck,
@@ -191,7 +192,8 @@ const menuGroups = [
       { path: '/stock/entries', icon: PackagePlus, label: 'nav.stockEntries', permission: 'VIEW_STOCK' },
       { path: '/stock/issues', icon: PackageMinus, label: 'nav.stockIssues', permission: 'VIEW_STOCK' },
       { path: '/stock/returns', icon: Undo2, label: 'nav.stockReturns', permission: 'VIEW_STOCK' },
-      { path: '/stock/equipment', icon: Laptop, label: 'nav.equipment', permission: 'VIEW_STOCK' },
+      { path: '/stock/equipment', icon: Laptop, label: 'nav.equipment', permission: 'VIEW_EQUIPMENT' }, // nature « Équipement » (migration 63)
+      { path: '/stock/consumables', icon: Pill, label: 'nav.consumables', permission: 'VIEW_CONSUMABLES' }, // nature « Consommable »
       { path: '/stock/valuation', icon: Coins, label: 'nav.stockValuation', permission: 'VIEW_STOCK' },
       { path: '/stock/reconciliation', icon: ShieldCheck, label: 'nav.receiptRecon', permission: 'VIEW_STOCK' },
       { path: '/stock/counts', icon: ClipboardCheck, label: 'nav.stockCounts', permission: 'VIEW_STOCK' },

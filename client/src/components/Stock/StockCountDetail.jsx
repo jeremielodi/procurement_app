@@ -11,11 +11,12 @@ import { CountStatusBadge } from './StockCountList';
 import { stockCountService } from '../../services/stockService';
 import { usePermissions } from '../../hooks/usePermissions';
 import { t, getLocale } from '../../i18n';
+import { HiddenLinesNotice } from './StockNature';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const fmtQty = (n) => new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(Number(n) || 0);
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString(getLocale(), { dateStyle: 'medium', timeStyle: 'short' }) : '—');
-const ERROR_CODES = ['NOT_COMPLETE', 'BALANCE_CHANGED', 'COUNT_CLOSED', 'LINE_EXISTS', 'SERIAL_ITEM', 'EXPIRY_REQUIRED', 'LOT_REQUIRED',
+const ERROR_CODES = ['NATURE_FORBIDDEN', 'ITEM_NATURE_MISMATCH', 'NOT_COMPLETE', 'BALANCE_CHANGED', 'COUNT_CLOSED', 'LINE_EXISTS', 'SERIAL_ITEM', 'EXPIRY_REQUIRED', 'LOT_REQUIRED',
   'INVALID_QUANTITY', 'INVALID_UNIT_COUNT', 'WAREHOUSE_FORBIDDEN', 'ITEM_NOT_STOCKABLE'];
 
 export default function StockCountDetail() {
@@ -49,7 +50,8 @@ export default function StockCountDetail() {
   if (loading) return <div className="flex justify-center p-10"><RefreshCw className="animate-spin text-blue-500" /></div>;
   if (!count) return <div className="p-6 text-gray-500">{t('stock.count.notFound')}</div>;
 
-  const editable = count.status === 'OPEN' && hasPermission('COUNT_STOCK');
+  // Compter / valider / annuler : gérer la nature de l'inventaire (can_manage du serveur, MANAGE_* — migration 63)
+  const editable = count.status === 'OPEN' && hasPermission('COUNT_STOCK') && !!count.can_manage;
   const counted = lines.filter(l => l.counted !== null && l.counted !== undefined).length;
   const withDiff = lines.filter(l => l.difference !== null && Math.abs(l.difference) > 1e-9);
   const dirty = Object.keys(draft).length;
@@ -130,6 +132,7 @@ export default function StockCountDetail() {
         {editable && <button onClick={save} disabled={!dirty || busy} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50" data-testid="count-save"><Save size={16} /> {t('stock.count.save')}</button>}
       </div>
 
+      <HiddenLinesNotice count={count.hidden_line_count} />
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs text-gray-500">
@@ -182,7 +185,7 @@ export default function StockCountDetail() {
         </table>
       </div>
 
-      {count.status === 'OPEN' && (
+      {count.status === 'OPEN' && count.can_manage && (
         <div className="flex flex-wrap gap-2">
           {hasPermission('ADJUST_STOCK') && (
             <button onClick={() => setDialog('validate')} disabled={dirty > 0}
@@ -229,7 +232,7 @@ export default function StockCountDetail() {
         {dialog === 'add' && (
           <div className="space-y-3 text-sm">
             <p className="text-gray-600">{t('stock.count.addFoundHint')}</p>
-            <CatalogAutocomplete linked={found.item} onLink={(item) => setFound(f => ({ ...f, item, text: item ? item.name : '' }))}
+            <CatalogAutocomplete stockScope linked={found.item} onLink={(item) => setFound(f => ({ ...f, item, text: item ? item.name : '' }))}
               onTextChange={(text) => setFound(f => ({ ...f, text }))} placeholder={t('stock.issue.itemSearch')} className={inputCls} minChars={1}
               inputProps={{ value: found.text, readOnly: !!found.item }} />
             {found.item?.track_lots && (

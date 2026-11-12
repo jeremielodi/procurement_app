@@ -439,6 +439,7 @@ page({
     'L\'entreprise a deux dépôts à Goma : le **Magasin central Goma (MAG-GOMA)** et le **Magasin antenne Nord (MAG-NORD)**. Le stock du magasin central vient d\'être alimenté par la réception de la commande du cas « Cycle d\'achat complet » (50 rames, 10 toners, entrées automatiquement en stock).',
     'Dans ce cas, le magasin reçoit un **don** (savon, ordinateurs, papier), sert une **demande** d\'une employée, **affecte un ordinateur** puis le récupère, **transfère** du stock vers l\'antenne Nord (avec une perte en transit) et fait son **inventaire** de fin de trimestre.',
     'Chaque opération écrit des **mouvements de stock** dans un journal non modifiable ; les soldes ne peuvent jamais devenir négatifs, et chaque entrée garde le **projet qui l\'a financée**.',
+    'Chaque article a une **nature** : **équipement** (ordinateur, chaise…) ou **consommable** (papier, savon, médicament…). Deux gestionnaires spécialisés, limités au projet Eau potable Goma, montrent qui voit et gère quoi : un **médicament suivi par lot** côté consommables, des **chaises de bureau** (équipement sans n° de série) côté équipements.',
   ],
   cast: [
     ['Sarah Amani', 'Logistique', 'Responsable logistique : valide les entrées, affecte et récupère le matériel, transfère, fait l\'inventaire.'],
@@ -446,6 +447,8 @@ page({
     ['Marie Bahati', 'Demandeur', 'Demande des articles au magasin et accuse réception.'],
     ['David Lukusa', 'Manager niveau 1', 'Reçoit un ordinateur portable en dotation, puis le rend.'],
     ['Alice Admin', 'Administrateur', 'Crée les dépôts et leurs accès, valide les écarts d\'inventaire, suit la valorisation.'],
+    ['Claire Furaha', 'Gestionnaire des consommables', 'Pharmacie : gère les seuls consommables du projet Eau potable Goma — reçoit et sort les médicaments.'],
+    ['Didier Kambale', 'Gestionnaire des équipements', 'Gère les seuls équipements du projet Eau potable Goma — reçoit et affecte le mobilier.'],
   ],
   phases: [
     { title: 'Organisation du stock', steps: S([
@@ -548,6 +551,41 @@ page({
         'Menu **Ajustements** : les corrections de stock avec leur motif (casse, perte, vol, péremption, trouvé, correction…). Un ajustement manuel est réservé à l\'administrateur.',
       ] },
     ]) },
+    { title: 'Équipements et consommables : qui voit et gère quoi', intro: 'Dans le module Stock, chaque nature a deux niveaux de droit : **voir** (finance, auditeur, direction…) et **gérer** (fiche article, entrées, sorties, inventaires). Seul celui qui **gère** une nature fait entrer ou sortir ses articles. Les profils de stock sont aussi **liés au projet** : un gestionnaire limité à un projet ne voit que le stock financé par ce projet (et le stock sans projet). La réquisition, elle, n\'est pas concernée : chacun commande ce qu\'il veut.', steps: S([
+      { img: '32_admin_catalogue-natures', dir: 'stock', profile: 'Administrateur', user: 'Alice Admin', title: 'La nature de chaque article', text: [
+        'Le catalogue affiche la colonne **Nature** et un filtre « Toutes les natures ». Papier, toner, savon et **paracétamol** sont des **consommables** ; l\'ordinateur portable (suivi par n° de série) et la **chaise de bureau** (sans n° de série) sont des **équipements**.',
+      ], points: ['Un article suivi par n° de série est toujours un équipement.', 'La nature se choisit dans la fiche de l\'article ; à l\'import Excel, colonne « Nature ».'] },
+      { img: '33_admin_gestionnaire-consommables-projet', dir: 'stock', profile: 'Administrateur', user: 'Alice Admin', title: 'Un gestionnaire limité à un projet', text: [
+        'Fiche de **Claire Furaha** : profil « Gestionnaire des consommables », exercé sur le seul projet **Eau potable Goma** (rubrique « Profils par projet »). Elle voit et gère les consommables de ce projet et le stock sans projet — jamais les équipements, ni le stock d\'un autre projet.',
+      ], points: ['« Tous les projets » coché : pas de limite de projet.', 'Le magasinier et la logistique gèrent les deux natures.'] },
+      { img: '34_consommables_bon-entree-medicament', dir: 'stock', profile: 'Gestionnaire des consommables', user: 'Claire Furaha', title: 'Exemple consommable : médicament reçu par lot', text: [
+        'La pharmacie centrale remet une dotation de **paracétamol 500 mg** : Claire saisit un bon d\'entrée avec **deux lots** et leur **date de péremption** (30 boîtes qui périment dans 2 mois et demi, 50 dans 20 mois). Le bon est validé par Sarah (logistique) : les deux lots entrent en stock.',
+      ] },
+      { img: '35_consommables_menu-consommables', dir: 'stock', profile: 'Gestionnaire des consommables', user: 'Claire Furaha', title: 'Menu « Consommables »', text: [
+        'Le stock des consommables **par dépôt et par lot**, avec la date de péremption : un lot qui périme dans moins de 90 jours est signalé en orange, un lot périmé en rouge. Filtres par dépôt et par péremption, export Excel.',
+      ] },
+      { img: '36_consommables_catalogue-consommables', dir: 'stock', profile: 'Gestionnaire des consommables', user: 'Claire Furaha', title: 'Elle ne voit que les consommables', text: [
+        'Dans le catalogue, l\'état du stock, le journal, la valorisation… Claire ne voit que les consommables. Le menu « Équipements » n\'apparaît pas pour elle.',
+      ] },
+      { img: '37_consommables_sortie-medicament-fefo', dir: 'stock', profile: 'Gestionnaire des consommables', user: 'Claire Furaha', title: 'Sortie : le lot qui périme le plus tôt part en premier', text: [
+        'Claire sort 10 boîtes pour la trousse de premiers secours de Marie : l\'application prend automatiquement le **lot qui périme le plus tôt** (FEFO). Un bon de sortie = **une opération de sortie**, qui peut contenir plusieurs articles.',
+      ] },
+      { img: 'P5_pdf_sortie-medicament', doc: true, profile: 'Document', title: 'PDF : bon de sortie du médicament', text: [
+        'Le bon de sortie PDF indique le **n° de lot** et la **péremption** de chaque ligne, à signer par le magasinier et la personne qui reçoit.',
+      ] },
+      { img: '38_consommables_document-mixte', dir: 'stock', profile: 'Gestionnaire des consommables', user: 'Claire Furaha', title: 'Un document mixte : lignes masquées', text: [
+        'Le don du début (savon, ordinateurs, papier) mélange les deux natures. Claire voit le bon avec ses seules lignes de consommables ; un bandeau indique les lignes masquées. Elle ne pourrait ni l\'annuler ni le valider : cela toucherait aussi les ordinateurs.',
+      ] },
+      { img: '39_equipements_catalogue-equipements', dir: 'stock', profile: 'Gestionnaire des équipements', user: 'Didier Kambale', title: 'Exemple équipement : chaises de bureau', text: [
+        'Didier saisit un bon d\'entrée de **6 chaises de bureau** achetées sur caisse (équipement **sans n° de série**), validé par Sarah. Dans son catalogue, il ne voit que les équipements.',
+      ] },
+      { img: '40_equipements_menu-equipements', dir: 'stock', profile: 'Gestionnaire des équipements', user: 'Didier Kambale', title: 'Menu « Équipements »', text: [
+        'Les équipements suivis par n° de série (ordinateurs) avec leur n° d\'inventaire, leur statut et leur détenteur.',
+      ] },
+      { img: '41_equipements_sortie-chaises-departement', dir: 'stock', profile: 'Gestionnaire des équipements', user: 'Didier Kambale', title: 'Sortie vers un département', text: [
+        'Didier remet 4 chaises au département **Logistique** pour le bureau de l\'antenne. Il ne pourrait pas sortir de médicaments : il ne gère pas les consommables.',
+      ] },
+    ]) },
     { title: 'Suivi, prévision et valorisation', steps: S([
       { img: '25_logistique_journal-operations', dir: 'stock', profile: 'Logistique', user: 'Sarah Amani', title: 'Journal des mouvements (par opération)', text: [
         'Menu **Mouvements** : chaque opération (réception, bon d\'entrée, sortie, transfert, inventaire…) regroupe ses mouvements sous un n° MVG-…. Vue « Détail » : un mouvement par ligne, filtrable par article, dépôt, projet, type.',
@@ -579,6 +617,7 @@ page({
     ['Projet de financement', 'Chaque entrée garde son projet ; une sortie pour un projet ne prend jamais le stock d\'un autre projet.'],
     ['Journal immuable', 'Un mouvement ne se modifie ni ne se supprime : on corrige par une écriture inverse (annulation, ajustement).'],
     ['Inventaire', 'Écarts validés par l\'administrateur uniquement.'],
+    ['Équipements et consommables', 'Voir une nature ≠ la gérer : seul celui qui gère une nature fait entrer ou sortir ses articles. Un gestionnaire limité à un projet ne voit que le stock de ce projet et le stock sans projet.'],
   ],
 });
 

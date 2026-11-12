@@ -1,5 +1,7 @@
 // Étape 3 — cas concret « gestion de stock » : don (bon d'entrée) validé par une autre personne, demande au magasin
-// servie et reçue, affectation puis retour d'un ordinateur, transfert avec perte en transit, inventaire, rapports.
+// servie et reçue, affectation puis retour d'un ordinateur, transfert avec perte en transit, inventaire, rapports ;
+// équipements et consommables (migrations 63 à 65) : médicament suivi par lot (gestionnaire des consommables, sortie FEFO),
+// chaises de bureau = équipement sans n° de série (gestionnaire des équipements), document mixte aux lignes masquées.
 // À lancer après 2-workflow.mjs (le stock du magasin central vient de la réception de la commande).
 import { call, tokenFor, loadState, saveState, sleep, future, openBrowser, clickButton } from './lib.mjs';
 
@@ -13,6 +15,7 @@ export async function stockPdfs(B, run, token) {
   await pdf(`/stock-issues/${run.issueId}/pdf?lang=fr`, 'P2_pdf_bon-de-sortie');
   await pdf(`/stock-issues/${run.transferId}/pdf?lang=fr`, 'P3_pdf_bon-de-transfert');
   await pdf(`/stock-returns/${run.returnId}/pdf?lang=fr`, 'P4_pdf_bon-de-retour');
+  if (run.medIssueId) await pdf(`/stock-issues/${run.medIssueId}/pdf?lang=fr`, 'P5_pdf_sortie-medicament');
 }
 
 export async function stock() {
@@ -119,6 +122,57 @@ export async function stock() {
     await call('POST', `/stock-counts/${count.id}/validate`, await tok('admin'), {});
     await shot('logistic', `/stock/counts/${count.id}`, '23c_logistique_inventaire-valide', { tall: 1200 });
     await shot('logistic', '/stock/adjustments', '24_logistique_ajustements');
+
+    console.log('• Équipements et consommables (nature, voir / gérer, projet)');
+    await shot('admin', '/stock/items', '32_admin_catalogue-natures');
+    // Fiche utilisateur (fenêtre ouverte depuis la liste) : profil exercé sur le seul projet EAU-GOMA
+    await shot('admin', '/users', '33_admin_gestionnaire-consommables-projet', { tall: 1500, before: async (p) => {
+      await p.fill('input[type="text"]', 'Furaha');
+      await p.waitForTimeout(1500);
+      await p.locator('tr', { hasText: 'Furaha' }).first().locator('button').first().click();
+      await p.waitForTimeout(2000);
+    } });
+    // Consommable suivi par lot : médicament reçu en dotation, deux lots aux péremptions différentes
+    const stampLot = Date.now().toString(36).toUpperCase();
+    const med = await call('POST', '/stock-entries', await tok('consumables'), {
+      warehouseId: WH, entryType: 'DONATION', origin: 'Pharmacie centrale provinciale (dotation)', deliveredBy: 'Mme Neema, pharmacienne', reference: 'DOT-PHA-2026-117',
+      reason: 'Dotation pour la trousse de premiers secours des équipes terrain', projectId: D.project.id, currency: 'USD',
+      lines: [
+        { stockItemId: I.para.id, quantity: 30, unitCost: 4.2, lotNumber: `PARA-${stampLot}-A`, expiryDate: future(75) },
+        { stockItemId: I.para.id, quantity: 50, unitCost: 4.2, lotNumber: `PARA-${stampLot}-B`, expiryDate: future(600) },
+      ],
+    });
+    run.medEntryId = med.id; keep();
+    await shot('consumables', `/stock/entries/${med.id}`, '34_consommables_bon-entree-medicament', { tall: 1000 });
+    await call('POST', `/stock-entries/${med.id}/validate`, await tok('logistic'), {});
+    await shot('consumables', '/stock/consumables', '35_consommables_menu-consommables', { tall: 1100 });
+    await shot('consumables', '/stock/items', '36_consommables_catalogue-consommables');
+    // Sortie : le lot qui périme le plus tôt part en premier (FEFO)
+    const medIssue = await call('POST', '/stock-issues', await tok('consumables'), {
+      warehouseId: WH, destinationType: 'USER', recipientId: U.requester.id, projectId: D.project.id, purpose: 'Trousse de premiers secours — mission Katindo',
+      lines: [{ stockItemId: I.para.id, quantity: 10 }],
+    });
+    run.medIssueId = medIssue.id; keep();
+    await shot('consumables', `/stock/issues/${medIssue.id}`, '37_consommables_sortie-medicament-fefo', { tall: 1000 });
+    // Document mixte (le don : savon, ordinateurs, papier) : lignes d'équipement masquées
+    await shot('consumables', `/stock/entries/${run.entryId}`, '38_consommables_document-mixte', { tall: 1100 });
+    // Équipement sans n° de série : chaises de bureau
+    const chairs = await call('POST', '/stock-entries', await tok('equipment'), {
+      warehouseId: WH, entryType: 'OFF_SYSTEM_PURCHASE', origin: 'Mobilier Kivu (achat sur caisse)', deliveredBy: 'Livreur Mobilier Kivu', reference: 'FAC-MK-0932',
+      reason: 'Aménagement du bureau de l\'antenne', projectId: D.project.id, currency: 'USD',
+      lines: [{ stockItemId: I.chair.id, quantity: 6, unitCost: 85 }],
+    });
+    run.chairEntryId = chairs.id; keep();
+    await call('POST', `/stock-entries/${chairs.id}/validate`, await tok('logistic'), {});
+    await shot('equipment', '/stock/items', '39_equipements_catalogue-equipements');
+    await shot('equipment', '/stock/equipment', '40_equipements_menu-equipements');
+    const logDept = list(await call('GET', '/departments', await tok('admin'))).find(d => d.code === 'LOG');
+    const chairIssue = await call('POST', '/stock-issues', await tok('equipment'), {
+      warehouseId: WH, destinationType: 'DEPARTMENT', departmentId: logDept.id, projectId: D.project.id, purpose: 'Bureau de l\'antenne logistique',
+      lines: [{ stockItemId: I.chair.id, quantity: 4 }],
+    });
+    run.chairIssueId = chairIssue.id; keep();
+    await shot('equipment', `/stock/issues/${chairIssue.id}`, '41_equipements_sortie-chaises-departement', { tall: 1000 });
 
     console.log('• Suivi et rapports');
     await sleep(1000);

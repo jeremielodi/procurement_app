@@ -11,6 +11,8 @@ const warehouseModel = require('../models/WarehouseModel');
 const i18n = require('../i18n');
 const { audit, AUDIT } = require('../utils/auditLog');
 const { block, same } = require('../utils/segregation');
+const stockNature = require('../utils/stockNature');
+const stockProject = require('../utils/stockProject');
 
 function sendError(res, error, fallback) {
   if (error.status) {
@@ -57,6 +59,23 @@ async function assertNotAuthor(req, entry) {
   }
 }
 
+/**
+ * Bon d'entrée limité aux lignes des natures autorisées (migration 63) : null si aucune ligne n'est visible ;
+ * hidden_line_count = lignes masquées (valeur totale non communiquée dans ce cas)
+ */
+async function visibleEntry(id) {
+  const entry = await stockEntryModel.getById(id);
+  if (!entry) return null;
+  // Bon financé par un projet où l'utilisateur n'a pas de profil de stock : introuvable (migration 65)
+  if (!stockProject.isAllowed(await stockProject.allowed(), entry.project_id)) return null;
+  const { lines, hidden } = await stockNature.splitLines(entry.lines);
+  if (!lines.length && hidden) return null;
+  entry.lines = lines;
+  entry.hidden_line_count = hidden;
+  if (hidden) entry.total_value = null;
+  return entry;
+}
+
 module.exports = {
   /** GET /stock-entries — filtres warehouseId, entryType, status, search, fromDate, toDate ; pagination */
   async list(req, res) {
@@ -71,9 +90,11 @@ module.exports = {
   /** GET /stock-entries/:id — + actions possibles pour l'utilisateur connecté */
   async get(req, res) {
     try {
-      const entry = await stockEntryModel.getById(req.params.id);
+      const entry = await visibleEntry(req.params.id);
       if (!entry) return res.status(404).json({ success: false, message: 'Bon d\'entrée introuvable' });
       const userId = req.user.id;
+      // Lignes masquées : aucune décision possible sur le bon (elle porterait sur des articles non autorisés)
+      const full = !entry.hidden_line_count && await stockNature.managesLines(entry.lines); // MANAGE_* de toutes ses natures
       const [canValidatePerm, canRecord, onWarehouse] = await Promise.all([
         userModel.hasPermission(userId, 'VALIDATE_STOCK_ENTRIES'),
         userModel.hasPermission(userId, 'RECORD_STOCK_ENTRIES'),
@@ -82,9 +103,9 @@ module.exports = {
       const isAuthor = same(entry.created_by, userId);
       const pending = entry.status === 'PENDING';
       entry.self_validation = pending && isAuthor && canValidatePerm;
-      entry.can_validate = pending && !isAuthor && canValidatePerm && onWarehouse;
-      entry.can_withdraw = pending && isAuthor && canRecord && onWarehouse;
-      entry.can_cancel = entry.status === 'VALIDATED' && canValidatePerm && onWarehouse;
+      entry.can_validate = full && pending && !isAuthor && canValidatePerm && onWarehouse;
+      entry.can_withdraw = full && pending && isAuthor && canRecord && onWarehouse;
+      entry.can_cancel = full && entry.status === 'VALIDATED' && canValidatePerm && onWarehouse;
       res.json({ success: true, data: entry });
     } catch (error) { return sendError(res, error, 'Erreur lors du chargement du bon d\'entrée'); }
   },
@@ -157,7 +178,8 @@ module.exports = {
   /** GET /stock-entries/:id/pdf?lang= — bon d'entrée à imprimer et signer */
   async pdf(req, res) {
     try {
-      const result = await stockEntryPdfService.generate(req.params.id, { lang: i18n.fromRequest(req) });
+      const visible = await visibleEntry(req.params.id);
+      const result = visible && await stockEntryPdfService.generate(req.params.id, { lang: i18n.fromRequest(req), lines: visible.lines });
       if (!result) return res.status(404).json({ success: false, message: 'Bon d\'entrée introuvable' });
       res.set('Content-Type', 'application/pdf');
       res.set('Content-Disposition', `inline; filename="${String(result.entry.entry_number).replace(/[^\w.-]+/g, '_')}.pdf"`);

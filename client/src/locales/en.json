@@ -146,7 +146,8 @@
     "expand": "Expand menu",
     "receiptRecon": "Receipt reconciliation",
     "stockPlanning": "Forecast",
-    "stockRequests": "Store requests"
+    "stockRequests": "Store requests",
+    "consumables": "Consumables"
   },
   "header": {
     "toggleSidebar": "Show / hide menu",
@@ -491,7 +492,7 @@
       "items": [
         {
           "title": "Warehouses and catalogue",
-          "desc": "Several warehouses per city, with per-user access; the item catalogue and existing stock are imported from Excel in minutes (template provided)."
+          "desc": "Several warehouses per city, with per-user access; the item catalogue and existing stock are imported from Excel in minutes (template provided). Equipment and consumables kept apart: each manager only sees their own nature of items."
         },
         {
           "title": "Receipts and goods in notes",
@@ -1844,7 +1845,8 @@
       "ITEM_NOT_FOUND": "Item not found",
       "ITEM_NOT_STOCKABLE": "Item not stockable",
       "ITEM_MISMATCH": "The line is already linked to another item",
-      "WAREHOUSE_MISMATCH": "This receipt is already linked to another warehouse"
+      "WAREHOUSE_MISMATCH": "This receipt is already linked to another warehouse",
+      "NATURE_FORBIDDEN": "You are not allowed to put items of this nature into stock"
     },
     "stockEntry": {
       "action": "Put into stock",
@@ -3449,7 +3451,8 @@
         "expiry": "Expiry date required",
         "expired": "Expiry date has passed",
         "integer": "Equipment needs a whole quantity",
-        "serials": "{{expected}} serial number(s) expected, {{count}} entered"
+        "serials": "{{expected}} serial number(s) expected, {{count}} entered",
+        "NATURE_FORBIDDEN": "You are not allowed to manage items of this nature"
       },
       "status": {
         "PENDING": "Pending validation",
@@ -3583,7 +3586,8 @@
         "REQUEST_QUANTITY_EXCEEDED": "Quantity above what remains on the request",
         "REQUEST_DESTINATION_MISMATCH": "The issue must go to the request's destination",
         "REQUEST_WAREHOUSE_MISMATCH": "The request is addressed to another warehouse",
-        "REQUEST_LINE_INVALID": "Item not on the request"
+        "REQUEST_LINE_INVALID": "Item not on the request",
+        "NATURE_FORBIDDEN": "You are not allowed to manage items of this nature"
       },
       "projectLabel": "Project",
       "noUnits": "No unit in stock in this warehouse",
@@ -3683,7 +3687,8 @@
         "WAREHOUSE_FORBIDDEN": "You do not have access to this warehouse",
         "NO_LINES": "No items",
         "department": "Choose the department",
-        "HOLDER_REQUIRED": "Enter the employee or the department"
+        "HOLDER_REQUIRED": "Enter the employee or the department",
+        "NATURE_FORBIDDEN": "You are not allowed to manage items of this nature"
       },
       "holderType": "Returned by",
       "holderTypes": {
@@ -3816,7 +3821,10 @@
         "INVALID_UNIT_COUNT": "Equipment: present or missing",
         "WAREHOUSE_FORBIDDEN": "You do not have access to this warehouse",
         "ITEM_NOT_STOCKABLE": "Item not stocked",
-        "chooseItem": "Choose the item"
+        "chooseItem": "Choose the item",
+        "NATURE_FORBIDDEN": "You are not allowed to manage items of this nature",
+        "NATURE_INVALID": "Invalid nature",
+        "ITEM_NATURE_MISMATCH": "This item is not of the count's nature"
       }
     },
     "adjust": {
@@ -3857,7 +3865,8 @@
         "INVALID_QUANTITY": "Invalid quantity",
         "WAREHOUSE_FORBIDDEN": "You do not have access to this warehouse",
         "ITEM_NOT_STOCKABLE": "Item not stocked",
-        "PROJECT_NOT_FOUND": "Funding project not found"
+        "PROJECT_NOT_FOUND": "Funding project not found",
+        "NATURE_FORBIDDEN": "You are not allowed to manage items of this nature"
       }
     },
     "valuation": {
@@ -3981,7 +3990,10 @@
         "LOT_EXPIRY_MISMATCH": "lot {{lot}} already exists with expiry date {{expiry}}",
         "DUPLICATE_OPENING": "same item, warehouse and lot as row {{line}}",
         "PROJECT_UNKNOWN": "Unknown project: \"{{value}}\" (code of a company project)",
-        "ASSET_CATEGORY_INVALID": "invalid tag category \"{{value}}\" (2 to 5 letters or digits)"
+        "ASSET_CATEGORY_INVALID": "invalid tag category \"{{value}}\" (2 to 5 letters or digits)",
+        "NATURE_INVALID": "unknown nature \"{{value}}\" (Equipment or Consumable)",
+        "NATURE_SERIALS_EQUIPMENT": "an item tracked by serial number is equipment",
+        "NATURE_FORBIDDEN": "{{value}}: you are not allowed to manage this item's nature"
       },
       "fileErr": {
         "UNREADABLE": "Unreadable file: make sure it is an .xlsx or .csv file",
@@ -4257,6 +4269,35 @@
         "HOLDER_INACTIVE": "account {{value}} is deactivated or not an employee account",
         "UNIT_DUPLICATE": "equipment {{value}} already on row {{other}}"
       }
+    },
+    "nature": {
+      "label": "Nature",
+      "EQUIPMENT": "Equipment",
+      "CONSUMABLE": "Consumable",
+      "all": "Whole warehouse",
+      "allNatures": "All natures",
+      "hint": "Equipment: durable asset (computer, vehicle, chair…), even without a serial number. Consumable: item that wears out or is used up. An item tracked by serial number is always equipment. Only people allowed for this nature see and manage the item in stock.",
+      "hiddenLines_one": "{{count}} line of this document concerns items of a nature you cannot access: it is hidden.",
+      "hiddenLines_other": "{{count}} lines of this document concern items of a nature you cannot access: they are hidden.",
+      "countLimited": "This count will only cover the nature:"
+    },
+    "consumables": {
+      "title": "Consumables",
+      "subtitle": "Stock of items of nature \"Consumable\", by warehouse and lot, with their expiry date",
+      "itemsInStock": "Items in stock",
+      "expiringSoon": "Lots expiring within 90 days",
+      "expiredLots": "Expired lots",
+      "expired": "expired",
+      "search": "Search by code, name or lot number…",
+      "allExpiry": "All expiry dates",
+      "onlyExpired": "Expired",
+      "within90": "Expiring within 90 days",
+      "within180": "Expiring within 180 days",
+      "project": "Project",
+      "none": "No consumables in stock for these criteria",
+      "export": "Export (Excel)",
+      "newEntry": "Entry note",
+      "newIssue": "Issue consumables"
     }
   },
   "help": {
@@ -4442,6 +4483,14 @@
               [
                 "Auditor",
                 "Views all purchasing files, stock, budget and the audit log, with exports. No data entry or approval."
+              ],
+              [
+                "Equipment manager",
+                "Manages only equipment (durable assets) in stock, for the projects assigned to them: catalogue, entries, issues, assignments and returns, counts. Does not see consumables."
+              ],
+              [
+                "Consumables manager",
+                "Manages only consumables (paper, fuel, medicines…) in stock, for the projects assigned to them: catalogue, entries, issues, store requests, counts. Does not see equipment."
               ]
             ]
           },
@@ -5412,6 +5461,29 @@
           {
             "type": "p",
             "text": "Once the item has stock movements, its unit and tracking rules can no longer be changed (that would distort the history)."
+          },
+          {
+            "type": "h",
+            "text": "Equipment and consumables"
+          },
+          {
+            "type": "p",
+            "text": "Each catalogue item has a nature: \"Equipment\" (durable asset: computer, vehicle, chair… even without a serial number) or \"Consumable\" (item that wears out or is used up: paper, fuel, medicine…). An item tracked by serial number is always equipment. The nature is chosen on the item form and filtered in the list (\"All natures\"); when importing, use the \"Nature\" column. Menus \"Equipment\" (units tracked by serial number) and \"Consumables\" (stock by warehouse and lot, with expiry)."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Two levels of rights per nature, in the Stock module only: \"view\" (finance, auditor, management…) and \"manage\" (item form, entries, issues, returns, counts, adjustments). Only someone who manages a nature can put its items in or out of stock.",
+              "\"Equipment manager\" and \"Consumables manager\" profiles: a single nature, viewed and managed. Profiles that already managed stock (logistics, storekeeper, procurement, administrator) manage both.",
+              "A document mixing both natures (e.g. an issue note with a computer and paper, made by a storekeeper who manages both) stays visible with your lines only; a banner shows the hidden lines. Cancelling, validating or closing it requires managing all its natures.",
+              "One issue note = one stock operation (MVG number), which may contain several items.",
+              "Stock count: a single-nature manager counts only that nature; one count per nature can be open at the same time in the same warehouse.",
+              "Stock by project: stock profiles (managers, storekeeper, logistics) are linked to projects, like workflow profiles. On the user form, \"All projects\" or a list of projects: when limited, the user only sees and issues stock funded by those projects, plus stock without a project."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Requisitions are not affected: any user can order anything from the whole catalogue, and can request any item from the store."
           },
           {
             "type": "h",

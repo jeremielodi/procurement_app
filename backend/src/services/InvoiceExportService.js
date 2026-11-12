@@ -342,6 +342,7 @@ class InvoiceExportService {
     <div class="sig-line">{{#if enteredBySignature}}<img src="{{enteredBySignature}}" alt="">{{/if}}</div>
     <div class="sig-label">{{L.sigEnteredBy}}</div>
     <div style="margin-top:4px;color:#9CA3AF">{{#if inv.created_by_name}}{{inv.created_by_name}}{{else}}{{L.nameSignature}}{{/if}}</div>
+    {{#if inv.created_at}}<div style="margin-top:2px">{{L.dateField}} <span style="color:#1E3FA8;font-weight:600">{{inv_formatDate inv.created_at}}</span></div>{{/if}}
   </div>
   <div class="sig-box">
     <div class="sig-line"></div>

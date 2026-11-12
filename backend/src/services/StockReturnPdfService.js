@@ -9,6 +9,7 @@ const { pdfContext, rootLocale, rootLabels } = require('../utils/pdfI18n');
 const equipmentModel = require('../models/StockEquipmentModel');
 
 const safe = (name, fn) => { if (!Handlebars.helpers[name]) Handlebars.registerHelper(name, fn); };
+safe('sret_date', (d, options) => (d ? new Date(d).toLocaleDateString(rootLocale(options), { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'));
 safe('sret_datetime', (d, options) => (d ? new Date(d).toLocaleString(rootLocale(options), { dateStyle: 'short', timeStyle: 'short' }) : '—'));
 safe('sret_qty', (n, options) => new Intl.NumberFormat(rootLocale(options), { maximumFractionDigits: 4 }).format(Number(n) || 0));
 safe('sret_index1', (i) => i + 1);
@@ -42,6 +43,7 @@ const TEMPLATE = `<!doctype html>
   .sig { flex: 1; border: 1px dashed #9CA3AF; border-radius: 6px; height: 110px; padding: 8px; color: #6B7280; }
   .sig b { display: block; color: #111827; margin: 4px 0; }
   .sig img { display: block; max-height: 48px; max-width: 170px; object-fit: contain; margin-bottom: 4px; }
+  .sig .ink { color: #1E3FA8; font-weight: 600; }
 </style></head>
 <body>
   <div class="header">
@@ -92,7 +94,7 @@ const TEMPLATE = `<!doctype html>
   </table>
 
   <div class="signatures">
-    <div class="sig">{{L.storekeeper}}<b>{{ret.received_by_name}}</b>{{#if receiverSignature}}<img src="{{receiverSignature}}" alt="">{{/if}}{{L.signature}}</div>
+    <div class="sig">{{L.storekeeper}}<b>{{ret.received_by_name}}</b>{{#if receiverSignature}}<img src="{{receiverSignature}}" alt="">{{/if}}{{L.signature}} <span class="ink">{{sret_date ret.received_at}}</span></div>
     <div class="sig">{{L.returnerSignature}}<b>{{#if ret.department_name}}{{ret.department_name}}{{else}}{{ret.returned_by_name}}{{/if}}</b>{{L.signature}}</div>
   </div>
 </body></html>`;

@@ -497,7 +497,8 @@
       "address": "Address",
       "description": "Description",
       "date": "Date",
-      "comment": "Comment"
+      "comment": "Comment",
+      "dateField": "Date:"
     },
     "po": {
       "title": "Purchase Order {number}",

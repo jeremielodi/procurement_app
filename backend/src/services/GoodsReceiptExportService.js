@@ -103,6 +103,7 @@ class GoodsReceiptExportService {
   .sig b { color: #111827; display: block; margin-top: 4px; }
   .sig i { display: block; font-style: normal; color: #4B5563; }
   .sig img { display: block; max-height: 48px; max-width: 170px; object-fit: contain; margin-top: 6px; }
+  .sig .ink { color: #1E3FA8; font-weight: 600; }
 </style></head>
 <body>
   <div class="header">
@@ -166,7 +167,7 @@ class GoodsReceiptExportService {
   {{/if}}
 
   <div class="signatures">
-    <div class="sig">{{L.receivedBy}}<b>{{grn.received_by_name}}</b>{{#if receiverSignature}}<img src="{{receiverSignature}}" alt="">{{else}}<br>{{/if}}{{L.signature}}</div>
+    <div class="sig">{{L.receivedBy}}<b>{{grn.received_by_name}}</b>{{#if receiverSignature}}<img src="{{receiverSignature}}" alt="">{{else}}<br>{{/if}}<i>{{L.dateField}} <span class="ink">{{grn_formatDate grn.created_at}}</span></i>{{L.signature}}</div>
     <div class="sig">{{L.deliverer}}<br><br>{{L.nameSignature}}</div>
     <div class="sig">{{L.warehouse}} <b>{{#if grn.warehouse_name}}{{grn.warehouse_name}}{{else}}&nbsp;{{/if}}</b>
       {{#if grn.store_confirmed_at}}

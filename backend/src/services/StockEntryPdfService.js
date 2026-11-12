@@ -55,6 +55,7 @@ const TEMPLATE = `<!doctype html>
   .sig b { display: block; color: #111827; margin: 4px 0 0; }
   .sig i { display: block; font-style: normal; font-size: 9px; margin-bottom: 4px; }
   .sig img { display: block; max-height: 46px; max-width: 160px; object-fit: contain; margin-bottom: 4px; }
+  .sig .ink { color: #1E3FA8; font-weight: 600; }
 </style></head>
 <body>
   <div class="header">
@@ -117,8 +118,8 @@ const TEMPLATE = `<!doctype html>
 
   <div class="signatures">
     <div class="sig">{{L.deliveredSignature}}<b>{{#if entry.delivered_by}}{{entry.delivered_by}}{{else}}&nbsp;{{/if}}</b><i>&nbsp;</i>{{L.signature}}</div>
-    <div class="sig">{{L.storekeeper}}<b>{{entry.created_by_name}}</b><i>{{#if entry.created_by_position}}{{entry.created_by_position}}{{else}}&nbsp;{{/if}}</i>{{#if sig.creator}}<img src="{{sig.creator}}" alt="">{{/if}}{{L.signature}}</div>
-    <div class="sig">{{L.validator}}<b>{{#if entry.validated_by_name}}{{entry.validated_by_name}}{{else}}&nbsp;{{/if}}</b><i>{{#if entry.validated_by_position}}{{entry.validated_by_position}}{{else}}&nbsp;{{/if}}</i>{{#if sig.validator}}<img src="{{sig.validator}}" alt="">{{/if}}{{L.signature}}</div>
+    <div class="sig">{{L.storekeeper}}<b>{{entry.created_by_name}}</b><i>{{#if entry.created_by_position}}{{entry.created_by_position}}{{else}}&nbsp;{{/if}}</i>{{#if sig.creator}}<img src="{{sig.creator}}" alt="">{{/if}}{{L.signature}} <span class="ink">{{sen_date entry.created_at}}</span></div>
+    <div class="sig">{{L.validator}}<b>{{#if entry.validated_by_name}}{{entry.validated_by_name}}{{else}}&nbsp;{{/if}}</b><i>{{#if entry.validated_by_position}}{{entry.validated_by_position}}{{else}}&nbsp;{{/if}}</i>{{#if sig.validator}}<img src="{{sig.validator}}" alt="">{{/if}}{{L.signature}}{{#if entry.validated_at}} <span class="ink">{{sen_date entry.validated_at}}</span>{{/if}}</div>
   </div>
 </body></html>`;
 

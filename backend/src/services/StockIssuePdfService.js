@@ -43,6 +43,7 @@ const TEMPLATE = `<!doctype html>
   .sig { flex: 1; border: 1px dashed #9CA3AF; border-radius: 6px; height: 110px; padding: 8px; color: #6B7280; }
   .sig b { display: block; color: #111827; margin: 4px 0; }
   .sig img { display: block; max-height: 48px; max-width: 170px; object-fit: contain; margin-bottom: 4px; }
+  .sig .ink { color: #1E3FA8; font-weight: 600; }
 </style></head>
 <body>
   <div class="header">
@@ -107,8 +108,8 @@ const TEMPLATE = `<!doctype html>
   {{/if}}
 
   <div class="signatures">
-    <div class="sig">{{L.storekeeper}}<b>{{issue.issued_by_name}}</b>{{#if sig.issuer}}<img src="{{sig.issuer}}" alt="">{{/if}}{{L.signature}}</div>
-    <div class="sig">{{#if transfer}}{{L.receiverSignature}}<b>{{issue.destination_warehouse_name}}</b>{{else}}{{L.recipientSignature}}<b>{{T.receiverName}}</b>{{/if}}{{#if sig.receiver}}<img src="{{sig.receiver}}" alt="">{{/if}}{{L.signature}}</div>
+    <div class="sig">{{L.storekeeper}}<b>{{issue.issued_by_name}}</b>{{#if sig.issuer}}<img src="{{sig.issuer}}" alt="">{{/if}}{{L.signature}} <span class="ink">{{sis_date issue.issued_at}}</span></div>
+    <div class="sig">{{#if transfer}}{{L.receiverSignature}}<b>{{issue.destination_warehouse_name}}</b>{{else}}{{L.recipientSignature}}<b>{{T.receiverName}}</b>{{/if}}{{#if sig.receiver}}<img src="{{sig.receiver}}" alt="">{{/if}}{{L.signature}}{{#if issue.acknowledged_at}} <span class="ink">{{sis_date issue.acknowledged_at}}</span>{{/if}}</div>
   </div>
 </body></html>`;
 

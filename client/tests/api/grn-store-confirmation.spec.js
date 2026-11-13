@@ -75,7 +75,7 @@ test.describe.serial('API › GRN : confirmation de l\'entrée en magasin', () =
     } })).json()).data;
 
     // Réquisition → bon de commande → réception par la logistique (dans le dépôt)
-    const req = await json(await request.post('/api/requisitions', { headers: H, data: {
+    const req = await json(await request.post('/api/requisitions', { headers: H, data: { submit: true,
       title: `[TEST GRN MAGASIN] ${stamp}`, description: 'Confirmation du magasin', departmentId: depts[0]?.id, projectId: projects[0]?.id,
       currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'Test',
       items: [{ description: `Gasoil ${stamp}`, quantity: 20, frequency: 1, unitPrice: 2, stockItemId: fuel.id }],

@@ -129,7 +129,7 @@ async function createRequisition(request, token, { title, amount, budgetLineId, 
 
   const res = await request.post('/api/requisitions', {
     headers: auth(token),
-    data: {
+    data: { submit: true,
       title:           `[TEST EXT] ${title} — ${Date.now()}`,
       description:     `Test automatisé Playwright — ${title}`,
       departmentId:    dept.id,
@@ -682,7 +682,7 @@ test.describe.serial('Scénario 5 — Budget insuffisant (item sans budgetLineId
     // Création délibérément sans budgetLineId pour déclencher BUDGET_INSUFFICIENT
     const res = await request.post('/api/requisitions', {
       headers: auth(sharedToken),
-      data: {
+      data: { submit: true,
         title:           `[TEST EXT] Budget Insufficient Test — ${Date.now()}`,
         description:     'Test automatisé — budget insuffisant',
         departmentId:    sharedDept.id,

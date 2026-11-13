@@ -23,7 +23,7 @@ test.describe.serial('API › Profils liés au projet', () => {
   const tokenOf = async (request, u) => (await (await request.post('/api/auth/login', { data: u })).json()).data.token;
   const members = async (request, projectId) => (await (await request.get(`/api/projects/${projectId}/members`, { headers: H() })).json()).data;
   const lastAudit = async (request, query) => (await (await request.get(`/api/audit-logs?limit=5&${query}`, { headers: H() })).json()).data;
-  const requisition = (projectId, budgetLineId, title) => ({
+  const requisition = (projectId, budgetLineId, title) => ({ submit: true,
     title: `[TEST PROFILS PROJET] ${title} ${stamp}`, description: 'x', departmentId: dept.id, projectId, currencyId: 1, currencyCode: 'USD',
     priority: 'MEDIUM', justification: 'x', items: [{ description: 'Article', quantity: 1, frequency: 1, unitPrice: 40, budgetLineId }],
   });

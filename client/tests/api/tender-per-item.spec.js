@@ -61,7 +61,7 @@ test.describe.serial('Appel d\'offres attribué par article (BpmnGo)', () => {
     const line = (await (await request.post('/api/budget', { headers: H, data: {
       entityCode: `BL-AOLOT-${stamp}`, description: 'Ligne test AO par article', allocatedAmount: 1000000, projectId: projects[0].id,
     } })).json()).data;
-    const created = await request.post('/api/requisitions', { headers: H, data: {
+    const created = await request.post('/api/requisitions', { headers: H, data: { submit: true,
       title: `[TEST AO PAR ARTICLE] ${stamp}`, description: 'AO par article', departmentId: depts[0].id, projectId: projects[0].id,
       estimatedAmount: 36000, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'Test',
       items: ITEMS.map(description => ({ description, quantity: 1, frequency: 1, unitPrice: 12000, budgetLineId: line?.id ?? line })),

@@ -32,7 +32,7 @@ test.describe.serial('API › Ajustement budgétaire', () => {
     return null;
   }
   async function createRequisition(request, amount) {
-    const res = await request.post('/api/requisitions', { headers: H(), data: {
+    const res = await request.post('/api/requisitions', { headers: H(), data: { submit: true,
       title: `[TEST AJUSTEMENT] ${stamp} ${amount}`, description: 'x', departmentId: dept.id, projectId: project.id,
       currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'x',
       items: [{ description: 'Article test ajustement', quantity: 1, frequency: 1, unitPrice: amount, budgetLineId: smallLine.id }],

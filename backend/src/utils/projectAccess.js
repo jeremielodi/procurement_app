@@ -89,14 +89,18 @@ function seesProjectRequisitions(scope, projectId) {
 
 /** Peut consulter la réquisition { requester_id, project_id } (la sienne ou celles de son projet) */
 function canSeeRequisition(scope, requisition) {
-  return !!requisition && (String(requisition.requester_id) === scope.userId || seesProjectRequisitions(scope, requisition.project_id));
+  return !!requisition && (String(requisition.requester_id) === scope.userId
+    || ((requisition.status !== 'DRAFT' || scope.isAdmin) && seesProjectRequisitions(scope, requisition.project_id)));
 }
 
-/** Clause SQL de liste : réquisitions (alias) visibles par l'utilisateur ; ajoute le paramètre à params */
+/**
+ * Clause SQL de liste : réquisitions (alias) visibles par l'utilisateur ; ajoute le paramètre à params.
+ * Brouillon (migration 67) : son demandeur et les administrateurs seulement.
+ */
 function requisitionVisibilitySql(alias, userId, params) {
   params.push(userId);
   const p = `$${params.length}`;
-  return ` AND (${alias}.requester_id = ${p} OR user_sees_project_requisitions(${p}, ${alias}.project_id))`;
+  return ` AND (${alias}.requester_id = ${p} OR ((${alias}.status <> 'DRAFT' OR user_is_enterprise_admin(${p})) AND user_sees_project_requisitions(${p}, ${alias}.project_id)))`;
 }
 
 /**

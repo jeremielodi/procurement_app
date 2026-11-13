@@ -19,7 +19,7 @@ test.describe.serial('API › Recherche globale', () => {
     item = (await (await request.post('/api/stock-items', { headers: H, data: { code: `GS-${stamp}`, name: `Article recherche ${stamp}`, unit: 'pc', categoryId: cats.find(c => c.code === 'FUEL').id } })).json()).data;
     const [dept] = (await (await request.get('/api/departments', { headers: H })).json()).data;
     const [project] = (await (await request.get('/api/projects', { headers: H })).json()).data;
-    requisition = (await (await request.post('/api/requisitions', { headers: H, data: {
+    requisition = (await (await request.post('/api/requisitions', { headers: H, data: { submit: true,
       title: `Recherche globale ${stamp}`, description: 'x', departmentId: dept.id, projectId: project?.id, currencyId: 1, currencyCode: 'USD',
       priority: 'LOW', justification: 'x', items: [{ description: 'x', quantity: 1, frequency: 1, unitPrice: 1 }],
     } })).json()).data;

@@ -4619,7 +4619,20 @@
               "Renseignez le titre, la description, la justification, la priorité, le département et le projet. Le projet détermine les lignes budgétaires disponibles et les personnes qui recevront les tâches.",
               "Ajoutez les articles : description, quantité, fréquence et prix unitaire. Total de la ligne = quantité × fréquence × prix unitaire.",
               "Affectez une ligne budgétaire à chaque article (bouton de recherche). Vous pouvez cocher plusieurs articles et leur affecter la même ligne en une fois.",
-              "Joignez si besoin des pièces (devis, cahier des charges…) puis enregistrez : la réquisition est soumise et BpmnGo démarre le circuit."
+              "Joignez si besoin des pièces (devis, cahier des charges…) puis cliquez sur « Enregistrer le brouillon » : la réquisition est enregistrée en brouillon, elle n'est pas encore dans le circuit."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Brouillon, puis soumission"
+          },
+          {
+            "type": "list",
+            "items": [
+              "Tant qu'elle est un brouillon, seuls vous et l'administrateur la voyez ; vous pouvez la modifier (« Modifier ») et la supprimer (« Supprimer ») autant que nécessaire.",
+              "Quand elle est prête, cliquez sur « Soumettre » (bandeau de la fiche) ou sur « Enregistrer et soumettre » dans le formulaire : BpmnGo démarre le circuit (vérification du budget, puis validation par le chef de projet).",
+              "Après la soumission, la réquisition n'est plus modifiable, sauf si le chef de projet vous la renvoie pour correction, ou si vous la retirez avant qu'il ne prenne en charge la validation.",
+              "Si BpmnGo ne répond pas au moment de la soumission, la réquisition reste un brouillon : réessayez plus tard."
             ]
           },
           {
@@ -7151,7 +7164,7 @@
     "saved": "Modifications enregistrées (pas encore soumises)",
     "resubmitted": "Réquisition soumise à nouveau (version {{version}})",
     "notEditableTitle": "Cette réquisition ne peut pas être modifiée",
-    "notEditableText": "Seul le demandeur peut la modifier, et seulement quand elle est « À corriger » (renvoyée par un approbateur ou retirée avant prise en charge de l'approbation).",
+    "notEditableText": "Seul le demandeur peut la modifier, et seulement tant qu'elle est un brouillon ou quand elle est « À corriger » (renvoyée par un approbateur ou retirée avant prise en charge de l'approbation).",
     "backToRequisition": "Retour à la réquisition",
     "returnDecision": "Renvoyer pour correction",
     "returnDecisionHint": "Le demandeur corrigera la réquisition puis la soumettra à nouveau ; le circuit d'approbation recommencera.",
@@ -7180,9 +7193,30 @@
       "RETURN_NOT_SUPPORTED": "Réquisition démarrée avant la mise à jour du circuit : le renvoi pour correction n'est pas possible (approuvez-la ou rejetez-la)",
       "PROJECT_REQUIRED": "Choisissez le projet : la réquisition est validée par son chef de projet",
       "PROJECT_MANAGER_MISSING": "Ce projet n'a pas de chef de projet actif : demandez à l'administrateur de le désigner",
-      "REQUESTER_IS_PROJECT_MANAGER": "Vous êtes le chef de ce projet : vous ne pouvez pas valider votre propre réquisition — elle doit être faite par un autre membre du projet"
+      "REQUESTER_IS_PROJECT_MANAGER": "Vous êtes le chef de ce projet : vous ne pouvez pas valider votre propre réquisition — elle doit être faite par un autre membre du projet",
+      "NOT_DRAFT": "Cette réquisition a déjà été soumise"
     },
     "returnNotSupported": "Renvoi pour correction indisponible : réquisition démarrée avant la mise à jour du circuit d'approbation."
+  },
+  "draft": {
+    "title": "Brouillon — pas encore soumis",
+    "hintRequester": "Cette réquisition n'est pas encore entrée dans le circuit : personne d'autre ne la voit. Modifiez-la autant que nécessaire, puis soumettez-la pour la validation du chef de projet.",
+    "hintOther": "Le demandeur ne l'a pas encore soumise : elle n'est pas dans le circuit de validation.",
+    "create": "Enregistrer le brouillon",
+    "created": "Brouillon enregistré. Vérifiez-le puis cliquez sur « Soumettre » pour lancer le circuit de validation.",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "saved": "Brouillon enregistré",
+    "saveAndSubmit": "Enregistrer et soumettre",
+    "formTitle": "Modifier le brouillon {{number}}",
+    "submit": "Soumettre",
+    "submitTitle": "Soumettre la réquisition",
+    "submitText": "La réquisition {{number}} entre dans le circuit : vérification du budget puis validation par le chef de projet. Elle ne pourra plus être modifiée, sauf si elle vous est renvoyée pour correction (ou si vous la retirez avant la prise en charge de la validation).",
+    "submitted": "Réquisition soumise : le circuit de validation a démarré",
+    "delete": "Supprimer",
+    "deleteTitle": "Supprimer le brouillon",
+    "deleteText": "Le brouillon {{number}} et ses articles seront définitivement supprimés.",
+    "deleted": "Brouillon supprimé"
   },
   "approvalPolicy": {
     "title": "Seuils d'approbation des bons de commande (N1 / N2 / N3)",

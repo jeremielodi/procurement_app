@@ -4619,7 +4619,20 @@
               "Fill in the title, description, justification, priority, department and project. The project determines the available budget lines and the people who will receive the tasks.",
               "Add the items: description, quantity, frequency and unit price. Line total = quantity × frequency × unit price.",
               "Assign a budget line to each item (search button). You can tick several items and assign them the same line at once.",
-              "Attach documents if needed (quotes, specifications…) then save: the requisition is submitted and BpmnGo starts the process."
+              "Attach documents if needed (quotes, specifications…) and click \"Save draft\": the requisition is saved as a draft and has not entered the workflow yet."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Draft, then submission"
+          },
+          {
+            "type": "list",
+            "items": [
+              "While it is a draft, only you and the administrator can see it; you can edit it (\"Edit\") and delete it (\"Delete\") as often as needed.",
+              "When it is ready, click \"Submit\" (banner of the requisition page) or \"Save and submit\" in the form: BpmnGo starts the workflow (budget check, then approval by the project manager).",
+              "Once submitted, the requisition can no longer be edited, unless the project manager returns it to you for correction, or you withdraw it before the approval is claimed.",
+              "If BpmnGo does not respond when you submit, the requisition stays a draft: try again later."
             ]
           },
           {
@@ -7151,7 +7164,7 @@
     "saved": "Changes saved (not yet submitted)",
     "resubmitted": "Requisition resubmitted (version {{version}})",
     "notEditableTitle": "This requisition cannot be edited",
-    "notEditableText": "Only the requester can edit it, and only when it is \"To be corrected\" (returned by an approver or withdrawn before the approval was claimed).",
+    "notEditableText": "Only the requester can edit it, and only while it is a draft or when it is \"To be corrected\" (returned by an approver or withdrawn before the approval was claimed).",
     "backToRequisition": "Back to the requisition",
     "returnDecision": "Return for correction",
     "returnDecisionHint": "The requester will correct the requisition, then resubmit it; the approval circuit will start over.",
@@ -7180,9 +7193,30 @@
       "RETURN_NOT_SUPPORTED": "Requisition started before the circuit was updated: it cannot be returned for correction (approve or reject it)",
       "PROJECT_REQUIRED": "Choose the project: the requisition is approved by its project manager",
       "PROJECT_MANAGER_MISSING": "This project has no active project manager: ask the administrator to assign one",
-      "REQUESTER_IS_PROJECT_MANAGER": "You are this project's manager: you cannot approve your own requisition — another project member must raise it"
+      "REQUESTER_IS_PROJECT_MANAGER": "You are this project's manager: you cannot approve your own requisition — another project member must raise it",
+      "NOT_DRAFT": "This requisition has already been submitted"
     },
     "returnNotSupported": "Return for correction unavailable: requisition started before the approval circuit was updated."
+  },
+  "draft": {
+    "title": "Draft — not submitted yet",
+    "hintRequester": "This requisition has not entered the workflow yet: nobody else can see it. Edit it as much as needed, then submit it for the project manager's approval.",
+    "hintOther": "The requester has not submitted it yet: it is not in the approval workflow.",
+    "create": "Save draft",
+    "created": "Draft saved. Check it, then click \"Submit\" to start the approval workflow.",
+    "edit": "Edit",
+    "save": "Save",
+    "saved": "Draft saved",
+    "saveAndSubmit": "Save and submit",
+    "formTitle": "Edit draft {{number}}",
+    "submit": "Submit",
+    "submitTitle": "Submit the requisition",
+    "submitText": "Requisition {{number}} enters the workflow: budget check, then approval by the project manager. It can no longer be edited unless it is returned to you for correction (or you withdraw it before the approval is claimed).",
+    "submitted": "Requisition submitted: the approval workflow has started",
+    "delete": "Delete",
+    "deleteTitle": "Delete the draft",
+    "deleteText": "Draft {{number}} and its items will be permanently deleted.",
+    "deleted": "Draft deleted"
   },
   "approvalPolicy": {
     "title": "Purchase order approval thresholds (N1 / N2 / N3)",

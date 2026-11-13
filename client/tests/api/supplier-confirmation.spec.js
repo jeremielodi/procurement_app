@@ -33,7 +33,7 @@ test.describe.serial('API › Confirmation de commande par le fournisseur', () =
     expect(supplier?.id).toBeTruthy();
 
     const [depts, projects] = await Promise.all(['/api/departments', '/api/projects'].map(async u => (await (await request.get(u, { headers: H })).json()).data));
-    req = (await (await request.post('/api/requisitions', { headers: H, data: {
+    req = (await (await request.post('/api/requisitions', { headers: H, data: { submit: true,
       title: `[TEST CONFIRMATION] ${stamp}`, description: 'x', departmentId: depts[0].id, projectId: projects[0]?.id, currencyId: 1, currencyCode: 'USD',
       priority: 'MEDIUM', justification: 'x', items: [{ description: 'Ramettes de papier', quantity: 10, frequency: 1, unitPrice: 5 }],
     } })).json()).data;

@@ -3,9 +3,10 @@
 //  - « À corriger » (renvoyée par un approbateur ou retirée) : motif ; le demandeur « Corrige » (formulaire de
 //    modification puis nouvelle soumission) ou « Abandonne » (motif obligatoire) ; les autres voient l'état
 //  - en attente d'approbation que personne n'a prise en charge : le demandeur peut « Retirer pour corriger »
+//  - brouillon (pas encore dans le circuit BpmnGo) : le demandeur le modifie, le soumet ou le supprime
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { FileDiff, Undo2, PencilLine, XCircle, Info } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { FileDiff, Undo2, PencilLine, XCircle, Info, FileEdit, Send, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Modal from '../Common/Modal'
 import requisitionService from '../../services/requisitionService'
@@ -15,7 +16,7 @@ import { TASK_LABELS } from '../../utils/taskLabels'
 
 export const REVISION_ERRORS = ['NOT_REQUESTER', 'NOT_EDITABLE', 'NOT_WITHDRAWABLE', 'APPROVAL_IN_PROGRESS', 'TASK_NOT_FOUND', 'BPMNGO_ERROR',
   'RETURN_NOT_SUPPORTED', 'REASON_REQUIRED', 'TITLE_REQUIRED', 'ITEMS_REQUIRED', 'ITEM_INVALID', 'BUDGET_LINE_REQUIRED', 'BUDGET_LINE_INVALID', 'NOT_ON_PROJECT',
-  'PROJECT_REQUIRED', 'PROJECT_MANAGER_MISSING', 'REQUESTER_IS_PROJECT_MANAGER']
+  'PROJECT_REQUIRED', 'PROJECT_MANAGER_MISSING', 'REQUESTER_IS_PROJECT_MANAGER', 'NOT_DRAFT']
 
 export const revisionError = (err) => {
   const d = err?.response?.data || {}
@@ -25,7 +26,8 @@ export const revisionError = (err) => {
 
 export default function RevisionPanel({ requisition, onChanged }) {
   const [state, setState] = useState(null)
-  const [dialog, setDialog] = useState(null) // 'withdraw' | 'abandon'
+  const [dialog, setDialog] = useState(null) // 'withdraw' | 'abandon' | 'submit' | 'delete'
+  const navigate = useNavigate()
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -34,7 +36,31 @@ export default function RevisionPanel({ requisition, onChanged }) {
 
   if (!state) return null
 
+  // Brouillon : soumission (démarrage du circuit) ou suppression
+  const confirmDraft = async () => {
+    setBusy(true)
+    try {
+      if (dialog === 'submit') {
+        await requisitionService.submit(requisition.id)
+        toast.success(t('draft.submitted'))
+        setDialog(null)
+        await load()
+        onChanged?.()
+      } else {
+        await requisitionService.delete(requisition.id)
+        toast.success(t('draft.deleted'))
+        setDialog(null)
+        navigate('/requisitions')
+      }
+    } catch (err) {
+      toast.error(revisionError(err), { duration: 7000 })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const confirm = async () => {
+    if (dialog === 'submit' || dialog === 'delete') return confirmDraft()
     if (dialog === 'abandon' && !reason.trim()) { toast.error(t('revision.reasonRequired')); return }
     setBusy(true)
     try {
@@ -61,8 +87,40 @@ export default function RevisionPanel({ requisition, onChanged }) {
     ? t('revision.withdrawnBy', { name: ret.by_name || ret.by_email || '—', date: formatDateTime(ret.at) })
     : t('revision.returnedBy', { name: ret?.by_name || ret?.by_email || '—', task: TASK_LABELS[ret?.task] || ret?.task || '', date: formatDateTime(ret?.at) })
 
+  const draftDialog = dialog === 'submit' || dialog === 'delete'
+
   return (
     <>
+      {state.isDraft && (
+        <div className="rounded-lg border border-slate-300 bg-slate-50 p-4" data-testid="draft-banner">
+          <div className="flex flex-wrap items-start gap-3">
+            <FileEdit className="h-5 w-5 text-slate-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-[240px]">
+              <p className="font-medium text-slate-900">{t('draft.title')}</p>
+              <p className="text-sm text-slate-700 mt-0.5">{state.isRequester ? t('draft.hintRequester') : t('draft.hintOther')}</p>
+            </div>
+            {state.canSubmit && (
+              <div className="flex flex-wrap gap-2">
+                <Link to={`/requisitions/${requisition.id}/edit`} data-testid="draft-edit"
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 bg-white text-slate-700 rounded-lg hover:bg-slate-100">
+                  <PencilLine size={16} /> {t('draft.edit')}
+                </Link>
+                <button type="button" onClick={() => setDialog('submit')} data-testid="draft-submit"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                  <Send size={16} /> {t('draft.submit')}
+                </button>
+                {state.canDelete && (
+                  <button type="button" onClick={() => setDialog('delete')} data-testid="draft-delete"
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 bg-white rounded-lg hover:bg-red-50">
+                    <Trash2 size={16} /> {t('draft.delete')}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {state.status === 'RETURNED' && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-4" data-testid="revision-banner">
           <div className="flex flex-wrap items-start gap-3">
@@ -111,13 +169,16 @@ export default function RevisionPanel({ requisition, onChanged }) {
       <Modal
         isOpen={!!dialog}
         onClose={() => setDialog(null)}
-        title={dialog === 'withdraw' ? t('revision.withdrawTitle') : t('revision.abandonTitle')}
-        type={dialog === 'abandon' ? 'danger' : 'warning'}
-        confirmText={dialog === 'withdraw' ? t('revision.withdraw') : t('revision.abandon')}
+        title={draftDialog ? t(`draft.${dialog}Title`) : dialog === 'withdraw' ? t('revision.withdrawTitle') : t('revision.abandonTitle')}
+        type={dialog === 'abandon' || dialog === 'delete' ? 'danger' : 'warning'}
+        confirmText={draftDialog ? t(`draft.${dialog}`) : dialog === 'withdraw' ? t('revision.withdraw') : t('revision.abandon')}
         cancelText={t('common.cancel')}
         onConfirm={confirm}
         isLoading={busy}
       >
+        {draftDialog ? (
+          <p className="text-sm text-gray-700" data-testid="draft-dialog-text">{t(`draft.${dialog}Text`, { number: requisition.requisition_number })}</p>
+        ) : (
         <div className="space-y-3">
           <p className="text-sm text-gray-700">{dialog === 'withdraw' ? t('revision.withdrawText') : t('revision.abandonText')}</p>
           <label className="block text-sm font-medium text-gray-700">
@@ -126,6 +187,7 @@ export default function RevisionPanel({ requisition, onChanged }) {
           <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} data-testid="revision-reason"
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
         </div>
+        )}
       </Modal>
     </>
   )

@@ -61,7 +61,7 @@ function scenario({ method, sourcingTask, amount, justification }) {
         entityCode: `BL-METH-${Date.now()}`, description: 'Ligne test méthode d\'achat', allocatedAmount: 1000000, projectId: project.id,
       } })).json()).data;
 
-      const created = await request.post('/api/requisitions', { headers: H, data: {
+      const created = await request.post('/api/requisitions', { headers: H, data: { submit: true,
         title: `[TEST METHODE ${method}] ${Date.now()}`, description: method, departmentId: depts[0].id, projectId: project.id,
         estimatedAmount: amount, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'Test',
         items: [{ description: 'Pièce constructeur', quantity: 1, frequency: 1, unitPrice: amount, budgetLineId: line?.id ?? line }],

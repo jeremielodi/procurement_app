@@ -44,6 +44,7 @@ const { singleDocumentMiddleware } = require('../utils/supplierDocuments');
 const requisitionTimeline = require('../services/RequisitionTimelineService');
 const i18n = require('../i18n');
 const { authenticate, hasPermission, hasAnyPermission } = require('../middleware/auth');
+const db = require('../config/database');
 const { tenantContext, tenantGuard } = require('../middleware/tenant');
 // Profils BPMN liés au projet : la permission doit venir d'un profil de l'utilisateur SUR LE PROJET du document
 const { requireProjectPermission: onProject, from, requisitionVisible } = require('../utils/projectAccess');
@@ -288,6 +289,8 @@ router.put('/requisitions/:id',
   hasPermission('CREATE_REQUISITIONS'),
   onProject('CREATE_REQUISITIONS', 'project', from.body('projectId')),
   revisionRoute((req) => revisionService.update(req.params.id, req.body || {}, req.user.id)));
+// Brouillon (migration 67) : soumission par le demandeur → démarrage du circuit BpmnGo
+router.post('/requisitions/:id/submit', hasPermission('CREATE_REQUISITIONS'), (req, res) => requisitionController.submit(req, res));
 router.post('/requisitions/:id/withdraw', hasPermission('VIEW_REQUISITIONS'), revisionRoute((req) => revisionService.withdraw(req.params.id, req.body || {}, req.user.id, req.io)));
 router.post('/requisitions/:id/resubmit', hasPermission('VIEW_REQUISITIONS'), revisionRoute((req) => revisionService.resubmit(req.params.id, req.body || {}, req.user.id, req.io)));
 router.post('/requisitions/:id/abandon', hasPermission('VIEW_REQUISITIONS'), revisionRoute((req) => revisionService.abandon(req.params.id, req.body || {}, req.user.id)));
@@ -328,9 +331,17 @@ router.post('/requisitions/history',
   (req, res) => requisitionController.addWorkflowHistory(req, res)
 );
 
+// Suppression : DELETE_REQUISITIONS, ou le demandeur pour son propre brouillon (pas encore dans le circuit)
+const ownDraftOr = (permission) => async (req, res, next) => {
+  try {
+    const r = await db.one('SELECT requester_id, status, process_instance_id FROM requisitions WHERE id::text = $1', [String(req.params.id)]);
+    if (r && r.status === 'DRAFT' && !r.process_instance_id && String(r.requester_id) === String(req.user.id)) return next();
+  } catch (error) { return next(error); }
+  return hasPermission(permission)(req, res, next);
+};
 router.delete('/requisitions/:id',
   authenticate,
-  hasPermission('DELETE_REQUISITIONS'),
+  ownDraftOr('DELETE_REQUISITIONS'),
   (req, res) => requisitionController.delete(req, res)
 );
 

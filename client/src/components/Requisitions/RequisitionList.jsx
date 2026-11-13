@@ -11,7 +11,6 @@ import {
   Eye,
   Edit,
   Trash2,
-  Send,
   XCircle,
   CheckCircle,
   Clock,
@@ -37,6 +36,7 @@ import ErrorAlert from '../Common/ErrorAlert'
 import Modal from '../Common/Modal'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import toast from 'react-hot-toast'
+import { useAuth } from '../../hooks/useAuth'
 import { t, withLabel } from '../../i18n'
 import SearchSelect from '../Common/SearchSelect'
 import { Table } from 'antd'
@@ -65,6 +65,7 @@ export default function RequisitionList() {
   const { hasPermission } = usePermissions()
   const canCreate = hasPermission('CREATE_REQUISITIONS')
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   // États pour les filtres
   const [filters, setFilters] = useState({
@@ -165,18 +166,6 @@ export default function RequisitionList() {
     },
     onError: (error) => {
       toast.error(error.message || t('requisitions.deleteError'))
-    }
-  })
-
-  // Mutation pour soumettre une réquisition
-  const submitMutation = useMutation({
-    mutationFn: (id) => requisitionService.submit(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['requisitions'])
-      toast.success(t('requisitions.submitted'))
-    },
-    onError: (error) => {
-      toast.error(error.message || t('requisitions.submitError'))
     }
   })
 
@@ -356,22 +345,17 @@ export default function RequisitionList() {
               <PencilLine size={18} />
             </Link>
           )}
-          {requisition.status === 'DRAFT' && (
+          {/* Brouillon : modifier / supprimer par son demandeur (la soumission se fait depuis la fiche, avec confirmation) */}
+          {requisition.status === 'DRAFT' && String(requisition.requester_id) === String(user?.id) && (
             <>
               <Link
                 to={`/requisitions/${requisition.id}/edit`}
                 className="text-gray-400 hover:text-green-600 transition-colors"
-                title={t('common.edit')}
+                title={t('draft.edit')}
+                data-testid="requisition-draft-edit"
               >
                 <Edit size={18} />
               </Link>
-              <button
-                onClick={() => submitMutation.mutate(requisition.id)}
-                className="text-gray-400 hover:text-purple-600 transition-colors"
-                title={t('common.submit')}
-              >
-                <Send size={18} />
-              </button>
               <button
                 onClick={() => {
                   setRequisitionToDelete(requisition)

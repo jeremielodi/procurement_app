@@ -46,7 +46,7 @@ test.describe.serial('API › Types de sortie de stock (transfert, département)
     expect(laptop?.track_serials).toBe(true);
 
     // Stock au dépôt A : 100 L par réception, 3 ordinateurs (parc existant)
-    const req = (await (await request.post('/api/requisitions', { headers: H, data: {
+    const req = (await (await request.post('/api/requisitions', { headers: H, data: { submit: true,
       title: `[TEST DESTINATIONS] ${stamp}`, description: 'x', departmentId: depts[0].id, projectId: projects[0]?.id, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'x',
       items: [{ description: 'Gasoil', quantity: 100, frequency: 1, unitPrice: 1.5, stockItemId: fuel.id }],
     } })).json()).data;

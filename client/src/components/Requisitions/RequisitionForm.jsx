@@ -148,6 +148,8 @@ export default function RequisitionForm() {
   })
   const editing = editData?.data || null
   const revision = revisionData?.data || null
+  // Brouillon (pas encore dans le circuit BpmnGo) : « Enregistrer » ou « Enregistrer et soumettre »
+  const isDraft = isEdit && !!revision?.isDraft
   useEffect(() => {
     if (!editing) return
     reset({
@@ -181,7 +183,8 @@ export default function RequisitionForm() {
   const projects = [
     ...(projectsData?.data || []),
     ...(editing?.project_id && !(projectsData?.data || []).some(p => p.id === editing.project_id)
-      ? [{ id: editing.project_id, code: editing.project_code, name: editing.project_name }] : []),
+      // Hors de la liste (liste paginée) : chef de projet inconnu ici, contrôlé par le serveur à la soumission
+      ? [{ id: editing.project_id, code: editing.project_code, name: editing.project_name, managerUnknown: true }] : []),
   ]
   // Chef du projet choisi : il valide seul la réquisition (il ne peut pas valider la sienne)
   const { user } = useAuth()
@@ -218,7 +221,8 @@ export default function RequisitionForm() {
       }
 
       queryClient.invalidateQueries(['requisitions'])
-      toast.success(t('reqForm.created'))
+      // Brouillon : rien n'entre dans le circuit tant que le demandeur ne l'a pas soumis depuis la fiche
+      toast.success(t('draft.created'), { duration: 6000 })
       // Fiche de la réquisition avec son PDF (formulaire de demande d'achat) ouvert : le demandeur voit le document
       navigate(requisitionId ? `/requisitions/${requisitionId}?pdf=1` : '/requisitions')
     },
@@ -306,13 +310,18 @@ export default function RequisitionForm() {
           destinationWarehouseId: (item.stockItem && item.destinationWarehouse?.id) || null,
         })),
       })
-      if (resubmit) {
+      if (resubmit && isDraft) {
+        await requisitionService.submit(editId)
+        toast.success(t('draft.submitted'))
+        queryClient.invalidateQueries(['requisitions'])
+        navigate(`/requisitions/${editId}`)
+      } else if (resubmit) {
         const result = await requisitionService.resubmit(editId, resubmitComment.trim())
         toast.success(t('revision.resubmitted', { version: result.data?.version }))
         queryClient.invalidateQueries(['requisitions'])
         navigate(`/requisitions/${editId}`)
       } else {
-        toast.success(t('revision.saved'))
+        toast.success(isDraft ? t('draft.saved') : t('revision.saved'))
         queryClient.invalidateQueries(['requisition-edit', editId])
       }
     } catch (error) {
@@ -477,7 +486,8 @@ export default function RequisitionForm() {
     <div className="max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">
-          {isEdit ? t('revision.formTitle', { number: editing.requisition_number }) : t('reqForm.title')}
+          {isDraft ? t('draft.formTitle', { number: editing.requisition_number })
+            : isEdit ? t('revision.formTitle', { number: editing.requisition_number }) : t('reqForm.title')}
         </h1>
         <button
           onClick={() => navigate(isEdit ? `/requisitions/${editId}` : '/requisitions')}
@@ -598,7 +608,7 @@ export default function RequisitionForm() {
               </SearchSelect>
               {!projectId && <p className="text-red-500 text-sm mt-1">{t('reqForm.projectRequired')}</p>}
               {/* Validation par le chef du projet : obligatoire, et jamais par le demandeur lui-même */}
-              {chosenProject && !chosenProject.project_manager_id && (
+              {chosenProject && !chosenProject.managerUnknown && !chosenProject.project_manager_id && (
                 <p className="text-sm text-red-600 mt-1" data-testid="project-no-manager">{t('reqForm.projectNoManager')}</p>
               )}
               {managerIsMe && (
@@ -926,7 +936,7 @@ export default function RequisitionForm() {
         </div>
 
         {/* Correction : message facultatif à l'approbateur, joint à la nouvelle version */}
-        {isEdit && (
+        {isEdit && !isDraft && (
           <div className="bg-white rounded-lg shadow p-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('revision.commentLabel')}</label>
             <textarea value={resubmitComment} onChange={(e) => setResubmitComment(e.target.value)} rows={2} data-testid="resubmit-comment"
@@ -949,21 +959,21 @@ export default function RequisitionForm() {
               type="button"
               disabled={isSubmitting || !formValid}
               onClick={handleSubmit((data) => saveCorrection(data, false))}
-              data-testid="revision-save"
+              data-testid={isDraft ? 'draft-save' : 'revision-save'}
               className="flex items-center px-6 py-2 border border-blue-600 text-blue-700 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save size={20} className="mr-2" />
-              {t('revision.save')}
+              {isDraft ? t('draft.save') : t('revision.save')}
             </button>
           )}
           <button
             type="submit"
             disabled={isSubmitting || !formValid}
-            data-testid={isEdit ? 'revision-resubmit' : undefined}
+            data-testid={isDraft ? 'draft-save-submit' : isEdit ? 'revision-resubmit' : 'requisition-save-draft'}
             className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isEdit ? <Send size={20} className="mr-2" /> : <Save size={20} className="mr-2" />}
-            {isEdit ? t('revision.resubmit') : (isSubmitting ? t('reqForm.creating') : t('reqForm.create'))}
+            {isDraft ? t('draft.saveAndSubmit') : isEdit ? t('revision.resubmit') : (isSubmitting ? t('reqForm.creating') : t('draft.create'))}
           </button>
         </div>
       </form>

@@ -43,7 +43,7 @@ test.describe.serial('API › Sorties de stock vers un utilisateur', () => {
     med = (await (await request.post('/api/stock-items', { headers: H, data: { code: `ISM-${stamp}`, name: 'Antipaludéen', unit: 'boîte', categoryId: cats.find(c => c.code === 'MEDICAL_SUPPLIES').id, trackLots: true, trackExpiry: true } })).json()).data;
 
     // Stock : réception de 100 L de gasoil et de 2 lots de médicaments (péremptions différentes)
-    const req = (await (await request.post('/api/requisitions', { headers: H, data: {
+    const req = (await (await request.post('/api/requisitions', { headers: H, data: { submit: true,
       title: `[TEST SORTIES] ${stamp}`, description: 'x', departmentId: depts[0].id, projectId: projects[0]?.id, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'x',
       items: [{ description: 'Gasoil', quantity: 100, frequency: 1, unitPrice: 1.5, stockItemId: fuel.id }, { description: 'Antipaludéen', quantity: 50, frequency: 1, unitPrice: 4, stockItemId: med.id }],
     } })).json()).data;

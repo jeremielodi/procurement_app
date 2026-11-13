@@ -139,7 +139,7 @@ test.describe.serial('🔄 BPMN Procurement Flow — end to end', () => {
 
     const res  = await request.post('/api/requisitions', {
       headers: auth(token),
-      data: {
+      data: { submit: true,
         title:           `[TEST FLOW] ${Date.now()}`,
         description:     'Playwright BPMN end-to-end flow test',
         departmentId:    dept.id,

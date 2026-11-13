@@ -17,7 +17,7 @@ test.describe.serial('API › Unités de mesure', () => {
 
   const unitsIn = async (request, lang) =>
     (await (await request.get('/api/units', { headers: { ...auth(admin), 'Accept-Language': lang } })).json()).data;
-  const createRequisition = (request, items) => request.post('/api/requisitions', { headers: auth(admin), data: {
+  const createRequisition = (request, items) => request.post('/api/requisitions', { headers: auth(admin), data: { submit: true,
     title: `[TEST UNITES] ${stamp}`, projectId: project.id, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM',
     items: items.map(it => ({ quantity: 1, frequency: 1, unitPrice: 10, budgetLineId: line.id, ...it })),
   } });

@@ -237,7 +237,10 @@ class RequisitionRevisionService {
     return { status: 'RETURNED' };
   }
 
-  /** Droits et état, pour l'écran : { canWithdraw, canEdit, approvalClaimedBy, version, lastReturn } */
+  /**
+   * Droits et état, pour l'écran : { canWithdraw, canEdit, canSubmit, canDelete, isDraft, approvalClaimedBy, version,
+   * lastReturn }. Brouillon (migration 67) : modifiable, supprimable et soumis par son demandeur seul
+   */
   async state(requisitionId, userId) {
     const req = await loadRequisition(requisitionId);
     if (!req) throw fail(404, 'NOT_FOUND', 'Réquisition introuvable');
@@ -253,11 +256,15 @@ class RequisitionRevisionService {
        WHERE v.requisition_id = $1 AND v.return_kind IS NOT NULL ORDER BY v.version DESC LIMIT 1`,
       [req.id]
     );
+    const isDraft = req.status === 'DRAFT' && !req.process_instance_id;
     return {
       status: req.status,
       version: req.version || 1,
       isRequester,
-      canEdit: isRequester && req.status === 'RETURNED',
+      isDraft,
+      canEdit: isRequester && (req.status === 'RETURNED' || isDraft),
+      canSubmit: isRequester && isDraft,
+      canDelete: isRequester && isDraft,
       canWithdraw: !!approval && !approval.assignee && await supportsRevision(req.process_instance_id),
       approvalClaimedBy: approval?.assignee || null,
       lastReturn: req.status === 'RETURNED' ? lastReturn : null,
@@ -265,7 +272,7 @@ class RequisitionRevisionService {
   }
 
   /**
-   * Modification par le demandeur pendant la correction : champs + articles (id conservé = article modifié, sans id =
+   * Modification par le demandeur d'un brouillon (avant la soumission) ou pendant la correction : champs + articles (id conservé = article modifié, sans id =
    * ajouté, absent = supprimé). Montant recalculé.
    */
   async update(requisitionId, data, userId) {
@@ -285,7 +292,8 @@ class RequisitionRevisionService {
       const req = await tx.one('SELECT * FROM requisitions WHERE id = $1 FOR UPDATE', [requisitionId]);
       if (!req) throw fail(404, 'NOT_FOUND', 'Réquisition introuvable');
       if (!same(req.requester_id, userId)) throw fail(403, 'NOT_REQUESTER', 'Seul le demandeur peut modifier sa réquisition');
-      if (req.status !== 'RETURNED') throw fail(409, 'NOT_EDITABLE', 'La réquisition ne peut être modifiée que lorsqu\'elle est « À corriger »');
+      const isDraft = req.status === 'DRAFT' && !req.process_instance_id;
+      if (req.status !== 'RETURNED' && !isDraft) throw fail(409, 'NOT_EDITABLE', 'La réquisition ne peut être modifiée que lorsqu\'elle est un brouillon ou « À corriger »');
 
       // Projet obligatoire avec un chef de projet (qui validera la nouvelle version) autre que le demandeur
       const projectId = data.projectId || null;

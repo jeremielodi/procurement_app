@@ -24,7 +24,7 @@ test('Questions aux fournisseurs : création, réponse sur le portail, note tech
   const line = (await (await api.post('/api/budget', { headers: H, data: {
     entityCode: `BL-E2E-AOQ-${stamp}`, description: 'e2e', allocatedAmount: 1000000, projectId: projects[0].id,
   } })).json()).data;
-  const req = (await (await api.post('/api/requisitions', { headers: H, data: {
+  const req = (await (await api.post('/api/requisitions', { headers: H, data: { submit: true,
     title: `[E2E AO QUESTIONS] ${stamp}`, description: 'e2e', projectId: projects[0].id,
     estimatedAmount: 30000, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'e2e',
     items: [{ description: 'Imprimante réseau', quantity: 2, frequency: 1, unitPrice: 15000, budgetLineId: line?.id ?? line }],

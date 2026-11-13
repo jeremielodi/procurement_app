@@ -41,7 +41,7 @@ const complete = (request, task, variables, tk = token) =>
 /** Réquisition de 10 unités menée jusqu'au PO confirmé par le fournisseur → { req, po, poItem } */
 async function orderConfirmed(request, label) {
   const H = auth(token);
-  const created = await request.post('/api/requisitions', { headers: H, data: {
+  const created = await request.post('/api/requisitions', { headers: H, data: { submit: true,
     title: `[TEST LIVRAISON PARTIELLE] ${label} ${Date.now()}`, description: label, departmentId: refs.dept.id, projectId: refs.project.id,
     estimatedAmount: 10 * PRICE, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'Test',
     items: [{ description: 'Cartons de ramettes', quantity: 10, frequency: 1, unitPrice: PRICE, budgetLineId: refs.line }],

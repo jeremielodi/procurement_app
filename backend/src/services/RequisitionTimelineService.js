@@ -281,6 +281,9 @@ class RequisitionTimelineService {
 
       if (action === 'CREATED') {
         events.push({ date: row.performed_at, kind: 'info', title: T('timeline.created'), actor: who(row) || req.requester_name, actorId: row.performed_by || req.requester_id || null, details: [], links: [] });
+      } else if (action === 'SUBMITTED') {
+        // Brouillon soumis (migration 67) : entrée dans le circuit BpmnGo
+        events.push({ date: row.performed_at, kind: 'info', title: T('timeline.submitted'), actor: who(row) || req.requester_name, actorId: row.performed_by || req.requester_id || null, details: [], links: [] });
       } else if (action === 'PROCESS_STARTED') {
         events.push({ date: row.performed_at, kind: 'info', title: T('timeline.processStarted'), actor: T('timeline.system'), details: [], links: [] });
       } else if (action === 'PROCESS_START_FAILED') {
@@ -442,7 +445,11 @@ class RequisitionTimelineService {
     const hasDoc = (list) => (po) => list.some(d => String(d.po_id) === String(po.id));
 
     const steps = [
-      { key: 'created', label: T('timeline.steps.created'), status: 'done', date: req.created_at, info: req.requester_name },
+      {
+        key: 'created', label: T('timeline.steps.created'), status: req.status === 'DRAFT' ? 'current' : 'done', date: req.created_at,
+        // Brouillon (migration 67) : pas encore soumis, aucun circuit
+        info: req.status === 'DRAFT' ? [req.requester_name, T('timeline.draftInfo')].filter(Boolean).join(' · ') : req.requester_name,
+      },
       { key: 'budget', label: T('timeline.steps.budget'), status: budget ? (budget.ok ? 'done' : 'failed') : 'pending', date: budget?.date },
       {
         key: 'approval', label: T('timeline.steps.approval'),

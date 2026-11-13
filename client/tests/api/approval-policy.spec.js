@@ -16,7 +16,7 @@ test.describe.serial('API › Seuils d\'approbation par projet (bon de commande)
   const lastAudit = async (request, query) => (await (await request.get(`/api/audit-logs?limit=5&${query}`, { headers: H() })).json()).data;
 
   async function requisition(request, project, amount, title) {
-    return (await (await request.post('/api/requisitions', { headers: H(), data: {
+    return (await (await request.post('/api/requisitions', { headers: H(), data: { submit: true,
       title: `[TEST SEUILS] ${title} ${stamp}`, description: 'x', departmentId: dept.id, projectId: project.id, currencyId: 1, currencyCode: 'USD',
       priority: 'MEDIUM', justification: 'x', items: [{ description: 'Article', quantity: 1, frequency: 1, unitPrice: amount, budgetLineId: lines[project.id] }],
     } })).json()).data;

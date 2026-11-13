@@ -19,7 +19,7 @@ test.describe.serial('API › Bon de commande : fréquence de la réquisition', 
     approver = await getApproverToken(request);
     [project] = (await (await request.get('/api/projects', { headers: auth(admin) })).json()).data;
     [supplier] = (await (await request.get('/api/suppliers', { headers: auth(admin) })).json()).data;
-    const res = await request.post('/api/requisitions', { headers: auth(admin), data: {
+    const res = await request.post('/api/requisitions', { headers: auth(admin), data: { submit: true,
       title: `[TEST FREQUENCE PO] ${stamp}`, description: 'x', projectId: project.id,
       currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'x',
       items: [

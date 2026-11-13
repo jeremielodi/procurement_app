@@ -119,7 +119,7 @@ test.describe.serial('API › Gestion de stock', () => {
     test.skip(!refs.dept || !refs.supplier, 'Département / fournisseur requis');
     const req = await json(await request.post('/api/requisitions', {
       headers: asAdmin(),
-      data: {
+      data: { submit: true,
         title: `[TEST STOCK] ${stamp}`, description: 'Test gestion de stock', departmentId: refs.dept.id, projectId: refs.project?.id,
         currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'Test',
         items: [

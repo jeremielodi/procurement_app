@@ -57,7 +57,7 @@ test.describe.serial('API › GRN : entrée en stock après la réception', () =
     test.skip(!refs.dept || !refs.supplier, 'Département / fournisseur requis');
     const req = await json(await request.post('/api/requisitions', {
       headers: asAdmin(),
-      data: {
+      data: { submit: true,
         title: `[TEST GRN STOCK] ${stamp}`, description: 'Entrée en stock après réception', departmentId: refs.dept.id, projectId: refs.project?.id,
         currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'Test',
         items: [

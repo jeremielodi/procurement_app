@@ -28,7 +28,7 @@ test('Attribution par article depuis la fiche de l\'appel d\'offres', async ({ p
   const line = (await (await api.post('/api/budget', { headers: H, data: {
     entityCode: `BL-E2E-AOLOT-${stamp}`, description: 'e2e', allocatedAmount: 1000000, projectId: projects[0].id,
   } })).json()).data;
-  const req = (await (await api.post('/api/requisitions', { headers: H, data: {
+  const req = (await (await api.post('/api/requisitions', { headers: H, data: { submit: true,
     title: `[E2E AO PAR ARTICLE] ${stamp}`, description: 'e2e', departmentId: depts[0].id, projectId: projects[0].id,
     estimatedAmount: 36000, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'e2e',
     items: ['Groupe électrogène', 'Panneaux solaires'].map(description => ({ description, quantity: 1, frequency: 1, unitPrice: 18000, budgetLineId: line?.id ?? line })),

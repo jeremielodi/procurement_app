@@ -1,23 +1,19 @@
 // backend/src/controllers/RequisitionController.js
 const requisitionModel = require('../models/RequisitionModel');
 const userModel = require('../models/UserModel');
-const departmentModel = require('../models/DepartmentModel')
 const notificationService = require('../services/NotificationService');
-const camundaService = require('../services/CamundaService');
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
 const { v4: uuidv4 } = require('uuid');
 const requisitionExportService = require('../services/RequisitionExportService');
 const i18n = require('../i18n');
-const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { audit, AUDIT } = require('../utils/auditLog');
-const revisionService = require('../services/RequisitionRevisionService');
 const { requisitionDelivery } = require('../utils/requisitionDelivery');
 const { resolveUnitId } = require('../utils/units');
 const projectManagers = require('../utils/projectManager');
 const stockPlanning = require('../services/StockPlanningService');
+const submissionService = require('../services/RequisitionSubmissionService');
 
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 class RequisitionController {
 
@@ -153,9 +149,9 @@ async create(req, res) {
     }
 
     // Projet obligatoire, avec un chef de projet actif qui n'est pas le demandeur : il valide seul la réquisition
-    let projectManager;
+    // (contrôlé dès le brouillon, puis de nouveau à la soumission)
     try {
-      projectManager = await projectManagers.forRequisition(projectId, userId);
+      await projectManagers.forRequisition(projectId, userId);
     } catch (error) {
       if (!error.status) throw error;
       return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
@@ -163,15 +159,10 @@ async create(req, res) {
 
     // Récupérer l'email et le username de l'utilisateur
     const userEmail = await this.getUserEmailById(userId);
-    const userUsername = await this.getUserUsernameById(userId);
     
     // Récupérer les détails du projet
     const projectDetails = await this.getProjectDetails(projectId);
     const projectCode = projectDetails?.code || null;
-    const projectName = projectDetails?.name || null;
-
-    // recuperer le departement
-    const departement = departmentId ? await departmentModel.findById(departmentId) : null;
 
     // Préparer les items avec toutes les informations
     const itemsWithDetails = await Promise.all(items.map(async (item, index) => {
@@ -205,7 +196,6 @@ async create(req, res) {
     }));
 
     const totalAmount = itemsWithDetails.reduce((sum, item) => sum + item.total, 0);
-    const totalQuantity = itemsWithDetails.reduce((sum, item) => sum + item.quantity, 0);
 
     const result = await requisitionModel.create({
       title, 
@@ -223,19 +213,8 @@ async create(req, res) {
     });
 
     if (result.success) {
-      // Version 1 (photo de la réquisition soumise) : base de comparaison en cas de correction
-      await revisionService.recordInitialVersion(result.id);
-
-      // Émettre une notification de création
-      this.emitNotification(
-        io, userId,
-        'Réquisition en cours de création',
-        `Création de votre réquisition ${result.requisitionNumber} en cours...`,
-        'INFO',
-        `/requisitions/${result.id}`
-      );
-
-      // Ajouter l'historique du workflow
+      // Brouillon (migration 67) : aucun processus BpmnGo tant que le demandeur ne l'a pas soumis
+      // (POST /requisitions/:id/submit). La version 1 est enregistrée à la soumission.
       await requisitionModel.addWorkflowHistory({
         processInstanceId: null,
         entityType: 'requisition',
@@ -243,187 +222,37 @@ async create(req, res) {
         taskId: null,
         taskName: 'Création réquisition',
         action: 'CREATED',
-        comments: `Création de la réquisition ${result.requisitionNumber} par l'utilisateur ${userEmail || userId}`,
+        comments: `Création du brouillon ${result.requisitionNumber} par l'utilisateur ${userEmail || userId}`,
         performedBy: userId
       });
-
-      // Démarrer le processus Camunda avec TOUTES les informations
-      const defaultCurrency = await getEnterpriseCurrencyCode();
-      const processResult = await camundaService.startProcess(
-        process.env.PROCUREMENT_BPMN_PROCESS,
-        {
-          // === INFORMATIONS GÉNÉRALES ===
+      if (io) {
+        io.to(`user-${userId}`).emit('requisitions-list-update', {
+          action: 'CREATE',
           requisitionId: result.id,
-          requisitionNumber: result.requisitionNumber,
-          requester: userEmail || userId.toString(),
-          requesterUsername: userUsername || userId.toString(),
-          requesterId: userId,
-          
-          // === DÉTAILS DE LA RÉQUISITION ===
-          title: title || '',
-          description: description || '',
-          departmentId: departmentId || '',
-          departementCode: departement?.code || '',
-          priority: priority || 'MEDIUM',
-          justification: justification || '',
-          estimatedAmount: totalAmount,
-          currency: currencyCode || defaultCurrency,
-          currencyId,
-          
-          // === INFORMATIONS PROJET ===
-          projectId: projectId || '',
-          projectCode: projectCode || '',
-          projectName: projectName || '',
-          // Validation de la réquisition (Activity_ProjectManagerApproval) : le chef de projet — information ; le
-          // droit est contrôlé sur le chef de projet ACTUEL en base (il a pu changer depuis)
-          projectManager: projectManager.email,
-          projectManagerId: projectManager.id,
-          
-          // === ARTICLES (format JSON avec budgetLineId) ===
-          items: JSON.stringify(itemsWithDetails.map(item => ({
-            description: item.description,
-            quantity: item.quantity,
-            frequency: item.frequency,
-            unitPrice: item.unitPrice,
-            total: item.total,
-            budgetLineId: item.budgetLineId,              // ← AJOUTÉ
-            budgetLineCode: item.budgetLineCode,
-            budgetLineDescription: item.budgetLineDescription
-          }))),
-          
-          // === STATISTIQUES ===
-          totalItems: itemsWithDetails.length,
-          totalQuantity: totalQuantity,
-          
-          // === CIRCUIT ===
-          // BPMN avec « Corriger la réquisition » (migration 25) : les processus démarrés avant ne l'ont pas
-          revisionSupported: true,
-          // Circuit du 2026-11-06 : chef de projet sur la réquisition, N1 / N2 / N3 sur le bon de commande
-          approvalFlow: 'PROJECT_MANAGER',
-
-          // === TIMESTAMPS ===
-          createdAt: new Date().toISOString(),
-          createdBy: userEmail || userId.toString()
-        }
-      );
-
-      if (processResult.success) {
-        await requisitionModel.updateStatus(
-          result.id,
-          'IN_PROGRESS',
-          processResult.processInstanceId
-        );
-
-        // Ajouter l'historique du workflow
-        await requisitionModel.addWorkflowHistory({
-          processInstanceId: processResult.processInstanceId,
-          entityType: 'requisition',
-          entityId: result.id,
-          taskId: null,
-          taskName: 'Démarrage processus',
-          action: 'PROCESS_STARTED',
-          comments: `Processus Camunda démarré avec l'ID: ${processResult.processInstanceId}`,
-          performedBy: userId
+          requisitionNumber: result.requisitionNumber
         });
+      }
 
-        // Émettre une mise à jour de statut
-        this.emitRequisitionUpdate(io, result.id, {
-          status: 'IN_PROGRESS',
-          processInstanceId: processResult.processInstanceId
-        });
-
-        await sleep(3000);
-        
-        // Récupérer les tâches avec l'email comme assignee
-        // const userTasks = await camundaService.getUserTasks(userEmail, processResult.processInstanceId);
-        
-        // const createRequisitionTask = userTasks.filter((t) => t.taskDefinitionKey == 'Activity_CreateRequisition')[0] || {};
-        
-        // if (createRequisitionTask.id) {
-        //   // Ajouter l'historique du workflow
-        //   await requisitionModel.addWorkflowHistory({
-        //     processInstanceId: processResult.processInstanceId,
-        //     entityType: 'requisition',
-        //     entityId: result.id,
-        //     taskId: createRequisitionTask.id,
-        //     taskName: createRequisitionTask.name || 'Création réquisition',
-        //     action: 'TASK_STARTED',
-        //     comments: `Début de la tâche: ${createRequisitionTask.name}`,
-        //     performedBy: userId
-        //   });
-
-        //   await camundaService.completeTask(createRequisitionTask.id, {});
-          
-        //   // Ajouter l'historique du workflow
-        //   await requisitionModel.addWorkflowHistory({
-        //     processInstanceId: processResult.processInstanceId,
-        //     entityType: 'requisition',
-        //     entityId: result.id,
-        //     taskId: createRequisitionTask.id,
-        //     taskName: createRequisitionTask.name || 'Création réquisition',
-        //     action: 'TASK_COMPLETED',
-        //     comments: `Tâche "${createRequisitionTask.name}" complétée automatiquement`,
-        //     performedBy: userId
-        //   });
-        
-        // }
-
-        // Ajouter l'historique du workflow
-        await requisitionModel.addWorkflowHistory({
-          processInstanceId: processResult.processInstanceId,
-          entityType: 'requisition',
-          entityId: result.id,
-          taskId: null,
-          taskName: 'Notification',
-          action: 'NOTIFICATION_SENT',
-          comments: `Notification envoyée à l'utilisateur ${userEmail || userId}: Réquisition créée avec succès`,
-          performedBy: userId
-        });
-
-        // Notifier le demandeur
-        await notificationService.sendNotification(
-          userId,
-          'Réquisition créée avec succès',
-          `Votre réquisition ${result.requisitionNumber} a été créée et le processus a démarré.`,
-          'REQUISITION_CREATED',
-          `/requisitions/${result.id}`
-        );
-
-        // Émettre la notification finale
-        this.emitNotification(
-          io, userId,
-          'Réquisition créée avec succès ✅',
-          `Votre réquisition ${result.requisitionNumber} a été créée et le processus a démarré.`,
-          'SUCCESS',
-          `/requisitions/${result.id}`
-        );
-
-        // Émettre une mise à jour de la liste des réquisitions
-        if (io) {
-          io.emit('requisitions-list-update', {
-            action: 'CREATE',
-            requisitionId: result.id,
-            requisitionNumber: result.requisitionNumber
+      // Création et soumission en un appel (API, intégrations) : { submit: true }. L'interface crée toujours un brouillon.
+      let submission = null;
+      if (req.body.submit === true || req.body.submit === 'true') {
+        try {
+          submission = await submissionService.submit(result.id, userId, io);
+        } catch (error) {
+          if (!error.status) throw error;
+          return res.status(201).json({
+            success: true,
+            message: 'Brouillon enregistré, mais non soumis',
+            data: { ...result, status: 'DRAFT' },
+            submitError: { code: error.code, message: error.message }
           });
         }
-      } else {
-        // Ajouter l'historique du workflow - échec
-        await requisitionModel.addWorkflowHistory({
-          processInstanceId: null,
-          entityType: 'requisition',
-          entityId: result.id,
-          taskId: null,
-          taskName: 'Démarrage processus',
-          action: 'PROCESS_START_FAILED',
-          comments: `Échec du démarrage du processus Camunda: ${processResult.error}`,
-          performedBy: userId
-        });
       }
 
       return res.status(201).json({
         success: true,
-        message: 'Réquisition créée avec succès',
-        data: result
+        message: submission ? 'Réquisition créée et soumise' : 'Brouillon enregistré',
+        data: { ...result, status: submission ? submission.status : 'DRAFT', processInstanceId: submission?.processInstanceId || null }
       });
     }
   } catch (error) {
@@ -746,53 +575,16 @@ async create(req, res) {
   }
 
   /**
-   * Soumettre une réquisition
+   * Soumettre un brouillon : démarrage du circuit BpmnGo (RequisitionSubmissionService)
    */
   async submit(req, res) {
     try {
-      const { id } = req.params;
-      const userId = req.user?.id || 1;
-      const io = req.io;
-      const userEmail = await this.getUserEmailById(userId);
-
-      const requisition = await requisitionModel.findById(id);
-      if (!requisition) {
-        return res.status(404).json({
-          success: false,
-          message: 'Réquisition non trouvée'
-        });
-      }
-
-      const result = await requisitionModel.submit(id);
-
-      // Émettre une notification de soumission
-      this.emitNotification(
-        io, userId,
-        'Réquisition soumise 📤',
-        `Votre réquisition ${requisition.requisition_number} a été soumise pour approbation`,
-        'INFO',
-        `/requisitions/${id}`
-      );
-
-      // Émettre une mise à jour de la réquisition
-      this.emitRequisitionUpdate(io, id, {
-        status: 'PENDING',
-        submittedAt: new Date().toISOString(),
-        submittedBy: userEmail || userId
-      });
-
-      return res.json({
-        success: true,
-        message: 'Réquisition soumise avec succès',
-        data: result
-      });
+      const data = await submissionService.submit(req.params.id, req.user.id, req.io);
+      return res.json({ success: true, message: 'Réquisition soumise', data });
     } catch (error) {
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details });
       console.error('Error submitting requisition:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Erreur lors de la soumission de la réquisition',
-        error: error.message
-      });
+      return res.status(500).json({ success: false, message: 'Erreur lors de la soumission de la réquisition' });
     }
   }
 

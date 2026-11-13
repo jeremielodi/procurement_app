@@ -68,7 +68,7 @@ test.describe.serial('Réquisition répartie entre plusieurs fournisseurs (BpmnG
     suppliers = (await (await request.get('/api/suppliers', { headers: H, params: { forPurchaseOrder: 1 } })).json()).data;
     test.skip(suppliers.length < 3, 'Il faut au moins trois fournisseurs actifs');
 
-    const created = await request.post('/api/requisitions', { headers: H, data: {
+    const created = await request.post('/api/requisitions', { headers: H, data: { submit: true,
       title: `[TEST REPARTITION] ${Date.now()}`, description: 'Répartition', departmentId: depts[0].id, projectId: project.id,
       estimatedAmount: 4500, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'Test',
       items: ITEMS.map(description => ({ description, quantity: 1, frequency: 1, unitPrice: 900, budgetLineId: line?.id ?? line })),

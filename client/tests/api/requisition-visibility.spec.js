@@ -47,7 +47,7 @@ test.describe.serial('API › Visibilité des réquisitions par projet', () => {
     for (const u of Object.values(users)) u.token = (await (await request.post('/api/auth/login', { data: { email: u.email, password: u.password } })).json()).data.token;
 
     const create = async (u, who) => {
-      const res = await request.post('/api/requisitions', { headers: H(u.token), data: {
+      const res = await request.post('/api/requisitions', { headers: H(u.token), data: { submit: true,
         title: `[TEST VISIBILITE] ${who} ${stamp}`, description: 'x', departmentId: dept.id, projectId: projectP.id, currencyId: 1, currencyCode: 'USD',
         priority: 'MEDIUM', justification: 'x', items: [{ description: 'Article', quantity: 1, frequency: 1, unitPrice: 40, budgetLineId: line.id }],
       } });

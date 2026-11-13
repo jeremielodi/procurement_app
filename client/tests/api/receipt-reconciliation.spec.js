@@ -34,7 +34,7 @@ test.describe.serial('API › Rapprochement réceptions ↔ stock', () => {
     const [dept] = (await (await request.get('/api/departments', { headers: H() })).json()).data;
     const [project] = (await (await request.get('/api/projects', { headers: H() })).json()).data;
     const supplier = (await (await request.get('/api/suppliers?all=1', { headers: H() })).json()).data.find(s => s.status === 'ACTIVE');
-    const req = (await (await request.post('/api/requisitions', { headers: H(), data: {
+    const req = (await (await request.post('/api/requisitions', { headers: H(), data: { submit: true,
       title: `[TEST RAPPROCHEMENT] ${stamp}`, description: 'x', departmentId: dept.id, projectId: project.id, currencyId: 1, currencyCode: 'USD',
       priority: 'LOW', justification: 'x', items: [{ description: 'Gasoil', quantity: 100, frequency: 1, unitPrice: 1.5, stockItemId: item.id }],
     } })).json()).data;

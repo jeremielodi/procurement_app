@@ -24,7 +24,7 @@ test.describe.serial('API › Budget : montant utilisé', () => {
   });
 
   test('Une réquisition sans bon de commande ne consomme rien', async ({ request }) => {
-    const res = await request.post('/api/requisitions', { headers: auth(admin), data: {
+    const res = await request.post('/api/requisitions', { headers: auth(admin), data: { submit: true,
       title: `[TEST BUDGET UTILISE] ${stamp}`, description: 'x', projectId: project.id,
       currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'x',
       items: [

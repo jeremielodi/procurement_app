@@ -41,7 +41,7 @@ test('Répartition de 5 articles entre 3 fournisseurs depuis l\'onglet tâches',
   const line = (await (await page.request.post('/api/budget', { headers: H, data: {
     entityCode: `BL-SPLIT-E2E-${Date.now()}`, description: 'Ligne e2e répartition', allocatedAmount: 1000000, projectId: projects[0].id,
   } })).json()).data;
-  const created = await page.request.post('/api/requisitions', { headers: H, data: {
+  const created = await page.request.post('/api/requisitions', { headers: H, data: { submit: true,
     title: `[E2E REPARTITION] ${Date.now()}`, description: 'Répartition', departmentId: depts[0].id, projectId: projects[0].id,
     estimatedAmount: 4500, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'Test e2e',
     items: ITEMS.map(description => ({ description, quantity: 1, frequency: 1, unitPrice: 900, budgetLineId: line?.id ?? line })),

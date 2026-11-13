@@ -153,6 +153,8 @@
     "approvedWord": "approved",
     "rejectedWord": "rejected",
     "created": "Requisition created",
+    "submitted": "Draft submitted by the requester",
+    "draftInfo": "Draft: not submitted yet",
     "processStarted": "Approval workflow started",
     "processStartFailed": "Approval workflow failed to start",
     "engineNoResponse": "The workflow engine did not respond",

@@ -44,7 +44,7 @@ test.describe.serial('API › Équipements affectés et retours', () => {
     laptop = r.body.data;
     paper = (await (await request.post('/api/stock-items', { headers: H, data: { code: `PAP-${stamp}`, name: 'Rame A4', unit: 'rame', categoryId: cats.find(c => c.code === 'OFFICE_SUPPLIES').id } })).json()).data;
 
-    const req = (await (await request.post('/api/requisitions', { headers: H, data: {
+    const req = (await (await request.post('/api/requisitions', { headers: H, data: { submit: true,
       title: `[TEST EQUIPEMENTS] ${stamp}`, description: 'x', departmentId: depts[0].id, projectId: projects[0]?.id, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'x',
       items: [{ description: 'Ordinateur portable', quantity: 3, frequency: 1, unitPrice: 900, stockItemId: laptop.id }, { description: 'Rame A4', quantity: 50, frequency: 1, unitPrice: 6, stockItemId: paper.id }],
     } })).json()).data;

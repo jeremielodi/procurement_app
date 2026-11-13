@@ -45,7 +45,7 @@ test.describe.serial('API › Modèles de documents (réquisition, bon de comman
   });
 
   test('Date nécessaire invalide refusée', async ({ request }) => {
-    const res = await request.post('/api/requisitions', { headers: auth(admin), data: {
+    const res = await request.post('/api/requisitions', { headers: auth(admin), data: { submit: true,
       title: `[TEST DOC] date ${stamp}`, projectId: project.id, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM',
       neededBy: '26/10/2026',
       items: [{ description: 'Article', quantity: 1, frequency: 1, unitPrice: 10, budgetLineId: line.id }],
@@ -56,7 +56,7 @@ test.describe.serial('API › Modèles de documents (réquisition, bon de comman
 
   test('Réquisition : livraison et unité de mesure enregistrées, PDF du formulaire', async ({ request }) => {
     const liter = (await (await request.get('/api/units', { headers: auth(admin) })).json()).data.find(u => u.code === 'LITER');
-    const res = await request.post('/api/requisitions', { headers: auth(admin), data: {
+    const res = await request.post('/api/requisitions', { headers: auth(admin), data: { submit: true,
       title: `[TEST DOC] location ${stamp}`, description: 'Informations supplémentaires', justification: 'Appui programmatique',
       projectId: project.id, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM',
       deliveryAddress: 'BUREAU IMA BUNIA', neededBy: '2026-11-15', deliveryRecipient: 'Logistique', deliveryContact: '+243 900 000 000',

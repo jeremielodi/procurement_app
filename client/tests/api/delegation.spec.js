@@ -39,7 +39,7 @@ test.describe.serial('API › Intérim du chef de projet', () => {
   });
 
   test('Réquisition en attente du chef, qu\'il prend en charge avant son congé ; l\'intérimaire ne voit encore rien', async ({ request }) => {
-    const created = await json(await request.post('/api/requisitions', { headers: H(), data: {
+    const created = await json(await request.post('/api/requisitions', { headers: H(), data: { submit: true,
       title: `[TEST INTERIM] ${stamp}`, description: 'x', projectId: project.id, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM',
       justification: 'x', items: [{ description: 'Article', quantity: 1, frequency: 1, unitPrice: 500, budgetLineId: line }],
     } }));

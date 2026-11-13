@@ -56,7 +56,7 @@ test.describe.serial('API › Agent achats désigné à la validation', () => {
   });
 
   test('Validation : agent achats obligatoire, choisi parmi les agents Achats du projet', async ({ request }) => {
-    const created = await json(await request.post('/api/requisitions', { headers: H(), data: {
+    const created = await json(await request.post('/api/requisitions', { headers: H(), data: { submit: true,
       title: `[TEST AGENT ACHATS] ${stamp}`, description: 'x', projectId: project.id, currencyId: 1, currencyCode: 'USD',
       priority: 'MEDIUM', justification: 'x', items: [{ description: 'Article', quantity: 1, frequency: 1, unitPrice: 300, budgetLineId: line }],
     } }));

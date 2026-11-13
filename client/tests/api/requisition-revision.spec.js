@@ -43,7 +43,7 @@ test.describe.serial('API › Correction des réquisitions', () => {
     }
     return null;
   }
-  const createRequisition = async (request, title, unitPrice = 100) => (await (await request.post('/api/requisitions', { headers: H(), data: {
+  const createRequisition = async (request, title, unitPrice = 100) => (await (await request.post('/api/requisitions', { headers: H(), data: { submit: true,
     title: `[TEST CORRECTION] ${title} ${stamp}`, description: 'x', departmentId: dept.id, projectId: project.id, currencyId: 1, currencyCode: 'USD',
     priority: 'MEDIUM', justification: 'Besoin initial', items: [{ description: 'Papier A4', quantity: 10, frequency: 1, unitPrice, budgetLineId: budgetLine.id }],
   } })).json()).data;

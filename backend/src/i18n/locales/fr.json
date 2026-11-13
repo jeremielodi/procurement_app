@@ -153,6 +153,8 @@
     "approvedWord": "approuvée",
     "rejectedWord": "rejetée",
     "created": "Réquisition créée",
+    "submitted": "Brouillon soumis par le demandeur",
+    "draftInfo": "Brouillon : pas encore soumis",
     "processStarted": "Circuit de validation démarré",
     "processStartFailed": "Échec du démarrage du circuit de validation",
     "engineNoResponse": "Le moteur de workflow n'a pas répondu",

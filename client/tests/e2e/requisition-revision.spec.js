@@ -16,7 +16,7 @@ async function setup(request) {
   const line = (await (await request.post('/api/budget', { headers: H, data: {
     entityCode: `E2E-REV-${stamp}`, description: 'Ligne e2e correction', allocatedAmount: 1_000_000, projectId: project.id,
   } })).json()).data;
-  const req = (await (await request.post('/api/requisitions', { headers: H, data: {
+  const req = (await (await request.post('/api/requisitions', { headers: H, data: { submit: true,
     title: `[E2E CORRECTION] ${stamp}`, description: 'x', departmentId: dept.id, projectId: project.id, currencyId: 1, currencyCode: 'USD',
     priority: 'MEDIUM', justification: 'x', items: [{ description: 'Cartouches', quantity: 2, frequency: 1, unitPrice: 50, budgetLineId: line.id }],
   } })).json()).data;

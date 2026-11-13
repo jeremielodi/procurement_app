@@ -118,7 +118,7 @@ test.describe.serial('API › Signatures dans les PDF de réquisition et de bon 
     line = (await (await request.post('/api/budget', { headers: H, data: {
       entityCode: `BL-SIGN-${Date.now()}`, description: 'Signatures PDF', allocatedAmount: 1000000, projectId: project.id,
     } })).json()).data;
-    const created = await request.post('/api/requisitions', { headers: H, data: {
+    const created = await request.post('/api/requisitions', { headers: H, data: { submit: true,
       title: `[TEST SIGNATURES] ${Date.now()}`, description: 'Signatures', projectId: project.id,
       currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'Test',
       items: [{ description: 'Pièce', quantity: 1, frequency: 1, unitPrice: 1000, budgetLineId: line.id }],

@@ -10,7 +10,7 @@ test.describe.serial('API › Valorisation du stock (CMUP)', () => {
   const today = () => new Date().toISOString().slice(0, 10);
 
   async function receive(request, quantity, unitPrice) {
-    const req = (await (await request.post('/api/requisitions', { headers: H(), data: {
+    const req = (await (await request.post('/api/requisitions', { headers: H(), data: { submit: true,
       title: `[TEST CMUP] ${stamp}`, description: 'x', departmentId: dept.id, projectId: project?.id, currencyId: 1, currencyCode: 'USD',
       priority: 'LOW', justification: 'x', items: [{ description: fuel.name, quantity, frequency: 1, unitPrice, stockItemId: fuel.id }],
     } })).json()).data;

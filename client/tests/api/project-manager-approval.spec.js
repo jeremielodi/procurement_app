@@ -35,7 +35,7 @@ test.describe.serial('API › Validation par le chef de projet, N1 / N2 / N3 sur
     return { id: login.user.id, token: login.token };
   }
 
-  const newRequisition = (request, amount, projectId = project.id, token = admin) => request.post('/api/requisitions', { headers: auth(token), data: {
+  const newRequisition = (request, amount, projectId = project.id, token = admin) => request.post('/api/requisitions', { headers: auth(token), data: { submit: true,
     title: `[TEST CHEF DE PROJET] ${amount} ${stamp}`, description: 'x', projectId, currencyId: 1, currencyCode: 'USD',
     priority: 'MEDIUM', justification: 'x', items: [{ description: 'Article', quantity: 1, frequency: 1, unitPrice: amount, budgetLineId: line }],
   } });

@@ -51,7 +51,7 @@ test.describe.serial('Devis multiples → demande de cotations (BpmnGo)', () => 
     const line = (await (await request.post('/api/budget', { headers: H(), data: {
       entityCode: `BL-RFQ-${stamp}`, description: 'Ligne test RFQ', allocatedAmount: 1_000_000, projectId: projects[0].id,
     } })).json()).data;
-    const created = await request.post('/api/requisitions', { headers: H(), data: {
+    const created = await request.post('/api/requisitions', { headers: H(), data: { submit: true,
       title: `[TEST RFQ] ${stamp}`, description: 'Devis multiples', projectId: projects[0].id,
       currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'Test',
       items: ['Ordinateurs', 'Écrans'].map(description => ({ description, quantity: 1, frequency: 1, unitPrice: 20000, budgetLineId: line?.id ?? line })),

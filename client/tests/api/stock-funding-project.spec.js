@@ -33,7 +33,7 @@ test.describe.serial('API › Stock — projet de financement', () => {
     const line = (await (await request.post('/api/budget', { headers: H(), data: {
       entityCode: `SF-L-${stamp}`, description: 'Ligne financement stock', allocatedAmount: 100_000, projectId: projectA.id,
     } })).json()).data;
-    const req = (await (await request.post('/api/requisitions', { headers: H(), data: {
+    const req = (await (await request.post('/api/requisitions', { headers: H(), data: { submit: true,
       title: `[TEST FINANCEMENT STOCK] ${stamp}`, description: 'x', departmentId: refs.dept.id, projectId: projectA.id, currencyId: 1, currencyCode: 'USD',
       priority: 'MEDIUM', justification: 'x', items: [
         { description: 'Papier A4', quantity: 10, frequency: 1, unitPrice: 5, stockItemId: paper.id, budgetLineId: line.id },

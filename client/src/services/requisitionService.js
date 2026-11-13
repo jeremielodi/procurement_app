@@ -93,6 +93,9 @@ class RequisitionService {
     const response = await api.delete(`/requisitions/${id}`)
     return response.data
   }
+
+  // Brouillon : soumission par le demandeur → démarrage du circuit BpmnGo (erreurs traduites par l'appelant)
+  submit = async (id) => (await api.post(`/requisitions/${id}/submit`, {}, { skipErrorToast: true })).data
   // Ajustement budgétaire (budget insuffisant) : synthèse par ligne, changement de lignes, décision RETRY / ABANDON
   // (erreurs métier affichées et traduites par le panneau)
   async getBudgetAdjustment(id) {

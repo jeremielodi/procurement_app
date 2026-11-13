@@ -150,7 +150,7 @@ test.describe.serial('API › Stock — prévision du réapprovisionnement', () 
     const [proj] = (await (await request.get('/api/projects', { headers: H() })).json()).data;
     project = proj;
     line = (await (await request.post('/api/budget', { headers: H(), data: { entityCode: `PLAN-${stamp}`, description: 'Prévision', allocatedAmount: 100000, projectId: project.id } })).json()).data;
-    const body = (items) => ({ title: `[TEST PREVISION] ${stamp}`, description: 'x', projectId: project.id, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'x', items });
+    const body = (items) => ({ submit: true, title: `[TEST PREVISION] ${stamp}`, description: 'x', projectId: project.id, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'x', items });
     const free = await json(await request.post('/api/requisitions', { headers: H(), data: body([{ description: 'Texte libre', quantity: 1, frequency: 1, unitPrice: 1, budgetLineId: line.id, destinationWarehouseId: whA.id }]) }));
     expect([free.status, free.body.code]).toEqual([400, 'DESTINATION_NEEDS_ITEM']);
     const res = await json(await request.post('/api/requisitions', { headers: H(), data: body([{ description: item.name, quantity: 20, frequency: 2, unitPrice: 1, budgetLineId: line.id, stockItemId: item.id, destinationWarehouseId: whA.id }]) }));

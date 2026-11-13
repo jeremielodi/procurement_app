@@ -4,8 +4,6 @@ import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
-  Edit,
-  Trash2,
   CheckCircle,
   XCircle,
   Clock,
@@ -22,7 +20,6 @@ import {
   History,
   Download,
   Printer,
-  Send,
   RefreshCw,
   Eye,
   FileCheck,
@@ -61,7 +58,6 @@ export default function RequisitionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showWorkflowModal, setShowWorkflowModal] = useState(false)
   const [cancellationReason, setCancellationReason] = useState('')
@@ -144,30 +140,6 @@ export default function RequisitionDetail() {
     },
     onError: (error) => {
       toast.error(error.message || t('reqDetail.cancelError'))
-    }
-  })
-
-  // Mutation pour supprimer la réquisition
-  const deleteMutation = useMutation({
-    mutationFn: () => requisitionService.delete(id),
-    onSuccess: () => {
-      toast.success(t('requisitions.deleted'))
-      navigate('/requisitions')
-    },
-    onError: (error) => {
-      toast.error(error.message || t('requisitions.deleteError'))
-    }
-  })
-
-  // Mutation pour soumettre la réquisition
-  const submitMutation = useMutation({
-    mutationFn: () => requisitionService.submit(requisition?.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['requisition', id])
-      toast.success(t('requisitions.submitted'))
-    },
-    onError: (error) => {
-      toast.error(error.message || t('requisitions.submitError'))
     }
   })
 
@@ -300,10 +272,8 @@ const handleGeneratePDF = async () => {
     )
   }
 
-  const canEdit = requisition.status === 'DRAFT'
-  const canSubmit = requisition.status === 'DRAFT'
-  const canCancel = ['DRAFT', 'PENDING', 'BUDGET_CHECKED'].includes(requisition.status)
-  const canDelete = requisition.status === 'DRAFT'
+  // Brouillon : modifier / soumettre / supprimer depuis le bandeau de RevisionPanel (demandeur seul)
+  const canCancel = ['PENDING', 'BUDGET_CHECKED'].includes(requisition.status)
   const hasActiveProcess = requisition.process_instance_id && pendingTasksCount > 0
 
   // Générer les éléments d'historique pour l'affichage
@@ -380,37 +350,6 @@ const handleGeneratePDF = async () => {
             <RefreshCw size={18} />
             {t('reqDetail.viewWorkflow')}
           </button>
-          
-          {canSubmit && (
-            <button
-              onClick={() => submitMutation.mutate()}
-              disabled={submitMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              <Send size={18} />
-              {submitMutation.isPending ? t('reqDetail.submitting') : t('common.submit')}
-            </button>
-          )}
-          
-          {canEdit && (
-            <Link
-              to={`/requisitions/${requisition.id}/edit`}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Edit size={18} />
-              {t('common.edit')}
-            </Link>
-          )}
-          
-          {canDelete && (
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-            >
-              <Trash2 size={18} />
-              {t('common.delete')}
-            </button>
-          )}
           
           {canCancel && (
             <button
@@ -804,20 +743,6 @@ const handleGeneratePDF = async () => {
       </div>
 
       {/* Modales */}
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        title={t('requisitions.deleteTitle')}
-        type="danger"
-        confirmText={t('common.delete')}
-        cancelText={t('common.cancel')}
-        onConfirm={() => deleteMutation.mutate()}
-        isLoading={deleteMutation.isPending}
-      >
-        <p>{t('requisitions.deleteConfirmBefore')} <strong>{requisition.requisition_number}</strong> ?</p>
-        <p className="text-sm text-gray-500 mt-2">{t('requisitions.irreversible')}</p>
-      </Modal>
-
       <Modal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}

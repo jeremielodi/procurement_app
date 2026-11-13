@@ -47,7 +47,7 @@ test.describe.serial('API › Contrôle interne', () => {
     budgetLine = (await (await request.post('/api/budget', { headers: H(), data: {
       entityCode: `IC-${stamp}`, description: `Ligne contrôle interne ${stamp}`, allocatedAmount: 1_000_000, projectId: project.id,
     } })).json()).data;
-    req = (await (await request.post('/api/requisitions', { headers: H(), data: {
+    req = (await (await request.post('/api/requisitions', { headers: H(), data: { submit: true,
       title: `[TEST CONTRÔLE INTERNE] ${stamp}`, description: 'x', departmentId: dept.id, projectId: project.id, currencyId: 1, currencyCode: 'USD',
       priority: 'MEDIUM', justification: 'x', items: [{ description: 'Article contrôle', quantity: 2, frequency: 1, unitPrice: 50, budgetLineId: budgetLine.id }],
     } })).json()).data;

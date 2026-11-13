@@ -23,7 +23,7 @@ test.describe.serial('API › Réquisition sans département', () => {
 
   for (const [label, departmentId] of [['absent', undefined], ['vide', ''], ['null', null]]) {
     test(`Création avec département ${label}`, async ({ request }) => {
-      const res = await request.post('/api/requisitions', { headers: auth(admin), data: {
+      const res = await request.post('/api/requisitions', { headers: auth(admin), data: { submit: true,
         title: `[TEST SANS DEPT] ${label} ${stamp}`, description: 'x', ...(departmentId !== undefined && { departmentId }),
         projectId: project.id, currencyId: 1, currencyCode: 'USD', priority: 'MEDIUM', justification: 'x',
         items: [{ description: 'Article', quantity: 1, frequency: 1, unitPrice: 40, budgetLineId: line.id }],

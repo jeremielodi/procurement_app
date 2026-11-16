@@ -1,6 +1,7 @@
 // backend/src/models/PurchaseOrderModel.js
 const db = require('../config/database');
 const tenant = require('../utils/tenant');
+const frameworkAgreementModel = require('./FrameworkAgreementModel');
 const { getEnterpriseCurrencyCode } = require('../utils/enterpriseCurrency');
 const { localizedSql } = require('../utils/requestLang');
 
@@ -49,60 +50,45 @@ class PurchaseOrderModel {
     const poNumber = `PO-${year}-${String(parseInt(countResult.count) + 1).padStart(4, '0')}`;
     const currencyId = await this.resolveCurrencyId(poData);
 
-    const transaction = db.transaction();
-
-    transaction.addInsertReturningQuery('purchase_orders', {
-      po_number: poNumber,
-      requisition_id: poData.requisitionId,
-      task_id: poData.taskId || null,
-      supplier_id: poData.supplierId,
-      order_date: poData.orderDate || new Date(),
-      delivery_date: poData.deliveryDate,
-      shipping_address: poData.shippingAddress,
-      // Bon de commande de l'entreprise (migration 44)
-      payment_terms: poData.paymentTerms || null,
-      delivery_terms: poData.deliveryTerms || null,
-      special_instructions: poData.specialInstructions || null,
-      total_amount: poData.totalAmount,
-      currency_id: currencyId,
-      status: 'PO_PENDING',
-      created_by: poData.createdBy,
-      // Part d'une réquisition répartie entre plusieurs fournisseurs (migration 38)
-      supplier_lot_id: poData.supplierLotId || null,
-      created_at: new Date(),
-      updated_at: new Date()
-    }, 'id');
-
-    const results = await transaction.execute();
-    const poId = results[0][0]?.id || results[0][0]?.purchase_order_id;
-    if (poData.supplierLotId) {
-      await db.exec('UPDATE requisition_supplier_lots SET po_id = $1 WHERE id = $2', [poId, poData.supplierLotId]);
-    }
-    
-    // Ajouter les items si présents
-    if (poData.items && poData.items.length > 0) {
-      const itemTransaction = db.transaction();
-      for (const item of poData.items) {
-        itemTransaction.addInsertQuery('purchase_order_items', {
-          purchase_order_id: poId,
-          item_description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          total_amount: item.quantity * item.unitPrice,
-          specifications: item.specifications || null,
-          // Article du catalogue et ligne de réquisition d'origine (gestion de stock, traçabilité)
-          stock_item_id: item.stockItemId || null,
-          requisition_item_id: item.requisitionItemId || null
-        });
+    // En-tête + lignes dans UNE transaction ; commande sur accord-cadre (migration 69) : contrat verrouillé et contrôlé
+    // (fournisseur, devise, bordereau, quantités max., plafond) avant l'écriture
+    return db.withTransaction(async (tx) => {
+      let items = poData.items || [];
+      if (poData.frameworkAgreementId) {
+        items = (await frameworkAgreementModel.checkOrder(tx, {
+          agreementId: poData.frameworkAgreementId, supplierId: poData.supplierId, currencyId,
+          orderDate: poData.orderDate, items,
+        })).items;
       }
-      await itemTransaction.execute();
-    }
-    
-    return {
-      id: poId,
-      poNumber,
-      success: true
-    };
+      const po = await tx.one(
+        `INSERT INTO purchase_orders (po_number, requisition_id, task_id, supplier_id, order_date, delivery_date, shipping_address,
+                                      payment_terms, delivery_terms, special_instructions, total_amount, currency_id, status, created_by,
+                                      supplier_lot_id, framework_agreement_id, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'PO_PENDING', $13, $14, $15, NOW(), NOW()) RETURNING id`,
+        [poNumber, poData.requisitionId, poData.taskId || null, poData.supplierId, poData.orderDate || new Date(), poData.deliveryDate || null,
+         poData.shippingAddress ?? null,
+         // Bon de commande de l'entreprise (migration 44)
+         poData.paymentTerms || null, poData.deliveryTerms || null, poData.specialInstructions || null,
+         poData.totalAmount, currencyId, poData.createdBy,
+         // Part d'une réquisition répartie entre plusieurs fournisseurs (migration 38)
+         poData.supplierLotId || null, poData.frameworkAgreementId || null]
+      );
+      const poId = po.id;
+      if (poData.supplierLotId) {
+        await tx.exec('UPDATE requisition_supplier_lots SET po_id = $1 WHERE id = $2', [poId, poData.supplierLotId]);
+      }
+      for (const item of items) {
+        await tx.exec(
+          `INSERT INTO purchase_order_items (purchase_order_id, item_description, quantity, unit_price, total_amount, specifications,
+                                             stock_item_id, requisition_item_id, framework_item_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          // Article du catalogue et ligne de réquisition d'origine (gestion de stock, traçabilité) ; ligne du bordereau
+          [poId, item.description, item.quantity, item.unitPrice, item.quantity * item.unitPrice, item.specifications || null,
+           item.stockItemId || null, item.requisitionItemId || null, item.frameworkItemId || null]
+        );
+      }
+      return { id: poId, poNumber, success: true };
+    });
   }
 
   /**
@@ -223,8 +209,12 @@ class PurchaseOrderModel {
         u.first_name as created_by_name,
         u.email as created_by_email,
         c.format_key as currency,
-        ${DELIVERY_STATUS_SQL('po')} AS delivery_status
+        ${DELIVERY_STATUS_SQL('po')} AS delivery_status,
+        -- Commande sur accord-cadre (migration 69)
+        fa.agreement_number AS framework_agreement_number, fa.contract_reference AS framework_contract_reference,
+        fa.title AS framework_agreement_title
       FROM purchase_orders po
+      LEFT JOIN framework_agreements fa ON fa.id = po.framework_agreement_id
       LEFT JOIN requisitions r ON po.requisition_id = r.id
       LEFT JOIN suppliers s ON po.supplier_id = s.id
       LEFT JOIN users su ON su.id = s.user_id -- compte portail du fournisseur : langue des emails

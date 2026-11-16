@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, ShoppingCart, Plus, Trash2, AlertTriangle, Split } from 'lucide-react';
+import { ArrowLeft, Save, ShoppingCart, Plus, Trash2, AlertTriangle, Split, FileSignature } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { purchaseOrderService } from '../../services/purchaseOrderService';
 import requisitionService from '../../services/requisitionService';
@@ -9,6 +9,8 @@ import { useCurrency } from '../../contexts/EnterpriseContext';
 import { t, getLocale } from '../../i18n';
 import CatalogAutocomplete from '../Stock/CatalogAutocomplete';
 import SearchSelect from '../Common/SearchSelect';
+import { frameworkAgreementService } from '../../services/frameworkAgreementService';
+import { agreementError } from '../FrameworkAgreements/FrameworkAgreementList';
 
 export default function POForm() {
   const { requisitionId, taskId } = useParams();
@@ -35,6 +37,10 @@ export default function POForm() {
   const [termsEdited, setTermsEdited] = useState(false);
   const [items, setItems] = useState([]);
   const [itemsVersion, setItemsVersion] = useState(0); // incrémenté à chaque chargement des articles de la réquisition
+  // Commande sur accord-cadre (migration 69) : contrat retenu à l'étape « Méthode d'achat » — fournisseur, devise et
+  // prix du bordereau imposés ; null sans contrat
+  const [agreement, setAgreement] = useState(null);
+  const [agreementPricesKey, setAgreementPricesKey] = useState(null);
 
   useEffect(() => {
     // Tous les fournisseurs actifs, préqualifiés en tête ; l'attributaire de l'appel d'offres de la réquisition
@@ -71,6 +77,39 @@ export default function POForm() {
   const supplierOption = (s) => (
     <option key={s.id} value={s.id}>{s.name}{s.awarded ? ` — ${t('po.awardedSupplier')}` : s.direct_purchase ? ` — ${t('po.directPurchaseSupplier')}` : ''}</option>
   );
+
+  useEffect(() => {
+    if (!requisitionId) return;
+    frameworkAgreementService.forRequisition(requisitionId)
+      .then(r => {
+        const a = r.data || null;
+        setAgreement(a);
+        if (a) setSupplierId(String(a.supplier_id));
+      })
+      .catch(() => setAgreement(null));
+  }, [requisitionId]);
+
+  // Ligne du bordereau correspondant à une ligne du bon : même ligne de réquisition, sinon même article du catalogue,
+  // sinon même désignation (un seul candidat) — même règle que le serveur
+  const priceLineFor = (it) => {
+    if (!agreement) return null;
+    const norm = (v) => String(v || '').trim().toLowerCase();
+    const one = (list) => (list.length === 1 ? list[0] : null);
+    if (it.frameworkItemId) return agreement.items.find(p => p.id === it.frameworkItemId) || null;
+    return (it.requisitionItemId && one(agreement.items.filter(p => p.requisition_item_id && String(p.requisition_item_id) === String(it.requisitionItemId))))
+      || (it.stockItem?.id && one(agreement.items.filter(p => p.stock_item_id && String(p.stock_item_id) === String(it.stockItem.id))))
+      || one(agreement.items.filter(p => norm(p.description) === norm(it.description)));
+  };
+  // Prix du bordereau appliqués à chaque chargement des articles de la réquisition
+  useEffect(() => {
+    const key = `${agreement?.id}:${itemsVersion}`;
+    if (!agreement || !itemsVersion || agreementPricesKey === key) return;
+    setItems(prev => prev.map(it => {
+      const line = priceLineFor(it);
+      return line ? { ...it, frameworkItemId: line.id, unitPrice: line.unit_price } : it;
+    }));
+    setAgreementPricesKey(key);
+  }, [agreement?.id, itemsVersion]);
 
   useEffect(() => {
     if (!requisitionId) return;
@@ -122,6 +161,10 @@ export default function POForm() {
   }
 
   const totalAmount = items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0), 0);
+  // Devise du bon : celle du contrat pour une commande sur accord-cadre
+  const poCurrency = agreement?.currency_code || currency.code;
+  const offList = agreement ? items.filter(it => !priceLineFor(it)) : [];
+  const overCeiling = agreement && totalAmount > Number(agreement.remaining_amount) + 0.005;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -140,9 +183,9 @@ export default function POForm() {
         specialInstructions: notes,
         paymentTerms,
         deliveryTerms,
-        currency: currency.code,
+        currency: poCurrency,
         totalAmount,
-        items: items.map(({ stockItem, origin, ...it }) => ({ ...it, stockItemId: stockItem?.id || null }))
+        items: items.map(({ stockItem, origin, ...it }) => ({ ...it, stockItemId: stockItem?.id || null, frameworkItemId: priceLineFor({ ...it, stockItem })?.id || null }))
       });
 
       if (res.success) {
@@ -154,6 +197,7 @@ export default function POForm() {
       }
     } catch (err) {
       const { code, details } = err.response?.data || {};
+      if (code && code.startsWith('AGREEMENT_')) { toast.error(agreementError(err)); return; }
       toast.error(['LOT_SUPPLIER_MISMATCH', 'LOT_ITEMS_MISMATCH', 'LOT_ALREADY_ORDERED'].includes(code)
         ? t(`split.err.${code}`)
         : ['ITEM_QUANTITY_EXCEEDS_REQUISITION', 'ITEM_NOT_IN_REQUISITION'].includes(code)
@@ -214,6 +258,19 @@ export default function POForm() {
         </div>
       )}
 
+      {agreement && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm mb-6 flex gap-2 text-blue-900" data-testid="po-agreement-banner">
+          <FileSignature size={18} className="shrink-0 mt-0.5" />
+          <span>
+            {t('po.agreementBanner', {
+              number: agreement.agreement_number, supplier: agreement.supplier_name,
+              remaining: Number(agreement.remaining_amount).toLocaleString(getLocale()), currency: agreement.currency_code,
+              end: new Date(`${agreement.end_date}T00:00:00`).toLocaleDateString(getLocale()),
+            })}{' '}
+            <Link to={`/framework-agreements/${agreement.id}`} className="underline" target="_blank" rel="noreferrer">{t('po.agreementOpen')}</Link>
+          </span>
+        </div>
+      )}
       {lot && (
         <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-sm mb-6 flex gap-2 text-indigo-900" data-testid="po-lot-banner">
           <Split size={18} className="shrink-0 mt-0.5" />
@@ -233,7 +290,7 @@ export default function POForm() {
               <SearchSelect
                 required
                 searchThreshold={0}
-                disabled={!!lot}
+                disabled={!!lot || !!agreement}
                 value={supplierId}
                 onChange={e => setSupplierId(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -372,14 +429,19 @@ export default function POForm() {
                     </td>
                     <td className="px-3 py-2">
                       <input
-                        type="number" min="0" step="0.01" required
-                        className="w-28 border border-gray-200 rounded px-2 py-1 text-sm text-right"
+                        type="number" min="0" step="any" required
+                        className={`w-28 border border-gray-200 rounded px-2 py-1 text-sm text-right ${agreement && priceLineFor(item) ? 'bg-gray-100' : ''}`}
                         value={item.unitPrice}
+                        readOnly={!!(agreement && priceLineFor(item))}
+                        data-testid="po-item-price"
                         onChange={e => updateItem(i, 'unitPrice', e.target.value)}
                       />
+                      {agreement && (priceLineFor(item)
+                        ? <p className="text-xs text-blue-700 mt-1 whitespace-nowrap" data-testid="po-item-agreement-price">{t('po.agreementPrice')}</p>
+                        : <p className={`text-xs mt-1 whitespace-nowrap ${agreement.allow_off_list ? 'text-gray-500' : 'text-red-600'}`} data-testid="po-item-off-list">{t(agreement.allow_off_list ? 'po.offListAllowed' : 'po.offListRefused')}</p>)}
                     </td>
                     <td className="px-3 py-2 font-medium text-right text-gray-700 whitespace-nowrap">
-                      {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toLocaleString(getLocale())} {currency.code}
+                      {((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toLocaleString(getLocale())} {poCurrency}
                     </td>
                     <td className="px-3 py-2">
                       {items.length > 1 && !lot && (
@@ -395,7 +457,7 @@ export default function POForm() {
                 <tr>
                   <td colSpan={3} className="px-3 py-2 text-right font-semibold text-gray-700">{t('common.total')}</td>
                   <td className="px-3 py-2 font-bold text-gray-900 text-right whitespace-nowrap">
-                    {totalAmount.toLocaleString(getLocale())} {currency.code}
+                    {totalAmount.toLocaleString(getLocale())} {poCurrency}
                   </td>
                   <td />
                 </tr>
@@ -404,6 +466,14 @@ export default function POForm() {
           </div>
         </div>
 
+        {overCeiling && (
+          <p className="text-sm text-red-600" data-testid="po-agreement-over-ceiling">
+            {t('po.agreementOverCeiling', { remaining: Number(agreement.remaining_amount).toLocaleString(getLocale()), currency: agreement.currency_code })}
+          </p>
+        )}
+        {agreement && !agreement.allow_off_list && offList.length > 0 && (
+          <p className="text-sm text-red-600" data-testid="po-agreement-off-list-warning">{t('po.agreementOffListWarning')}</p>
+        )}
         {/* Actions */}
         <div className="flex gap-3 justify-end">
           <button

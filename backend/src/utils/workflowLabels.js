@@ -108,7 +108,7 @@ const matchLabel = (status, lang) => (i18n.has(lang, `workflow.match.${status}`)
 const TASK_LABELS = Object.fromEntries(TASK_KEYS.map(k => [k, taskLabel(k, 'fr')]));
 const TASK_GROUPS = Object.fromEntries(Object.keys(TASK_CANDIDATE_GROUPS).map(k => [k, groupLabel(k, 'fr')]));
 const fr = i18n.translator('fr');
-const METHOD_LABELS = Object.fromEntries(['DIRECT_PURCHASE', 'MULTIPLE_QUOTATIONS', 'RFP', 'SOLE_SOURCE'].map(m => [m, fr(`workflow.methods.${m}`)]));
+const METHOD_LABELS = Object.fromEntries(['DIRECT_PURCHASE', 'MULTIPLE_QUOTATIONS', 'RFP', 'SOLE_SOURCE', 'FRAMEWORK_AGREEMENT'].map(m => [m, fr(`workflow.methods.${m}`)]));
 const MATCH_LABELS = Object.fromEntries(['MATCHED', 'MISMATCH', 'PARTIAL', 'PENDING'].map(m => [m, fr(`workflow.match.${m}`)]));
 
 // Tâches attribuées par le processus à UNE personne (assignee ${requester}) : notifiées au seul demandeur, traitées

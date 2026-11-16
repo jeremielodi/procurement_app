@@ -538,6 +538,25 @@ export default function PODetail() {
             </div>
           )}
 
+          {/* Commande sur accord-cadre (migration 69) */}
+          {po.framework_agreement_id && (
+            <div className="bg-white rounded-lg shadow" data-testid="po-framework-agreement">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <FileText size={20} />
+                  {t('po.frameworkAgreement')}
+                </h2>
+              </div>
+              <div className="p-6">
+                <Link to={`/framework-agreements/${po.framework_agreement_id}`} className="block hover:bg-gray-50 -m-2 p-2 rounded-lg transition-colors">
+                  <p className="font-medium text-blue-600">{po.framework_agreement_number}</p>
+                  <p className="text-sm text-gray-500 mt-1">{po.framework_agreement_title}</p>
+                  {po.framework_contract_reference && <p className="text-xs text-gray-500 mt-1">{po.framework_contract_reference}</p>}
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Flux Procure-to-Pay */}
           {['PO_APPROVED', 'PO_SENT', 'PO_CONFIRMED', 'PO_RECEIVED', 'PO_COMPLETE'].includes(po.status) && (
             <div className="bg-white rounded-lg shadow">

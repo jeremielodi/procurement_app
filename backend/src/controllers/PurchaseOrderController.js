@@ -11,6 +11,7 @@ const allocationService = require('../services/SupplierAllocationService');
 const approvalPolicy = require('../utils/approvalPolicy');
 const projectAccess = require('../utils/projectAccess');
 const { PO_REVIEW_TASK, PO_APPROVAL_TASKS, TASK_CANDIDATE_GROUPS } = require('../utils/workflowLabels');
+const frameworkAgreementAlerts = require('../services/FrameworkAgreementAlerts');
 
 // Groupe BpmnGo qui approuve un bon de commande selon son niveau (migration 51 : N1 / N2 / N3 sur la commande)
 const LEVEL_GROUPS = { N1: 'manager', N2: 'manager_n2', N3: 'manager_n3' };
@@ -155,7 +156,7 @@ class PurchaseOrderController {
         });
       }
       // Une commande est TOUJOURS rattachée à une réquisition existante (entreprise courante : tenantGuard) et active
-      const requisition = await db.one('SELECT id, status, process_instance_id FROM requisitions WHERE id = $1', [requisitionId]);
+      const requisition = await db.one('SELECT id, status, process_instance_id, framework_agreement_id FROM requisitions WHERE id = $1', [requisitionId]);
       if (!requisition) {
         return res.status(404).json({ success: false, code: 'REQUISITION_NOT_FOUND', message: 'Réquisition introuvable' });
       }
@@ -189,6 +190,8 @@ class PurchaseOrderController {
         paymentTerms: clip(paymentTerms), deliveryTerms: clip(deliveryTerms), specialInstructions: clip(specialInstructions ?? notes),
         items: items || [],
         supplierLotId: lot?.id || null,
+        // Méthode « Commande sur accord-cadre » (migration 69) : contrat retenu à l'étape méthode d'achat, jamais le corps
+        frameworkAgreementId: requisition.framework_agreement_id || null,
         createdBy: req.user.id // jamais une valeur du client (séparation des tâches)
       });
 
@@ -212,8 +215,13 @@ class PurchaseOrderController {
         console.error('[PO create] Camunda task completion (non-fatal):', camundaErr.message);
       }
 
+      // Accord-cadre : alerte quand 80 % du plafond est consommé (une seule fois)
+      if (requisition.framework_agreement_id) await frameworkAgreementAlerts.checkCeiling(requisition.framework_agreement_id, req.io);
+
       res.status(201).json({ success: true, data: result, message: 'Commande créée avec succès' });
     } catch (error) {
+      // Refus métier (accord-cadre : prix, plafond, validité…) : { status, code, details }
+      if (error.status) return res.status(error.status).json({ success: false, code: error.code, message: error.message, details: error.details, line: error.line });
       console.error('Error creating purchase order:', error);
       res.status(500).json({ success: false, message: 'Erreur lors de la création', error: error.message });
     }

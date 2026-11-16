@@ -884,6 +884,23 @@ router.post('/stock-incidents/:id/validate', authenticate, stockIncidentControll
 router.post('/stock-incidents/:id/reject', authenticate, stockIncidentController.reject);
 router.post('/stock-incidents/:id/cancel', authenticate, stockIncidentController.cancel);
 
+// Accords-cadres (migration 69) : saisie / soumission / vie du contrat (MANAGE_FRAMEWORK_AGREEMENTS), validation par le
+// chef de chaque projet listé puis le directeur général (droits contrôlés par le modèle), consultation dans le contrôleur
+const frameworkAgreementController = require('../controllers/FrameworkAgreementController');
+router.get('/framework-agreements/counts', authenticate, frameworkAgreementController.counts);
+router.get('/framework-agreements/tender-prefill', authenticate, hasPermission('MANAGE_FRAMEWORK_AGREEMENTS'), frameworkAgreementController.tenderPrefill);
+router.get('/framework-agreements/usable', authenticate, hasAnyPermission('CREATE_PURCHASE_ORDERS', 'MANAGE_FRAMEWORK_AGREEMENTS', 'VIEW_FRAMEWORK_AGREEMENTS'), frameworkAgreementController.usable);
+router.get('/framework-agreements/by-requisition/:requisitionId', authenticate, hasAnyPermission('VIEW_PURCHASE_ORDERS', 'CREATE_PURCHASE_ORDERS', 'VIEW_FRAMEWORK_AGREEMENTS'), frameworkAgreementController.byRequisition);
+router.get('/framework-agreements', authenticate, frameworkAgreementController.list);
+router.get('/framework-agreements/:id', authenticate, frameworkAgreementController.get);
+router.post('/framework-agreements', authenticate, hasPermission('MANAGE_FRAMEWORK_AGREEMENTS'), frameworkAgreementController.create);
+router.put('/framework-agreements/:id', authenticate, hasPermission('MANAGE_FRAMEWORK_AGREEMENTS'), frameworkAgreementController.update);
+router.post('/framework-agreements/:id/submit', authenticate, hasPermission('MANAGE_FRAMEWORK_AGREEMENTS'), frameworkAgreementController.submit);
+router.post('/framework-agreements/:id/decision', authenticate, frameworkAgreementController.decide);
+for (const action of ['suspend', 'reactivate', 'close', 'cancel']) {
+  router.post(`/framework-agreements/:id/${action}`, authenticate, hasPermission('MANAGE_FRAMEWORK_AGREEMENTS'), frameworkAgreementController.changeStatus(action));
+}
+
 // Équipements (n° de série), détentions et retours en stock
 router.get('/stock-holdings/mine', authenticate, equipmentController.myHoldings);
 router.get('/stock-holdings', authenticate, hasPermission('VIEW_STOCK'), equipmentController.holdings);

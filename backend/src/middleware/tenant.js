@@ -133,6 +133,9 @@ const PATH_RESOURCES = [
   { re: new RegExp(`^/stock-incidents/(${UUID})(/|$)`), table: 'stock_incidents' },
   // Partenaires (migration 66) ; comptes d'un partenaire : /partners/:id/accounts/:userId (compte vérifié par le modèle)
   { re: new RegExp(`^/partners/(${UUID})(/|$)`), table: 'partners' },
+  // Accords-cadres (migration 69) ; contrat retenu pour une réquisition (bon de commande)
+  { re: new RegExp(`^/framework-agreements/(${UUID})(/|$)`), table: 'framework_agreements' },
+  { re: new RegExp(`^/framework-agreements/by-requisition/(${UUID})$`), table: 'requisitions' },
   // Intérim du chef de projet (migration 53)
   { re: new RegExp(`^/delegations/(${UUID})(/|$)`), table: 'user_delegations' },
 ];
@@ -153,6 +156,7 @@ const KEY_TABLES = {
   warehouseId: 'warehouses', warehouse_id: 'warehouses', destinationWarehouseId: 'warehouses',
   stockItemId: 'stock_items', stock_item_id: 'stock_items',
   stockRequestId: 'stock_requests',
+  frameworkAgreementId: 'framework_agreements', framework_agreement_id: 'framework_agreements',
   partnerId: 'partners', partner_id: 'partners',
   lotId: 'stock_lots', lot_id: 'stock_lots',
   // Part d'une réquisition répartie entre plusieurs fournisseurs (migration 38)
@@ -164,6 +168,7 @@ const KEY_TABLES = {
 const ATTACHMENT_TABLES = {
   requisition: 'requisitions', purchase_order: 'purchase_orders', grn: 'goods_receipt_notes',
   invoice: 'invoices', payment: 'payments', san: 'service_acceptance_notes',
+  framework_agreement: 'framework_agreements',
 };
 
 async function belongs(table, value, enterpriseId, column = 'id') {

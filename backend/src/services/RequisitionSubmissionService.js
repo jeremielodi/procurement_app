@@ -64,6 +64,7 @@ async function processVariables(req, requester, projectManager) {
     totalQuantity: items.reduce((s, i) => s + num(i.quantity), 0),
     // === CIRCUIT ===
     revisionSupported: true,          // « Corriger la réquisition » (migration 25)
+    frameworkAgreementSupported: true, // méthode « Commande sur accord-cadre » (migration 69 : BPMN qui la connaît)
     approvalFlow: 'PROJECT_MANAGER',  // circuit du 2026-11-06
     requisitionVersion: req.version || 1,
     // === DATES ===

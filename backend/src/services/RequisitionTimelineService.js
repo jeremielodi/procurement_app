@@ -423,6 +423,11 @@ class RequisitionTimelineService {
     const sourcingDone = SOURCING_KEYS.map(done).find(Boolean);
     // Achat direct : fournisseur désigné avec sa pro-forma (Activity_DirectPurchase)
     const directPurchase = await directPurchaseService.latest(requisitionId);
+    // Commande sur accord-cadre (migration 69) : contrat retenu à l'étape « Méthode d'achat » (pas d'étape de sourcing)
+    const agreement = await db.one(
+      'SELECT a.id, a.agreement_number, s.name AS supplier_name FROM requisitions r JOIN framework_agreements a ON a.id = r.framework_agreement_id JOIN suppliers s ON s.id = a.supplier_id WHERE r.id = $1',
+      [requisitionId]
+    );
     const activePos = pos.filter(p => !PO_REJECTED.includes(p.status));
     const paid = payments.some(p => ['PAID', 'COMPLETED'].includes(p.status)) || invoices.some(i => i.status === 'PAID');
     // Même règle que la colonne « Avancement » (RequisitionModel) : la fin du processus BpmnGo fait foi
@@ -466,10 +471,12 @@ class RequisitionTimelineService {
       },
       { key: 'method', label: T('timeline.steps.method'), status: classification ? 'done' : 'pending', date: classification?.date, info: classification ? methodLabel(classification.method, lang) : null },
       {
-        key: 'sourcing', label: T('timeline.steps.sourcing'), status: sourcingDone || activePos.length ? 'done' : 'pending',
-        date: sourcingDone?.completedAt,
-        info: [sourcingDone?.label, directPurchase ? T('timeline.directPurchaseSupplier', { supplier: directPurchase.supplier_name }) : null].filter(Boolean).join(' · ') || null,
-        links: tender ? [{ label: tender.tender_number, to: `/tenders/${tender.id}` }] : [],
+        key: 'sourcing', label: T('timeline.steps.sourcing'), status: sourcingDone || activePos.length || agreement ? 'done' : 'pending',
+        date: sourcingDone?.completedAt || (agreement ? classification?.date : undefined),
+        info: [sourcingDone?.label, directPurchase ? T('timeline.directPurchaseSupplier', { supplier: directPurchase.supplier_name }) : null,
+          agreement ? T('timeline.frameworkAgreement', { number: agreement.agreement_number, supplier: agreement.supplier_name }) : null].filter(Boolean).join(' · ') || null,
+        links: [...(tender ? [{ label: tender.tender_number, to: `/tenders/${tender.id}` }] : []),
+          ...(agreement ? [{ label: agreement.agreement_number, to: `/framework-agreements/${agreement.id}` }] : [])],
       },
       // Répartition entre plusieurs fournisseurs (seulement si elle a lieu)
       ...(lots.length || pending.some(t => t.key === 'Activity_AllocateSuppliers') ? [{

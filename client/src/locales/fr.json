@@ -153,7 +153,8 @@
     "partnerTransfers": "Envois reçus",
     "partnerHoldings": "Matériel détenu",
     "partners": "Partenaires",
-    "stockIncidents": "Rapports d'incident"
+    "stockIncidents": "Rapports d'incident",
+    "frameworkAgreements": "Accords-cadres"
   },
   "header": {
     "toggleSidebar": "Afficher / masquer le menu",
@@ -219,14 +220,16 @@
     "CLASSIFIED_MULTIPLE_QUOTATIONS": "Devis multiples",
     "CLASSIFIED_RFP": "Appel d'offres",
     "CLASSIFIED_SOLE_SOURCE": "Source unique",
-    "RETURNED": "À corriger"
+    "RETURNED": "À corriger",
+    "CLASSIFIED_FRAMEWORK_AGREEMENT": "Commande sur accord-cadre"
   },
   "procurementMethod": {
     "DIRECT_PURCHASE": "Achat direct",
     "MULTIPLE_QUOTATIONS": "Multiples devis",
     "RFP": "Appel d'offres",
     "SOLE_SOURCE": "Source unique",
-    "OTHER": "Autre"
+    "OTHER": "Autre",
+    "FRAMEWORK_AGREEMENT": "Commande sur accord-cadre"
   },
   "tasks": {
     "labels": {
@@ -454,7 +457,7 @@
         },
         {
           "title": "Appels d'offres",
-          "desc": "Publication, offres scellées jusqu'à la clôture, comparatif et attribution. Attribution à un seul fournisseur ou article par article (un bon de commande par fournisseur retenu)."
+          "desc": "Publication, offres scellées jusqu'à la clôture, comparatif et attribution. Attribution à un seul fournisseur ou article par article (un bon de commande par fournisseur retenu). Accords-cadres : plafond, bordereau de prix, validation par les chefs de projet puis le DG, commandes successives sans nouvelle mise en concurrence."
         },
         {
           "title": "Bons de commande",
@@ -1546,7 +1549,14 @@
         "PROFORMA_DATE_INVALID": "Date de la pro-forma invalide"
       }
     },
-    "methodHint": "Toutes les méthodes sont possibles quel que soit le montant : choisissez la plus adaptée."
+    "methodHint": "Toutes les méthodes sont possibles quel que soit le montant : choisissez la plus adaptée.",
+    "agreementDesc_one": "Commande au fournisseur d'un contrat déjà validé, aux prix de son bordereau, sans nouvelle mise en concurrence ({{count}} contrat utilisable).",
+    "agreementDesc_other": "Commande au fournisseur d'un contrat déjà validé, aux prix de son bordereau, sans nouvelle mise en concurrence ({{count}} contrats utilisables).",
+    "agreementLabel": "Accord-cadre",
+    "agreementRemaining": "reste {{amount}} {{currency}}",
+    "agreementInfo_one": "{{title}} — valable jusqu'au {{end}}, {{count}} article au bordereau.",
+    "agreementInfo_other": "{{title}} — valable jusqu'au {{end}}, {{count}} articles au bordereau.",
+    "agreementListOnly": "Seuls les articles du bordereau peuvent être commandés."
   },
   "po": {
     "approved": "Commande approuvée avec succès",
@@ -1710,7 +1720,15 @@
         "SELF_APPROVAL": "Vous avez créé ce bon (ou demandé l'achat) : un autre réviseur doit le traiter",
         "BPMNGO_ERROR": "Le moteur de workflow n'a pas accepté la révision : réessayez"
       }
-    }
+    },
+    "agreementBanner": "Commande sur l'accord-cadre {{number}} : fournisseur {{supplier}}, prix du bordereau, reste disponible {{remaining}} {{currency}}, valable jusqu'au {{end}}.",
+    "agreementOpen": "Voir le contrat",
+    "agreementPrice": "Prix du bordereau",
+    "offListAllowed": "Hors bordereau (autorisé)",
+    "offListRefused": "Hors bordereau : refusé par le contrat",
+    "agreementOverCeiling": "Le montant du bon dépasse le reste disponible de l'accord-cadre ({{remaining}} {{currency}}).",
+    "agreementOffListWarning": "Ce contrat n'autorise que les articles de son bordereau : retirez ou corrigez les lignes signalées.",
+    "frameworkAgreement": "Accord-cadre"
   },
   "grnStatus": {
     "DRAFT": "Brouillon",
@@ -4981,6 +4999,10 @@
               [
                 "Source unique",
                 "Justification obligatoire"
+              ],
+              [
+                "Commande sur accord-cadre",
+                "Contrat actif choisi ; directement le bon de commande, au fournisseur et aux prix du contrat"
               ]
             ]
           },
@@ -6812,6 +6834,106 @@
           }
         ],
         "faq": []
+      },
+      "frameworkAgreements": {
+        "title": "Accords-cadres",
+        "summary": "Contrats passés avec un fournisseur : plafond, bordereau de prix, validation par les chefs de projet puis le DG, commandes successives.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Un accord-cadre est un contrat passé avec UN fournisseur pour une période : un plafond (montant maximum, dans une devise) et un bordereau de prix (prix unitaire de chaque article, quantité maximale facultative). Les commandes sont ensuite passées sur ce contrat, sans nouvelle mise en concurrence, aux prix du bordereau."
+          },
+          {
+            "type": "h",
+            "text": "Créer un accord-cadre"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Menu « Accords-cadres » → « Nouvel accord-cadre » (profil Achats ou administrateur), ou bouton « Créer un accord-cadre » sur un appel d'offres attribué : le fournisseur et les prix de l'offre retenue sont repris (attribution par article : choisissez l'attributaire).",
+              "Renseignez le titre, la référence du contrat, la période, le plafond et la devise, puis les projets autorisés à commander (aucun projet = toute l'entreprise).",
+              "Complétez le bordereau (article du catalogue ou texte libre, unité, prix unitaire, quantité maximale facultative) et indiquez si les articles hors bordereau sont autorisés.",
+              "Joignez le contrat signé (obligatoire pour un contrat saisi à la main), enregistrez le brouillon puis « Soumettre à validation »."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Validation"
+          },
+          {
+            "type": "p",
+            "text": "Le chef de chaque projet listé (ou son intérimaire) valide d'abord, puis le directeur général valide en dernier et active le contrat. Contrat ouvert à toute l'entreprise : le directeur général seul. L'auteur du contrat ne le valide jamais. Un rejet renvoie le contrat en brouillon avec le motif ; une nouvelle soumission fait refaire toutes les validations."
+          },
+          {
+            "type": "tip",
+            "text": "Les contrats qui attendent votre validation apparaissent dans « Mes tâches » (bandeau) et dans l'onglet « À valider » du registre."
+          },
+          {
+            "type": "h",
+            "text": "Commander sur un accord-cadre"
+          },
+          {
+            "type": "p",
+            "text": "À l'étape « Déterminer la méthode d'achat », l'agent achats choisit « Commande sur accord-cadre » puis le contrat (seuls les contrats actifs, en cours de validité, ouverts au projet et avec un reste disponible sont proposés). Il n'y a pas d'étape de mise en concurrence : la réquisition passe directement à la création du bon de commande."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Fournisseur et devise du contrat imposés ; prix du bordereau verrouillés.",
+              "Article hors bordereau refusé si le contrat ne l'autorise pas.",
+              "Quantité maximale par article et plafond contrôlés à la création du bon (deux bons simultanés ne peuvent pas dépasser le plafond).",
+              "Le bon suit ensuite le circuit habituel : révision, approbation N1 / N2 / N3, envoi, réception, facture, paiement."
+            ]
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Indicateur",
+                "Règle"
+              ],
+              [
+                "Consommé",
+                "Bons de commande actifs passés sur le contrat (rejetés et annulés exclus ; reliquat soldé = quantité acceptée)"
+              ],
+              [
+                "Reste disponible",
+                "Plafond − consommé"
+              ],
+              [
+                "Expiré",
+                "Contrat actif dont la date de fin est passée : plus aucune commande"
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "Alertes : les achats et l'auteur du contrat sont prévenus quand 80 % du plafond est consommé et 30 jours avant l'échéance. Un contrat peut être suspendu (plus de commande jusqu'à sa réactivation) ou clôturé (fin définitive)."
+          },
+          {
+            "type": "links",
+            "items": [
+              {
+                "to": "/framework-agreements",
+                "label": "Accords-cadres"
+              },
+              {
+                "to": "/tenders",
+                "label": "Appels d'offres"
+              }
+            ]
+          }
+        ],
+        "faq": [
+          {
+            "q": "Je ne vois pas « Commande sur accord-cadre » dans la fenêtre de méthode d'achat.",
+            "a": "Aucun contrat n'est utilisable pour cette réquisition : il doit être actif, en cours de validité, ouvert à son projet et avoir un reste disponible. Une réquisition soumise avant la mise à jour du circuit ne peut pas non plus utiliser cette méthode."
+          },
+          {
+            "q": "Puis-je modifier un contrat actif ?",
+            "a": "Non : seul un brouillon est modifiable. Pour changer les prix ou le plafond, clôturez le contrat et créez-en un nouveau (qui sera validé à son tour)."
+          }
+        ]
       }
     }
   },
@@ -7437,7 +7559,8 @@
       "LOT_SUPPLIER_MISMATCH": "Ce fournisseur ne correspond pas à la part de cette étape.",
       "LOT_ITEMS_MISMATCH": "Le bon de commande doit reprendre exactement les articles de la part.",
       "LOT_ALREADY_ORDERED": "Cette part a déjà son bon de commande."
-    }
+    },
+    "notForAgreement": "Commande sur accord-cadre : un seul fournisseur, celui du contrat."
   },
   "supplierAccess": {
     "title": "Accès au portail fournisseur",
@@ -8016,5 +8139,219 @@
       "NOT_FOUND": "Rapport d'incident introuvable"
     },
     "project": "Projet"
+  },
+  "frameworkAgreements": {
+    "title": "Accords-cadres",
+    "subtitle": "Contrats passés avec un fournisseur pour une période : plafond, bordereau de prix, commandes successives.",
+    "new": "Nouvel accord-cadre",
+    "fromTenderButton": "Créer un accord-cadre",
+    "bannerToValidate_one": "{{count}} accord-cadre attend votre validation",
+    "bannerToValidate_other": "{{count}} accords-cadres attendent votre validation",
+    "tabs": {
+      "all": "Tous",
+      "involved": "Mes validations",
+      "toValidate": "À valider"
+    },
+    "searchPlaceholder": "N°, titre, référence, fournisseur…",
+    "allStatuses": "Tous les statuts",
+    "status": {
+      "DRAFT": "Brouillon",
+      "PENDING_VALIDATION": "En validation",
+      "ACTIVE": "Actif",
+      "EXPIRED": "Expiré",
+      "SUSPENDED": "Suspendu",
+      "CLOSED": "Clôturé",
+      "CANCELLED": "Annulé"
+    },
+    "number": "N°",
+    "contract": "Contrat",
+    "supplier": "Fournisseur",
+    "period": "Période de validité",
+    "projects": "Projets",
+    "project": "Projet",
+    "allProjects": "Toute l'entreprise",
+    "consumption": "Consommé / plafond",
+    "ceiling": "Plafond",
+    "consumed": "Consommé",
+    "remaining": "Reste disponible",
+    "consumptionRule": "Consommé = bons de commande actifs passés sur ce contrat (rejetés et annulés exclus ; reliquat soldé = quantité acceptée).",
+    "daysLeft_one": "{{count}} jour restant",
+    "daysLeft_other": "{{count}} jours restants",
+    "none": "Aucun accord-cadre.",
+    "notFound": "Accord-cadre introuvable.",
+    "createdByOn": "Saisi par {{name}} le {{date}}",
+    "activatedBy": "Validé par {{name}} (directeur général) le {{date}}",
+    "rejectedBy": "Rejeté par {{name}} le {{date}} : {{reason}}. Corrigez le contrat puis soumettez-le à nouveau.",
+    "suspendedBy": "Suspendu par {{name}} le {{date}} : {{reason}}",
+    "closedBy": "Clôturé par {{name}} le {{date}}",
+    "cancelledBy": "Annulé par {{name}} le {{date}}",
+    "expiredNotice": "Ce contrat a expiré le {{date}} : aucune nouvelle commande ne peut être passée.",
+    "selfValidation": "Vous êtes l'auteur de ce contrat : il doit être validé par d'autres personnes (chefs de projet, puis directeur général).",
+    "awaiting": "En attente de : {{names}}",
+    "awaitingNobody": "Personne ne peut valider ce contrat pour le moment (chef de projet ou directeur général inactif) : contactez l'administrateur.",
+    "steps": {
+      "projectManager": "Chef du projet {{project}}",
+      "dg": "Directeur général",
+      "doneBy": "validé par {{name}} le {{date}}",
+      "state": {
+        "PENDING": "en attente",
+        "WAITING": "après les chefs de projet",
+        "SKIPPED": "sauté (auteur du contrat ou chef inactif)"
+      }
+    },
+    "offList": "Articles hors bordereau",
+    "offListYes": "Autorisés sur les commandes",
+    "offListNo": "Refusés : seuls les articles du bordereau",
+    "origin": "Appel d'offres d'origine",
+    "priceList": "Bordereau de prix",
+    "item": "Article",
+    "unit": "Unité",
+    "unitPrice": "Prix unitaire",
+    "maxQuantity": "Quantité max.",
+    "ordered": "Commandé",
+    "orderedAmount": "Montant commandé",
+    "noItems": "Aucun article au bordereau.",
+    "signedContract": "Contrat signé",
+    "attach": "Joindre un fichier",
+    "attachmentAdded": "Fichier joint",
+    "noAttachment": "Aucun fichier : joignez le contrat signé avant de soumettre.",
+    "noAttachmentTender": "Aucun fichier (facultatif : contrat issu d'un appel d'offres).",
+    "history": "Décisions",
+    "noDecision": "Aucune décision pour le moment.",
+    "decision": {
+      "APPROVED": "Validé",
+      "REJECTED": "Rejeté"
+    },
+    "onBehalfOf": "par intérim de {{name}}",
+    "round": "soumission n° {{n}}",
+    "purchaseOrders": "Bons de commande passés sur ce contrat",
+    "po": "Bon de commande",
+    "requisition": "Réquisition",
+    "noPurchaseOrders": "Aucune commande pour le moment.",
+    "lineN": "Ligne {{n}}",
+    "comment": "Commentaire (facultatif)",
+    "reasonRequired": "Motif *",
+    "actions": {
+      "submit": "Soumettre à validation",
+      "approve": "Valider",
+      "reject": "Rejeter",
+      "suspend": "Suspendre",
+      "reactivate": "Réactiver",
+      "close": "Clôturer",
+      "cancel": "Annuler le contrat"
+    },
+    "dialog": {
+      "submit": "Soumettre l'accord-cadre",
+      "approve": "Valider l'accord-cadre",
+      "reject": "Rejeter l'accord-cadre",
+      "suspend": "Suspendre l'accord-cadre",
+      "reactivate": "Réactiver l'accord-cadre",
+      "close": "Clôturer l'accord-cadre",
+      "cancel": "Annuler l'accord-cadre"
+    },
+    "dialogHint": {
+      "submit": "Le contrat ne sera plus modifiable. Il sera validé par le chef de chaque projet concerné, puis par le directeur général.",
+      "approve": "Vous confirmez le fournisseur, la période, le plafond et les prix du bordereau. Le directeur général valide en dernier et active le contrat.",
+      "reject": "Le contrat revient en brouillon ; son auteur le corrige puis le soumet à nouveau (toutes les validations seront refaites).",
+      "suspend": "Plus aucune commande ne pourra être passée sur ce contrat jusqu'à sa réactivation.",
+      "reactivate": "Les commandes sur ce contrat seront de nouveau possibles.",
+      "close": "Fin définitive du contrat : plus aucune commande possible. Les commandes déjà passées suivent leur cours.",
+      "cancel": "Le contrat, jamais activé, est abandonné."
+    },
+    "done": {
+      "submit": "Accord-cadre soumis à validation",
+      "approve": "Étape validée",
+      "activated": "Accord-cadre validé — contrat actif",
+      "reject": "Accord-cadre rejeté — renvoyé en brouillon",
+      "suspend": "Accord-cadre suspendu",
+      "reactivate": "Accord-cadre réactivé",
+      "close": "Accord-cadre clôturé",
+      "cancel": "Accord-cadre annulé"
+    },
+    "form": {
+      "newTitle": "Nouvel accord-cadre",
+      "editTitle": "Modifier l'accord-cadre",
+      "hint": "Enregistré en brouillon. Depuis la fiche, soumettez-le : chefs des projets concernés, puis directeur général.",
+      "fromTender": "Repris de l'appel d'offres {{number}} — {{title}} : fournisseur et prix de l'offre retenue.",
+      "chooseAwardee": "Attribution par article : fournisseur du contrat",
+      "title": "Titre du contrat",
+      "reference": "Référence du contrat",
+      "referencePlaceholder": "N° du contrat signé ou du marché",
+      "prequalified": "Préqualifiés",
+      "notPrequalified": "Non préqualifiés",
+      "startDate": "Début",
+      "endDate": "Fin",
+      "currency": "Devise",
+      "enterpriseCurrency": "Devise de l'entreprise",
+      "description": "Objet / conditions",
+      "projectsHint": "Projets autorisés à commander sur ce contrat. Aucun projet = toute l'entreprise.",
+      "addProject": "+ Ajouter un projet",
+      "validationProjects": "Validation : le chef de chacun de ces projets, puis le directeur général.",
+      "validationDgOnly": "Validation : le directeur général.",
+      "priceListHint": "Prix unitaires imposés sur les bons de commande. Quantité maximale facultative.",
+      "addItem": "Ajouter un article",
+      "defaultUnit": "Pièce (par défaut)",
+      "unlimited": "Illimitée",
+      "maxAboveCeiling": "Les quantités maximales × prix dépassent le plafond : le plafond reste la limite des commandes.",
+      "allowOffList": "Autoriser les articles hors bordereau",
+      "allowOffListHint": "Les commandes pourront contenir d'autres articles, à prix libre, dans la limite du plafond.",
+      "contractRequired": "Obligatoire avant la soumission (contrat saisi à la main).",
+      "contractOptional": "Facultatif : contrat issu d'un appel d'offres.",
+      "contractOnDetail": "Les fichiers se joignent depuis la fiche du contrat.",
+      "chooseFile": "Choisir le contrat signé",
+      "saveDraft": "Enregistrer le brouillon",
+      "created": "Accord-cadre enregistré (brouillon)",
+      "updated": "Accord-cadre modifié",
+      "uploadFailed": "Le contrat est enregistré mais le fichier n'a pas pu être joint : joignez-le depuis la fiche."
+    },
+    "err": {
+      "TITLE_REQUIRED": "Titre du contrat obligatoire.",
+      "SUPPLIER_REQUIRED": "Choisissez le fournisseur.",
+      "SUPPLIER_NOT_FOUND": "Fournisseur introuvable.",
+      "SUPPLIER_INACTIVE": "Ce fournisseur n'est pas actif.",
+      "DATES_REQUIRED": "Dates de début et de fin obligatoires.",
+      "DATES_INVALID": "La date de fin doit suivre la date de début.",
+      "CEILING_INVALID": "Plafond invalide : montant supérieur à 0.",
+      "CURRENCY_INVALID": "Devise inconnue.",
+      "PROJECT_NOT_FOUND": "Projet introuvable.",
+      "ITEM_NOT_FOUND": "Article du catalogue introuvable.",
+      "ITEM_DESCRIPTION_REQUIRED": "Désignation obligatoire.",
+      "UNIT_INVALID": "Unité inconnue ou désactivée.",
+      "PRICE_INVALID": "Prix unitaire invalide.",
+      "MAX_QUANTITY_INVALID": "Quantité maximale invalide.",
+      "TENDER_NOT_FOUND": "Appel d'offres introuvable.",
+      "TENDER_NOT_AWARDED": "L'appel d'offres n'est pas attribué.",
+      "TENDER_SUPPLIER_MISMATCH": "Ce fournisseur n'est pas attributaire de l'appel d'offres.",
+      "NOT_EDITABLE": "Seul un brouillon est modifiable.",
+      "NOT_DRAFT": "Seul un brouillon peut être soumis.",
+      "ITEMS_REQUIRED": "Ajoutez au moins un article au bordereau (ou autorisez les articles hors bordereau).",
+      "CONTRACT_REQUIRED": "Joignez le contrat signé avant de soumettre.",
+      "PROJECT_MANAGER_MISSING": "Projet sans chef de projet actif : {{projects}}. Désignez un chef de projet ou retirez le projet.",
+      "DG_MISSING": "Aucun directeur général actif dans l'entreprise pour valider le contrat.",
+      "DECISION_REQUIRED": "Choisissez de valider ou de rejeter.",
+      "REASON_REQUIRED": "Motif obligatoire.",
+      "NOT_PENDING": "Le contrat n'attend plus de validation.",
+      "SELF_APPROVAL": "Vous ne pouvez pas valider un contrat que vous avez saisi.",
+      "NOT_VALIDATOR": "Ce n'est pas à vous de valider ce contrat maintenant.",
+      "STATUS_INVALID": "Action impossible dans l'état actuel du contrat.",
+      "NOT_FOUND": "Accord-cadre introuvable.",
+      "AGREEMENT_REQUIRED": "Choisissez l'accord-cadre sur lequel commander.",
+      "AGREEMENT_NOT_FOUND": "Accord-cadre introuvable.",
+      "AGREEMENT_NOT_ACTIVE": "L'accord-cadre n'est pas actif (suspendu, clôturé ou pas encore validé).",
+      "AGREEMENT_NOT_STARTED": "L'accord-cadre ne commence que le {{startDate}}.",
+      "AGREEMENT_EXPIRED": "L'accord-cadre a expiré le {{endDate}}.",
+      "AGREEMENT_PROJECT": "Cet accord-cadre n'est pas ouvert au projet de la réquisition.",
+      "AGREEMENT_SUPPLIER_INACTIVE": "Le fournisseur de l'accord-cadre n'est plus actif.",
+      "AGREEMENT_CEILING_REACHED": "Le plafond de l'accord-cadre est atteint.",
+      "SPLIT_NOT_AVAILABLE_FOR_AGREEMENT": "Une commande sur accord-cadre va au seul fournisseur du contrat : pas de répartition.",
+      "METHOD_NOT_SUPPORTED": "Réquisition soumise avant la mise à jour du circuit : choisissez une autre méthode.",
+      "AGREEMENT_SUPPLIER_MISMATCH": "Le bon de commande doit être passé au fournisseur de l'accord-cadre.",
+      "AGREEMENT_CURRENCY_MISMATCH": "Le bon de commande doit être dans la devise de l'accord-cadre.",
+      "AGREEMENT_ITEM_INVALID": "Ligne absente du bordereau de l'accord-cadre.",
+      "AGREEMENT_ITEM_OFF_LIST": "« {{description}} » n'est pas au bordereau : ce contrat refuse les articles hors bordereau.",
+      "AGREEMENT_PRICE_MISMATCH": "« {{description}} » : le prix doit être celui du bordereau ({{expected}}).",
+      "AGREEMENT_QUANTITY_EXCEEDED": "« {{description}} » : {{remaining}} au plus (quantité maximale du contrat).",
+      "AGREEMENT_CEILING_EXCEEDED": "Plafond de l'accord-cadre dépassé : {{amount}} commandé(s), {{remaining}} disponible(s)."
+    }
   }
 }

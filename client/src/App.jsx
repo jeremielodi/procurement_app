@@ -78,6 +78,9 @@ import TenderList from './components/Tenders/TenderList';
 import TenderForm from './components/Tenders/TenderForm';
 import QuestionTemplateList from './components/Tenders/QuestionTemplateList';
 import TenderDetail from './components/Tenders/TenderDetail';
+import FrameworkAgreementList from './components/FrameworkAgreements/FrameworkAgreementList';
+import FrameworkAgreementForm from './components/FrameworkAgreements/FrameworkAgreementForm';
+import FrameworkAgreementDetail from './components/FrameworkAgreements/FrameworkAgreementDetail';
 import SupplierTenderList from './components/SupplierPortal/SupplierTenderList';
 import SupplierTenderDetail from './components/SupplierPortal/SupplierTenderDetail';
 import SupplierOrderList from './components/SupplierPortal/SupplierOrderList';
@@ -385,6 +388,11 @@ function App() {
         <Route path="/tenders/question-templates" element={<ProtectedRoute requiredPermission="MANAGE_TENDERS"><Layout><QuestionTemplateList /></Layout></ProtectedRoute>} />
         <Route path="/tenders/new" element={<ProtectedRoute requiredPermission="MANAGE_TENDERS"><Layout><TenderForm /></Layout></ProtectedRoute>} />
         <Route path="/tenders/:id" element={<ProtectedRoute requiredPermission="MANAGE_TENDERS"><Layout><TenderDetail /></Layout></ProtectedRoute>} />
+        {/* Accords-cadres (migration 69) : liste / fiche ouvertes (chefs de projet et DG valident sans droit de lecture), saisie = MANAGE */}
+        <Route path="/framework-agreements" element={<ProtectedRoute><Layout><FrameworkAgreementList /></Layout></ProtectedRoute>} />
+        <Route path="/framework-agreements/new" element={<ProtectedRoute requiredPermission="MANAGE_FRAMEWORK_AGREEMENTS"><Layout><FrameworkAgreementForm /></Layout></ProtectedRoute>} />
+        <Route path="/framework-agreements/:id/edit" element={<ProtectedRoute requiredPermission="MANAGE_FRAMEWORK_AGREEMENTS"><Layout><FrameworkAgreementForm /></Layout></ProtectedRoute>} />
+        <Route path="/framework-agreements/:id" element={<ProtectedRoute><Layout><FrameworkAgreementDetail /></Layout></ProtectedRoute>} />
 
         {/* Plateforme (super admin) et paramètres d'entreprise */}
         <Route path="/admin/enterprises" element={<ProtectedRoute superAdminOnly><Layout><EnterpriseList /></Layout></ProtectedRoute>} />

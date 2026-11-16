@@ -18,7 +18,8 @@
     "CLASSIFIED_MULTIPLE_QUOTATIONS": "Multiple quotations",
     "CLASSIFIED_RFP": "Call for tenders (RFP)",
     "CLASSIFIED_SOLE_SOURCE": "Sole source",
-    "RETURNED": "To be corrected"
+    "RETURNED": "To be corrected",
+    "CLASSIFIED_FRAMEWORK_AGREEMENT": "Framework agreement order"
   },
   "progress": {
     "DRAFT": "Draft",
@@ -108,7 +109,8 @@
       "DIRECT_PURCHASE": "Direct purchase",
       "MULTIPLE_QUOTATIONS": "Multiple quotations",
       "RFP": "Call for tenders",
-      "SOLE_SOURCE": "Sole source"
+      "SOLE_SOURCE": "Sole source",
+      "FRAMEWORK_AGREEMENT": "Framework agreement order"
     },
     "reasons": {
       "Amount below direct purchase threshold": "amount below the direct purchase threshold",
@@ -258,7 +260,8 @@
       "previous": "Previous agent: {name}"
     },
     "rfqPublished": "Request for quotations published",
-    "rfqAwarded": "Request for quotations awarded"
+    "rfqAwarded": "Request for quotations awarded",
+    "frameworkAgreement": "Framework agreement {number} — {supplier}"
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -528,6 +531,20 @@
       "rejectedMessage": "{validator} rejected incident report {number}: \"{reason}\". The items remain in your holdings.",
       "cancelledTitle": "Incident report withdrawn: {number}",
       "cancelledMessage": "Incident report {number} from {name} was withdrawn: it no longer needs validation."
+    },
+    "frameworkAgreement": {
+      "toValidateTitle": "Framework agreement to approve: {number}",
+      "toValidateMessage": "The contract \"{title}\" with {supplier} is waiting for your approval.",
+      "stepApprovedTitle": "Framework agreement {number}: step approved",
+      "stepApprovedMessage": "{name} approved the contract \"{title}\". It moves to the next step.",
+      "activatedTitle": "Framework agreement active: {number}",
+      "activatedMessage": "{name} approved the contract \"{title}\" with {supplier}. Orders can now be placed under this contract.",
+      "rejectedTitle": "Framework agreement rejected: {number}",
+      "rejectedMessage": "{name} rejected the contract \"{title}\": {reason}. It is back to draft: correct it and submit it again.",
+      "ceilingAlertTitle": "Framework agreement {number}: {percent}% of the ceiling consumed",
+      "ceilingAlertMessage": "The contract \"{title}\" has consumed {consumed} {currency} of a {ceiling} {currency} ceiling. Plan a new contract if needs continue.",
+      "expiryAlertTitle": "Framework agreement {number}: ends in {days} day(s)",
+      "expiryAlertMessage": "The contract \"{title}\" ends on {date}. No order will be possible afterwards: prepare its renewal if needed."
     }
   },
   "pdf": {
@@ -611,7 +628,8 @@
       "vendorRepresentative": "Vendor's authorized representative",
       "termsTitle": "PURCHASE ORDER TERMS AND CONDITIONS",
       "afterReceipt": "Upon receipt of the purchase order",
-      "contactTitle": "Title:"
+      "contactTitle": "Title:",
+      "frameworkAgreement": "Framework agreement"
     },
     "grn": {
       "heading": "GOODS RECEIPT NOTE",
@@ -1151,7 +1169,14 @@
     "STOCK_INCIDENT_REPORTED": "Incident report filed",
     "STOCK_INCIDENT_VALIDATED": "Incident report validated",
     "STOCK_INCIDENT_REJECTED": "Incident report rejected",
-    "STOCK_INCIDENT_CANCELLED": "Incident report withdrawn"
+    "STOCK_INCIDENT_CANCELLED": "Incident report withdrawn",
+    "FRAMEWORK_AGREEMENT_CREATED": "Framework agreement entered",
+    "FRAMEWORK_AGREEMENT_UPDATED": "Framework agreement updated",
+    "FRAMEWORK_AGREEMENT_SUBMITTED": "Framework agreement submitted for approval",
+    "FRAMEWORK_AGREEMENT_APPROVED": "Framework agreement: step approved",
+    "FRAMEWORK_AGREEMENT_ACTIVATED": "Framework agreement approved by the CEO (active)",
+    "FRAMEWORK_AGREEMENT_REJECTED": "Framework agreement rejected",
+    "FRAMEWORK_AGREEMENT_STATUS_CHANGED": "Framework agreement suspended / reactivated / closed / cancelled"
   },
   "auditExport": {
     "sheet": "Audit log",
@@ -1182,7 +1207,8 @@
     "stock_issue": "Stock issue",
     "stock_adjustment": "Adjustment",
     "stock_count": "Stock count",
-    "delegation": "Delegation"
+    "delegation": "Delegation",
+    "framework_agreement": "Framework agreement"
   },
   "receiptRecon": {
     "title": "Receipts ↔ stock reconciliation",

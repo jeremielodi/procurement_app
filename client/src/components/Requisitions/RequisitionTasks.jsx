@@ -41,6 +41,7 @@ import RevisionChanges from './RevisionChanges';
 import SearchSelect from '../Common/SearchSelect';
 import { supplierService } from '../../services/supplierService';
 import { uploadService } from '../../services/uploadService';
+import { frameworkAgreementService } from '../../services/frameworkAgreementService';
 
 // Statuts de bon de commande par étape
 const PO_PENDING = ['PO_PENDING', 'DRAFT'];
@@ -73,6 +74,10 @@ const revisionSupported = (task) => task?.variables?.revisionSupported === true 
 
 // Appel d'offres et devis multiples (demande de cotations) : la répartition entre fournisseurs se fait à l'attribution
 const SPLIT_AT_AWARD = ['RFP', 'MULTIPLE_QUOTATIONS'];
+// Méthodes sans répartition entre fournisseurs : AO / devis (à l'attribution), accord-cadre (un seul fournisseur)
+const NO_SPLIT = [...SPLIT_AT_AWARD, 'FRAMEWORK_AGREEMENT'];
+// Refus du serveur pour une commande sur accord-cadre (migration 69) : textes frameworkAgreements.err.*
+const AGREEMENT_ERRORS = ['AGREEMENT_REQUIRED', 'AGREEMENT_NOT_FOUND', 'AGREEMENT_NOT_ACTIVE', 'AGREEMENT_NOT_STARTED', 'AGREEMENT_EXPIRED', 'AGREEMENT_PROJECT', 'AGREEMENT_SUPPLIER_INACTIVE', 'AGREEMENT_CEILING_REACHED', 'SPLIT_NOT_AVAILABLE_FOR_AGREEMENT', 'METHOD_NOT_SUPPORTED'];
 
 export default function RequisitionTasks() {
   const { id } = useParams();
@@ -85,6 +90,7 @@ export default function RequisitionTasks() {
   const userEmail = user?.email;
   const { formatAmount, currency } = useCurrency();
   const [suppliers, setSuppliers] = useState([]); // achat direct : fournisseurs actifs, préqualifiés en tête
+  const [agreements, setAgreements] = useState(null); // méthode d'achat : accords-cadres utilisables pour cette réquisition
   const [agentCandidates, setAgentCandidates] = useState(null); // validation du chef de projet : agents achats du projet
 
   const [tasks, setTasks] = useState([]);
@@ -261,6 +267,7 @@ export default function RequisitionTasks() {
       procurementMethod: '',
       justification: '',
       multiSupplier: false,
+      frameworkAgreementId: '',
       newBudgetAmount: '',
       adjustmentJustification: '',
       procurementAgentId: ''
@@ -270,6 +277,10 @@ export default function RequisitionTasks() {
       requisitionService.getProcurementAgent(id)
         .then(r => setAgentCandidates(r.data?.candidates || []))
         .catch(() => setAgentCandidates([]));
+    }
+    setAgreements(null);
+    if (TASK_FORMS[task.taskDefinitionKey] === 'method') {
+      frameworkAgreementService.usable(id).then(r => setAgreements(r.data || [])).catch(() => setAgreements([]));
     }
     if (TASK_FORMS[task.taskDefinitionKey] === 'directPurchase') {
       supplierService.getForPurchaseOrder(id)
@@ -285,6 +296,10 @@ export default function RequisitionTasks() {
       if (!formData.procurementMethod) { toast.error(t('reqTasks.methodRequired')); return; }
       if (formData.procurementMethod === 'SOLE_SOURCE' && !formData.justification.trim()) {
         toast.error(t('reqTasks.soleJustificationRequired'));
+        return;
+      }
+      if (formData.procurementMethod === 'FRAMEWORK_AGREEMENT' && !formData.frameworkAgreementId) {
+        toast.error(t('frameworkAgreements.err.AGREEMENT_REQUIRED'));
         return;
       }
     }
@@ -324,7 +339,8 @@ export default function RequisitionTasks() {
       if (needsAgent(selectedTask)) variables.procurementAgentId = formData.procurementAgentId;
       if (formData.procurementMethod) variables.procurementMethod = formData.procurementMethod;
       if (formData.justification) variables.justification = formData.justification;
-      if (isMethodTask(selectedTask)) variables.multiSupplier = !!formData.multiSupplier && !SPLIT_AT_AWARD.includes(formData.procurementMethod);
+      if (isMethodTask(selectedTask)) variables.multiSupplier = !!formData.multiSupplier && !NO_SPLIT.includes(formData.procurementMethod);
+      if (isMethodTask(selectedTask) && formData.procurementMethod === 'FRAMEWORK_AGREEMENT') variables.frameworkAgreementId = formData.frameworkAgreementId;
       if (formData.newBudgetAmount) variables.newBudgetAmount = parseFloat(formData.newBudgetAmount);
       if (formData.adjustmentJustification) variables.adjustmentJustification = formData.adjustmentJustification;
 
@@ -339,6 +355,7 @@ export default function RequisitionTasks() {
       const code = error.response?.data?.code;
       if (code && DIRECT_PURCHASE_ERRORS.includes(code)) { toast.error(t(`reqTasks.direct.err.${code}`)); return; }
       if (code && AGENT_ERRORS.includes(code)) { toast.error(t(`procurementAgent.err.${code}`)); return; }
+      if (code && AGREEMENT_ERRORS.includes(code)) { toast.error(t(`frameworkAgreements.err.${code}`)); return; }
       toast.error(code && ['PROCUREMENT_METHOD_REQUIRED', 'JUSTIFICATION_REQUIRED', 'SPLIT_NOT_AVAILABLE_FOR_RFP', 'SPLIT_NEEDS_TWO_ITEMS'].includes(code)
         ? t(`reqTasks.err.${code}`)
         : code && ['RETURN_REASON_REQUIRED', 'DECISION_REQUIRED', 'RETURN_NOT_SUPPORTED'].includes(code)
@@ -819,7 +836,9 @@ export default function RequisitionTasks() {
                         { value: 'DIRECT_PURCHASE', label: t('procurementMethod.DIRECT_PURCHASE'), desc: t('reqTasks.directDesc') },
                         { value: 'MULTIPLE_QUOTATIONS', label: t('procurementMethod.MULTIPLE_QUOTATIONS'), desc: t('reqTasks.quotesDesc') },
                         { value: 'RFP', label: t('reqTasks.rfpLabel'), desc: t('reqTasks.rfpDesc') },
-                        { value: 'SOLE_SOURCE', label: t('procurementMethod.SOLE_SOURCE'), desc: t('reqTasks.soleDesc') }
+                        { value: 'SOLE_SOURCE', label: t('procurementMethod.SOLE_SOURCE'), desc: t('reqTasks.soleDesc') },
+                        // Commande sur accord-cadre (migration 69) : seulement s'il existe un contrat utilisable
+                        ...(agreements?.length ? [{ value: 'FRAMEWORK_AGREEMENT', label: t('procurementMethod.FRAMEWORK_AGREEMENT'), desc: t('reqTasks.agreementDesc', { count: agreements.length }) }] : []),
                       ].map(option => {
                         // Toutes les méthodes sont ouvertes quel que soit le montant : les achats décident
                         return (
@@ -842,20 +861,47 @@ export default function RequisitionTasks() {
                       })}
                     </div>
                   </div>
+                  {formData.procurementMethod === 'FRAMEWORK_AGREEMENT' && (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3" data-testid="method-agreement-block">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('reqTasks.agreementLabel')} *</label>
+                      <SearchSelect
+                        value={formData.frameworkAgreementId}
+                        onChange={(e) => handleInputChange('frameworkAgreementId', e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
+                        data-testid="method-framework-agreement"
+                      >
+                        <option value="">—</option>
+                        {(agreements || []).map(a => (
+                          <option key={a.id} value={a.id}>
+                            {a.agreement_number} — {a.supplier_name} — {t('reqTasks.agreementRemaining', { amount: Number(a.remaining_amount).toLocaleString(getLocale()), currency: a.currency_code })}
+                          </option>
+                        ))}
+                      </SearchSelect>
+                      {(() => {
+                        const a = (agreements || []).find(x => String(x.id) === String(formData.frameworkAgreementId));
+                        return a ? (
+                          <p className="mt-1 text-xs text-blue-900" data-testid="method-agreement-info">
+                            {t('reqTasks.agreementInfo', { title: a.title, end: new Date(`${a.end_date}T00:00:00`).toLocaleDateString(getLocale()), count: a.item_count })}
+                            {!a.allow_off_list && ` ${t('reqTasks.agreementListOnly')}`}
+                          </p>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
                   {/* Répartition entre plusieurs fournisseurs : même méthode (calculée sur le total), une commande par fournisseur */}
-                  <label className={`flex items-start gap-3 p-3 border rounded-lg ${SPLIT_AT_AWARD.includes(formData.procurementMethod) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}>
+                  <label className={`flex items-start gap-3 p-3 border rounded-lg ${NO_SPLIT.includes(formData.procurementMethod) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}>
                     <input
                       type="checkbox"
                       data-testid="method-multi-supplier"
-                      disabled={SPLIT_AT_AWARD.includes(formData.procurementMethod)}
-                      checked={!!formData.multiSupplier && !SPLIT_AT_AWARD.includes(formData.procurementMethod)}
+                      disabled={NO_SPLIT.includes(formData.procurementMethod)}
+                      checked={!!formData.multiSupplier && !NO_SPLIT.includes(formData.procurementMethod)}
                       onChange={(e) => handleInputChange('multiSupplier', e.target.checked)}
                       className="w-4 h-4 text-blue-600 mt-0.5"
                     />
                     <div>
                       <span className="font-medium">{t('split.methodOption')}</span>
                       <p className="text-xs text-gray-500">
-                        {SPLIT_AT_AWARD.includes(formData.procurementMethod) ? t('split.notForRfp') : t('split.methodOptionHelp')}
+                        {formData.procurementMethod === 'FRAMEWORK_AGREEMENT' ? t('split.notForAgreement') : SPLIT_AT_AWARD.includes(formData.procurementMethod) ? t('split.notForRfp') : t('split.methodOptionHelp')}
                       </p>
                     </div>
                   </label>

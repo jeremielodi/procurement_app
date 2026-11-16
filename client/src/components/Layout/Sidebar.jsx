@@ -46,7 +46,8 @@ import {
   ScrollText,
   ShieldCheck,
   ShieldAlert,
-  TrendingUp
+  TrendingUp,
+  FileSignature
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -145,6 +146,13 @@ const menuGroups = [
         icon: Gavel,
         label: 'nav.tenders',
         permission: 'MANAGE_TENDERS'
+      },
+      {
+        // Accords-cadres (migration 69)
+        path: '/framework-agreements',
+        icon: FileSignature,
+        label: 'nav.frameworkAgreements',
+        permission: ['VIEW_FRAMEWORK_AGREEMENTS', 'MANAGE_FRAMEWORK_AGREEMENTS']
       },
       {
         path: '/goods-receipts',

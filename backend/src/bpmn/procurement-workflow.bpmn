@@ -88,6 +88,7 @@
       <bpmn:outgoing>Flow_Method_RFP</bpmn:outgoing>
       <bpmn:outgoing>Flow_Method_SoleSource</bpmn:outgoing>
       <bpmn:outgoing>Flow_Method_DirectPurchaseSplit</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Method_FrameworkAgreement</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:userTask id="Activity_DirectPurchase" name="Direct Purchase" camunda:assignee="${procurementOfficer}" camunda:candidateGroups="procurement">
       <bpmn:incoming>Flow_Method_DirectPurchase</bpmn:incoming>
@@ -387,6 +388,7 @@
       <bpmn:incoming>Flow_DirectPurchase_CreatePO</bpmn:incoming>
       <bpmn:incoming>Flow_Analyze_CreatePO</bpmn:incoming>
       <bpmn:incoming>Flow_SoleSource_CreatePO</bpmn:incoming>
+      <bpmn:incoming>Flow_Method_FrameworkAgreement</bpmn:incoming>
       <bpmn:outgoing>Flow_Split_Yes</bpmn:outgoing>
       <bpmn:outgoing>Flow_Split_No</bpmn:outgoing>
     </bpmn:exclusiveGateway>
@@ -407,6 +409,9 @@
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Method_DirectPurchaseSplit" sourceRef="Gateway_MethodDecision" targetRef="Activity_AllocateSuppliers">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${procurementMethod == "DIRECT_PURCHASE" &amp;&amp; multiSupplier == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Method_FrameworkAgreement" name="Framework Agreement" sourceRef="Gateway_MethodDecision" targetRef="Gateway_SplitDecision">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${procurementMethod == "FRAMEWORK_AGREEMENT"}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Allocate_Orders" sourceRef="Activity_AllocateSuppliers" targetRef="SubProcess_SupplierOrder" />
     <bpmn:sequenceFlow id="Flow_Orders_Close" sourceRef="SubProcess_SupplierOrder" targetRef="Task_CloseRequisition" />
@@ -912,6 +917,12 @@
         <di:waypoint x="1590" y="1060" />
         <di:waypoint x="2190" y="1060" />
         <di:waypoint x="2190" y="1040" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Method_FrameworkAgreement_di" bpmnElement="Flow_Method_FrameworkAgreement">
+        <di:waypoint x="1590" y="835" />
+        <di:waypoint x="1590" y="1000" />
+        <di:waypoint x="2070" y="1000" />
+        <di:waypoint x="2070" y="835" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Allocate_Orders_di" bpmnElement="Flow_Allocate_Orders">
         <di:waypoint x="2240" y="1000" />

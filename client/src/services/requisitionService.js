@@ -146,7 +146,7 @@ class RequisitionService {
     return [
       { value: 'all', label: t('requisitions.allStatuses') },
       ...['DRAFT', 'PENDING', 'BUDGET_CHECKED', 'RETURNED', 'APPROVED', 'REJECTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED',
-        'CLASSIFIED_DIRECT_PURCHASE', 'CLASSIFIED_MULTIPLE_QUOTATIONS', 'CLASSIFIED_RFP', 'CLASSIFIED_SOLE_SOURCE']
+        'CLASSIFIED_DIRECT_PURCHASE', 'CLASSIFIED_MULTIPLE_QUOTATIONS', 'CLASSIFIED_RFP', 'CLASSIFIED_SOLE_SOURCE', 'CLASSIFIED_FRAMEWORK_AGREEMENT']
         .map(value => ({ value, label: t(`requisitionStatus.${value}`) }))
     ];
   }

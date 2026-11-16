@@ -153,7 +153,8 @@
     "partnerTransfers": "Shipments received",
     "partnerHoldings": "Items held",
     "partners": "Partners",
-    "stockIncidents": "Incident reports"
+    "stockIncidents": "Incident reports",
+    "frameworkAgreements": "Framework agreements"
   },
   "header": {
     "toggleSidebar": "Show / hide menu",
@@ -219,14 +220,16 @@
     "CLASSIFIED_MULTIPLE_QUOTATIONS": "Multiple quotations",
     "CLASSIFIED_RFP": "Call for tenders (RFP)",
     "CLASSIFIED_SOLE_SOURCE": "Sole source",
-    "RETURNED": "To be corrected"
+    "RETURNED": "To be corrected",
+    "CLASSIFIED_FRAMEWORK_AGREEMENT": "Framework agreement order"
   },
   "procurementMethod": {
     "DIRECT_PURCHASE": "Direct purchase",
     "MULTIPLE_QUOTATIONS": "Multiple quotations",
     "RFP": "Tender (RFP)",
     "SOLE_SOURCE": "Sole source",
-    "OTHER": "Other"
+    "OTHER": "Other",
+    "FRAMEWORK_AGREEMENT": "Framework agreement order"
   },
   "tasks": {
     "labels": {
@@ -454,7 +457,7 @@
         },
         {
           "title": "Tenders",
-          "desc": "Publishing, sealed bids until closing, comparison and award. Award to a single supplier or item by item (one purchase order per selected supplier)."
+          "desc": "Publication, sealed offers until closing, comparison and award. Award to a single supplier or item by item (one purchase order per selected supplier). Framework agreements: ceiling, price list, approval by project managers then the CEO, successive orders without new competition."
         },
         {
           "title": "Purchase orders",
@@ -1546,7 +1549,14 @@
         "PROFORMA_DATE_INVALID": "Invalid pro forma date"
       }
     },
-    "methodHint": "All methods are available whatever the amount: choose the most suitable one."
+    "methodHint": "All methods are available whatever the amount: choose the most suitable one.",
+    "agreementDesc_one": "Order from the supplier of an approved contract, at its price-list prices, without new competition ({{count}} usable contract).",
+    "agreementDesc_other": "Order from the supplier of an approved contract, at its price-list prices, without new competition ({{count}} usable contracts).",
+    "agreementLabel": "Framework agreement",
+    "agreementRemaining": "{{amount}} {{currency}} left",
+    "agreementInfo_one": "{{title}} — valid until {{end}}, {{count}} item on the price list.",
+    "agreementInfo_other": "{{title}} — valid until {{end}}, {{count}} items on the price list.",
+    "agreementListOnly": "Only price-list items can be ordered."
   },
   "po": {
     "approved": "Order approved successfully",
@@ -1710,7 +1720,15 @@
         "SELF_APPROVAL": "You created this purchase order (or requested the purchase): another reviewer must handle it",
         "BPMNGO_ERROR": "The workflow engine did not accept the review: try again"
       }
-    }
+    },
+    "agreementBanner": "Order under framework agreement {{number}}: supplier {{supplier}}, price-list prices, {{remaining}} {{currency}} left, valid until {{end}}.",
+    "agreementOpen": "Open the contract",
+    "agreementPrice": "Price-list price",
+    "offListAllowed": "Not on the price list (allowed)",
+    "offListRefused": "Not on the price list: refused by the contract",
+    "agreementOverCeiling": "The order amount exceeds what is left on the framework agreement ({{remaining}} {{currency}}).",
+    "agreementOffListWarning": "This contract only allows price-list items: remove or correct the flagged lines.",
+    "frameworkAgreement": "Framework agreement"
   },
   "grnStatus": {
     "DRAFT": "Draft",
@@ -4981,6 +4999,10 @@
               [
                 "Sole source",
                 "Justification required"
+              ],
+              [
+                "Framework agreement order",
+                "Active contract chosen; straight to the purchase order, with the contract supplier and prices"
               ]
             ]
           },
@@ -6812,6 +6834,106 @@
           }
         ],
         "faq": []
+      },
+      "frameworkAgreements": {
+        "title": "Framework agreements",
+        "summary": "Contracts with a supplier: ceiling, price list, approval by project managers then the CEO, successive orders.",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "A framework agreement is a contract with ONE supplier for a period: a ceiling (maximum amount, in one currency) and a price list (unit price of each item, optional maximum quantity). Orders are then placed under this contract, without new competition, at the price-list prices."
+          },
+          {
+            "type": "h",
+            "text": "Create a framework agreement"
+          },
+          {
+            "type": "steps",
+            "items": [
+              "\"Framework agreements\" menu → \"New framework agreement\" (Procurement profile or administrator), or \"Create a framework agreement\" on an awarded tender: the supplier and prices of the selected offer are reused (per-item award: choose the awardee).",
+              "Enter the title, contract reference, period, ceiling and currency, then the projects allowed to order (no project = whole enterprise).",
+              "Fill in the price list (catalogue item or free text, unit, unit price, optional maximum quantity) and state whether items not on the price list are allowed.",
+              "Attach the signed contract (required for a contract entered manually), save the draft then \"Submit for approval\"."
+            ]
+          },
+          {
+            "type": "h",
+            "text": "Approval"
+          },
+          {
+            "type": "p",
+            "text": "The manager of each listed project (or their acting manager) approves first, then the CEO approves last and activates the contract. Contract open to the whole enterprise: the CEO alone. The contract author never approves it. A rejection sends the contract back to draft with the reason; a new submission redoes all approvals."
+          },
+          {
+            "type": "tip",
+            "text": "Contracts waiting for your approval appear in \"My tasks\" (banner) and in the \"To approve\" tab of the register."
+          },
+          {
+            "type": "h",
+            "text": "Ordering under a framework agreement"
+          },
+          {
+            "type": "p",
+            "text": "At the \"Determine procurement method\" step, the procurement agent chooses \"Framework agreement order\" then the contract (only active contracts, within their validity period, open to the project and with an amount left are offered). There is no competition step: the requisition goes straight to purchase order creation."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Contract supplier and currency imposed; price-list prices locked.",
+              "Items not on the price list refused unless the contract allows them.",
+              "Maximum quantity per item and ceiling checked when the order is created (two simultaneous orders cannot exceed the ceiling).",
+              "The order then follows the usual workflow: review, N1 / N2 / N3 approval, sending, receipt, invoice, payment."
+            ]
+          },
+          {
+            "type": "table",
+            "rows": [
+              [
+                "Indicator",
+                "Rule"
+              ],
+              [
+                "Consumed",
+                "Active purchase orders placed under the contract (rejected and cancelled excluded; closed balance = accepted quantity)"
+              ],
+              [
+                "Remaining",
+                "Ceiling − consumed"
+              ],
+              [
+                "Expired",
+                "Active contract whose end date has passed: no more orders"
+              ]
+            ]
+          },
+          {
+            "type": "p",
+            "text": "Alerts: procurement and the contract author are notified when 80% of the ceiling is consumed and 30 days before the end date. A contract can be suspended (no orders until reactivated) or closed (final end)."
+          },
+          {
+            "type": "links",
+            "items": [
+              {
+                "to": "/framework-agreements",
+                "label": "Framework agreements"
+              },
+              {
+                "to": "/tenders",
+                "label": "Tenders"
+              }
+            ]
+          }
+        ],
+        "faq": [
+          {
+            "q": "I do not see \"Framework agreement order\" in the procurement method window.",
+            "a": "No contract can be used for this requisition: it must be active, within its validity period, open to its project and have an amount left. A requisition submitted before the workflow update cannot use this method either."
+          },
+          {
+            "q": "Can I edit an active contract?",
+            "a": "No: only a draft can be edited. To change prices or the ceiling, close the contract and create a new one (which will be approved in turn)."
+          }
+        ]
       }
     }
   },
@@ -7437,7 +7559,8 @@
       "LOT_SUPPLIER_MISMATCH": "This supplier does not match the lot of this step.",
       "LOT_ITEMS_MISMATCH": "The purchase order must cover exactly the items of the lot.",
       "LOT_ALREADY_ORDERED": "This lot already has its purchase order."
-    }
+    },
+    "notForAgreement": "Framework agreement order: a single supplier, the contract's."
   },
   "supplierAccess": {
     "title": "Supplier portal access",
@@ -8016,5 +8139,219 @@
       "NOT_FOUND": "Incident report not found"
     },
     "project": "Project"
+  },
+  "frameworkAgreements": {
+    "title": "Framework agreements",
+    "subtitle": "Contracts with a supplier for a period: ceiling, price list, successive orders.",
+    "new": "New framework agreement",
+    "fromTenderButton": "Create a framework agreement",
+    "bannerToValidate_one": "{{count}} framework agreement is waiting for your approval",
+    "bannerToValidate_other": "{{count}} framework agreements are waiting for your approval",
+    "tabs": {
+      "all": "All",
+      "involved": "My approvals",
+      "toValidate": "To approve"
+    },
+    "searchPlaceholder": "No., title, reference, supplier…",
+    "allStatuses": "All statuses",
+    "status": {
+      "DRAFT": "Draft",
+      "PENDING_VALIDATION": "Under approval",
+      "ACTIVE": "Active",
+      "EXPIRED": "Expired",
+      "SUSPENDED": "Suspended",
+      "CLOSED": "Closed",
+      "CANCELLED": "Cancelled"
+    },
+    "number": "No.",
+    "contract": "Contract",
+    "supplier": "Supplier",
+    "period": "Validity period",
+    "projects": "Projects",
+    "project": "Project",
+    "allProjects": "Whole enterprise",
+    "consumption": "Consumed / ceiling",
+    "ceiling": "Ceiling",
+    "consumed": "Consumed",
+    "remaining": "Remaining",
+    "consumptionRule": "Consumed = active purchase orders placed under this contract (rejected and cancelled excluded; closed balance = accepted quantity).",
+    "daysLeft_one": "{{count}} day left",
+    "daysLeft_other": "{{count}} days left",
+    "none": "No framework agreement.",
+    "notFound": "Framework agreement not found.",
+    "createdByOn": "Entered by {{name}} on {{date}}",
+    "activatedBy": "Approved by {{name}} (CEO) on {{date}}",
+    "rejectedBy": "Rejected by {{name}} on {{date}}: {{reason}}. Correct the contract and submit it again.",
+    "suspendedBy": "Suspended by {{name}} on {{date}}: {{reason}}",
+    "closedBy": "Closed by {{name}} on {{date}}",
+    "cancelledBy": "Cancelled by {{name}} on {{date}}",
+    "expiredNotice": "This contract expired on {{date}}: no new order can be placed.",
+    "selfValidation": "You entered this contract: it must be approved by other people (project managers, then the CEO).",
+    "awaiting": "Waiting for: {{names}}",
+    "awaitingNobody": "Nobody can approve this contract at the moment (inactive project manager or CEO): contact the administrator.",
+    "steps": {
+      "projectManager": "Manager of project {{project}}",
+      "dg": "CEO",
+      "doneBy": "approved by {{name}} on {{date}}",
+      "state": {
+        "PENDING": "pending",
+        "WAITING": "after the project managers",
+        "SKIPPED": "skipped (contract author or inactive manager)"
+      }
+    },
+    "offList": "Items not on the price list",
+    "offListYes": "Allowed on orders",
+    "offListNo": "Refused: price-list items only",
+    "origin": "Originating tender",
+    "priceList": "Price list",
+    "item": "Item",
+    "unit": "Unit",
+    "unitPrice": "Unit price",
+    "maxQuantity": "Max. quantity",
+    "ordered": "Ordered",
+    "orderedAmount": "Amount ordered",
+    "noItems": "No item on the price list.",
+    "signedContract": "Signed contract",
+    "attach": "Attach a file",
+    "attachmentAdded": "File attached",
+    "noAttachment": "No file: attach the signed contract before submitting.",
+    "noAttachmentTender": "No file (optional: contract from a tender).",
+    "history": "Decisions",
+    "noDecision": "No decision yet.",
+    "decision": {
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    },
+    "onBehalfOf": "acting for {{name}}",
+    "round": "submission #{{n}}",
+    "purchaseOrders": "Purchase orders placed under this contract",
+    "po": "Purchase order",
+    "requisition": "Requisition",
+    "noPurchaseOrders": "No order yet.",
+    "lineN": "Line {{n}}",
+    "comment": "Comment (optional)",
+    "reasonRequired": "Reason *",
+    "actions": {
+      "submit": "Submit for approval",
+      "approve": "Approve",
+      "reject": "Reject",
+      "suspend": "Suspend",
+      "reactivate": "Reactivate",
+      "close": "Close",
+      "cancel": "Cancel the contract"
+    },
+    "dialog": {
+      "submit": "Submit the framework agreement",
+      "approve": "Approve the framework agreement",
+      "reject": "Reject the framework agreement",
+      "suspend": "Suspend the framework agreement",
+      "reactivate": "Reactivate the framework agreement",
+      "close": "Close the framework agreement",
+      "cancel": "Cancel the framework agreement"
+    },
+    "dialogHint": {
+      "submit": "The contract can no longer be edited. It will be approved by the manager of each project concerned, then by the CEO.",
+      "approve": "You confirm the supplier, period, ceiling and price-list prices. The CEO approves last and activates the contract.",
+      "reject": "The contract goes back to draft; its author corrects it and submits it again (all approvals will be redone).",
+      "suspend": "No order can be placed under this contract until it is reactivated.",
+      "reactivate": "Orders under this contract will be possible again.",
+      "close": "Final end of the contract: no more orders. Orders already placed continue.",
+      "cancel": "The contract, never activated, is abandoned."
+    },
+    "done": {
+      "submit": "Framework agreement submitted for approval",
+      "approve": "Step approved",
+      "activated": "Framework agreement approved — contract active",
+      "reject": "Framework agreement rejected — back to draft",
+      "suspend": "Framework agreement suspended",
+      "reactivate": "Framework agreement reactivated",
+      "close": "Framework agreement closed",
+      "cancel": "Framework agreement cancelled"
+    },
+    "form": {
+      "newTitle": "New framework agreement",
+      "editTitle": "Edit the framework agreement",
+      "hint": "Saved as a draft. From the contract page, submit it: managers of the projects concerned, then the CEO.",
+      "fromTender": "From tender {{number}} — {{title}}: supplier and prices of the selected offer.",
+      "chooseAwardee": "Per-item award: contract supplier",
+      "title": "Contract title",
+      "reference": "Contract reference",
+      "referencePlaceholder": "No. of the signed contract or market",
+      "prequalified": "Prequalified",
+      "notPrequalified": "Not prequalified",
+      "startDate": "Start",
+      "endDate": "End",
+      "currency": "Currency",
+      "enterpriseCurrency": "Enterprise currency",
+      "description": "Purpose / terms",
+      "projectsHint": "Projects allowed to order under this contract. No project = whole enterprise.",
+      "addProject": "+ Add a project",
+      "validationProjects": "Approval: the manager of each of these projects, then the CEO.",
+      "validationDgOnly": "Approval: the CEO.",
+      "priceListHint": "Unit prices imposed on purchase orders. Maximum quantity optional.",
+      "addItem": "Add an item",
+      "defaultUnit": "Piece (default)",
+      "unlimited": "Unlimited",
+      "maxAboveCeiling": "Maximum quantities × prices exceed the ceiling: the ceiling remains the limit for orders.",
+      "allowOffList": "Allow items not on the price list",
+      "allowOffListHint": "Orders may contain other items, at a free price, within the ceiling.",
+      "contractRequired": "Required before submission (contract entered manually).",
+      "contractOptional": "Optional: contract from a tender.",
+      "contractOnDetail": "Files are attached from the contract page.",
+      "chooseFile": "Choose the signed contract",
+      "saveDraft": "Save draft",
+      "created": "Framework agreement saved (draft)",
+      "updated": "Framework agreement updated",
+      "uploadFailed": "The contract is saved but the file could not be attached: attach it from the contract page."
+    },
+    "err": {
+      "TITLE_REQUIRED": "Contract title is required.",
+      "SUPPLIER_REQUIRED": "Choose the supplier.",
+      "SUPPLIER_NOT_FOUND": "Supplier not found.",
+      "SUPPLIER_INACTIVE": "This supplier is not active.",
+      "DATES_REQUIRED": "Start and end dates are required.",
+      "DATES_INVALID": "The end date must follow the start date.",
+      "CEILING_INVALID": "Invalid ceiling: amount above 0.",
+      "CURRENCY_INVALID": "Unknown currency.",
+      "PROJECT_NOT_FOUND": "Project not found.",
+      "ITEM_NOT_FOUND": "Catalogue item not found.",
+      "ITEM_DESCRIPTION_REQUIRED": "Description is required.",
+      "UNIT_INVALID": "Unknown or disabled unit.",
+      "PRICE_INVALID": "Invalid unit price.",
+      "MAX_QUANTITY_INVALID": "Invalid maximum quantity.",
+      "TENDER_NOT_FOUND": "Tender not found.",
+      "TENDER_NOT_AWARDED": "The tender is not awarded.",
+      "TENDER_SUPPLIER_MISMATCH": "This supplier was not awarded the tender.",
+      "NOT_EDITABLE": "Only a draft can be edited.",
+      "NOT_DRAFT": "Only a draft can be submitted.",
+      "ITEMS_REQUIRED": "Add at least one item to the price list (or allow items not on the price list).",
+      "CONTRACT_REQUIRED": "Attach the signed contract before submitting.",
+      "PROJECT_MANAGER_MISSING": "Project without an active project manager: {{projects}}. Assign a manager or remove the project.",
+      "DG_MISSING": "No active CEO in the enterprise to approve the contract.",
+      "DECISION_REQUIRED": "Choose to approve or reject.",
+      "REASON_REQUIRED": "Reason is required.",
+      "NOT_PENDING": "The contract is no longer waiting for approval.",
+      "SELF_APPROVAL": "You cannot approve a contract you entered.",
+      "NOT_VALIDATOR": "It is not your turn to approve this contract.",
+      "STATUS_INVALID": "Action not possible in the current state of the contract.",
+      "NOT_FOUND": "Framework agreement not found.",
+      "AGREEMENT_REQUIRED": "Choose the framework agreement to order under.",
+      "AGREEMENT_NOT_FOUND": "Framework agreement not found.",
+      "AGREEMENT_NOT_ACTIVE": "The framework agreement is not active (suspended, closed or not yet approved).",
+      "AGREEMENT_NOT_STARTED": "The framework agreement only starts on {{startDate}}.",
+      "AGREEMENT_EXPIRED": "The framework agreement expired on {{endDate}}.",
+      "AGREEMENT_PROJECT": "This framework agreement is not open to the requisition's project.",
+      "AGREEMENT_SUPPLIER_INACTIVE": "The framework agreement supplier is no longer active.",
+      "AGREEMENT_CEILING_REACHED": "The framework agreement ceiling has been reached.",
+      "SPLIT_NOT_AVAILABLE_FOR_AGREEMENT": "A framework agreement order goes to the contract's supplier only: no split.",
+      "METHOD_NOT_SUPPORTED": "Requisition submitted before the workflow update: choose another method.",
+      "AGREEMENT_SUPPLIER_MISMATCH": "The purchase order must go to the framework agreement supplier.",
+      "AGREEMENT_CURRENCY_MISMATCH": "The purchase order must be in the framework agreement currency.",
+      "AGREEMENT_ITEM_INVALID": "Line not on the framework agreement price list.",
+      "AGREEMENT_ITEM_OFF_LIST": "\"{{description}}\" is not on the price list: this contract refuses other items.",
+      "AGREEMENT_PRICE_MISMATCH": "\"{{description}}\": the price must be the price-list price ({{expected}}).",
+      "AGREEMENT_QUANTITY_EXCEEDED": "\"{{description}}\": {{remaining}} at most (contract maximum quantity).",
+      "AGREEMENT_CEILING_EXCEEDED": "Framework agreement ceiling exceeded: {{amount}} ordered, {{remaining}} available."
+    }
   }
 }

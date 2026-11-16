@@ -218,6 +218,9 @@ async function startServer() {
     // Rapport quotidien des réquisitions (email à minuit, entreprises ayant activé l'option)
     require('./src/services/DailyRequisitionReportService').start();
 
+    // Accords-cadres : alerte 30 jours avant l'échéance (migration 69)
+    require('./src/services/FrameworkAgreementAlerts').start(io);
+
     // Démarrer le serveur
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {

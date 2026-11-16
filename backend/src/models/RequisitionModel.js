@@ -37,7 +37,7 @@ const PROGRESS_STATUS_SQL = `
   END`;
 
 // Méthodes d'achat (Gateway_MethodDecision) — toutes ouvertes quel que soit le montant (migration 59)
-const PROCUREMENT_METHODS = ['DIRECT_PURCHASE', 'MULTIPLE_QUOTATIONS', 'RFP', 'SOLE_SOURCE'];
+const PROCUREMENT_METHODS = ['DIRECT_PURCHASE', 'MULTIPLE_QUOTATIONS', 'RFP', 'SOLE_SOURCE', 'FRAMEWORK_AGREEMENT']; // accord-cadre : migration 69
 
 class RequisitionModel {
 

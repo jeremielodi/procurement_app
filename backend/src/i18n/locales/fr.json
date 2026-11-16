@@ -18,7 +18,8 @@
     "CLASSIFIED_MULTIPLE_QUOTATIONS": "Devis multiples",
     "CLASSIFIED_RFP": "Appel d'offres",
     "CLASSIFIED_SOLE_SOURCE": "Source unique",
-    "RETURNED": "À corriger"
+    "RETURNED": "À corriger",
+    "CLASSIFIED_FRAMEWORK_AGREEMENT": "Commande sur accord-cadre"
   },
   "progress": {
     "DRAFT": "Brouillon",
@@ -108,7 +109,8 @@
       "DIRECT_PURCHASE": "Achat direct",
       "MULTIPLE_QUOTATIONS": "Devis multiples",
       "RFP": "Appel d'offres",
-      "SOLE_SOURCE": "Source unique"
+      "SOLE_SOURCE": "Source unique",
+      "FRAMEWORK_AGREEMENT": "Commande sur accord-cadre"
     },
     "reasons": {
       "Amount below direct purchase threshold": "montant inférieur au seuil d'achat direct",
@@ -258,7 +260,8 @@
       "previous": "Agent précédent : {name}"
     },
     "rfqPublished": "Demande de cotations publiée",
-    "rfqAwarded": "Demande de cotations attribuée"
+    "rfqAwarded": "Demande de cotations attribuée",
+    "frameworkAgreement": "Accord-cadre {number} — {supplier}"
   },
   "supplierProfile": {
     "logo_path": "Logo",
@@ -528,6 +531,20 @@
       "rejectedMessage": "{validator} a rejeté le rapport d'incident {number} : « {reason} ». Les articles restent dans vos détentions.",
       "cancelledTitle": "Rapport d'incident retiré : {number}",
       "cancelledMessage": "Le rapport d'incident {number} de {name} a été retiré : il n'est plus à valider."
+    },
+    "frameworkAgreement": {
+      "toValidateTitle": "Accord-cadre à valider : {number}",
+      "toValidateMessage": "Le contrat « {title} » avec {supplier} attend votre validation.",
+      "stepApprovedTitle": "Accord-cadre {number} : étape validée",
+      "stepApprovedMessage": "{name} a validé le contrat « {title} ». Il passe à l'étape suivante.",
+      "activatedTitle": "Accord-cadre actif : {number}",
+      "activatedMessage": "{name} a validé le contrat « {title} » avec {supplier}. Les commandes peuvent désormais être passées sur ce contrat.",
+      "rejectedTitle": "Accord-cadre rejeté : {number}",
+      "rejectedMessage": "{name} a rejeté le contrat « {title} » : {reason}. Il est revenu en brouillon : corrigez-le puis soumettez-le à nouveau.",
+      "ceilingAlertTitle": "Accord-cadre {number} : {percent} % du plafond consommé",
+      "ceilingAlertMessage": "Le contrat « {title} » a consommé {consumed} {currency} sur un plafond de {ceiling} {currency}. Prévoyez un nouveau contrat si les besoins continuent.",
+      "expiryAlertTitle": "Accord-cadre {number} : échéance dans {days} jour(s)",
+      "expiryAlertMessage": "Le contrat « {title} » prend fin le {date}. Aucune commande ne sera possible ensuite : préparez son renouvellement si nécessaire."
     }
   },
   "pdf": {
@@ -611,7 +628,8 @@
       "vendorRepresentative": "Représentant autorisé du fournisseur",
       "termsTitle": "CONDITIONS GÉNÉRALES DU BON DE COMMANDE",
       "afterReceipt": "Après réception du bon de commande",
-      "contactTitle": "Fonction :"
+      "contactTitle": "Fonction :",
+      "frameworkAgreement": "Accord-cadre"
     },
     "grn": {
       "heading": "BON DE RÉCEPTION",
@@ -1151,7 +1169,14 @@
     "STOCK_INCIDENT_REPORTED": "Rapport d'incident déclaré",
     "STOCK_INCIDENT_VALIDATED": "Rapport d'incident validé",
     "STOCK_INCIDENT_REJECTED": "Rapport d'incident rejeté",
-    "STOCK_INCIDENT_CANCELLED": "Rapport d'incident retiré"
+    "STOCK_INCIDENT_CANCELLED": "Rapport d'incident retiré",
+    "FRAMEWORK_AGREEMENT_CREATED": "Accord-cadre saisi",
+    "FRAMEWORK_AGREEMENT_UPDATED": "Accord-cadre modifié",
+    "FRAMEWORK_AGREEMENT_SUBMITTED": "Accord-cadre soumis à validation",
+    "FRAMEWORK_AGREEMENT_APPROVED": "Accord-cadre : étape validée",
+    "FRAMEWORK_AGREEMENT_ACTIVATED": "Accord-cadre validé par le DG (actif)",
+    "FRAMEWORK_AGREEMENT_REJECTED": "Accord-cadre rejeté",
+    "FRAMEWORK_AGREEMENT_STATUS_CHANGED": "Accord-cadre suspendu / réactivé / clôturé / annulé"
   },
   "auditExport": {
     "sheet": "Journal d'audit",
@@ -1182,7 +1207,8 @@
     "stock_issue": "Sortie de stock",
     "stock_adjustment": "Ajustement",
     "stock_count": "Inventaire",
-    "delegation": "Intérim"
+    "delegation": "Intérim",
+    "framework_agreement": "Accord-cadre"
   },
   "receiptRecon": {
     "title": "Rapprochement réceptions ↔ stock",

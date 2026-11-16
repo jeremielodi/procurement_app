@@ -41,6 +41,7 @@ const directPurchaseService = require('../services/DirectPurchaseService');
 const allocationService = require('../services/SupplierAllocationService');
 const orderTasks = require('../services/OrderTaskService');
 const procurementAgents = require('../services/ProcurementAgentService');
+const frameworkAgreementModel = require('../models/FrameworkAgreementModel');
 
 // Validation de la réquisition (REQUISITION_APPROVAL_TASKS) : chef de projet ; N1 / N2 / N3 = processus démarrés avant.
 // Approbation du bon de commande (PO_APPROVAL_TASKS) : N1 / N2 / N3 selon son montant ; Direction = processus d'avant.
@@ -480,6 +481,10 @@ async function completeTask(req, res) {
       // appel d'offres et devis multiples (demande de cotations, migration 59) : la répartition se décide à
       // l'attribution (publiée « par article », TenderController)
       if (variables.multiSupplier === true || variables.multiSupplier === 'true') {
+        // Commande sur accord-cadre (migration 69) : un contrat = un fournisseur, pas de répartition
+        if (method === 'FRAMEWORK_AGREEMENT') {
+          return res.status(400).json({ success: false, code: 'SPLIT_NOT_AVAILABLE_FOR_AGREEMENT', message: 'Une commande sur accord-cadre va au seul fournisseur du contrat' });
+        }
         if (method === 'RFP' || method === 'MULTIPLE_QUOTATIONS') {
           return res.status(400).json({ success: false, code: 'SPLIT_NOT_AVAILABLE_FOR_RFP', message: 'Appel d\'offres / demande de cotations : la répartition se fait à l\'attribution (publiée « par article »)' });
         }
@@ -487,6 +492,18 @@ async function completeTask(req, res) {
         if ((count?.n || 0) < 2) {
           return res.status(400).json({ success: false, code: 'SPLIT_NEEDS_TWO_ITEMS', message: 'Une répartition demande au moins deux articles' });
         }
+      }
+    }
+
+    // Commande sur accord-cadre (migration 69) : contrat actif, en cours de validité, ouvert au projet, reste disponible ;
+    // processus démarrés avant le BPMN qui connaît cette méthode : refusé (la passerelle n'aurait pas de chemin)
+    const frameworkAgreement = taskDefinitionKey === 'Activity_DetermineType' && variables.procurementMethod === 'FRAMEWORK_AGREEMENT'
+      ? await frameworkAgreementModel.checkUsable(variables.frameworkAgreementId, requisitionId)
+      : null;
+    if (frameworkAgreement) {
+      const vars = await camundaService.getProcessVariables(task.processInstanceId).catch(() => null);
+      if (!(vars?.frameworkAgreementSupported === true || vars?.frameworkAgreementSupported === 'true')) {
+        return res.status(409).json({ success: false, code: 'METHOD_NOT_SUPPORTED', message: 'Réquisition soumise avant la mise à jour du circuit : la commande sur accord-cadre n\'est pas possible (choisissez une autre méthode)' });
       }
     }
 
@@ -569,6 +586,14 @@ async function completeTask(req, res) {
     if (taskDefinitionKey === 'Activity_DetermineType') {
       taskVariables.multiSupplier = variables.multiSupplier === true || variables.multiSupplier === 'true';
       taskVariables.supplierLots = [orderTasks.MAIN_LOT];
+      if (frameworkAgreement) {
+        Object.assign(taskVariables, {
+          frameworkAgreementId: frameworkAgreement.id, frameworkAgreementNumber: frameworkAgreement.agreement_number,
+          supplierId: frameworkAgreement.supplier_id, supplierName: frameworkAgreement.supplier_name,
+        });
+      } else {
+        delete taskVariables.frameworkAgreementId;
+      }
     }
     if (allocation) delete taskVariables.lots;
     if (procurementAgent) Object.assign(taskVariables, { procurementAgentId: procurementAgent.id, procurementAgent: procurementAgent.email });
@@ -583,10 +608,23 @@ async function completeTask(req, res) {
       });
     }
 
+    // Accord-cadre retenu enregistré AVANT de terminer l'étape (le bon de commande le lit) ; remis comme avant si BpmnGo refuse
+    const previousAgreement = taskDefinitionKey === 'Activity_DetermineType'
+      ? (await db.one('SELECT framework_agreement_id FROM requisitions WHERE id = $1', [requisitionId]))?.framework_agreement_id || null
+      : undefined;
+    if (previousAgreement !== undefined) {
+      await db.exec('UPDATE requisitions SET framework_agreement_id = $2 WHERE id = $1', [requisitionId, frameworkAgreement?.id || null]);
+    }
+    const restoreAgreement = () => (previousAgreement !== undefined
+      ? db.exec('UPDATE requisitions SET framework_agreement_id = $2 WHERE id = $1', [requisitionId, previousAgreement]) : null);
+
     // Agent achats enregistré AVANT de terminer la validation : la notification de l'étape suivante (méthode d'achat)
     // lui est réservée ; remis comme avant si BpmnGo refuse
     const previousAgent = procurementAgent ? await procurementAgents.assign(requisitionId, procurementAgent.id, userId) : null;
-    const restoreAgent = () => (procurementAgent ? procurementAgents.restore(requisitionId, previousAgent) : null);
+    const restoreAgent = async () => {
+      await restoreAgreement();
+      if (procurementAgent) await procurementAgents.restore(requisitionId, previousAgent);
+    };
 
     // 1. Complete the Camunda user task (achat direct / répartition : enregistrés dans la même transaction)
     const result = await (async () => directPurchase

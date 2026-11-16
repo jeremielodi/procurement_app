@@ -17,12 +17,15 @@ import TenderAnswers from './TenderAnswers';
 import { toEditable, questionErrorMessage, maxScore } from '../../utils/tenderQuestions';
 import { t } from '../../i18n';
 import TenderTypeBadge from './TenderTypeBadge';
+import { usePermissions } from '../../hooks/usePermissions';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
 export default function TenderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
+  const canManageAgreements = hasPermission('MANAGE_FRAMEWORK_AGREEMENTS');
   const [tender, setTender] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -260,6 +263,12 @@ export default function TenderDetail() {
       {tender.effective_status === 'AWARDED' && (
         <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 flex items-center gap-2">
           <Award size={18} /> {perItem && awards.length ? t('tenders.perItem.awardedTo') : t('tenders.awardedTo')} <b>{tender.awarded_supplier_name}</b> {t('tenders.awardedOn', { date: fmtDateTime(tender.awarded_at) })}
+          {/* Accord-cadre repris de cet appel d'offres (migration 69) : fournisseur et prix de l'offre retenue */}
+          {canManageAgreements && (
+            <Link to={`/framework-agreements/new?tenderId=${tender.id}`} className="ml-auto whitespace-nowrap rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100" data-testid="tender-create-agreement">
+              {t('frameworkAgreements.fromTenderButton')}
+            </Link>
+          )}
         </div>
       )}
       {sealed && (

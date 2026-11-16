@@ -4,7 +4,7 @@
 // (/requisitions/:id/tasks) : c'est là que la commande, la réception, la facture ou le paiement sont rattachés à la
 // bonne réquisition et au bon bon de commande. Ici, chaque tâche renvoie vers cet onglet (?task= la met en évidence).
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircle, AlertCircle, Package, RefreshCw, DollarSign, User, UserCheck, Clock, ShieldAlert, ArrowRight, Info,
@@ -15,6 +15,7 @@ import { getTaskLabel } from '../../utils/taskLabels';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import { useCurrency } from '../../contexts/EnterpriseContext';
 import { t, getLocale } from '../../i18n';
+import { frameworkAgreementService } from '../../services/frameworkAgreementService';
 
 /** Lien vers l'onglet tâches de la réquisition, tâche mise en évidence */
 export const requisitionTasksLink = (task) =>
@@ -88,6 +89,14 @@ const TaskList = () => {
     enabled: !!userEmail
   });
 
+  // Accords-cadres à valider (chef de projet, puis DG — migration 69) : hors BpmnGo, signalés ici
+  const { data: agreementCounts } = useQuery({
+    queryKey: ['framework-agreement-counts', userEmail],
+    queryFn: () => frameworkAgreementService.counts(),
+    enabled: !!userEmail,
+  });
+  const agreementsToValidate = agreementCounts?.data?.toValidate || 0;
+
   const tasks = tasksData?.data || [];
   const filteredTasks = tasks.filter(task => {
     const isCompleted = task.state === 'completed';
@@ -122,6 +131,11 @@ const TaskList = () => {
 
   return (
     <div className="space-y-6">
+      {agreementsToValidate > 0 && (
+        <Link to="/framework-agreements?scope=toValidate" className="block rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100" data-testid="tasks-agreements-to-validate">
+          {t('frameworkAgreements.bannerToValidate', { count: agreementsToValidate })}
+        </Link>
+      )}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-gray-800">{t('nav.myTasks')}</h2>

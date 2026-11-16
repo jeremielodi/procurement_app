@@ -165,6 +165,7 @@ class PurchaseOrderExportService {
   </tr>
   <tr><td class="k">{{L.deliveryTerms}}</td><td class="v multi" colspan="3">{{deliveryTerms}}</td></tr>
   <tr><td class="k">{{L.specialInstructions}}</td><td class="v multi" colspan="3">{{po.special_instructions}}</td></tr>
+  {{#if po.framework_agreement_number}}<tr><td class="k">{{L.frameworkAgreement}}</td><td class="v" colspan="3" data-agreement="1">{{po.framework_agreement_number}}{{#if po.framework_contract_reference}} — {{po.framework_contract_reference}}{{/if}} ({{po.framework_agreement_title}})</td></tr>{{/if}}
 </table>
 
 <table class="items">

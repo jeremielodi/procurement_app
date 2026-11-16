@@ -152,7 +152,8 @@
     "consumables": "Consommables",
     "partnerTransfers": "Envois reçus",
     "partnerHoldings": "Matériel détenu",
-    "partners": "Partenaires"
+    "partners": "Partenaires",
+    "stockIncidents": "Rapports d'incident"
   },
   "header": {
     "toggleSidebar": "Afficher / masquer le menu",
@@ -513,7 +514,7 @@
         },
         {
           "title": "Sorties et équipements",
-          "desc": "Sorties vers un employé ou un département avec accusé de réception ; ordinateurs et matériel suivis par n° de série et récupérés au départ. Les demandes au magasin des employés sont validées puis servies par un bon de sortie."
+          "desc": "Sorties vers un employé ou un département avec accusé de réception ; ordinateurs et matériel suivis par n° de série et récupérés au départ. Les demandes au magasin des employés sont validées puis servies par un bon de sortie. Article perdu, volé ou abîmé : rapport d'incident de l'employé, validé par le chef de projet qui se prononce sur sa responsabilité."
         },
         {
           "title": "Journal infalsifiable",
@@ -3984,7 +3985,8 @@
         "lotNumber": "N° de lot",
         "expiryDate": "Date de péremption",
         "project": "Code projet",
-        "assetCategory": "Catégorie TAG"
+        "assetCategory": "Catégorie TAG",
+        "nature": "Nature"
       },
       "err": {
         "CODE_REQUIRED": "code vide",
@@ -4326,6 +4328,71 @@
       "export": "Exporter (Excel)",
       "newEntry": "Bon d'entrée",
       "newIssue": "Sortir des consommables"
+    },
+    "importGuide": {
+      "whenTitle": "Quand l'utiliser",
+      "effectsTitle": "Ce que l'import enregistre",
+      "cautionsTitle": "À savoir avant d'importer",
+      "stepsTitle": "Ordre conseillé pour démarrer le stock",
+      "current": "vous êtes ici",
+      "catalog": {
+        "title": "Pourquoi importer le catalogue d'articles ?",
+        "why": "Le catalogue est la base de tout le module Stock : un article doit y exister (code, unité, nature Équipement ou Consommable, mode de suivi) avant de pouvoir être réceptionné, sorti, compté à l'inventaire ou cité dans une réquisition. L'import crée ou met à jour des centaines d'articles d'un coup au lieu de les saisir un par un, et enregistre en même temps le stock déjà présent dans vos dépôts au démarrage.",
+        "when": [
+          "Mise en service du stock : reprendre la liste des articles de l'ancien fichier Excel ou logiciel",
+          "Ajouter une nouvelle gamme d'articles (médicaments, fournitures de bureau, pièces détachées…)",
+          "Corriger des fiches en masse : unité, catégorie, stock minimum, nature… (code existant = mise à jour)",
+          "Enregistrer le stock initial des consommables (quantité, coût, lot, péremption) déjà présent dans les dépôts"
+        ],
+        "effects": [
+          "Crée les nouveaux articles et met à jour les articles existants (seules les cellules remplies)",
+          "Fixe la nature : Équipement (matériel durable, suivi et affecté à une personne) ou Consommable (utilisé puis épuisé) — elle détermine qui peut voir et gérer l'article",
+          "Stock initial : un mouvement « Stock initial » par dépôt / lot, au coût indiqué et rattaché au projet de financement — point de départ des soldes, de la valorisation (CMUP) et de la prévision du réapprovisionnement",
+          "Tout l'import forme une seule opération, consultable dans le journal des mouvements"
+        ],
+        "cautions": [
+          "Le stock initial est définitif : un nouvel import ne le double pas (refusé si l'article a déjà des mouvements dans ce dépôt) ; pour corriger, faites un inventaire ou un ajustement",
+          "Le mode de suivi (stockable, lot, péremption, n° de série) ne peut plus changer une fois l'article mouvementé : vérifiez-le avant d'importer",
+          "Équipements à n° de série : pas de quantité ici, enregistrez-les ensuite un par un avec l'import du parc existant (étape 2)",
+          "Une livraison de fournisseur ne s'importe pas : elle passe par la réception du bon de commande (GRN) ou un bon d'entrée, qui gardent la trace du document"
+        ]
+      },
+      "units": {
+        "title": "Pourquoi importer le parc existant ?",
+        "why": "Cet import fait entrer dans l'application les biens que l'organisation possède déjà (ordinateurs, véhicules, motos, mobilier…) : chaque équipement devient une fiche avec son n° de série, son n° d'inventaire (étiquette) et son état. Sans cette reprise, le matériel acheté avant la mise en service n'existe pas dans procureApp : impossible de l'affecter, de le retrouver, de le compter à l'inventaire ou de savoir qui le détient.",
+        "when": [
+          "Mise en service : reprendre le registre des biens (Excel) de l'organisation",
+          "Intégrer du matériel arrivé hors procureApp (ancien projet, don non enregistré)",
+          "Compléter le parc après un inventaire physique qui découvre des biens non enregistrés"
+        ],
+        "effects": [
+          "Une fiche par équipement à n° de série (unique par article), « en stock » au dépôt indiqué, état Bon ou Endommagé",
+          "N° d'inventaire repris tel qu'il est collé sur le bien, ou attribué automatiquement selon la codification de l'entreprise",
+          "Projet de financement, coût et date d'acquisition : utilisés par le registre des équipements, la valorisation et le n° d'inventaire",
+          "Articles sans n° de série (chaises, tables…) : une quantité en stock initial",
+          "Tout l'import forme une seule opération (MVG), consultable dans le journal des mouvements"
+        ],
+        "cautions": [
+          "Les articles doivent déjà exister dans le catalogue (étape 1)",
+          "Ne pas importer deux fois : un n° de série ou un n° d'inventaire déjà enregistré est refusé",
+          "Les biens entrent au dépôt : pour ceux déjà entre les mains d'un employé, faites ensuite l'étape 3 (« Importer les affectations ») qui crée les bons de sortie",
+          "Le matériel acheté désormais passe par la réception du bon de commande ou un bon d'entrée, pas par cet import"
+        ]
+      },
+      "steps": {
+        "catalog": {
+          "title": "Catalogue d'articles",
+          "text": "Créer les articles (équipements et consommables) et le stock initial des consommables — Stock › Articles › Importer"
+        },
+        "units": {
+          "title": "Parc existant",
+          "text": "Enregistrer chaque équipement déjà possédé (n° de série, n° d'inventaire, état) — Stock › Équipements › Importer (Excel / CSV)"
+        },
+        "assignments": {
+          "title": "Affectations existantes",
+          "text": "Indiquer qui détient quel équipement (email du détenteur) — Stock › Équipements › Importer les affectations"
+        }
+      }
     }
   },
   "help": {
@@ -4458,7 +4525,7 @@
               ],
               [
                 "Chef de projet",
-                "Désigné sur la fiche du projet (pas un profil) : valide seul les réquisitions de son projet — approuver, rejeter ou renvoyer pour correction."
+                "Désigné sur la fiche du projet (pas un profil) : valide seul les réquisitions de son projet — approuver, rejeter ou renvoyer pour correction ; valide aussi les rapports d'incident (perte, vol, dommage) sur le stock de son projet et se prononce sur la responsabilité de l'employé."
               ],
               [
                 "Manager niveau 1",
@@ -4864,6 +4931,14 @@
           {
             "type": "tip",
             "text": "Les réquisitions déjà en cours avant ce circuit gardent l'ancien : approbation N1 / N2 / N3 de la réquisition, puis approbation du bon de commande par la Direction."
+          },
+          {
+            "type": "h",
+            "text": "Rapports d'incident du stock"
+          },
+          {
+            "type": "p",
+            "text": "Le chef de projet valide aussi les rapports d'incident (perte, vol, dommage) sur les articles du stock de son projet détenus par un employé : menu « Rapports d'incident » → onglet « À valider ». Il valide en indiquant si la responsabilité de l'employé est engagée (oui / non, avec un commentaire), ou rejette avec un motif. Son intérimaire peut le faire à sa place ; sans projet ou sans chef actif, c'est l'administrateur. Il ne valide jamais un rapport dont il est le détenteur ou le déclarant."
           },
           {
             "type": "links",
@@ -5684,6 +5759,28 @@
           },
           {
             "type": "h",
+            "text": "Rapport d'incident (perte, vol, dommage)"
+          },
+          {
+            "type": "p",
+            "text": "Un employé qui perd, se fait voler ou abîme un article qu'il détient (remis par un bon de sortie) fait un rapport d'incident : menu « Rapports d'incident » → « Déclarer un incident », ou « Signaler un incident » à côté de l'article dans « Mes articles reçus ». Le magasin peut aussi le déclarer pour le compte d'un employé."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Choisissez le type : Perte, Vol (n° de plainte conseillé) ou Dommage (équipements à n° de série seulement).",
+              "Indiquez la date, le lieu et les circonstances, puis cochez les articles concernés et la quantité. Un rapport ne porte que sur un projet.",
+              "Le rapport part au chef du projet des articles (ou à son intérimaire). Article sans projet ou projet sans chef actif : l'administrateur de l'entreprise. Ni le détenteur ni le déclarant ne peuvent le valider.",
+              "Le chef de projet valide en indiquant si la responsabilité de l'employé est engagée (oui / non, avec un commentaire), ou rejette avec un motif.",
+              "Perte ou vol validé : les articles sortent des détentions de l'employé, les équipements passent « Perdu ». Dommage validé : l'équipement reste détenu, à l'état « Endommagé », jusqu'à son retour au magasin."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "Le rapport PDF (bouton « Rapport PDF ») porte la décision et les signatures de l'employé et du chef de projet. Tant qu'il attend sa validation, l'employé peut le retirer."
+          },
+          {
+            "type": "h",
             "text": "Prévision du réapprovisionnement"
           },
           {
@@ -5807,6 +5904,10 @@
               {
                 "to": "/stock/reconciliation",
                 "label": "Rapprochement réceptions ↔ stock"
+              },
+              {
+                "to": "/stock/incidents",
+                "label": "Rapports d'incident"
               }
             ]
           }
@@ -5840,6 +5941,10 @@
                 "Articles sortis pour un service (consommation ou matériel du service). Indiquez si besoin la personne qui les retire : elle confirme la réception ; sinon, c'est le responsable du département. Un équipement est affecté au département."
               ]
             ]
+          },
+          {
+            "type": "tip",
+            "text": "Un article reçu a été perdu, volé ou abîmé ? Dans « Mes articles reçus », cliquez « Signaler un incident » à côté de l'article : le rapport d'incident est validé par le chef du projet (voir la rubrique « Stock », « Rapport d'incident »)."
           },
           {
             "type": "h",
@@ -6015,6 +6120,10 @@
                 "Aucune entrée en stock ; l'appareil passe au statut « Perdu »."
               ]
             ]
+          },
+          {
+            "type": "tip",
+            "text": "Équipement perdu ou volé par l'employé : plutôt qu'un retour « Perdu » saisi par le magasin, l'employé fait un rapport d'incident (menu « Rapports d'incident »), validé par le chef de projet qui se prononce sur sa responsabilité ; à la validation l'équipement passe « Perdu ». Un dommage validé le marque « Endommagé » : récupérez-le ensuite par un retour."
           },
           {
             "type": "h",
@@ -6841,7 +6950,11 @@
       "PARTNER_ACCOUNT_CREATED": "Accès à l'espace partenaire créé",
       "PARTNER_ACCOUNT_ACTIVATED": "Compte partenaire réactivé",
       "PARTNER_ACCOUNT_DEACTIVATED": "Compte partenaire désactivé",
-      "PARTNER_TRANSFER_RECEIVED": "Réception confirmée par le partenaire"
+      "PARTNER_TRANSFER_RECEIVED": "Réception confirmée par le partenaire",
+      "STOCK_INCIDENT_REPORTED": "Rapport d'incident déclaré",
+      "STOCK_INCIDENT_VALIDATED": "Rapport d'incident validé",
+      "STOCK_INCIDENT_REJECTED": "Rapport d'incident rejeté",
+      "STOCK_INCIDENT_CANCELLED": "Rapport d'incident retiré"
     },
     "groups": {
       "all": "Tous les événements",
@@ -7754,5 +7867,154 @@
     "holdingsTitle": "Matériel détenu",
     "holdingsSubtitle": "Articles et équipements reçus, non rendus.",
     "noHoldings": "Aucun matériel détenu"
+  },
+  "stockIncidents": {
+    "title": "Rapports d'incident",
+    "subtitle": "Perte, vol ou dommage d'un article que vous détenez : déclarez-le, le chef de projet valide le rapport.",
+    "new": "Déclarer un incident",
+    "tabs": {
+      "mine": "Mes rapports",
+      "toValidate": "À valider",
+      "all": "Tous"
+    },
+    "bannerToValidate_one": "{{count}} rapport d'incident attend votre validation",
+    "bannerToValidate_other": "{{count}} rapports d'incident attendent votre validation",
+    "searchPlaceholder": "N° de rapport, employé, article, n° de série…",
+    "allTypes": "Tous les types",
+    "allStatuses": "Tous les statuts",
+    "number": "N° du rapport",
+    "incidentDate": "Date de l'incident",
+    "type": "Type d'incident",
+    "holder": "Employé détenteur",
+    "items": "Articles",
+    "none": "Aucun rapport d'incident",
+    "types": {
+      "LOST": "Perte",
+      "STOLEN": "Vol",
+      "DAMAGED": "Dommage"
+    },
+    "typeHints": {
+      "LOST": "L'article a été égaré ou oublié et n'a pas été retrouvé.",
+      "STOLEN": "L'article a été volé (indiquez si possible le n° de plainte).",
+      "DAMAGED": "L'équipement est cassé ou abîmé mais toujours en votre possession (équipements à n° de série)."
+    },
+    "status": {
+      "PENDING": "En attente de validation",
+      "VALIDATED": "Validé",
+      "REJECTED": "Rejeté",
+      "CANCELLED": "Retiré"
+    },
+    "liableShort": "Responsabilité engagée",
+    "notLiableShort": "Responsabilité non engagée",
+    "formTitle": "Déclarer un incident",
+    "formSubtitle": "Choisissez le type d'incident, décrivez les circonstances et cochez les articles concernés. Le rapport est ensuite validé par le chef du projet.",
+    "forWhom": "Pour qui ?",
+    "mode": {
+      "self": "Mes articles",
+      "other": "Pour le compte d'un employé"
+    },
+    "otherHint": "Le magasin peut déclarer l'incident pour un employé qui n'a pas accès à l'application ; l'employé est prévenu.",
+    "chooseHolder": "Choisissez l'employé pour afficher les articles qu'il détient.",
+    "place": "Lieu",
+    "placePlaceholder": "Ex. : bureau de Goma, route Goma–Sake…",
+    "circumstances": "Circonstances",
+    "circumstancesPlaceholder": "Que s'est-il passé ? Quand vous en êtes-vous aperçu ? Quelles démarches avez-vous faites ?",
+    "circumstancesShort": "10 caractères au moins",
+    "policeReference": "N° de plainte / déclaration à la police",
+    "policeHint": "Facultatif, mais recommandé pour un vol.",
+    "itemsTitle": "Articles concernés",
+    "noHoldings": "Aucun article détenu : rien à déclarer.",
+    "issue": "Bon de sortie",
+    "held": "Détenu",
+    "declared": "Quantité déclarée",
+    "lot": "Lot {{lot}}",
+    "pendingOnLine": "Rapport d'incident en attente",
+    "damageEquipmentOnly": "Dommage : équipements à n° de série seulement",
+    "alreadyDamaged": "Déjà signalé endommagé",
+    "noProject": "Sans projet",
+    "mixedProjects": "Ces articles relèvent de projets différents : chaque projet a son chef, faites un rapport par projet.",
+    "afterSubmit": "Le rapport est envoyé au chef du projet des articles (ou à son intérimaire ; sans projet ou sans chef : à l'administrateur). Tant qu'il n'est pas validé, les articles restent dans vos détentions et vous pouvez le retirer.",
+    "submit": "Envoyer le rapport",
+    "created": "Rapport {{number}} envoyé au chef de projet",
+    "reportShort": "Signaler un incident",
+    "possessionHint": "Article perdu, volé ou abîmé ? « Signaler un incident ».",
+    "reportedByOn": "Déclaré par {{name}} le {{date}}",
+    "onBehalfOfHolder": "pour le compte de {{name}}",
+    "pdf": "Rapport PDF",
+    "actions": {
+      "validate": "Valider",
+      "reject": "Rejeter",
+      "cancel": "Retirer le rapport"
+    },
+    "dialog": {
+      "validate": "Valider le rapport d'incident",
+      "reject": "Rejeter le rapport d'incident",
+      "cancel": "Retirer le rapport d'incident"
+    },
+    "done": {
+      "validate": "Rapport validé",
+      "reject": "Rapport rejeté",
+      "cancel": "Rapport retiré"
+    },
+    "awaiting": "En attente de validation par : {{names}}",
+    "awaitingNobody": "Personne ne peut valider ce rapport : le projet n'a pas de chef actif et l'entreprise n'a pas d'administrateur actif.",
+    "validatedBy": "Validé par {{name}} le {{date}}",
+    "actingFor": "(par intérim de {{name}})",
+    "liable": "Responsabilité de l'employé : engagée.",
+    "notLiable": "Responsabilité de l'employé : non engagée.",
+    "effect": {
+      "LOST": "Les articles ne figurent plus dans les détentions de l'employé ; les équipements sont marqués « Perdu ».",
+      "STOLEN": "Les articles ne figurent plus dans les détentions de l'employé ; les équipements sont marqués « Perdu ».",
+      "DAMAGED": "L'équipement reste détenu par l'employé, à l'état « Endommagé » ; le magasin le récupère par un bon de retour."
+    },
+    "rejectedBy": "Rejeté par {{name}} le {{date}} : {{reason}}",
+    "cancelledOn": "Retiré par {{name}} le {{date}}",
+    "serialOrLot": "N° de série / lot",
+    "validateHint": {
+      "LOST": "En validant, les articles sortent des détentions de l'employé (les équipements passent « Perdu »).",
+      "STOLEN": "En validant, les articles sortent des détentions de l'employé (les équipements passent « Perdu »).",
+      "DAMAGED": "En validant, l'équipement passe à l'état « Endommagé » ; il reste détenu par l'employé jusqu'à son retour au magasin."
+    },
+    "liabilityQuestion": "La responsabilité de {{name}} est-elle engagée ?",
+    "liableOption": "Oui, imputable à l'employé",
+    "notLiableOption": "Non",
+    "liabilityHint": "Décision imprimée sur le rapport PDF (par exemple pour une éventuelle retenue, gérée hors de l'application).",
+    "rejectHint": "Les articles restent dans les détentions de l'employé.",
+    "cancelHint": "Le rapport ne sera plus à valider ; les articles restent dans vos détentions.",
+    "reasonRequired": "Motif (obligatoire)",
+    "comment": "Commentaire",
+    "notFound": "Rapport d'incident introuvable",
+    "err": {
+      "generic": "L'opération a échoué",
+      "INCIDENT_TYPE_INVALID": "Type d'incident invalide",
+      "INCIDENT_DATE_INVALID": "Date de l'incident invalide",
+      "INCIDENT_DATE_FUTURE": "La date de l'incident ne peut pas être dans le futur",
+      "CIRCUMSTANCES_REQUIRED": "Décrivez les circonstances (10 caractères au moins)",
+      "NO_LINES": "Cochez au moins un article",
+      "DUPLICATE_LINE": "Article en double",
+      "LINE_NOT_FOUND": "Article détenu introuvable",
+      "NOT_HOLDER": "Cet article a été remis à une autre personne",
+      "ISSUE_CANCELLED": "Le bon de sortie de cet article a été annulé",
+      "NOT_HELD": "Cet article n'est plus détenu (déjà rendu)",
+      "DAMAGE_EQUIPMENT_ONLY": "Le dommage se déclare pour un équipement à n° de série",
+      "INCIDENT_PENDING": "Un rapport d'incident est déjà en attente pour cet équipement",
+      "ALREADY_DAMAGED": "Équipement déjà signalé endommagé",
+      "INVALID_QUANTITY": "Quantité invalide",
+      "OVER_HELD": "Quantité supérieure à ce qui est détenu (disponible : {{available}})",
+      "MIXED_PROJECTS": "Articles de projets différents : faites un rapport par projet",
+      "HOLDER_INVALID": "Employé introuvable",
+      "NOT_ALLOWED": "Vous n'êtes pas autorisé à faire cette opération",
+      "NATURE_FORBIDDEN": "Vous ne gérez pas ce type d'article",
+      "PROJECT_FORBIDDEN": "Vous n'avez pas accès au stock de ce projet",
+      "LIABILITY_REQUIRED": "Indiquez si la responsabilité de l'employé est engagée",
+      "REASON_REQUIRED": "Motif obligatoire",
+      "NOT_PENDING": "Le rapport n'attend plus de validation",
+      "SELF_APPROVAL": "Le rapport doit être validé par une autre personne que le détenteur ou le déclarant",
+      "NOT_VALIDATOR": "Seul le chef du projet (ou l'administrateur) valide ce rapport",
+      "HOLDING_CHANGED": "L'article n'est plus détenu par l'employé (rendu ou bon annulé) : rejetez le rapport",
+      "NOT_CANCELLABLE": "Le rapport a déjà été traité",
+      "NOT_FOUND": "Rapport d'incident introuvable"
+    },
+    "project": "Projet"
   }
 }

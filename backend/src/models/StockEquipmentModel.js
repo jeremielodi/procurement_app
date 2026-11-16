@@ -11,6 +11,7 @@ const warehouseModel = require('./WarehouseModel');
 const { SEGMENT_RE } = require('../utils/assetTags');
 const stockNature = require('../utils/stockNature');
 const stockProject = require('../utils/stockProject');
+const { PENDING_SQL: PENDING_INCIDENT_SQL } = require('./StockIncidentModel');
 
 const EPS = 1e-9;
 const CONDITIONS = ['GOOD', 'DAMAGED', 'LOST'];
@@ -52,7 +53,12 @@ class StockEquipmentModel {
               (${held} - il.returned_quantity)::float8 AS remaining,
               si.id AS issue_id, si.issue_number, si.issued_at, si.warehouse_id, w.name AS warehouse_name,
               it.id AS stock_item_id, it.code AS item_code, it.name AS item_name, it.unit, it.track_serials,
-              lt.lot_number, un.id AS unit_id, un.serial_number, un.asset_tag, un.condition
+              lt.lot_number, un.id AS unit_id, un.serial_number, un.asset_tag, un.condition, il.project_id, it.nature AS item_nature,
+              (SELECT pj.code FROM projects pj WHERE pj.id = il.project_id) AS project_code,
+              -- Rapports d'incident en attente sur la ligne (migration 68) : quantité perdue / volée déclarée, nombre de rapports
+              ${PENDING_INCIDENT_SQL('il.id')}::float8 AS incident_pending_quantity,
+              (SELECT COUNT(*)::int FROM stock_incident_lines xl JOIN stock_incidents xi ON xi.id = xl.incident_id
+                WHERE xl.issue_line_id = il.id AND xi.status = 'PENDING') AS incident_pending_count
        FROM stock_issue_lines il
        JOIN stock_issues si ON si.id = il.issue_id
        JOIN stock_items it ON it.id = il.stock_item_id

@@ -509,6 +509,25 @@
       "cancelledMessage": "L'envoi {number} de {from} a été annulé.",
       "recordedTitle": "Réception enregistrée : {number}",
       "recordedMessage": "Le magasin a enregistré la réception de l'envoi {number} (bon signé sur papier)."
+    },
+    "stockIncident": {
+      "types": {
+        "LOST": "perte",
+        "STOLEN": "vol",
+        "DAMAGED": "dommage"
+      },
+      "toValidateTitle": "Rapport d'incident à valider : {number}",
+      "toValidateMessage": "{name} a déclaré un incident ({type}) sur des articles du stock qu'il détient. Vérifiez le rapport, validez-le et indiquez si la responsabilité de l'employé est engagée.",
+      "reportedForYouTitle": "Rapport d'incident déclaré pour vous : {number}",
+      "reportedForYouMessage": "Le magasin a déclaré pour votre compte un incident ({type}) sur des articles que vous détenez. Le chef de projet doit le valider.",
+      "validatedTitle": "Rapport d'incident validé : {number}",
+      "validatedMessage": "{validator} a validé le rapport d'incident {number} ({type}). Consultez la décision sur la responsabilité de l'employé.",
+      "storeInfoTitle": "Incident validé sur des articles sortis : {number}",
+      "storeInfoMessage": "Le rapport d'incident {number} ({type}) de {name} a été validé : les articles concernés ne sont plus dans ses détentions (perte / vol) ou sont signalés endommagés.",
+      "rejectedTitle": "Rapport d'incident rejeté : {number}",
+      "rejectedMessage": "{validator} a rejeté le rapport d'incident {number} : « {reason} ». Les articles restent dans vos détentions.",
+      "cancelledTitle": "Rapport d'incident retiré : {number}",
+      "cancelledMessage": "Le rapport d'incident {number} de {name} a été retiré : il n'est plus à valider."
     }
   },
   "pdf": {
@@ -958,6 +977,46 @@
       "rejectedOn": "Bon refusé par {name} le {date} — motif : {reason}. Aucun article n'est entré en stock.",
       "cancelledOn": "Bon retiré par {name} le {date} — motif : {reason}. Aucun article n'est entré en stock.",
       "cancelledAfterValidationOn": "Bon annulé par {name} le {date} — motif : {reason}. Les articles ont été retirés du stock."
+    },
+    "stockIncident": {
+      "title": "RAPPORT D'INCIDENT",
+      "reportedOn": "Déclaré le",
+      "holder": "Employé détenteur",
+      "name": "Nom",
+      "position": "Fonction",
+      "email": "Email",
+      "reportedBy": "Déclaré par",
+      "incident": "Incident",
+      "type": "Type",
+      "date": "Date de l'incident",
+      "place": "Lieu",
+      "policeReference": "N° de plainte / déclaration",
+      "project": "Projet",
+      "circumstances": "Circonstances",
+      "no": "N°",
+      "code": "Code",
+      "item": "Article",
+      "serial": "N° de série / lot",
+      "issue": "Bon de sortie",
+      "quantity": "Quantité",
+      "decision": "Décision du chef de projet",
+      "decisionLabel": "Décision",
+      "decidedBy": "Par",
+      "liability": "Responsabilité de l'employé",
+      "liableYes": "Engagée (imputable à l'employé)",
+      "liableNo": "Non engagée",
+      "pending": "En attente de validation par le chef de projet.",
+      "onBehalfOf": "p.i. de {name}",
+      "holderSignature": "Signature de l'employé",
+      "reporterSignature": "Signature du déclarant (magasin)",
+      "validatorSignature": "Validation — chef de projet",
+      "typeLOST": "Perte",
+      "typeSTOLEN": "Vol",
+      "typeDAMAGED": "Dommage",
+      "statusPENDING": "En attente de validation",
+      "statusVALIDATED": "Validé",
+      "statusREJECTED": "Rejeté",
+      "statusCANCELLED": "Retiré"
     }
   },
   "stockExport": {
@@ -1088,7 +1147,11 @@
     "PARTNER_ACCOUNT_CREATED": "Accès à l'espace partenaire créé",
     "PARTNER_ACCOUNT_ACTIVATED": "Compte partenaire réactivé",
     "PARTNER_ACCOUNT_DEACTIVATED": "Compte partenaire désactivé",
-    "PARTNER_TRANSFER_RECEIVED": "Réception d'un envoi confirmée par le partenaire"
+    "PARTNER_TRANSFER_RECEIVED": "Réception d'un envoi confirmée par le partenaire",
+    "STOCK_INCIDENT_REPORTED": "Rapport d'incident déclaré",
+    "STOCK_INCIDENT_VALIDATED": "Rapport d'incident validé",
+    "STOCK_INCIDENT_REJECTED": "Rapport d'incident rejeté",
+    "STOCK_INCIDENT_CANCELLED": "Rapport d'incident retiré"
   },
   "auditExport": {
     "sheet": "Journal d'audit",

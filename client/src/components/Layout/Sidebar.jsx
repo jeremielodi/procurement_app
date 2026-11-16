@@ -45,6 +45,7 @@ import {
   Undo2,
   ScrollText,
   ShieldCheck,
+  ShieldAlert,
   TrendingUp
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -97,6 +98,14 @@ const menuGroups = [
         path: '/stock/requests',
         icon: ClipboardList,
         label: 'nav.stockRequests',
+        permission: null,
+        hideForSupplier: true
+      },
+      {
+        // Rapports d'incident (migration 68) : déclaration par l'employé, validation par le chef de projet
+        path: '/stock/incidents',
+        icon: ShieldAlert,
+        label: 'nav.stockIncidents',
         permission: null,
         hideForSupplier: true
       }

@@ -93,6 +93,10 @@ const AUDIT = {
   STOCK_ENTRY_VALIDATED: 'STOCK_ENTRY_VALIDATED', // bon d'entrée hors bon de commande validé (le stock augmente)
   STOCK_ENTRY_REJECTED: 'STOCK_ENTRY_REJECTED',
   STOCK_ENTRY_CANCELLED: 'STOCK_ENTRY_CANCELLED', // retiré par son auteur, ou annulé après validation (écritures inverses)
+  STOCK_INCIDENT_REPORTED: 'STOCK_INCIDENT_REPORTED', // rapport d'incident (perte, vol, dommage) déclaré sur un article détenu
+  STOCK_INCIDENT_VALIDATED: 'STOCK_INCIDENT_VALIDATED', // validé par le chef de projet (responsabilité de l'employé)
+  STOCK_INCIDENT_REJECTED: 'STOCK_INCIDENT_REJECTED',
+  STOCK_INCIDENT_CANCELLED: 'STOCK_INCIDENT_CANCELLED',
   STOCK_ADJUSTED: 'STOCK_ADJUSTED',
   STOCK_COUNT_VALIDATED: 'STOCK_COUNT_VALIDATED',
   STOCK_ITEMS_IMPORTED: 'STOCK_ITEMS_IMPORTED', // catalogue (+ stock initial) importé depuis Excel / CSV

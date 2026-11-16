@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const fail = (status, code, message) => Object.assign(new Error(message), { status, code });
 
 // Préfixes des numéros de documents : interdits comme code initial d'inventaire
-const RESERVED_PREFIXES = ['INV', 'REQ', 'PO', 'GRN', 'SAN', 'PAY', 'SOR', 'RET', 'CNT', 'AJU', 'ENT', 'MVT', 'MVG'];
+const RESERVED_PREFIXES = ['INV', 'REQ', 'PO', 'GRN', 'SAN', 'PAY', 'SOR', 'RET', 'CNT', 'AJU', 'ENT', 'MVT', 'MVG', 'DEM', 'INC'];
 
 class ProjectModel {
   /**

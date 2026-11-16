@@ -152,7 +152,8 @@
     "consumables": "Consumables",
     "partnerTransfers": "Shipments received",
     "partnerHoldings": "Items held",
-    "partners": "Partners"
+    "partners": "Partners",
+    "stockIncidents": "Incident reports"
   },
   "header": {
     "toggleSidebar": "Show / hide menu",
@@ -513,7 +514,7 @@
         },
         {
           "title": "Issues and equipment",
-          "desc": "Issues to an employee or a department with acknowledgement of receipt; computers and equipment tracked by serial number and recovered on departure. Employees' store requests are approved then fulfilled with an issue note."
+          "desc": "Issues to an employee or a department with acknowledgement of receipt; computers and equipment tracked by serial number and recovered on departure. Employees' store requests are approved then fulfilled with an issue note. Lost, stolen or damaged item: incident report by the employee, validated by the project manager, who rules on their liability."
         },
         {
           "title": "Tamper-proof ledger",
@@ -3984,7 +3985,8 @@
         "lotNumber": "Lot number",
         "expiryDate": "Expiry date",
         "project": "Project code",
-        "assetCategory": "Tag category"
+        "assetCategory": "Tag category",
+        "nature": "Nature"
       },
       "err": {
         "CODE_REQUIRED": "empty code",
@@ -4326,6 +4328,71 @@
       "export": "Export (Excel)",
       "newEntry": "Entry note",
       "newIssue": "Issue consumables"
+    },
+    "importGuide": {
+      "whenTitle": "When to use it",
+      "effectsTitle": "What the import records",
+      "cautionsTitle": "Before you import",
+      "stepsTitle": "Recommended order to set up the stock",
+      "current": "you are here",
+      "catalog": {
+        "title": "Why import the item catalogue?",
+        "why": "The catalogue is the foundation of the whole Stock module: an item must exist here (code, unit, Equipment or Consumable nature, tracking mode) before it can be received, issued, counted or quoted in a requisition. The import creates or updates hundreds of items at once instead of entering them one by one, and records at the same time the stock already in your warehouses at start-up.",
+        "when": [
+          "Stock go-live: take over the item list from the old Excel file or software",
+          "Add a new range of items (medicines, office supplies, spare parts…)",
+          "Bulk-correct items: unit, category, minimum stock, nature… (existing code = update)",
+          "Record the opening stock of consumables (quantity, cost, lot, expiry) already in the warehouses"
+        ],
+        "effects": [
+          "Creates new items and updates existing ones (only the filled-in cells)",
+          "Sets the nature: Equipment (durable, tracked and assigned to a person) or Consumable (used up) — it decides who can see and manage the item",
+          "Opening stock: one \"Opening stock\" movement per warehouse / lot, at the given cost and linked to the funding project — starting point for balances, valuation (WAC) and the replenishment forecast",
+          "The whole import is a single operation, visible in the movement journal"
+        ],
+        "cautions": [
+          "Opening stock is final: a new import does not double it (refused if the item already has movements in that warehouse); to correct it, use a stock count or an adjustment",
+          "The tracking mode (stockable, lot, expiry, serial number) can no longer change once the item has movements: check it before importing",
+          "Serial-numbered equipment: no quantity here, register each unit afterwards with the existing assets import (step 2)",
+          "A supplier delivery is not imported: it goes through the purchase order receipt (GRN) or a stock entry note, which keep the document trail"
+        ]
+      },
+      "units": {
+        "title": "Why import the existing assets?",
+        "why": "This import brings into the application the assets the organisation already owns (computers, vehicles, motorbikes, furniture…): each piece of equipment becomes a record with its serial number, inventory number (tag) and condition. Without it, equipment bought before go-live does not exist in procureApp: it cannot be assigned, located, counted or traced to its holder.",
+        "when": [
+          "Go-live: take over the organisation's asset register (Excel)",
+          "Bring in equipment received outside procureApp (former project, unrecorded donation)",
+          "Complete the register after a physical count finds unrecorded assets"
+        ],
+        "effects": [
+          "One record per serial-numbered item (unique per item), \"in stock\" at the given warehouse, condition Good or Damaged",
+          "Inventory number kept as it appears on the tag, or assigned automatically from the enterprise's coding scheme",
+          "Funding project, cost and acquisition date: used by the equipment register, valuation and the inventory number",
+          "Items without serial numbers (chairs, tables…): an opening stock quantity",
+          "The whole import is a single operation (MVG), visible in the movement journal"
+        ],
+        "cautions": [
+          "Items must already exist in the catalogue (step 1)",
+          "Do not import twice: a serial or inventory number already recorded is refused",
+          "Assets enter the warehouse: for those already held by an employee, then do step 3 (\"Import assignments\"), which creates the issue notes",
+          "Equipment bought from now on goes through the purchase order receipt or a stock entry note, not this import"
+        ]
+      },
+      "steps": {
+        "catalog": {
+          "title": "Item catalogue",
+          "text": "Create the items (equipment and consumables) and the consumables' opening stock — Stock › Items › Import"
+        },
+        "units": {
+          "title": "Existing assets",
+          "text": "Register each piece of equipment already owned (serial number, inventory number, condition) — Stock › Equipment › Import (Excel / CSV)"
+        },
+        "assignments": {
+          "title": "Existing assignments",
+          "text": "Record who holds which equipment (holder's email) — Stock › Equipment › Import assignments"
+        }
+      }
     }
   },
   "help": {
@@ -4458,7 +4525,7 @@
               ],
               [
                 "Project manager",
-                "Assigned on the project page (not a profile): alone approves the project's requisitions — approve, reject or return for correction."
+                "Assigned on the project page (not a profile): alone approves the project's requisitions — approve, reject or return for correction; also validates incident reports (loss, theft, damage) on their project's stock and rules on the employee's liability."
               ],
               [
                 "Manager level 1",
@@ -4864,6 +4931,14 @@
           {
             "type": "tip",
             "text": "Requisitions already in progress before this process keep the previous one: N1 / N2 / N3 approval of the requisition, then purchase order approval by Management."
+          },
+          {
+            "type": "h",
+            "text": "Stock incident reports"
+          },
+          {
+            "type": "p",
+            "text": "The project manager also validates incident reports (loss, theft, damage) on stock items of their project held by an employee: \"Incident reports\" menu → \"To validate\" tab. They validate by stating whether the employee is liable (yes / no, with a comment), or reject with a reason. Their stand-in can do it for them; with no project or no active manager, the administrator does. They never validate a report in which they are the holder or the reporter."
           },
           {
             "type": "links",
@@ -5684,6 +5759,28 @@
           },
           {
             "type": "h",
+            "text": "Incident report (loss, theft, damage)"
+          },
+          {
+            "type": "p",
+            "text": "An employee who loses, has stolen or damages an item they hold (handed over by an issue note) files an incident report: \"Incident reports\" menu → \"Report an incident\", or \"Report an incident\" next to the item in \"My received items\". The store can also file it on behalf of an employee."
+          },
+          {
+            "type": "steps",
+            "items": [
+              "Choose the type: Loss, Theft (police report no. recommended) or Damage (serial-numbered equipment only).",
+              "Give the date, place and circumstances, then tick the items and quantities. A report covers a single project.",
+              "The report goes to the manager of the items' project (or their stand-in). Item without project or project without an active manager: the enterprise administrator. Neither the holder nor the reporter can validate it.",
+              "The project manager validates and states whether the employee is liable (yes / no, with a comment), or rejects with a reason.",
+              "Validated loss or theft: the items leave the employee's holdings and equipment becomes \"Lost\". Validated damage: the equipment stays with the employee, \"Damaged\", until it is returned to the store."
+            ]
+          },
+          {
+            "type": "tip",
+            "text": "The PDF report (\"PDF report\" button) carries the decision and the signatures of the employee and the project manager. While it awaits validation, the employee can withdraw it."
+          },
+          {
+            "type": "h",
             "text": "Replenishment forecast"
           },
           {
@@ -5807,6 +5904,10 @@
               {
                 "to": "/stock/reconciliation",
                 "label": "Receipts ↔ stock reconciliation"
+              },
+              {
+                "to": "/stock/incidents",
+                "label": "Incident reports"
               }
             ]
           }
@@ -5840,6 +5941,10 @@
                 "Items issued to a department (consumption or department equipment). Enter the person collecting them if needed: they confirm receipt; otherwise the department manager does. Equipment is assigned to the department."
               ]
             ]
+          },
+          {
+            "type": "tip",
+            "text": "An item you received was lost, stolen or damaged? In \"My received items\", click \"Report an incident\" next to the item: the incident report is validated by the project manager (see the \"Stock\" topic, \"Incident report\")."
           },
           {
             "type": "h",
@@ -6015,6 +6120,10 @@
                 "No stock entry; the device is marked \"Lost\"."
               ]
             ]
+          },
+          {
+            "type": "tip",
+            "text": "Equipment lost or stolen by the employee: rather than a \"Lost\" return entered by the store, the employee files an incident report (\"Incident reports\" menu), validated by the project manager, who rules on their liability; once validated the equipment becomes \"Lost\". Validated damage marks it \"Damaged\": take it back afterwards with a return."
           },
           {
             "type": "h",
@@ -6841,7 +6950,11 @@
       "PARTNER_ACCOUNT_CREATED": "Partner area access created",
       "PARTNER_ACCOUNT_ACTIVATED": "Partner account reactivated",
       "PARTNER_ACCOUNT_DEACTIVATED": "Partner account deactivated",
-      "PARTNER_TRANSFER_RECEIVED": "Receipt confirmed by the partner"
+      "PARTNER_TRANSFER_RECEIVED": "Receipt confirmed by the partner",
+      "STOCK_INCIDENT_REPORTED": "Incident report filed",
+      "STOCK_INCIDENT_VALIDATED": "Incident report validated",
+      "STOCK_INCIDENT_REJECTED": "Incident report rejected",
+      "STOCK_INCIDENT_CANCELLED": "Incident report withdrawn"
     },
     "groups": {
       "all": "All events",
@@ -7754,5 +7867,154 @@
     "holdingsTitle": "Items held",
     "holdingsSubtitle": "Items and equipment received, not returned.",
     "noHoldings": "No item held"
+  },
+  "stockIncidents": {
+    "title": "Incident reports",
+    "subtitle": "Loss, theft or damage of an item you hold: report it, the project manager validates the report.",
+    "new": "Report an incident",
+    "tabs": {
+      "mine": "My reports",
+      "toValidate": "To validate",
+      "all": "All"
+    },
+    "bannerToValidate_one": "{{count}} incident report awaits your validation",
+    "bannerToValidate_other": "{{count}} incident reports await your validation",
+    "searchPlaceholder": "Report no., employee, item, serial no.…",
+    "allTypes": "All types",
+    "allStatuses": "All statuses",
+    "number": "Report no.",
+    "incidentDate": "Incident date",
+    "type": "Incident type",
+    "holder": "Employee (holder)",
+    "items": "Items",
+    "none": "No incident report",
+    "types": {
+      "LOST": "Loss",
+      "STOLEN": "Theft",
+      "DAMAGED": "Damage"
+    },
+    "typeHints": {
+      "LOST": "The item was mislaid or forgotten and has not been found.",
+      "STOLEN": "The item was stolen (give the police report number if possible).",
+      "DAMAGED": "The equipment is broken or damaged but still in your possession (serial-numbered equipment)."
+    },
+    "status": {
+      "PENDING": "Awaiting validation",
+      "VALIDATED": "Validated",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Withdrawn"
+    },
+    "liableShort": "Employee liable",
+    "notLiableShort": "Employee not liable",
+    "formTitle": "Report an incident",
+    "formSubtitle": "Choose the incident type, describe what happened and tick the items concerned. The report is then validated by the project manager.",
+    "forWhom": "For whom?",
+    "mode": {
+      "self": "My items",
+      "other": "On behalf of an employee"
+    },
+    "otherHint": "The store can report the incident for an employee who has no access to the application; the employee is notified.",
+    "chooseHolder": "Choose the employee to list the items they hold.",
+    "place": "Place",
+    "placePlaceholder": "E.g. Goma office, Goma–Sake road…",
+    "circumstances": "Circumstances",
+    "circumstancesPlaceholder": "What happened? When did you notice it? What steps have you taken?",
+    "circumstancesShort": "At least 10 characters",
+    "policeReference": "Police report no.",
+    "policeHint": "Optional, but recommended for a theft.",
+    "itemsTitle": "Items concerned",
+    "noHoldings": "No item held: nothing to report.",
+    "issue": "Issue note",
+    "held": "Held",
+    "declared": "Quantity reported",
+    "lot": "Lot {{lot}}",
+    "pendingOnLine": "Incident report pending",
+    "damageEquipmentOnly": "Damage: serial-numbered equipment only",
+    "alreadyDamaged": "Already reported as damaged",
+    "noProject": "No project",
+    "mixedProjects": "These items belong to different projects: each project has its own manager, file one report per project.",
+    "afterSubmit": "The report goes to the manager of the items' project (or their stand-in; no project or no manager: the administrator). Until it is validated, the items stay in your holdings and you can withdraw it.",
+    "submit": "Send the report",
+    "created": "Report {{number}} sent to the project manager",
+    "reportShort": "Report an incident",
+    "possessionHint": "Item lost, stolen or damaged? \"Report an incident\".",
+    "reportedByOn": "Reported by {{name}} on {{date}}",
+    "onBehalfOfHolder": "on behalf of {{name}}",
+    "pdf": "PDF report",
+    "actions": {
+      "validate": "Validate",
+      "reject": "Reject",
+      "cancel": "Withdraw the report"
+    },
+    "dialog": {
+      "validate": "Validate the incident report",
+      "reject": "Reject the incident report",
+      "cancel": "Withdraw the incident report"
+    },
+    "done": {
+      "validate": "Report validated",
+      "reject": "Report rejected",
+      "cancel": "Report withdrawn"
+    },
+    "awaiting": "Awaiting validation by: {{names}}",
+    "awaitingNobody": "Nobody can validate this report: the project has no active manager and the enterprise has no active administrator.",
+    "validatedBy": "Validated by {{name}} on {{date}}",
+    "actingFor": "(acting for {{name}})",
+    "liable": "Employee's liability: yes.",
+    "notLiable": "Employee's liability: no.",
+    "effect": {
+      "LOST": "The items are no longer in the employee's holdings; equipment is marked \"Lost\".",
+      "STOLEN": "The items are no longer in the employee's holdings; equipment is marked \"Lost\".",
+      "DAMAGED": "The equipment stays with the employee, in \"Damaged\" condition; the store takes it back with a return note."
+    },
+    "rejectedBy": "Rejected by {{name}} on {{date}}: {{reason}}",
+    "cancelledOn": "Withdrawn by {{name}} on {{date}}",
+    "serialOrLot": "Serial / lot no.",
+    "validateHint": {
+      "LOST": "Once validated, the items leave the employee's holdings (equipment becomes \"Lost\").",
+      "STOLEN": "Once validated, the items leave the employee's holdings (equipment becomes \"Lost\").",
+      "DAMAGED": "Once validated, the equipment becomes \"Damaged\"; the employee keeps it until it is returned to the store."
+    },
+    "liabilityQuestion": "Is {{name}} liable?",
+    "liableOption": "Yes, attributable to the employee",
+    "notLiableOption": "No",
+    "liabilityHint": "Decision printed on the PDF report (e.g. for a possible deduction, handled outside the application).",
+    "rejectHint": "The items stay in the employee's holdings.",
+    "cancelHint": "The report will no longer need validation; the items stay in your holdings.",
+    "reasonRequired": "Reason (required)",
+    "comment": "Comment",
+    "notFound": "Incident report not found",
+    "err": {
+      "generic": "The operation failed",
+      "INCIDENT_TYPE_INVALID": "Invalid incident type",
+      "INCIDENT_DATE_INVALID": "Invalid incident date",
+      "INCIDENT_DATE_FUTURE": "The incident date cannot be in the future",
+      "CIRCUMSTANCES_REQUIRED": "Describe the circumstances (at least 10 characters)",
+      "NO_LINES": "Tick at least one item",
+      "DUPLICATE_LINE": "Duplicate item",
+      "LINE_NOT_FOUND": "Held item not found",
+      "NOT_HOLDER": "This item was handed to someone else",
+      "ISSUE_CANCELLED": "This item's issue note was cancelled",
+      "NOT_HELD": "This item is no longer held (already returned)",
+      "DAMAGE_EQUIPMENT_ONLY": "Damage is reported for serial-numbered equipment",
+      "INCIDENT_PENDING": "An incident report is already pending for this equipment",
+      "ALREADY_DAMAGED": "Equipment already reported as damaged",
+      "INVALID_QUANTITY": "Invalid quantity",
+      "OVER_HELD": "Quantity above what is held (available: {{available}})",
+      "MIXED_PROJECTS": "Items from different projects: file one report per project",
+      "HOLDER_INVALID": "Employee not found",
+      "NOT_ALLOWED": "You are not allowed to do this",
+      "NATURE_FORBIDDEN": "You do not manage this kind of item",
+      "PROJECT_FORBIDDEN": "You have no access to this project's stock",
+      "LIABILITY_REQUIRED": "State whether the employee is liable",
+      "REASON_REQUIRED": "Reason required",
+      "NOT_PENDING": "The report no longer awaits validation",
+      "SELF_APPROVAL": "The report must be validated by someone other than the holder or the reporter",
+      "NOT_VALIDATOR": "Only the project manager (or the administrator) validates this report",
+      "HOLDING_CHANGED": "The employee no longer holds the item (returned or note cancelled): reject the report",
+      "NOT_CANCELLABLE": "The report has already been processed",
+      "NOT_FOUND": "Incident report not found"
+    },
+    "project": "Project"
   }
 }

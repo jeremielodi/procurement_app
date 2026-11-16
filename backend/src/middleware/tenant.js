@@ -129,6 +129,8 @@ const PATH_RESOURCES = [
   { re: new RegExp(`^/stock/movement-groups/(${UUID})(/|$)`), table: 'stock_movement_groups' },
   { re: new RegExp(`^/stock/planning/items/(${UUID})(/|$)`), table: 'stock_items' },
   { re: new RegExp(`^/stock-requests/(${UUID})(/|$)`), table: 'stock_requests' },
+  // Rapports d'incident (migration 68)
+  { re: new RegExp(`^/stock-incidents/(${UUID})(/|$)`), table: 'stock_incidents' },
   // Partenaires (migration 66) ; comptes d'un partenaire : /partners/:id/accounts/:userId (compte vérifié par le modèle)
   { re: new RegExp(`^/partners/(${UUID})(/|$)`), table: 'partners' },
   // Intérim du chef de projet (migration 53)

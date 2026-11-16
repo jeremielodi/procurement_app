@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { Upload, FileSpreadsheet, Download, AlertTriangle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
+import ImportPurpose from './ImportPurpose';
 import { equipmentService } from '../../services/stockService';
 import { t, getLocale } from '../../i18n';
 
@@ -85,6 +86,8 @@ export default function ImportStockUnitsModal({ isOpen, onClose, onImported }) {
       confirmText={toImport ? t('stock.unitImport.confirmN', { count: s.units + s.openingQuantity }) : t('stock.unitImport.confirm')}
       confirmDisabled={!toImport} isLoading={loading} loadingText={preview ? t('stock.unitImport.importing') : t('stock.unitImport.analyzing')}>
       <div className="space-y-4">
+        <ImportPurpose kind="units" collapsed={!!preview} />
+
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 p-3">
           <div className="text-sm text-green-900">
             <div className="font-medium">{t('stock.unitImport.templateTitle')}</div>

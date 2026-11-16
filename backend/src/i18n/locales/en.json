@@ -509,6 +509,25 @@
       "cancelledMessage": "Shipment {number} from {from} has been cancelled.",
       "recordedTitle": "Receipt recorded: {number}",
       "recordedMessage": "The store recorded the receipt of shipment {number} (note signed on paper)."
+    },
+    "stockIncident": {
+      "types": {
+        "LOST": "loss",
+        "STOLEN": "theft",
+        "DAMAGED": "damage"
+      },
+      "toValidateTitle": "Incident report to validate: {number}",
+      "toValidateMessage": "{name} reported an incident ({type}) on stock items they hold. Review the report, validate it and state whether the employee is liable.",
+      "reportedForYouTitle": "Incident report filed on your behalf: {number}",
+      "reportedForYouMessage": "The store filed an incident ({type}) on your behalf for items you hold. The project manager must validate it.",
+      "validatedTitle": "Incident report validated: {number}",
+      "validatedMessage": "{validator} validated incident report {number} ({type}). See the decision on the employee's liability.",
+      "storeInfoTitle": "Incident validated on issued items: {number}",
+      "storeInfoMessage": "Incident report {number} ({type}) from {name} was validated: the items are no longer held (loss / theft) or are flagged as damaged.",
+      "rejectedTitle": "Incident report rejected: {number}",
+      "rejectedMessage": "{validator} rejected incident report {number}: \"{reason}\". The items remain in your holdings.",
+      "cancelledTitle": "Incident report withdrawn: {number}",
+      "cancelledMessage": "Incident report {number} from {name} was withdrawn: it no longer needs validation."
     }
   },
   "pdf": {
@@ -958,6 +977,46 @@
       "rejectedOn": "Rejected by {name} on {date} — reason: {reason}. No item entered stock.",
       "cancelledOn": "Withdrawn by {name} on {date} — reason: {reason}. No item entered stock.",
       "cancelledAfterValidationOn": "Cancelled by {name} on {date} — reason: {reason}. The items were removed from stock."
+    },
+    "stockIncident": {
+      "title": "INCIDENT REPORT",
+      "reportedOn": "Reported on",
+      "holder": "Employee (holder)",
+      "name": "Name",
+      "position": "Title",
+      "email": "Email",
+      "reportedBy": "Reported by",
+      "incident": "Incident",
+      "type": "Type",
+      "date": "Incident date",
+      "place": "Place",
+      "policeReference": "Police report no.",
+      "project": "Project",
+      "circumstances": "Circumstances",
+      "no": "No.",
+      "code": "Code",
+      "item": "Item",
+      "serial": "Serial / lot no.",
+      "issue": "Issue note",
+      "quantity": "Quantity",
+      "decision": "Project manager's decision",
+      "decisionLabel": "Decision",
+      "decidedBy": "By",
+      "liability": "Employee's liability",
+      "liableYes": "Liable (attributable to the employee)",
+      "liableNo": "Not liable",
+      "pending": "Awaiting validation by the project manager.",
+      "onBehalfOf": "acting for {name}",
+      "holderSignature": "Employee's signature",
+      "reporterSignature": "Reporter's signature (store)",
+      "validatorSignature": "Validation — project manager",
+      "typeLOST": "Loss",
+      "typeSTOLEN": "Theft",
+      "typeDAMAGED": "Damage",
+      "statusPENDING": "Awaiting validation",
+      "statusVALIDATED": "Validated",
+      "statusREJECTED": "Rejected",
+      "statusCANCELLED": "Withdrawn"
     }
   },
   "stockExport": {
@@ -1088,7 +1147,11 @@
     "PARTNER_ACCOUNT_CREATED": "Partner area access created",
     "PARTNER_ACCOUNT_ACTIVATED": "Partner account reactivated",
     "PARTNER_ACCOUNT_DEACTIVATED": "Partner account deactivated",
-    "PARTNER_TRANSFER_RECEIVED": "Shipment receipt confirmed by the partner"
+    "PARTNER_TRANSFER_RECEIVED": "Shipment receipt confirmed by the partner",
+    "STOCK_INCIDENT_REPORTED": "Incident report filed",
+    "STOCK_INCIDENT_VALIDATED": "Incident report validated",
+    "STOCK_INCIDENT_REJECTED": "Incident report rejected",
+    "STOCK_INCIDENT_CANCELLED": "Incident report withdrawn"
   },
   "auditExport": {
     "sheet": "Audit log",

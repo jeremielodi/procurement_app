@@ -74,11 +74,16 @@ export default function StockIssueList({ mine = false }) {
                   </td>
                   <td className="px-4 py-2 text-right">{new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 4 }).format(h.remaining)} <span className="text-xs text-gray-400">{h.unit}</span></td>
                   <td className="px-4 py-2 text-xs text-gray-500"><Link to={`/my-items/${h.issue_id}`} className="text-blue-600 hover:underline">{h.issue_number}</Link> · {new Date(h.issued_at).toLocaleDateString(getLocale())}</td>
+                  <td className="px-4 py-2 text-right text-xs">
+                    {h.incident_pending_count > 0
+                      ? <span className="text-amber-700" data-testid="holding-incident-pending">{t('stockIncidents.pendingOnLine')}</span>
+                      : <Link to={`/stock/incidents/new?lineId=${h.issue_line_id}`} className="whitespace-nowrap text-red-600 hover:underline" data-testid="holding-report-incident">{t('stockIncidents.reportShort')}</Link>}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="px-4 py-2 text-xs text-gray-500">{t('stock.return.possessionHint')}</p>
+          <p className="px-4 py-2 text-xs text-gray-500">{t('stock.return.possessionHint')} {t('stockIncidents.possessionHint')}</p>
         </div>
       )}
 

@@ -872,6 +872,18 @@ router.post('/stock-requests/:id/reject', authenticate, stockRequestController.r
 router.post('/stock-requests/:id/cancel', authenticate, stockRequestController.cancel);
 router.post('/stock-requests/:id/close', authenticate, hasPermission('ISSUE_STOCK'), stockRequestController.close);
 
+// Rapports d'incident (migration 68) : perte / vol / dommage d'un article détenu, déclaré par le détenteur (ou le
+// magasin pour son compte), validé par le chef du projet (à défaut l'administrateur) — droits contrôlés par le contrôleur
+const stockIncidentController = require('../controllers/StockIncidentController');
+router.get('/stock-incidents/counts', authenticate, stockIncidentController.counts);
+router.get('/stock-incidents', authenticate, stockIncidentController.list);
+router.get('/stock-incidents/:id/pdf', authenticate, stockIncidentController.pdf);
+router.get('/stock-incidents/:id', authenticate, stockIncidentController.get);
+router.post('/stock-incidents', authenticate, stockIncidentController.create);
+router.post('/stock-incidents/:id/validate', authenticate, stockIncidentController.validate);
+router.post('/stock-incidents/:id/reject', authenticate, stockIncidentController.reject);
+router.post('/stock-incidents/:id/cancel', authenticate, stockIncidentController.cancel);
+
 // Équipements (n° de série), détentions et retours en stock
 router.get('/stock-holdings/mine', authenticate, equipmentController.myHoldings);
 router.get('/stock-holdings', authenticate, hasPermission('VIEW_STOCK'), equipmentController.holdings);

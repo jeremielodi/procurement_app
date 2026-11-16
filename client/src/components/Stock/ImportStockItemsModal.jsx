@@ -6,11 +6,12 @@ import React, { useState } from 'react';
 import { Upload, FileSpreadsheet, Download, AlertTriangle, CheckCircle, PackagePlus, Pencil, Minus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../Common/Modal';
+import ImportPurpose from './ImportPurpose';
 import { stockItemService } from '../../services/stockService';
 import { t, getLocale } from '../../i18n';
 
-const ITEM_COLUMNS = ['code', 'name', 'unit', 'category', 'description', 'stockable', 'trackLots', 'trackExpiry', 'trackSerials', 'minQuantity', 'reorderQuantity', 'assetCategory'];
-const OPENING_COLUMNS = ['warehouse', 'openingQuantity', 'unitCost', 'currency', 'lotNumber', 'expiryDate'];
+const ITEM_COLUMNS = ['code', 'name', 'unit', 'category', 'description', 'stockable', 'trackLots', 'trackExpiry', 'trackSerials', 'minQuantity', 'reorderQuantity', 'assetCategory', 'nature'];
+const OPENING_COLUMNS = ['warehouse', 'openingQuantity', 'unitCost', 'currency', 'lotNumber', 'expiryDate', 'project'];
 const REQUIRED = ['code', 'name', 'unit'];
 // Champs SQL modifiés → colonne du modèle
 const FIELD_COLUMN = {
@@ -115,6 +116,9 @@ export default function ImportStockItemsModal({ isOpen, onClose, onImported }) {
       loadingText={preview ? t('stock.import.importing') : t('stock.import.analyzing')}
     >
       <div className="space-y-4">
+        {/* À quoi sert l'import (replié une fois le fichier analysé) */}
+        <ImportPurpose kind="catalog" collapsed={!!preview} />
+
         {/* Modèle */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 p-3">
           <div className="text-sm text-green-900">

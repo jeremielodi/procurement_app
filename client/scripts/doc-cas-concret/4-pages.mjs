@@ -215,7 +215,7 @@ page({
         'Paul voit dans **Mes tâches** l\'étape « Déterminer la méthode d\'achat ». Un autre agent achats ne la voit pas : elle lui est réservée.',
       ] },
       { img: '10_agent-achats_methode-achat', profile: 'Agent achats', user: 'Paul Kasongo', title: 'Choisir la méthode d\'achat', text: [
-        'Après prise en charge, Paul choisit la méthode adaptée. **Toutes les méthodes sont possibles quel que soit le montant** : achat direct, multiples devis (demande de cotations publiée aux fournisseurs), appel d\'offres (RFP) ou source unique (justification obligatoire). Ici : **Achat direct**.',
+        'Après prise en charge, Paul choisit la méthode adaptée. **Toutes les méthodes sont possibles quel que soit le montant** : achat direct, multiples devis (demande de cotations publiée aux fournisseurs), appel d\'offres (RFP) source unique (justification obligatoire) ou commande sur accord-cadre (proposée seulement si un contrat actif est ouvert au projet). Ici : **Achat direct**.',
       ], points: ['La case « Répartir entre plusieurs fournisseurs » permet d\'attribuer chaque article à un fournisseur différent (un bon de commande par fournisseur).'] },
       { img: '11_agent-achats_achat-direct-proforma', profile: 'Agent achats', user: 'Paul Kasongo', title: 'Achat direct : fournisseur retenu + pro-forma', text: [
         'Pour un achat direct, Paul désigne le **fournisseur retenu** (Bureautique Kivu SARL) et joint obligatoirement sa **facture pro-forma** (PDF, JPG ou PNG). Numéro, date et montant de la pro-forma sont facultatifs.',
